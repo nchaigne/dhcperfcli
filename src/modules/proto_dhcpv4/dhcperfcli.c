@@ -278,11 +278,28 @@ static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool receiv
 }
 
 /*
+ *	Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
+ */
+static void dpc_vp_printlist_dhcp_fields(FILE *fp, VALUE_PAIR *vp)
+{
+	fr_cursor_t	cursor;
+
+	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
+		if ((vp->da->vendor == DHCP_MAGIC_VENDOR) && (vp->da->attr >= 256 && vp->da->attr <= 269)) {
+			fr_pair_fprint(fp, vp);
+		}
+	}
+}
+
+/*
  * Print a DHCP packet.
  */
 static void dpc_print_packet(FILE *fp, RADIUS_PACKET *packet, bool received)
 {
 	dpc_packet_header_print(fp, packet, received);
+
+	fprintf(fp, "DHCP vps fields:\n");
+	dpc_vp_printlist_dhcp_fields(fp, packet->vps);
 }
 
 /*
