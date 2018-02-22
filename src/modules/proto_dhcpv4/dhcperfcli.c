@@ -280,15 +280,50 @@ static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool receiv
 /*
  *	Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
  */
-static void dpc_vp_printlist_dhcp_fields(FILE *fp, VALUE_PAIR *vp)
+static void dpc_vp_print_dhcp_fields(FILE *fp, VALUE_PAIR *vp)
 {
-	fr_cursor_t	cursor;
+	fr_cursor_t cursor;
 
 	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
 		if ((vp->da->vendor == DHCP_MAGIC_VENDOR) && (vp->da->attr >= 256 && vp->da->attr <= 269)) {
 			fr_pair_fprint(fp, vp);
 		}
 	}
+}
+
+/*
+ *	Print the "options" of a DHCP packet (from the VPs list).
+ */
+static int dpc_vp_print_dhcp_options(FILE *fp, VALUE_PAIR *vp)
+{
+	char buf[1024];
+	char *p = buf;
+	int num = 0; /* Keep track of how many options we have. */
+
+	fr_cursor_t cursor;
+	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
+		if ((vp->da->vendor == DHCP_MAGIC_VENDOR) && !(vp->da->attr >= 256 && vp->da->attr <= 269)) {
+			num ++;
+
+			p = buf;
+			*p++ = '\t';
+
+			if (vp->da->parent && vp->da->parent->type == FR_TYPE_TLV) {
+				/* If attribute has a parent which is of type "tlv", print <option.sub-attr> (eg. "82.1"). */
+				p += sprintf(p, "(%d.%d) ", vp->da->parent->attr, vp->da->attr);
+			} else {
+				/* Otherwise this is a simple option. */
+				p += sprintf(p, "(%d) ", vp->da->attr);
+			}
+
+			p += fr_pair_snprint(p, sizeof(buf) - 1, vp);
+			*p++ = '\n';
+			*p = '\0';
+
+			fputs(buf, fp);
+		}
+	}
+	return num;
 }
 
 /*
@@ -299,7 +334,12 @@ static void dpc_print_packet(FILE *fp, RADIUS_PACKET *packet, bool received)
 	dpc_packet_header_print(fp, packet, received);
 
 	fprintf(fp, "DHCP vps fields:\n");
-	dpc_vp_printlist_dhcp_fields(fp, packet->vps);
+	dpc_vp_print_dhcp_fields(fp, packet->vps);
+
+	fprintf(fp, "DHCP vps options:\n");
+	if (dpc_vp_print_dhcp_options(fp, packet->vps) == 0) {
+		fprintf(fp, "\t(empty list)\n");
+	}
 }
 
 /*
