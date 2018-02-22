@@ -155,6 +155,11 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 
 	} /* loop over the input vps */
 
+	if (!request->code) {
+		ERROR("No packet type specified in command line or input vps");
+		return NULL;
+	}
+
 	/*
 	 *	Set defaults if they weren't specified via pairs
 	 */
@@ -177,33 +182,34 @@ static void dpc_do_request(void)
 	dpc_input_t *input = dpc_get_input_list_head(&vps_list_in);
 
 	request = request_init(input);
-
-	if (fr_debug_lvl > 1) {
-		DEBUG2("Request input vps:");
-		fr_pair_list_fprint(fr_log_fp, request->vps);
-	}
-
-	/*
-	 *	Encode the packet
-	 */
-	if (fr_dhcpv4_packet_encode(request) < 0) {
-		ERROR("Failed encoding packet");
-		exit(EXIT_FAILURE);
-	}
-
-	//if (fr_debug_lvl) {
-	//	fr_dhcpv4_packet_decode(request);
-	//	dhcp_packet_debug(request, false);
-	//}
-
-	ret = send_with_socket(&reply, request);
-
-	if (reply) {
-		if (fr_dhcpv4_packet_decode(reply) < 0) {
-			ERROR("Failed decoding packet");
-			ret = -1;
+	if (request) {
+		if (fr_debug_lvl > 1) {
+			DEBUG2("Request input vps:");
+			fr_pair_list_fprint(fr_log_fp, request->vps);
 		}
-		//dhcp_packet_debug(reply, true);
+
+		/*
+		 *	Encode the packet
+		 */
+		if (fr_dhcpv4_packet_encode(request) < 0) {
+			ERROR("Failed encoding packet");
+			exit(EXIT_FAILURE);
+		}
+
+		//if (fr_debug_lvl) {
+		//	fr_dhcpv4_packet_decode(request);
+		//	dhcp_packet_debug(request, false);
+		//}
+
+		ret = send_with_socket(&reply, request);
+
+		if (reply) {
+			if (fr_dhcpv4_packet_decode(reply) < 0) {
+				ERROR("Failed decoding packet");
+				ret = -1;
+			}
+			//dhcp_packet_debug(reply, true);
+		}
 	}
 
 	talloc_free(input);
@@ -369,6 +375,7 @@ static void dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 		dpc_handle_input(input);
 
 	} while (!file_done);
+	fr_strerror(); /* Clear the error buffer */
 
 	DEBUG("Done reading input, list size: %d", vps_list_in.size);
 }
