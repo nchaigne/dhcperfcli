@@ -29,6 +29,8 @@ char const *radius_dir = RADDBDIR;
 char const *dict_dir = DICTDIR;
 fr_dict_t *dict = NULL;
 
+char const *file_vps_in = NULL;
+
 
 /*
  *	Load input vps.
@@ -68,9 +70,35 @@ static int dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 }
 
 /*
+ *	Load input vps, either from a file if specified, or stdin otherwise.
+ */
+static int dpc_load_input_file(TALLOC_CTX *ctx)
+{
+	FILE *file_in = NULL;
+
+	/*
+	 *	Determine where to read the vps from.
+	 */
+	if (file_vps_in && strcmp(file_vps_in, "-") != 0) {
+		DEBUG("Opening input file: %s", file_vps_in);
+
+		file_in = fopen(file_vps_in, "r");
+		if (!file_in) {
+			ERROR("Error opening %s: %s", file_vps_in, strerror(errno));
+			return 0;
+		}
+	} else {
+		DEBUG("Reading input vps from stdin");
+		file_in = stdin;
+	}
+
+	return dpc_load_input(ctx, file_in);
+}
+
+/*
  *	Load dictionaries.
  */
-static void dpc_dict_init()
+static void dpc_dict_init(void)
 {
 	fr_dict_attr_t const *da;
 
@@ -99,14 +127,49 @@ static void dpc_dict_init()
 	}
 }
 
+/*
+ *	Display the syntax for starting this program.
+ */
+static void NEVER_RETURNS usage(int status)
+{
+	FILE *output = status?stderr:stdout;
+
+	fprintf(output, "Usage placeholder");
+
+	exit(status);
+}
+
+/*
+ *	Process command line options.
+ */
+static void dpc_read_options(int argc, char **argv)
+{
+	int c;
+
+	/*  Process the options.  */
+	while ((c = getopt(argc, argv, "f:")) != EOF) switch (c) {
+		case 'f':
+			file_vps_in = optarg;
+			break;
+
+		default:
+			usage(1);
+			break;
+	}
+	argc -= (optind - 1);
+	argv += (optind - 1);
+}
+
 int main(int argc, char **argv)
 {
 	fr_debug_lvl = 4; // for now
 	fr_log_fp = stdout;
 
+	dpc_read_options(argc, argv);
+
 	dpc_dict_init();
 
-	dpc_load_input(NULL, stdin);
+	dpc_load_input_file(NULL);
 
 	return 0;
 }
