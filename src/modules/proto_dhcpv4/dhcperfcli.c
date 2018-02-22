@@ -3,34 +3,92 @@
  */
 
 #include <freeradius-devel/libradius.h>
+#include <assert.h>
+
 
 #undef DEBUG
 #define DEBUG(fmt, ...)		if (fr_debug_lvl > 0) fr_printf_log(fmt "\n", ## __VA_ARGS__)
+
+#undef DEBUG2
+#define DEBUG2(fmt, ...)	if (fr_debug_lvl > 1) fr_printf_log(fmt "\n", ## __VA_ARGS__)
 
 #undef ERROR
 #define ERROR(fmt, ...)		fr_perror("ERROR: " fmt, ## __VA_ARGS__)
 
 
 typedef struct dpc_input dpc_input_t;
+typedef struct dpc_input_list dpc_input_list_t;
 
 /*
  *	Holds input data (vps read from file or stdin).
  */
 struct dpc_input {
 	VALUE_PAIR *vps;
+
+	dpc_input_list_t *list; // the list to which this entry belongs (NULL for an unchained entry).
+
+	dpc_input_t *prev;
+	dpc_input_t *next;
+};
+
+/*
+ *	Chained list of input data elements.
+ */
+struct dpc_input_list {
+	dpc_input_t *head;
+	dpc_input_t *tail;
+	uint32_t size;
 };
 
 
 
 /*
- *  Global variables.
+ *	Global variables.
  */
 char const *radius_dir = RADDBDIR;
 char const *dict_dir = DICTDIR;
 fr_dict_t *dict = NULL;
 
-char const *file_vps_in = NULL;
+static char const *file_vps_in = NULL;
+static dpc_input_list_t vps_list_in = { 0 };
 
+
+/*
+ *	Add an allocated input entry to the tail of the list.
+ */
+static void dpc_add_vps_entry(dpc_input_list_t *list, dpc_input_t *entry)
+{
+	if (!list || !entry) return;
+
+	if (!list->head) {
+		assert(list->tail == NULL);
+		list->head = entry;
+		entry->prev = NULL;
+	} else {
+		assert(list->tail != NULL);
+		assert(list->tail->next == NULL);
+		list->tail->next = entry;
+		entry->prev = list->tail;
+	}
+	list->tail = entry;
+	entry->next = NULL;
+	entry->list = list;
+	list->size ++;
+}
+
+/*
+ *	Handle a list of input vps we've just read.
+ */
+static void dpc_handle_input(dpc_input_t *input)
+{
+	// for now, just trace what we've read.
+	if (fr_debug_lvl > 1) {
+		DEBUG2("Input vps read:");
+		fr_pair_list_fprint(fr_log_fp, input->vps);
+	}
+
+	dpc_add_vps_entry(&vps_list_in, input);
+}
 
 /*
  *	Load input vps.
@@ -57,14 +115,11 @@ static int dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 			break;
 		}
 
-		// for now, just trace what we've read.
-		if (fr_debug_lvl > 0) {
-			DEBUG("Input vps read:");
-			fr_pair_list_fprint(fr_log_fp, input->vps);
-		}
-		talloc_free(input);
+		dpc_handle_input(input);
 
 	} while (!file_done);
+
+	DEBUG("Done reading input, list size: %d", vps_list_in.size);
 
 	return 1;
 }
