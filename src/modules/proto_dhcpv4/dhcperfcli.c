@@ -24,6 +24,18 @@ static uint16_t server_port = DHCP_PORT_SERVER;
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = 0;
 
+static const FR_NAME_NUMBER request_types[] = {
+	{ "discover", FR_DHCPV4_DISCOVER },
+	{ "request",  FR_DHCPV4_REQUEST },
+	{ "decline",  FR_DHCPV4_DECLINE },
+	{ "release",  FR_DHCPV4_RELEASE },
+	{ "inform",   FR_DHCPV4_INFORM },
+	{ "lease_query",  FR_DHCPV4_LEASE_QUERY },
+	{ "auto",     FR_CODE_UNDEFINED },
+	{ NULL, 0}
+};
+
+
 /*
  *	Static functions declaration.
  */
@@ -149,7 +161,7 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 	if (request->src_ipaddr.af == AF_UNSPEC) request->src_ipaddr = client_ipaddr;
 	if (request->dst_ipaddr.af == AF_UNSPEC) request->dst_ipaddr = server_ipaddr;
 	if (!request->code) request->code = packet_code;
-	
+
 	return request;
 }
 
@@ -424,7 +436,7 @@ static void dpc_event_init(TALLOC_CTX *ctx)
 }
 
 /*
- *	Resolve host address.
+ *	Resolve host address and port.
  */
 static void dpc_resolve_hostaddr(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port)
 {
@@ -455,6 +467,23 @@ static void NEVER_RETURNS usage(int status)
 }
 
 /*
+ *	See what kind of request we want to send.
+ */
+static void dpc_parse_command(char const *command)
+{
+	// request types (or "auto")
+	if (!isdigit((int) command[0])) {
+		packet_code = fr_str2int(request_types, command, -2);
+		if (packet_code == -2) {
+			ERROR("Unrecognised packet type \"%s\"", command);
+			usage(1);
+		}
+	} else {
+		packet_code = atoi(command);
+	}
+}
+
+/*
  *	Process command line options and arguments.
  */
 static void dpc_read_options(int argc, char **argv)
@@ -480,6 +509,13 @@ static void dpc_read_options(int argc, char **argv)
 	 */
 	dpc_resolve_hostaddr(argv[1], &server_ipaddr, &server_port);
 	client_ipaddr.af = server_ipaddr.af;
+
+	/*
+	 *	See what kind of request we want to send.
+	 */
+	if (argc - 1 >= 2) {
+		dpc_parse_command(argv[2]);
+	}
 }
 
 int main(int argc, char **argv)
@@ -496,7 +532,6 @@ int main(int argc, char **argv)
 	dpc_load_input_file(autofree);
 
 	// for now, just send one
-	packet_code = FR_DHCPV4_DISCOVER;
 	dpc_do_request();
 
 	return 0;
