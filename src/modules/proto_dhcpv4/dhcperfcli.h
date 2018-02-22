@@ -4,6 +4,7 @@
 
 #include <freeradius-devel/libradius.h>
 #include <freeradius-devel/event.h>
+#include <freeradius-devel/dhcpv4/dhcpv4.h>
 
 #include <assert.h>
 

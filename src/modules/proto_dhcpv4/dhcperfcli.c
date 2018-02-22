@@ -19,9 +19,211 @@ static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
 
 static fr_ipaddr_t server_ipaddr = { 0 };
+static fr_ipaddr_t client_ipaddr = { 0 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static int force_af = AF_INET; // we only do DHCPv4.
+static int packet_code = 0;
 
+/*
+ *	Static functions declaration.
+ */
+static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
+static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
+
+
+/*
+ *	Basic send / receive, for now.
+ */
+static int sockfd;
+static struct timeval tv_timeout;
+static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
+{
+	int on = 1;
+
+	sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
+	if (sockfd < 0) {
+		ERROR("Error opening socket: %s", fr_strerror());
+		return -1;
+	}
+
+	if (fr_socket_bind(sockfd, &request->src_ipaddr, &request->src_port, NULL) < 0) {
+		ERROR("Error binding socket: %s", fr_strerror());
+		return -1;
+	}
+
+	/*
+	 *	Set option 'receive timeout' on socket.
+	 *	Note: in case of a timeout, the error will be "Resource temporarily unavailable".
+	 */
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_timeout, sizeof(struct timeval)) == -1) {
+		ERROR("Failed setting socket timeout: %s", fr_syserror(errno));
+		return -1;
+	}
+
+	if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
+		ERROR("Can't set broadcast option: %s", fr_syserror(errno));
+		return -1;
+	}
+	request->sockfd = sockfd;
+
+	if (fr_dhcpv4_udp_packet_send(request) < 0) {
+		ERROR("Failed sending: %s", fr_syserror(errno));
+		return -1;
+	}
+
+	*reply = fr_dhcpv4_udp_packet_recv(sockfd);
+	if (!*reply) {
+		if (errno == EAGAIN) {
+			fr_strerror(); /* clear error */
+			ERROR("Timed out waiting for reply");
+		} else {
+			ERROR("Error receiving reply");
+		}
+		return -1;
+	}
+
+	return 0;
+}
+
+static RADIUS_PACKET *request_init(dpc_input_t *input)
+{
+	vp_cursor_t cursor;
+	VALUE_PAIR *vp;
+	RADIUS_PACKET *request;
+
+	MEM(request = fr_radius_alloc(input, true));
+
+	// fill in the packet value pairs
+	dpc_pair_list_append(request, &request->vps, input->vps);
+
+	/*
+	 *	Fix / set various options
+	 */
+	for (vp = fr_pair_cursor_init(&cursor, &input->vps);
+	     vp;
+	     vp = fr_pair_cursor_next(&cursor)) {
+		/*
+		 *	Allow to set packet type using DHCP-Message-Type
+		 */
+		if (vp->da->vendor == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
+			request->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
+		} else if (!vp->da->vendor) switch (vp->da->attr) {
+		/*
+		 *	Allow it to set the packet type in
+		 *	the attributes read from the file.
+		 *	(this takes precedence over the command argument.)
+		 */
+		case FR_PACKET_TYPE:
+			request->code = vp->vp_uint32;
+			break;
+
+		case FR_PACKET_DST_PORT:
+			request->dst_port = vp->vp_uint16;
+			break;
+
+		case FR_PACKET_DST_IP_ADDRESS:
+		case FR_PACKET_DST_IPV6_ADDRESS:
+			memcpy(&request->dst_ipaddr, &vp->vp_ip, sizeof(request->src_ipaddr));
+			break;
+
+		case FR_PACKET_SRC_PORT:
+			request->src_port = vp->vp_uint16;
+			break;
+
+		case FR_PACKET_SRC_IP_ADDRESS:
+		case FR_PACKET_SRC_IPV6_ADDRESS:
+			memcpy(&request->src_ipaddr, &vp->vp_ip, sizeof(request->src_ipaddr));
+			break;
+
+		default:
+			break;
+		} /* switch over the attribute */
+
+	} /* loop over the input vps */
+
+	/*
+	 *	Set defaults if they weren't specified via pairs
+	 */
+	if (request->src_port == 0) request->src_port = server_port + 1;
+	if (request->dst_port == 0) request->dst_port = server_port;
+	if (request->src_ipaddr.af == AF_UNSPEC) request->src_ipaddr = client_ipaddr;
+	if (request->dst_ipaddr.af == AF_UNSPEC) request->dst_ipaddr = server_ipaddr;
+	if (!request->code) request->code = packet_code;
+	
+	return request;
+}
+
+static void dpc_do_request(void)
+{
+	RADIUS_PACKET *request = NULL;
+	RADIUS_PACKET *reply = NULL;
+	int ret;
+
+	// grab one input entry
+	dpc_input_t *input = dpc_get_input_list_head(&vps_list_in);
+
+	request = request_init(input);
+
+	if (fr_debug_lvl > 1) {
+		DEBUG2("Request input vps:");
+		fr_pair_list_fprint(fr_log_fp, request->vps);
+	}
+
+	/*
+	 *	Encode the packet
+	 */
+	if (fr_dhcpv4_packet_encode(request) < 0) {
+		ERROR("Failed encoding packet");
+		exit(EXIT_FAILURE);
+	}
+
+	//if (fr_debug_lvl) {
+	//	fr_dhcpv4_packet_decode(request);
+	//	dhcp_packet_debug(request, false);
+	//}
+
+	ret = send_with_socket(&reply, request);
+
+	if (reply) {
+		if (fr_dhcpv4_packet_decode(reply) < 0) {
+			ERROR("Failed decoding packet");
+			ret = -1;
+		}
+		//dhcp_packet_debug(reply, true);
+	}
+
+	talloc_free(input);
+}
+
+/*
+ *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
+ */
+static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
+{
+	vp_cursor_t src, dst;
+
+	if (NULL == *to) { // fall back to fr_pair_list_copy for a new list.
+		*to = fr_pair_list_copy(ctx, from);
+		return (*to);
+	}
+
+	VALUE_PAIR *out = *to, *vp;
+
+	fr_pair_cursor_init(&dst, &out);
+	for (vp = fr_pair_cursor_init(&src, &from);
+	     vp;
+	     vp = fr_pair_cursor_next(&src)) {
+		VP_VERIFY(vp);
+		vp = fr_pair_copy(ctx, vp);
+		if (!vp) {
+			fr_pair_list_free(&out);
+			return NULL;
+		}
+		fr_pair_cursor_append(&dst, vp); /* fr_pair_list_copy sets next pointer to NULL */
+	}
+
+	return *to;
+}
 
 /*
  *	Add an allocated input entry to the tail of the list.
@@ -253,7 +455,7 @@ static void NEVER_RETURNS usage(int status)
 }
 
 /*
- *	Process command line options.
+ *	Process command line options and arguments.
  */
 static void dpc_read_options(int argc, char **argv)
 {
@@ -277,6 +479,7 @@ static void dpc_read_options(int argc, char **argv)
 	 *	Resolve server host address and port.
 	 */
 	dpc_resolve_hostaddr(argv[1], &server_ipaddr, &server_port);
+	client_ipaddr.af = server_ipaddr.af;
 }
 
 int main(int argc, char **argv)
@@ -292,9 +495,9 @@ int main(int argc, char **argv)
 
 	dpc_load_input_file(autofree);
 
-	// grab one (just because we can)
-	dpc_input_t *one = dpc_get_input_list_head(&vps_list_in);
-	talloc_free(one);
+	// for now, just send one
+	packet_code = FR_DHCPV4_DISCOVER;
+	dpc_do_request();
 
 	return 0;
 }
