@@ -2,46 +2,7 @@
  * dhcperfcli.c
  */
 
-#include <freeradius-devel/libradius.h>
-#include <freeradius-devel/event.h>
-
-#include <assert.h>
-
-
-#undef DEBUG
-#define DEBUG(fmt, ...)		if (fr_debug_lvl > 0) fr_printf_log(fmt "\n", ## __VA_ARGS__)
-
-#undef DEBUG2
-#define DEBUG2(fmt, ...)	if (fr_debug_lvl > 1) fr_printf_log(fmt "\n", ## __VA_ARGS__)
-
-#undef ERROR
-#define ERROR(fmt, ...)		fr_perror("ERROR: " fmt, ## __VA_ARGS__)
-
-
-typedef struct dpc_input dpc_input_t;
-typedef struct dpc_input_list dpc_input_list_t;
-
-/*
- *	Holds input data (vps read from file or stdin).
- */
-struct dpc_input {
-	VALUE_PAIR *vps;
-
-	dpc_input_list_t *list; // the list to which this entry belongs (NULL for an unchained entry).
-
-	dpc_input_t *prev;
-	dpc_input_t *next;
-};
-
-/*
- *	Chained list of input data elements.
- */
-struct dpc_input_list {
-	dpc_input_t *head;
-	dpc_input_t *tail;
-	uint32_t size;
-};
-
+#include "dhcperfcli.h"
 
 
 /*
@@ -56,6 +17,10 @@ fr_event_list_t *event_list = NULL;
 
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
+
+static fr_ipaddr_t server_ipaddr = { 0 };
+static uint16_t server_port = DHCP_PORT_SERVER;
+static int force_af = AF_INET; // we only do DHCPv4.
 
 
 /*
@@ -257,13 +222,32 @@ static void dpc_event_init(TALLOC_CTX *ctx)
 }
 
 /*
+ *	Resolve host address.
+ */
+static void dpc_resolve_hostaddr(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port)
+{
+	if (!host_arg || !host_ipaddr || !host_port) return;
+
+	uint16_t port;
+
+	if (fr_inet_pton_port(host_ipaddr, &port, host_arg, -1, force_af, true, true) < 0) {
+		ERROR("Failed to parse host address");
+		exit(EXIT_FAILURE);
+	}
+
+	if (port != 0) { /* If a port is specified, use it. Otherwise, keep default. */
+		*host_port = port;
+	}
+}
+
+/*
  *	Display the syntax for starting this program.
  */
 static void NEVER_RETURNS usage(int status)
 {
 	FILE *output = status?stderr:stdout;
 
-	fprintf(output, "Usage placeholder");
+	fprintf(output, "Usage placeholder\n");
 
 	exit(status);
 }
@@ -286,6 +270,13 @@ static void dpc_read_options(int argc, char **argv)
 	}
 	argc -= (optind - 1);
 	argv += (optind - 1);
+
+	if (argc - 1 < 1) usage(1);
+
+	/*
+	 *	Resolve server host address and port.
+	 */
+	dpc_resolve_hostaddr(argv[1], &server_ipaddr, &server_port);
 }
 
 int main(int argc, char **argv)
