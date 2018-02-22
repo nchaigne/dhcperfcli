@@ -77,6 +77,62 @@ static void dpc_add_vps_entry(dpc_input_list_t *list, dpc_input_t *entry)
 }
 
 /*
+ *	Remove an input entry from its list.
+ */
+static dpc_input_t *dpc_yank_vps_entry(dpc_input_t *entry)
+{
+	if (!entry) return NULL; // should not happen.
+	if (!entry->list) return entry; // not in a list: just return the entry.
+
+	dpc_input_t *prev, *next;
+
+	prev = entry->prev;
+	next = entry->next;
+
+	dpc_input_list_t *list = entry->list;
+
+	assert(list->head != NULL); // entry belongs to a list, so the list can't be empty.
+	assert(list->tail != NULL); // same.
+
+	if (prev) {
+		assert(list->head != entry); // if entry has a prev, then entry can't be head.
+		prev->next = next;
+	}
+	else {
+		assert(list->head == entry); // if entry has no prev, then entry must be head.
+		list->head = next;
+	}
+
+	if (next) {
+		assert(list->tail != entry); // if entry has a next, then entry can't be tail.
+		next->prev = prev;
+	}
+	else {
+		assert(list->tail == entry); // if entry has no next, then entry must be tail.
+		list->tail = prev;
+	}
+
+	entry->list = NULL;
+	entry->prev = NULL;
+	entry->next = NULL;
+	list->size --;
+	return entry;
+}
+
+/*
+ *	Get the head input entry from a list.
+ */
+static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
+{
+	if (!list) return NULL;
+	if (!list->head || list->size == 0) { // list is empty.
+		return NULL;
+	}
+	// list is valid and has at least one element.
+	return dpc_yank_vps_entry(list->head);
+}
+
+/*
  *	Handle a list of input vps we've just read.
  */
 static void dpc_handle_input(dpc_input_t *input)
@@ -201,7 +257,6 @@ static void dpc_read_options(int argc, char **argv)
 {
 	int c;
 
-	/*  Process the options.  */
 	while ((c = getopt(argc, argv, "f:")) != EOF) switch (c) {
 		case 'f':
 			file_vps_in = optarg;
@@ -225,6 +280,10 @@ int main(int argc, char **argv)
 	dpc_dict_init();
 
 	dpc_load_input_file(NULL);
+
+	// grab one (just because we can)
+	dpc_input_t *one = dpc_get_input_list_head(&vps_list_in);
+	talloc_free(one);
 
 	return 0;
 }
