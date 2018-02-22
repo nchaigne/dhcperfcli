@@ -154,7 +154,7 @@ static void dpc_handle_input(dpc_input_t *input)
 /*
  *	Load input vps.
  */
-static int dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
+static void dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -181,8 +181,6 @@ static int dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 	} while (!file_done);
 
 	DEBUG("Done reading input, list size: %d", vps_list_in.size);
-
-	return 1;
 }
 
 /*
@@ -201,14 +199,17 @@ static int dpc_load_input_file(TALLOC_CTX *ctx)
 		file_in = fopen(file_vps_in, "r");
 		if (!file_in) {
 			ERROR("Error opening %s: %s", file_vps_in, strerror(errno));
-			return 0;
+			return -1;
 		}
 	} else {
 		DEBUG("Reading input vps from stdin");
 		file_in = stdin;
 	}
 
-	return dpc_load_input(ctx, file_in);
+	dpc_load_input(ctx, file_in);
+
+	if (file_in != stdin) fclose(file_in);
+	return 0;
 }
 
 /*
@@ -246,12 +247,13 @@ static void dpc_dict_init(void)
 /*
  *	Initialize event list.
  */
-static int dpc_event_init(TALLOC_CTX *ctx)
+static void dpc_event_init(TALLOC_CTX *ctx)
 {
 	event_list = fr_event_list_alloc(ctx, NULL, NULL);
-	if (!event_list) return 0;
-
-	return 1;
+	if (!event_list) {
+		ERROR("Failed to create event list");
+		exit(EXIT_FAILURE);
+	}
 }
 
 /*
