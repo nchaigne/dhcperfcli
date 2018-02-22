@@ -56,7 +56,7 @@ static dpc_input_list_t vps_list_in = { 0 };
 /*
  *	Add an allocated input entry to the tail of the list.
  */
-static void dpc_add_vps_entry(dpc_input_list_t *list, dpc_input_t *entry)
+static void dpc_add_input_entry(dpc_input_list_t *list, dpc_input_t *entry)
 {
 	if (!list || !entry) return;
 
@@ -79,7 +79,7 @@ static void dpc_add_vps_entry(dpc_input_list_t *list, dpc_input_t *entry)
 /*
  *	Remove an input entry from its list.
  */
-static dpc_input_t *dpc_yank_vps_entry(dpc_input_t *entry)
+static dpc_input_t *dpc_yank_input_entry(dpc_input_t *entry)
 {
 	if (!entry) return NULL; // should not happen.
 	if (!entry->list) return entry; // not in a list: just return the entry.
@@ -129,7 +129,7 @@ static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
 		return NULL;
 	}
 	// list is valid and has at least one element.
-	return dpc_yank_vps_entry(list->head);
+	return dpc_yank_input_entry(list->head);
 }
 
 /*
@@ -143,7 +143,7 @@ static void dpc_handle_input(dpc_input_t *input)
 		fr_pair_list_fprint(fr_log_fp, input->vps);
 	}
 
-	dpc_add_vps_entry(&vps_list_in, input);
+	dpc_add_input_entry(&vps_list_in, input);
 }
 
 /*
