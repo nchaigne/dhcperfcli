@@ -155,11 +155,6 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 
 	} /* loop over the input vps */
 
-	if (!request->code) {
-		ERROR("No packet type specified in command line or input vps");
-		return NULL;
-	}
-
 	/*
 	 *	Set defaults if they weren't specified via pairs
 	 */
@@ -168,6 +163,11 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 	if (request->src_ipaddr.af == AF_UNSPEC) request->src_ipaddr = client_ipaddr;
 	if (request->dst_ipaddr.af == AF_UNSPEC) request->dst_ipaddr = server_ipaddr;
 	if (!request->code) request->code = packet_code;
+
+	if (!request->code) {
+		ERROR("No packet type specified in command line or input vps");
+		return NULL;
+	}
 
 	return request;
 }
