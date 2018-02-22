@@ -22,7 +22,10 @@ static fr_ipaddr_t server_ipaddr = { 0 };
 static fr_ipaddr_t client_ipaddr = { 0 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static int force_af = AF_INET; // we only do DHCPv4.
-static int packet_code = 0;
+static int packet_code = FR_CODE_UNDEFINED;
+
+static float timeout = 3.0;
+static struct timeval tv_timeout;
 
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover", FR_DHCPV4_DISCOVER },
@@ -47,7 +50,6 @@ static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_
  *	Basic send / receive, for now.
  */
 static int sockfd;
-static struct timeval tv_timeout;
 static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 {
 	int on = 1;
@@ -205,6 +207,15 @@ static void dpc_do_request(void)
 	}
 
 	talloc_free(input);
+}
+
+/*
+ * Convert a float to struct timeval.
+ */
+static void dpc_float_to_timeval(struct timeval *tv, float f_val)
+{
+	tv->tv_sec = (time_t)f_val;
+	tv->tv_usec = (uint64_t)(f_val * USEC) - (tv->tv_sec * USEC);
 }
 
 /*
@@ -490,9 +501,14 @@ static void dpc_read_options(int argc, char **argv)
 {
 	int c;
 
-	while ((c = getopt(argc, argv, "f:")) != EOF) switch (c) {
+	while ((c = getopt(argc, argv, "f:t:")) != EOF) switch (c) {
 		case 'f':
 			file_vps_in = optarg;
+			break;
+
+		case 't':
+			if (!isdigit((int) *optarg)) usage(1);
+			timeout = atof(optarg);
 			break;
 
 		default:
@@ -516,6 +532,8 @@ static void dpc_read_options(int argc, char **argv)
 	if (argc - 1 >= 2) {
 		dpc_parse_command(argv[2]);
 	}
+
+	dpc_float_to_timeval(&tv_timeout, timeout);
 }
 
 int main(int argc, char **argv)
