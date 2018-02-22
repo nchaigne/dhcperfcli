@@ -3,6 +3,8 @@
  */
 
 #include <freeradius-devel/libradius.h>
+#include <freeradius-devel/event.h>
+
 #include <assert.h>
 
 
@@ -48,6 +50,9 @@ struct dpc_input_list {
 char const *radius_dir = RADDBDIR;
 char const *dict_dir = DICTDIR;
 fr_dict_t *dict = NULL;
+
+TALLOC_CTX *autofree = NULL;
+fr_event_list_t *event_list = NULL;
 
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
@@ -239,6 +244,17 @@ static void dpc_dict_init(void)
 }
 
 /*
+ *	Initialize event list.
+ */
+static int dpc_event_init(TALLOC_CTX *ctx)
+{
+	event_list = fr_event_list_alloc(ctx, NULL, NULL);
+	if (!event_list) return 0;
+
+	return 1;
+}
+
+/*
  *	Display the syntax for starting this program.
  */
 static void NEVER_RETURNS usage(int status)
@@ -279,7 +295,9 @@ int main(int argc, char **argv)
 
 	dpc_dict_init();
 
-	dpc_load_input_file(NULL);
+	dpc_event_init(autofree);
+
+	dpc_load_input_file(autofree);
 
 	// grab one (just because we can)
 	dpc_input_t *one = dpc_get_input_list_head(&vps_list_in);
