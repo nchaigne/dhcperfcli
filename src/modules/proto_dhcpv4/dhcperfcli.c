@@ -44,6 +44,7 @@ static const FR_NAME_NUMBER request_types[] = {
  */
 static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
+static void dpc_print_packet(FILE *fp, RADIUS_PACKET *packet, bool received);
 
 
 /*
@@ -176,7 +177,7 @@ static void dpc_do_request(void)
 {
 	RADIUS_PACKET *request = NULL;
 	RADIUS_PACKET *reply = NULL;
-	int ret;
+	UNUSED int ret;
 
 	// grab one input entry
 	dpc_input_t *input = dpc_get_input_list_head(&vps_list_in);
@@ -192,7 +193,7 @@ static void dpc_do_request(void)
 		 *	Encode the packet
 		 */
 		if (fr_dhcpv4_packet_encode(request) < 0) {
-			ERROR("Failed encoding packet");
+			ERROR("Failed encoding request packet");
 			exit(EXIT_FAILURE);
 		}
 
@@ -200,19 +201,88 @@ static void dpc_do_request(void)
 		//	fr_dhcpv4_packet_decode(request);
 		//	dhcp_packet_debug(request, false);
 		//}
+		dpc_print_packet(fr_log_fp, request, false); /* print request packet. */
 
 		ret = send_with_socket(&reply, request);
 
 		if (reply) {
 			if (fr_dhcpv4_packet_decode(reply) < 0) {
-				ERROR("Failed decoding packet");
+				ERROR("Failed decoding reply packet");
 				ret = -1;
 			}
-			//dhcp_packet_debug(reply, true);
+
+			dpc_print_packet(fr_log_fp, reply, true); /* print reply packet. */
 		}
 	}
 
 	talloc_free(input);
+}
+
+/*
+ *	Print an ethernet address in a buffer.
+ */
+static char *ether_addr_print(const uint8_t *addr, char *buf)
+{
+	sprintf (buf, "%02x:%02x:%02x:%02x:%02x:%02x",
+		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	return buf;
+}
+
+/*
+ *	Print the packet header.
+ */
+static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received)
+{
+	char src_ipaddr[128] = "";
+	char dst_ipaddr[128] = "";
+
+	uint32_t yiaddr;
+	char lease_ipaddr[128] = "";
+	uint8_t hwaddr[6] = "";
+	char buf_hwaddr[128] = "";
+
+	if (!fp) return;
+	if (!packet) return;
+
+	/* Internally, DHCP packet code starts with an offset of 1024 (hack), so... */
+	int code = packet->code - FR_DHCPV4_OFFSET;
+
+	fprintf(fp, "%s", received ? "Received" : "Sent");
+
+	if (is_dhcp_code(code)) {
+		fprintf(fp, " %s", dhcp_message_types[code]);
+	} else {
+		fprintf(fp, " DHCP packet");
+		if (code <= 0) fprintf(fp, " (BOOTP)"); /* No DHCP Message Type: BOOTP (or malformed DHCP packet). */
+		else fprintf(fp, " (code %u)", code);
+	}
+
+	/* DHCP specific information */
+	memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
+	fprintf(fp, " (hwaddr: %s", ether_addr_print(hwaddr, buf_hwaddr) );
+
+	if (packet->code == FR_DHCPV4_ACK || packet->code == FR_DHCPV4_OFFER) {
+		memcpy(&yiaddr, packet->data + 16, 4);
+		fprintf(fp, ", yiaddr: %s", inet_ntop(AF_INET, &yiaddr, lease_ipaddr, sizeof(lease_ipaddr)) );
+	}
+	fprintf(fp, ")");
+
+	/* Generic protocol information. */
+	fprintf(fp, " Id %u (0x%08x) from %s:%i to %s:%i length %zu\n",
+	        packet->id, packet->id,
+	        inet_ntop(packet->src_ipaddr.af, &packet->src_ipaddr.addr, src_ipaddr, sizeof(src_ipaddr)),
+	        packet->src_port,
+	        inet_ntop(packet->dst_ipaddr.af, &packet->dst_ipaddr.addr, dst_ipaddr, sizeof(dst_ipaddr)),
+	        packet->dst_port,
+	        packet->data_len);
+}
+
+/*
+ * Print a DHCP packet.
+ */
+static void dpc_print_packet(FILE *fp, RADIUS_PACKET *packet, bool received)
+{
+	dpc_packet_header_print(fp, packet, received);
 }
 
 /*
@@ -545,7 +615,7 @@ static void dpc_read_options(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	fr_debug_lvl = 4; // for now
+	fr_debug_lvl = 2; // for now
 	fr_log_fp = stdout;
 
 	dpc_read_options(argc, argv);

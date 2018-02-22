@@ -22,6 +22,10 @@
 
 
 #define DHCP_PORT_SERVER	67
+#define DHCP_MAX_MESSAGE_TYPE (16)
+// DHCP_MAX_MESSAGE_TYPE is defined in src/protocols/dhcpv4/base.c, we need our own.
+
+#define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
 
 typedef struct dpc_input dpc_input_t;
