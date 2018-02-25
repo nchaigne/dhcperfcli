@@ -12,5 +12,6 @@ bool dpc_packet_list_yank(dpc_packet_list_t *pl, RADIUS_PACKET *request);
 uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl);
 
 bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, void **pctx);
+bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request, bool yank);
 
 #endif

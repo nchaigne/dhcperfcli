@@ -351,3 +351,32 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 
 	return false;
 }
+
+/*
+ *	Free the ID previously allocated to a given packet, and remove the packet from
+ *	the packet list.
+ *	(ref: function fr_packet_list_id_free from protocols/radius/list.c)
+ */
+
+bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request, bool yank)
+// TODO: do we need "yank" ie are there cases where we could not want to ?
+{
+	dpc_packet_socket_t *ps;
+
+	if (!pl || !request) return false;
+
+	if (yank && !dpc_packet_list_yank(pl, request)) return false;
+
+	ps = dpc_socket_find(pl, request->sockfd);
+	if (!ps) return false;
+
+	ps->num_outgoing--;
+	pl->num_outgoing--;
+
+	request->id = DPC_PACKET_ID_UNASSIGNED;
+	request->sockfd = -1;
+	request->src_ipaddr.af = AF_UNSPEC;
+	request->src_port = 0;
+
+	return true;
+}
