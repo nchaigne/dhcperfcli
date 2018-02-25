@@ -42,9 +42,10 @@ static const FR_NAME_NUMBER request_types[] = {
 /*
  *	Static functions declaration.
  */
+static void usage(int);
 static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
-static void dpc_print_packet(FILE *fp, RADIUS_PACKET *packet, bool received);
+static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
 
 
 /*
@@ -124,8 +125,7 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 			request->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
 		} else if (!vp->da->vendor) switch (vp->da->attr) {
 		/*
-		 *	Allow it to set the packet type in
-		 *	the attributes read from the file.
+		 *	Also allow to set packet type using Packet-Type
 		 *	(this takes precedence over the command argument.)
 		 */
 		case FR_PACKET_TYPE:
@@ -201,7 +201,7 @@ static void dpc_do_request(void)
 		//	fr_dhcpv4_packet_decode(request);
 		//	dhcp_packet_debug(request, false);
 		//}
-		dpc_print_packet(fr_log_fp, request, false); /* print request packet. */
+		dpc_packet_print(fr_log_fp, request, false); /* print request packet. */
 
 		ret = send_with_socket(&reply, request);
 
@@ -211,7 +211,7 @@ static void dpc_do_request(void)
 				ret = -1;
 			}
 
-			dpc_print_packet(fr_log_fp, reply, true); /* print reply packet. */
+			dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 		}
 	}
 
@@ -280,7 +280,7 @@ static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool receiv
 /*
  *	Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
  */
-static void dpc_vp_print_dhcp_fields(FILE *fp, VALUE_PAIR *vp)
+static void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp)
 {
 	fr_cursor_t cursor;
 
@@ -294,7 +294,7 @@ static void dpc_vp_print_dhcp_fields(FILE *fp, VALUE_PAIR *vp)
 /*
  *	Print the "options" of a DHCP packet (from the VPs list).
  */
-static int dpc_vp_print_dhcp_options(FILE *fp, VALUE_PAIR *vp)
+static int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 {
 	char buf[1024];
 	char *p = buf;
@@ -329,15 +329,15 @@ static int dpc_vp_print_dhcp_options(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-static void dpc_print_packet(FILE *fp, RADIUS_PACKET *packet, bool received)
+static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received)
 {
 	dpc_packet_header_print(fp, packet, received);
 
 	fprintf(fp, "DHCP vps fields:\n");
-	dpc_vp_print_dhcp_fields(fp, packet->vps);
+	dpc_packet_fields_print(fp, packet->vps);
 
 	fprintf(fp, "DHCP vps options:\n");
-	if (dpc_vp_print_dhcp_options(fp, packet->vps) == 0) {
+	if (dpc_packet_options_print(fp, packet->vps) == 0) {
 		fprintf(fp, "\t(empty list)\n");
 	}
 }
@@ -384,7 +384,7 @@ static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_
 /*
  *	Add an allocated input entry to the tail of the list.
  */
-static void dpc_add_input_entry(dpc_input_list_t *list, dpc_input_t *entry)
+static void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)
 {
 	if (!list || !entry) return;
 
@@ -407,7 +407,7 @@ static void dpc_add_input_entry(dpc_input_list_t *list, dpc_input_t *entry)
 /*
  *	Remove an input entry from its list.
  */
-static dpc_input_t *dpc_yank_input_entry(dpc_input_t *entry)
+static dpc_input_t *dpc_input_item_draw(dpc_input_t *entry)
 {
 	if (!entry) return NULL; // should not happen.
 	if (!entry->list) return entry; // not in a list: just return the entry.
@@ -457,7 +457,7 @@ static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
 		return NULL;
 	}
 	// list is valid and has at least one element.
-	return dpc_yank_input_entry(list->head);
+	return dpc_input_item_draw(list->head);
 }
 
 /*
@@ -471,13 +471,13 @@ static void dpc_handle_input(dpc_input_t *input)
 		fr_pair_list_fprint(fr_log_fp, input->vps);
 	}
 
-	dpc_add_input_entry(&vps_list_in, input);
+	dpc_input_item_add(&vps_list_in, input);
 }
 
 /*
  *	Load input vps.
  */
-static void dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -494,7 +494,7 @@ static void dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 			break;
 		}
 		if (NULL == input->vps) {
-			/* Last line might be empty, in this case readvp2 will return a NULL vps pointer. Silently ignore this. */
+			/* Last line might be empty, in this case we will obtain a NULL vps pointer. Silently ignore this. */
 			talloc_free(input);
 			break;
 		}
@@ -510,7 +510,7 @@ static void dpc_load_input(TALLOC_CTX *ctx, FILE *file_in)
 /*
  *	Load input vps, either from a file if specified, or stdin otherwise.
  */
-static int dpc_load_input_file(TALLOC_CTX *ctx)
+static int dpc_input_load(TALLOC_CTX *ctx)
 {
 	FILE *file_in = NULL;
 
@@ -530,7 +530,7 @@ static int dpc_load_input_file(TALLOC_CTX *ctx)
 		file_in = stdin;
 	}
 
-	dpc_load_input(ctx, file_in);
+	dpc_input_load_from_fd(ctx, file_in);
 
 	if (file_in != stdin) fclose(file_in);
 	return 0;
@@ -583,7 +583,7 @@ static void dpc_event_init(TALLOC_CTX *ctx)
 /*
  *	Resolve host address and port.
  */
-static void dpc_resolve_hostaddr(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port)
+static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port)
 {
 	if (!host_arg || !host_ipaddr || !host_port) return;
 
@@ -600,21 +600,9 @@ static void dpc_resolve_hostaddr(char *host_arg, fr_ipaddr_t *host_ipaddr, uint1
 }
 
 /*
- *	Display the syntax for starting this program.
- */
-static void NEVER_RETURNS usage(int status)
-{
-	FILE *output = status?stderr:stdout;
-
-	fprintf(output, "Usage placeholder\n");
-
-	exit(status);
-}
-
-/*
  *	See what kind of request we want to send.
  */
-static void dpc_parse_command(char const *command)
+static void dpc_command_parse(char const *command)
 {
 	// request types (or "auto")
 	if (!isdigit((int) command[0])) {
@@ -631,7 +619,7 @@ static void dpc_parse_command(char const *command)
 /*
  *	Process command line options and arguments.
  */
-static void dpc_read_options(int argc, char **argv)
+static void dpc_options_parse(int argc, char **argv)
 {
 	int c;
 
@@ -657,34 +645,51 @@ static void dpc_read_options(int argc, char **argv)
 	/*
 	 *	Resolve server host address and port.
 	 */
-	dpc_resolve_hostaddr(argv[1], &server_ipaddr, &server_port);
+	dpc_host_addr_resolve(argv[1], &server_ipaddr, &server_port);
 	client_ipaddr.af = server_ipaddr.af;
 
 	/*
 	 *	See what kind of request we want to send.
 	 */
 	if (argc - 1 >= 2) {
-		dpc_parse_command(argv[2]);
+		dpc_command_parse(argv[2]);
 	}
 
 	dpc_float_to_timeval(&tv_timeout, timeout);
 }
 
+
+
+/*
+ *	The main guy.
+ */
 int main(int argc, char **argv)
 {
 	fr_debug_lvl = 2; // for now
 	fr_log_fp = stdout;
 
-	dpc_read_options(argc, argv);
+	dpc_options_parse(argc, argv);
 
 	dpc_dict_init();
 
 	dpc_event_init(autofree);
 
-	dpc_load_input_file(autofree);
+	dpc_input_load(autofree);
 
 	// for now, just send one
 	dpc_do_request();
 
 	return 0;
+}
+
+/*
+ *	Display the syntax for starting this program.
+ */
+static void NEVER_RETURNS usage(int status)
+{
+	FILE *output = status?stderr:stdout;
+
+	fprintf(output, "Usage placeholder\n");
+
+	exit(status);
 }
