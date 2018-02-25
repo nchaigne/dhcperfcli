@@ -15,5 +15,6 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request, bool yank);
 
 int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set);
+RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set);
 
 #endif

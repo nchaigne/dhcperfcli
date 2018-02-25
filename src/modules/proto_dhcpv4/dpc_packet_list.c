@@ -12,7 +12,6 @@
 #define DPC_MAX_SOCKETS         1
 #define DPC_ID_ALLOC_MAX_TRIES  100
 
-
 /*
  *	Structure defining a list of DHCP packets (incoming or outgoing)
  *	that should be managed.
@@ -407,4 +406,41 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 	if (maxfd < 0) return -1;
 
 	return maxfd + 1;
+}
+
+/*
+ *	The FD set is ready for reading.
+ *	Loop over the list of sockets tied to the packet list.
+ *	Receive the first incoming packet found.
+ *	(ref: function fr_packet_list_recv from protocols/radius/list.c)
+ */
+RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
+{
+	int start;
+	RADIUS_PACKET *packet;
+
+	if (!pl || !set) return NULL;
+
+	start = pl->last_recv;
+	do {
+		start = (start + 1) % DPC_MAX_SOCKETS;
+
+		if (pl->sockets[start].sockfd == -1) continue;
+
+		if (!FD_ISSET(pl->sockets[start].sockfd, set)) continue;
+
+		packet = fr_dhcpv4_udp_packet_recv(pl->sockets[start].sockfd);
+		if (!packet) continue;
+
+		/*
+		 *	We've received a packet, but are not guaranteed this was an expected reply.
+		 *	Call fr_packet_list_find_byreply(). If it doesn't find anything, discard the reply.
+		 */
+
+		pl->last_recv = start;
+		return packet;
+
+	} while (start != pl->last_recv);
+
+	return NULL;
 }
