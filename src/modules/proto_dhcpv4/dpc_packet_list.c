@@ -162,3 +162,14 @@ bool dpc_packet_list_yank(dpc_packet_list_t *pl, RADIUS_PACKET *request)
 	rbtree_delete(pl->tree, node);
 	return true;
 }
+
+/*
+ *	Get the number of elements in the packet list.
+ *	(ref: function fr_packet_list_num_elements from protocols/radius/list.c)
+ */
+uint32_t dhb_packet_list_num_elements(dhb_packet_list_t *pl)
+{
+	if (!pl) return 0;
+
+	return rbtree_num_elements(pl->tree);
+}
