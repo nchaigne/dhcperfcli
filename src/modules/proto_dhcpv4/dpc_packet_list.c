@@ -67,7 +67,7 @@ void dpc_packet_list_free(dpc_packet_list_t *pl)
 /*
  *	Create the DHCP packet list.
  *	Caller is responsible for managing the packet entries.
- *  (ref: function fr_packet_list_create from protocols/radius/list.c)
+ *	(ref: function fr_packet_list_create from protocols/radius/list.c)
  */
 dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id)
 {
@@ -95,9 +95,21 @@ dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id)
 }
 
 /*
+ *	Insert an element in the packet list.
+ *	Caller is responsible for allocating an ID before calling this.
+ *	(ref: function fr_packet_list_insert from protocols/radius/list.c)
+ */
+bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
+{
+	if (!pl || !request_p || !*request_p) return false;
+
+	return rbtree_insert(pl->tree, request_p);
+}
+
+/*
  *	For the reply packet we've received, look for the corresponding DHCP request
  *	from the packet list.
- *  (ref: function fr_packet_list_find_byreply from protocols/radius/list.c)
+ *	(ref: function fr_packet_list_find_byreply from protocols/radius/list.c)
  */
 RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKET *reply)
 {
@@ -130,4 +142,23 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 	request = &my_request;
 
 	return rbtree_finddata(pl->tree, &request);
+}
+
+/*
+ *	Remove an element from the packet list.
+ *	Note: contrary to RADIUS we don't keep track of allocated ID's per socket.
+ *	Caller is responsible to ensure he won't use again the ID previously allocated.
+ *	(ref: function fr_packet_list_yank from protocols/radius/list.c)
+ */
+bool dpc_packet_list_yank(dpc_packet_list_t *pl, RADIUS_PACKET *request)
+{
+	rbnode_t *node;
+
+	if (!pl || !request) return false;
+
+	node = rbtree_find(pl->tree, &request);
+	if (!node) return false;
+
+	rbtree_delete(pl->tree, node);
+	return true;
 }
