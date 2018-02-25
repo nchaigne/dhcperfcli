@@ -357,7 +357,6 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
  *	the packet list.
  *	(ref: function fr_packet_list_id_free from protocols/radius/list.c)
  */
-
 bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request, bool yank)
 // TODO: do we need "yank" ie are there cases where we could not want to ?
 {
@@ -370,8 +369,8 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request, bool
 	ps = dpc_socket_find(pl, request->sockfd);
 	if (!ps) return false;
 
-	ps->num_outgoing--;
-	pl->num_outgoing--;
+	ps->num_outgoing --;
+	pl->num_outgoing --;
 
 	request->id = DPC_PACKET_ID_UNASSIGNED;
 	request->sockfd = -1;
@@ -379,4 +378,33 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request, bool
 	request->src_port = 0;
 
 	return true;
+}
+
+/*
+ *	Loop over the list of sockets tied to the packet list. Prepare each socket
+ *	for reception, calling FD_SET to update a fd_set structure.
+ *	Return the highest-numbered fd of these sockets + 1.
+ *	(ref: function fr_packet_list_fd_set from protocols/radius/list.c)
+ */
+int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
+{
+	int i, maxfd;
+
+	if (!pl || !set) return 0;
+
+	maxfd = -1;
+
+	FD_ZERO(set); /* Clear the FD set. */
+
+	for (i = 0; i < DPC_MAX_SOCKETS; i++) {
+		if (pl->sockets[i].sockfd == -1) continue;
+		FD_SET(pl->sockets[i].sockfd, set); /* Add the socket fd to the set. */
+		if (pl->sockets[i].sockfd > maxfd) {
+			maxfd = pl->sockets[i].sockfd;
+		}
+	}
+
+	if (maxfd < 0) return -1;
+
+	return maxfd + 1;
 }
