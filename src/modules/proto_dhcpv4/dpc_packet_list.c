@@ -12,6 +12,32 @@
 #define DPC_MAX_SOCKETS         1
 #define DPC_ID_ALLOC_MAX_TRIES  100
 
+
+/*
+ *	Keep track of the socket(s) (along with source and destination IP/port)
+ *	associated to the packet list.
+ *	(ref: structure fr_packet_socket_t from protocols/radius/list.c)
+ *
+ *	Note: we do not keep track of used ID's.
+ */
+typedef struct dpc_packet_socket {
+	int sockfd;
+	void *ctx;
+
+	uint32_t num_outgoing;
+
+	int src_any;
+	fr_ipaddr_t src_ipaddr;
+	uint16_t src_port;
+
+	int dst_any;
+	fr_ipaddr_t dst_ipaddr;
+	uint16_t dst_port;
+
+	bool dont_use;
+
+} dpc_packet_socket_t;
+
 /*
  *	Structure defining a list of DHCP packets (incoming or outgoing)
  *	that should be managed.
@@ -36,6 +62,20 @@ typedef struct dpc_packet_list {
 } dpc_packet_list_t;
 
 
+/*
+ *	TODO
+ *	(ref: function fr_socket_find from protocols/radius/list.c)
+ */
+static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
+{
+	int i;
+	for (i=0; i<pl->num_sockets; i++) {
+		if (pl->sockets[i].sockfd == sockfd) return &pl->sockets[i];
+	}
+
+	return NULL;
+}
+
 
 /*
  *	Find out if two packet entries are "identical" as compared by fr_packet_cmp:
@@ -59,8 +99,8 @@ void dpc_packet_list_free(dpc_packet_list_t *pl)
 {
 	if (!pl) return;
 
-	rbtree_free(pl->tree);
-	free(pl);
+	talloc_free(pl->tree);
+	talloc_free(pl);
 }
 
 /*
@@ -208,7 +248,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 		request->src_ipaddr.af = request->dst_ipaddr.af;
 	}
 
-	src_any = fr_inaddr_any(&request->src_ipaddr);
+	src_any = fr_ipaddr_is_inaddr_any(&request->src_ipaddr);
 	if (src_any < 0) {
 		fr_strerror_printf("Can't check src_ipaddr");
 		return false;
@@ -217,7 +257,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 	/*
 	 *	MUST specify a destination address.
 	 */
-	if (fr_inaddr_any(&request->dst_ipaddr) != 0) {
+	if (fr_ipaddr_is_inaddr_any(&request->dst_ipaddr) != 0) {
 		fr_strerror_printf("Must specify a dst_ipaddr");
 		return false;
 	}

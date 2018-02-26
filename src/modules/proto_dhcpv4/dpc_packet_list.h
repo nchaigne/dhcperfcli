@@ -1,7 +1,17 @@
 #ifndef _DPC_PACKET_LIST_H
 #define _DPC_PACKET_LIST_H
 
+#include <freeradius-devel/libradius.h>
+#include <freeradius-devel/conf.h>
+#include <freeradius-devel/packet.h>
+#include <freeradius-devel/dhcpv4/dhcpv4.h>
+
+
 #define DPC_PACKET_ID_UNASSIGNED (-1)
+
+
+typedef struct dpc_packet_list dpc_packet_list_t;
+
 
 void dpc_packet_list_free(dpc_packet_list_t *pl);
 dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id);
