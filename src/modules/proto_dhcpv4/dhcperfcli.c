@@ -5,6 +5,13 @@
 #include "dhcperfcli.h"
 
 
+static char const *prog_version = "dhcperfcli (FreeRADIUS version " RADIUSD_VERSION_STRING ")"
+#ifdef RADIUSD_VERSION_COMMIT
+" (git #" STRINGIFY(RADIUSD_VERSION_COMMIT) ")"
+#endif
+", built on " __DATE__ " at " __TIME__;
+
+
 /*
  *	Global variables.
  */
@@ -623,7 +630,7 @@ static void dpc_options_parse(int argc, char **argv)
 {
 	int c;
 
-	while ((c = getopt(argc, argv, "f:t:")) != EOF) switch (c) {
+	while ((c = getopt(argc, argv, "f:t:v")) != EOF) switch (c) {
 		case 'f':
 			file_vps_in = optarg;
 			break;
@@ -632,6 +639,10 @@ static void dpc_options_parse(int argc, char **argv)
 			if (!isdigit((int) *optarg)) usage(1);
 			timeout = atof(optarg);
 			break;
+
+		case 'v':
+			printf("%s\n", prog_version);
+			exit(0);
 
 		default:
 			usage(1);
