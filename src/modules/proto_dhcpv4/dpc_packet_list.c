@@ -12,6 +12,10 @@
 #define DPC_MAX_SOCKETS         1
 #define DPC_ID_ALLOC_MAX_TRIES  100
 
+/*
+ *	TODO: once this works, implement something better.
+ */
+
 
 /*
  *	Keep track of the socket(s) (along with source and destination IP/port)
@@ -34,7 +38,7 @@ typedef struct dpc_packet_socket {
 	fr_ipaddr_t dst_ipaddr;
 	uint16_t dst_port;
 
-	bool dont_use;
+	bool dont_use; // TODO: remove. We probably don't need this.
 
 } dpc_packet_socket_t;
 
@@ -63,19 +67,88 @@ typedef struct dpc_packet_list {
 
 
 /*
- *	TODO
+ *	From a given socket FD, retrieve the corresponding element of the socket array
+ *	associated to the packet list.
  *	(ref: function fr_socket_find from protocols/radius/list.c)
  */
 static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 {
 	int i;
-	for (i=0; i<pl->num_sockets; i++) {
+	for (i = 0; i < pl->num_sockets; i++) {
 		if (pl->sockets[i].sockfd == sockfd) return &pl->sockets[i];
 	}
 
-	return NULL;
+	return NULL; /* Socket not found. */
 }
 
+/*
+ *	TODO: this is ugly...
+ *	(ref: function fr_packet_list_socket_add from protocols/radius/list.c)
+ */
+bool dpc_packet_list_socket_add(dpc_packet_list_t *pl, int sockfd,
+                                fr_ipaddr_t *dst_ipaddr, uint16_t dst_port, void *ctx)
+{
+	int i, start;
+	struct sockaddr_storage src;
+	socklen_t sizeof_src;
+	dpc_packet_socket_t *ps;
+
+	if (!pl || !dst_ipaddr || (dst_ipaddr->af == AF_UNSPEC)) {
+		fr_strerror_printf("Invalid argument");
+		return false;
+	}
+
+	if (pl->num_sockets >= DPC_MAX_SOCKETS) {
+		fr_strerror_printf("Too many open sockets");
+		return false;
+	}
+
+	/*
+	 *	Just add it at the end. We don't need to ever remove sockets.
+	 */
+	ps = &pl->sockets[pl->num_sockets];
+	if (!ps->sockfd == -1) {
+		fr_strerror_printf("Socket already allocated"); /* This should never happen. */
+		return false;
+	}
+
+	memset(ps, 0, sizeof(*ps));
+	ps->ctx = ctx;
+
+	/*
+	 *	Get address family, etc. first, so we know if we need to do udpfromto.
+	 *
+	 *	FIXME: udpfromto also does this, but it's not a critical problem.
+	 */
+	sizeof_src = sizeof(src);
+	memset(&src, 0, sizeof_src);
+	if (getsockname(sockfd, (struct sockaddr *) &src, &sizeof_src) < 0) {
+		fr_strerror_printf("%s", fr_syserror(errno));
+		return false;
+	}
+
+	if (fr_ipaddr_from_sockaddr(&src, sizeof_src, &ps->src_ipaddr, &ps->src_port) < 0) {
+		fr_strerror_printf("Failed to get IP");
+		return false;
+	}
+
+	ps->dst_ipaddr = *dst_ipaddr;
+	ps->dst_port = dst_port;
+
+	ps->src_any = fr_ipaddr_is_inaddr_any(&ps->src_ipaddr);
+	if (ps->src_any < 0) return false;
+
+	ps->dst_any = fr_ipaddr_is_inaddr_any(&ps->dst_ipaddr);
+	if (ps->dst_any < 0) return false;
+
+	/*
+	 *	As the last step before returning.
+	 */
+	ps->sockfd = sockfd;
+	pl->num_sockets ++;
+
+	return true;
+}
 
 /*
  *	Find out if two packet entries are "identical" as compared by fr_packet_cmp:
