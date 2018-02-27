@@ -3,6 +3,7 @@
  */
 
 #include "dhcperfcli.h"
+#include "dpc_util.h"
 
 
 static char const *prog_version = "dhcperfcli (FreeRADIUS version " RADIUSD_VERSION_STRING ")"
@@ -58,19 +59,24 @@ static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
 /*
  *	Basic send / receive, for now.
  */
-static int sockfd = -1;
+static int my_sockfd = -1;
 static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 {
 	int on = 1;
 
-	if (sockfd == -1) {
-		sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
-		if (sockfd < 0) {
+	if (my_sockfd != -1) { // for now: just reopen a socket each time we have a packet to send.
+		close(my_sockfd);
+		my_sockfd = -1;
+	}
+
+	if (my_sockfd == -1) {
+		my_sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
+		if (my_sockfd < 0) {
 			ERROR("Error opening socket: %s", fr_strerror());
 			return -1;
 		}
 
-		if (fr_socket_bind(sockfd, &request->src_ipaddr, &request->src_port, NULL) < 0) {
+		if (fr_socket_bind(my_sockfd, &request->src_ipaddr, &request->src_port, NULL) < 0) {
 			ERROR("Error binding socket: %s", fr_strerror());
 			return -1;
 		}
@@ -80,26 +86,28 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 	 *	Set option 'receive timeout' on socket.
 	 *	Note: in case of a timeout, the error will be "Resource temporarily unavailable".
 	 */
-	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_timeout, sizeof(struct timeval)) == -1) {
+	if (setsockopt(my_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_timeout, sizeof(struct timeval)) == -1) {
 		ERROR("Failed setting socket timeout: %s", fr_syserror(errno));
 		return -1;
 	}
 
-	if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
+	if (setsockopt(my_sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
 		ERROR("Can't set broadcast option: %s", fr_syserror(errno));
 		return -1;
 	}
-	request->sockfd = sockfd;
+	request->sockfd = my_sockfd;
+
+	dpc_socket_inspect(fr_log_fp, my_sockfd, NULL, NULL, NULL, NULL); // debug socket
 
 	if (fr_dhcpv4_udp_packet_send(request) < 0) {
 		ERROR("Failed sending: %s", fr_syserror(errno));
 		return -1;
 	}
 
-	*reply = fr_dhcpv4_udp_packet_recv(sockfd);
+	*reply = fr_dhcpv4_udp_packet_recv(my_sockfd);
 	if (!*reply) {
 		if (errno == EAGAIN) {
-			fr_strerror(); /* clear error */
+			fr_strerror(); /* Clear the error buffer */
 			ERROR("Timed out waiting for reply");
 		} else {
 			ERROR("Error receiving reply");
@@ -205,6 +213,7 @@ static void dpc_do_request(void)
 			ERROR("Failed encoding request packet");
 			exit(EXIT_FAILURE);
 		}
+		fr_strerror(); /* Clear the error buffer */
 
 		//if (fr_debug_lvl) {
 		//	fr_dhcpv4_packet_decode(request);
