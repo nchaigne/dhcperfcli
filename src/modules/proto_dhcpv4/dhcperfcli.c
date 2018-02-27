@@ -58,20 +58,22 @@ static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
 /*
  *	Basic send / receive, for now.
  */
-static int sockfd;
+static int sockfd = -1;
 static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 {
 	int on = 1;
 
-	sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
-	if (sockfd < 0) {
-		ERROR("Error opening socket: %s", fr_strerror());
-		return -1;
-	}
+	if (sockfd == -1) {
+		sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
+		if (sockfd < 0) {
+			ERROR("Error opening socket: %s", fr_strerror());
+			return -1;
+		}
 
-	if (fr_socket_bind(sockfd, &request->src_ipaddr, &request->src_port, NULL) < 0) {
-		ERROR("Error binding socket: %s", fr_strerror());
-		return -1;
+		if (fr_socket_bind(sockfd, &request->src_ipaddr, &request->src_port, NULL) < 0) {
+			ERROR("Error binding socket: %s", fr_strerror());
+			return -1;
+		}
 	}
 
 	/*
@@ -687,8 +689,10 @@ int main(int argc, char **argv)
 
 	dpc_input_load(autofree);
 
-	// for now, just send one
-	dpc_do_request();
+	// for now
+	while (vps_list_in.size > 0) {
+		dpc_do_request();
+	}
 
 	return 0;
 }
