@@ -88,7 +88,6 @@ static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 bool dpc_packet_list_socket_add(dpc_packet_list_t *pl, int sockfd,
                                 fr_ipaddr_t *dst_ipaddr, uint16_t dst_port, void *ctx)
 {
-	int i, start;
 	struct sockaddr_storage src;
 	socklen_t sizeof_src;
 	dpc_packet_socket_t *ps;
@@ -107,7 +106,7 @@ bool dpc_packet_list_socket_add(dpc_packet_list_t *pl, int sockfd,
 	 *	Just add it at the end. We don't need to ever remove sockets.
 	 */
 	ps = &pl->sockets[pl->num_sockets];
-	if (!ps->sockfd == -1) {
+	if (ps->sockfd != -1) {
 		fr_strerror_printf("Socket already allocated"); /* This should never happen. */
 		return false;
 	}
