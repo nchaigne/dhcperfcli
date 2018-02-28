@@ -70,7 +70,9 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 	}
 
 	if (my_sockfd == -1) {
+		/* Open a connectionless UDP socket for sending and receiving. */
 		my_sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
+
 		if (my_sockfd < 0) {
 			ERROR("Error opening socket: %s", fr_strerror());
 			return -1;
@@ -99,12 +101,12 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 
 	dpc_socket_inspect(fr_log_fp, my_sockfd, NULL, NULL, NULL, NULL); // debug socket
 
-	if (fr_dhcpv4_udp_packet_send(request) < 0) {
+	if (fr_dhcpv4_udp_packet_send(request) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
 		ERROR("Failed sending: %s", fr_syserror(errno));
 		return -1;
 	}
 
-	*reply = fr_dhcpv4_udp_packet_recv(my_sockfd);
+	*reply = fr_dhcpv4_udp_packet_recv(my_sockfd); /* Receive using a connectionless UDP socket (recvfromto). */
 	if (!*reply) {
 		if (errno == EAGAIN) {
 			fr_strerror(); /* Clear the error buffer */
@@ -667,8 +669,10 @@ static void dpc_options_parse(int argc, char **argv)
 	/*
 	 *	Resolve server host address and port.
 	 */
-	dpc_host_addr_resolve(argv[1], &server_ipaddr, &server_port);
-	client_ipaddr.af = server_ipaddr.af;
+	if (strcmp(argv[1], "-") != 0) {
+		dpc_host_addr_resolve(argv[1], &server_ipaddr, &server_port);
+		client_ipaddr.af = server_ipaddr.af;
+	}
 
 	/*
 	 *	See what kind of request we want to send.
