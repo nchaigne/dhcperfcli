@@ -102,7 +102,7 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 
 	dpc_socket_inspect(fr_log_fp, my_sockfd, NULL, NULL, NULL, NULL); // debug socket
 
-	DPC_DEBUG_TRACE("sending one packet, id: %u", request->id);
+	DPC_DEBUG_TRACE("sending one packet, id: %u, len: %zu", request->id, request->data_len);
 	DPC_DEBUG_HEX_DUMP("data", request->data, request->data_len);
 
 	if (fr_dhcpv4_udp_packet_send(request) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
@@ -207,11 +207,6 @@ static void dpc_do_request(void)
 
 	request = request_init(input);
 	if (request) {
-		if (fr_debug_lvl > 1) {
-			DEBUG2("Request input vps:");
-			fr_pair_list_fprint(fr_log_fp, request->vps);
-		}
-
 		/*
 		 *	Encode the packet
 		 */
@@ -221,10 +216,6 @@ static void dpc_do_request(void)
 		}
 		fr_strerror(); /* Clear the error buffer */
 
-		//if (fr_debug_lvl) {
-		//	fr_dhcpv4_packet_decode(request);
-		//	dhcp_packet_debug(request, false);
-		//}
 		dpc_packet_print(fr_log_fp, request, false); /* print request packet. */
 
 		ret = send_with_socket(&reply, request);
@@ -490,7 +481,7 @@ static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
 static void dpc_handle_input(dpc_input_t *input)
 {
 	// for now, just trace what we've read.
-	if (fr_debug_lvl > 1) {
+	if (dpc_debug_lvl > 1) {
 		DEBUG2("Input vps read:");
 		fr_pair_list_fprint(fr_log_fp, input->vps);
 	}
@@ -646,8 +637,9 @@ static void dpc_command_parse(char const *command)
 static void dpc_options_parse(int argc, char **argv)
 {
 	int argval;
+	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:ht:vx")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:ht:vxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -668,7 +660,10 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'x':
 			dpc_debug_lvl ++;
-			fr_debug_lvl ++; // TODO: see how we handle this
+			break;
+
+		case 'X':
+			debug_fr = true;
 			break;
 
 		default:
@@ -678,6 +673,8 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 	argc -= (optind - 1);
 	argv += (optind - 1);
+
+	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
 	/*
 	 *	Resolve server host address and port.
@@ -751,6 +748,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(output, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(output, "  -v               Print version information.\n");
 	fprintf(output, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
+	fprintf(output, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
 
 	exit(status);
 }
