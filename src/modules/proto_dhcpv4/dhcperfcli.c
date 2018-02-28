@@ -163,7 +163,7 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 	}
 	request->sockfd = my_sockfd;
 
-	dpc_socket_inspect(fr_log_fp, my_sockfd, NULL, NULL, NULL, NULL); // debug socket
+	dpc_socket_inspect(fr_log_fp, "", my_sockfd, NULL, NULL, NULL, NULL); // debug socket
 
 	DPC_DEBUG_TRACE("sending one packet, id: %u, len: %zu", request->id, request->data_len);
 	DPC_DEBUG_HEX_DUMP("data", request->data, request->data_len);

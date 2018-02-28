@@ -30,7 +30,7 @@ void dpc_printf_log(char const *fmt, ...)
 /*
  *	Print information on a socket from its file descriptor.
  */
-int dpc_socket_inspect(FILE *fp, int sockfd,
+int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
                        fr_ipaddr_t *src_ipaddr, uint16_t *src_port, fr_ipaddr_t *dst_ipaddr, uint16_t *dst_port)
 {
 	struct sockaddr_storage salocal;
@@ -90,7 +90,8 @@ int dpc_socket_inspect(FILE *fp, int sockfd,
 		}
 	}
 
-	fprintf(fp, "Socket fd: %d", sockfd);
+	if (log_pre) fprintf(fp, "%s ", log_pre);
+	fprintf(fp, "fd: %d", sockfd);
 	fprintf(fp, ", src: %s:%i", fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), *src_port);
 	if (!dst_notconn) {
 		fprintf(fp, ", dst: %s:%i", fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), dst_ipaddr), *dst_port);
