@@ -5,7 +5,9 @@
  * Similar to protocols/radius/list.c but adapted for handling DHCP.
  */
 
+#include "dhcperfcli.h"
 #include "dpc_packet_list.h"
+#include "dpc_util.h"
 
 
 /* We only need one socket for DHCP, so we limit the array size to one. */
@@ -61,7 +63,7 @@ typedef struct dpc_packet_list {
 	int num_sockets;
 
 	dpc_packet_socket_t sockets[DPC_MAX_SOCKETS];
-	
+
 	uint32_t prev_id; // useful for DHCP, to allocate xid's in a linear fashion.
 } dpc_packet_list_t;
 
@@ -79,6 +81,46 @@ static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 	}
 
 	return NULL; /* Socket not found. */
+}
+
+/*
+ *	Provide a suitable socket from our list. If necesary, initialize a new one.
+ */
+// in progress. TODO.
+int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
+{
+	int i;
+
+	if (!pl || !src_ipaddr || (src_ipaddr->af == AF_UNSPEC)) {
+		fr_strerror_printf("Invalid argument");
+		return -1;
+	}
+
+	for (i = 0; i<pl->num_sockets; i++) {
+		dpc_packet_socket_t *ps = &pl->sockets[i];
+
+		if (ps->src_port == src_port && (fr_ipaddr_cmp(&ps->src_ipaddr, src_ipaddr) == 0)) {
+			return ps->sockfd;
+		}
+	}
+
+	/* No socket found, we need a new one. */
+
+	/* Open a connectionless UDP socket for sending and receiving. */
+	int my_sockfd = fr_socket_server_udp(src_ipaddr, &src_port, NULL, false);
+	if (my_sockfd < 0) {
+		ERROR("Error opening socket: %s", fr_strerror());
+		return -1;
+	}
+
+	if (fr_socket_bind(my_sockfd, src_ipaddr, &src_port, NULL) < 0) {
+		ERROR("Error binding socket: %s", fr_strerror());
+		return -1;
+	}
+
+	dpc_socket_inspect(fr_log_fp, my_sockfd, NULL, NULL, NULL, NULL); // debug socket
+
+	return my_sockfd;
 }
 
 /*
@@ -185,7 +227,7 @@ dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id)
 	int i;
 	dpc_packet_list_t *pl;
 
-	pl = malloc(sizeof(*pl));
+	pl = malloc(sizeof(*pl)); // TODO: talloc this.
 	if (!pl) return NULL;
 	memset(pl, 0, sizeof(*pl));
 
@@ -300,6 +342,8 @@ uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl)
  */
 bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, void **pctx)
 {
+	if (!pl || !request_p) return false;
+
 	int i, fd, id;
 	int src_any = 0;
 	dpc_packet_socket_t *ps = NULL;
@@ -418,7 +462,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 	request->sockfd = ps->sockfd;
 	request->src_ipaddr = ps->src_ipaddr;
 	request->src_port = ps->src_port;
-	
+
 	id = DPC_PACKET_ID_UNASSIGNED;
 	if (request->id == DPC_PACKET_ID_UNASSIGNED) { /* If not, first try with the id they want. */
 		id = ++ pl->prev_id;

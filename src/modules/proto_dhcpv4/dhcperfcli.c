@@ -3,6 +3,7 @@
  */
 
 #include "dhcperfcli.h"
+#include "dpc_packet_list.h"
 #include "dpc_util.h"
 
 
@@ -23,7 +24,8 @@ int	dpc_debug_lvl = 0;
 
 TALLOC_CTX *autofree = NULL;
 char const *progname = NULL;
-fr_event_list_t *event_list = NULL;
+static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
+static fr_event_list_t *event_list = NULL;
 
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
@@ -57,6 +59,67 @@ static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
 
+
+// in progress. TODO.
+static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
+// note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
+{
+	RADIUS_PACKET *packet = *packet_p;
+	int i;
+
+	DPC_DEBUG_TRACE("Send one...");
+
+	int my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
+	if (my_sockfd < 0) {
+		ERROR("Failed to provide a suitable socket");
+		return -1;
+	}
+
+	if (packet->id == DPC_PACKET_ID_UNASSIGNED) {
+		/* Need to assign an xid to this packet. */
+
+		bool rcode;
+
+		DPC_DEBUG_TRACE("Get xid...");
+/*
+		rcode = dpc_packet_list_id_alloc(pl, packet_p, NULL);
+		if (!rcode) {
+			ERROR("Failed to get an ID");
+			return -1;
+		}
+*/
+		packet->id = 1; // for now
+	}
+
+	assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
+	assert(packet->data == NULL);
+
+	for (i = 0; i < 4; i++) {
+		((uint32_t *) packet->vector)[i] = fr_rand(); // TODO: do we need this ??
+	}
+
+	/*
+	 *	Encode the packet.
+	 */
+	if (fr_dhcpv4_packet_encode(packet) < 0) {
+		ERROR("Failed encoding request packet");
+		exit(EXIT_FAILURE);
+	}
+	fr_strerror(); /* Clear the error buffer */
+
+	/*
+	 *	Send the packet.
+	 */
+	dpc_packet_print(fr_log_fp, packet, false); /* print request packet. */
+
+	packet->sockfd = my_sockfd;
+	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
+		ERROR("Failed to send packet: %s", fr_syserror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return 0;
+}
 
 /*
  *	Basic send / receive, for now.
@@ -196,7 +259,7 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 	return request;
 }
 
-static void dpc_do_request(void)
+static int dpc_do_request(void)
 {
 	RADIUS_PACKET *request = NULL;
 	RADIUS_PACKET *reply = NULL;
@@ -207,30 +270,31 @@ static void dpc_do_request(void)
 
 	request = request_init(input);
 	if (request) {
-		/*
-		 *	Encode the packet
-		 */
-		if (fr_dhcpv4_packet_encode(request) < 0) {
-			ERROR("Failed encoding request packet");
-			exit(EXIT_FAILURE);
-		}
-		fr_strerror(); /* Clear the error buffer */
 
-		dpc_packet_print(fr_log_fp, request, false); /* print request packet. */
 
-		ret = send_with_socket(&reply, request);
+		dpc_send_one_packet(&request); // in progress. TODO.
 
-		if (reply) {
-			if (fr_dhcpv4_packet_decode(reply) < 0) {
-				ERROR("Failed decoding reply packet");
-				ret = -1;
+
+		reply = fr_dhcpv4_udp_packet_recv(request->sockfd); /* Receive using a connectionless UDP socket (recvfromto). */
+		if (!reply) {
+			if (errno == EAGAIN) {
+				fr_strerror(); /* Clear the error buffer */
+				ERROR("Timed out waiting for reply");
+			} else {
+				ERROR("Error receiving reply");
 			}
-
-			dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
+			return -1;
 		}
+
+		if (fr_dhcpv4_packet_decode(reply) < 0) {
+			ERROR("Failed decoding reply packet");
+			ret = -1;
+		}
+		dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 	}
 
 	talloc_free(input);
+	return 0;
 }
 
 /*
@@ -586,11 +650,25 @@ static void dpc_dict_init(void)
 /*
  *	Initialize event list.
  */
-static void dpc_event_init(TALLOC_CTX *ctx)
+static void dpc_event_list_init(TALLOC_CTX *ctx)
 {
 	event_list = fr_event_list_alloc(ctx, NULL, NULL);
 	if (!event_list) {
 		ERROR("Failed to create event list");
+		exit(EXIT_FAILURE);
+	}
+}
+
+/*
+ *	Initialize the packet list.
+ */
+static void dpc_packet_list_init(void)
+{
+	int base_xid = 0; // TODO
+
+	pl = dpc_packet_list_create(base_xid);
+	if (!pl) {
+		ERROR("Failed to create packet list");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -719,7 +797,8 @@ int main(int argc, char **argv)
 
 	dpc_dict_init();
 
-	dpc_event_init(autofree);
+	dpc_event_list_init(autofree);
+	dpc_packet_list_init();
 
 	dpc_input_load(autofree);
 
