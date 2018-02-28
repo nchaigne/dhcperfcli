@@ -69,6 +69,10 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 	DPC_DEBUG_TRACE("Send one...");
 
+// WARN: if no "Packet-Src-IP-Address" then a socket is allocated with src = 0.0.0.0
+// when a packet is sent, a suitable IP is automatically picked by the system... but we can't see which it is!
+// TODO => issue a warning ?
+
 	int my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
 	if (my_sockfd < 0) {
 		ERROR("Failed to provide a suitable socket");
