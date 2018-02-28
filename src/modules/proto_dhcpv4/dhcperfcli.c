@@ -19,6 +19,7 @@ static char const *prog_version = "(FreeRADIUS version " RADIUSD_VERSION_STRING 
 char const *radius_dir = RADDBDIR;
 char const *dict_dir = DICTDIR;
 fr_dict_t *dict = NULL;
+int	dpc_debug_lvl = 0;
 
 TALLOC_CTX *autofree = NULL;
 char const *progname = NULL;
@@ -100,6 +101,9 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 	request->sockfd = my_sockfd;
 
 	dpc_socket_inspect(fr_log_fp, my_sockfd, NULL, NULL, NULL, NULL); // debug socket
+
+	DPC_DEBUG_TRACE("sending one packet, id: %u", request->id);
+	DPC_DEBUG_HEX_DUMP("data", request->data, request->data_len);
 
 	if (fr_dhcpv4_udp_packet_send(request) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
 		ERROR("Failed sending: %s", fr_syserror(errno));
@@ -643,7 +647,7 @@ static void dpc_options_parse(int argc, char **argv)
 {
 	int argval;
 
-	while ((argval = getopt(argc, argv, "f:ht:v")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:ht:vx")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -661,6 +665,11 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'v':
 			printf("%s %s\n", progname, prog_version);
 			exit(0);
+
+		case 'x':
+			dpc_debug_lvl ++;
+			fr_debug_lvl ++; // TODO: see how we handle this
+			break;
 
 		default:
 			usage(1);
@@ -697,8 +706,9 @@ int main(int argc, char **argv)
 {
 	char *p;
 
-	fr_debug_lvl = 2; // for now
-	fr_log_fp = stdout;
+	fr_debug_lvl = 0; /* FreeRADIUS libraries debug. */
+	dpc_debug_lvl = 0; /* Our own debug. */
+	fr_log_fp = stdout; /* Both will go there. */
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -721,7 +731,7 @@ int main(int argc, char **argv)
 		dpc_do_request();
 	}
 
-	return 0;
+	exit(0);
 }
 
 /*
@@ -740,6 +750,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(output, "  -h               Print this help message.\n");
 	fprintf(output, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(output, "  -v               Print version information.\n");
+	fprintf(output, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
 
 	exit(status);
 }

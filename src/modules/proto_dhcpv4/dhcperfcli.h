@@ -10,15 +10,28 @@
 #include <assert.h>
 
 
+/*
+ *	Trace / logging.
+ */
+extern int dpc_debug_lvl;
 
 #undef DEBUG
-#define DEBUG(fmt, ...)		if (fr_debug_lvl > 0) fr_printf_log(fmt "\n", ## __VA_ARGS__)
+#define DEBUG(fmt, ...)		if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
 
 #undef DEBUG2
-#define DEBUG2(fmt, ...)	if (fr_debug_lvl > 1) fr_printf_log(fmt "\n", ## __VA_ARGS__)
+#define DEBUG2(fmt, ...)	if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
 
 #undef ERROR
 #define ERROR(fmt, ...)		fr_perror("ERROR: " fmt, ## __VA_ARGS__)
+
+/* Reuse of nifty FreeRADIUS functions in util/proto.c */
+#ifndef NDEBUG
+#  define DPC_DEBUG_TRACE(_x, ...)	if (fr_log_fp && (dpc_debug_lvl > 3)) fr_proto_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
+#  define DPC_DEBUG_HEX_DUMP(_x, _y, _z)	if (fr_log_fp && (dpc_debug_lvl > 3)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
+#else
+#  define DPC_DEBUG_TRACE(_x, ...)
+#  define DPC_DEBUG_HEX_DUMP(_x, _y, _z)
+#endif
 
 
 #define DHCP_PORT_SERVER	67

@@ -8,6 +8,26 @@
 
 
 /*
+ *	Print a log message.
+ *	Substitute for fr_printf_log so we can use our own debug level.
+ */
+void dpc_printf_log(char const *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	if ((dpc_debug_lvl == 0) || !fr_log_fp) {
+		va_end(ap);
+		return;
+	}
+
+	vfprintf(fr_log_fp, fmt, ap);
+	va_end(ap);
+
+	return;
+}
+
+/*
  *	Print information on a socket from its file descriptor.
  */
 int dpc_socket_inspect(FILE *fp, int sockfd,
