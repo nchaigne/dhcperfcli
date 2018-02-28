@@ -6,7 +6,7 @@
 #include "dpc_util.h"
 
 
-static char const *prog_version = "dhcperfcli (FreeRADIUS version " RADIUSD_VERSION_STRING ")"
+static char const *prog_version = "(FreeRADIUS version " RADIUSD_VERSION_STRING ")"
 #ifdef RADIUSD_VERSION_COMMIT
 " (git #" STRINGIFY(RADIUSD_VERSION_COMMIT) ")"
 #endif
@@ -21,6 +21,7 @@ char const *dict_dir = DICTDIR;
 fr_dict_t *dict = NULL;
 
 TALLOC_CTX *autofree = NULL;
+char const *progname = NULL;
 fr_event_list_t *event_list = NULL;
 
 static char const *file_vps_in = NULL;
@@ -72,7 +73,6 @@ static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
 	if (my_sockfd == -1) {
 		/* Open a connectionless UDP socket for sending and receiving. */
 		my_sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
-
 		if (my_sockfd < 0) {
 			ERROR("Error opening socket: %s", fr_strerror());
 			return -1;
@@ -641,11 +641,16 @@ static void dpc_command_parse(char const *command)
  */
 static void dpc_options_parse(int argc, char **argv)
 {
-	int c;
+	int argval;
 
-	while ((c = getopt(argc, argv, "f:t:v")) != EOF) switch (c) {
+	while ((argval = getopt(argc, argv, "f:ht:v")) != EOF) {
+		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
+			break;
+
+		case 'h':
+			usage(0);
 			break;
 
 		case 't':
@@ -654,22 +659,21 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'v':
-			printf("%s\n", prog_version);
+			printf("%s %s\n", progname, prog_version);
 			exit(0);
 
 		default:
 			usage(1);
 			break;
+		}
 	}
 	argc -= (optind - 1);
 	argv += (optind - 1);
 
-	if (argc - 1 < 1) usage(1);
-
 	/*
 	 *	Resolve server host address and port.
 	 */
-	if (strcmp(argv[1], "-") != 0) {
+	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
 		dpc_host_addr_resolve(argv[1], &server_ipaddr, &server_port);
 		client_ipaddr.af = server_ipaddr.af;
 	}
@@ -691,8 +695,18 @@ static void dpc_options_parse(int argc, char **argv)
  */
 int main(int argc, char **argv)
 {
+	char *p;
+
 	fr_debug_lvl = 2; // for now
 	fr_log_fp = stdout;
+
+	/* Get program name from argv. */
+	p = strrchr(argv[0], FR_DIR_SEP);
+	if (!p) {
+		progname = argv[0];
+	} else {
+		progname = p + 1;
+	}
 
 	dpc_options_parse(argc, argv);
 
@@ -717,7 +731,15 @@ static void NEVER_RETURNS usage(int status)
 {
 	FILE *output = status?stderr:stdout;
 
-	fprintf(output, "Usage placeholder\n");
+	fprintf(output, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
+	fprintf(output, "  <server>:<port>  The DHCP server. If omitted, it must be specified in inputs vps.\n");
+	fprintf(output, "  <command>        One of (packet type): discover, request, decline, release, inform.\n");
+	fprintf(output, "                   If omitted, packet type must be specified in input vps.\n");
+	fprintf(output, " Options:\n");
+	fprintf(output, "  -f <file>        Read input vps from <file>, not stdin.\n");
+	fprintf(output, "  -h               Print this help message.\n");
+	fprintf(output, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
+	fprintf(output, "  -v               Print version information.\n");
 
 	exit(status);
 }
