@@ -46,6 +46,7 @@ extern int dpc_debug_lvl;
 
 typedef struct dpc_input dpc_input_t;
 typedef struct dpc_input_list dpc_input_list_t;
+typedef struct dpc_session_ctx dpc_session_ctx_t;
 
 /*
  *	Holds input data (vps read from file or stdin).
@@ -66,4 +67,14 @@ struct dpc_input_list {
 	dpc_input_t *head;
 	dpc_input_t *tail;
 	uint32_t size;
+};
+
+/*
+ *	Session context.
+ */
+struct dpc_session_ctx {
+	uint32_t id; // id of session (0 for the first one).
+
+	RADIUS_PACKET *packet;
+	RADIUS_PACKET *reply;
 };

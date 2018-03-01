@@ -58,6 +58,7 @@ static void usage(int);
 static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
+static void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 
 
 // in progress. TODO.
@@ -67,7 +68,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	RADIUS_PACKET *packet = *packet_p;
 	int i;
 
-	DPC_DEBUG_TRACE("Send one...");
+	DPC_DEBUG_TRACE("Preparing to send one packet");
 
 // WARN: if no "Packet-Src-IP-Address" then a socket is allocated with src = 0.0.0.0
 // when a packet is sent, a suitable IP is automatically picked by the system... but we can't see which it is!
@@ -94,7 +95,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 		bool rcode;
 
-		DPC_DEBUG_TRACE("Get xid...");
+		DPC_DEBUG_TRACE("Get xid");
 
 		rcode = dpc_packet_list_id_alloc(pl, my_sockfd, packet_p);
 		if (!rcode) {
@@ -113,6 +114,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	/*
 	 *	Encode the packet.
 	 */
+	DPC_DEBUG_TRACE("Encoding packet");
 	if (fr_dhcpv4_packet_encode(packet) < 0) {
 		ERROR("Failed encoding request packet");
 		exit(EXIT_FAILURE);
@@ -190,13 +192,15 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 }
 
 
-static RADIUS_PACKET *request_init(dpc_input_t *input)
+static RADIUS_PACKET *request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 {
 	vp_cursor_t cursor;
 	VALUE_PAIR *vp;
 	RADIUS_PACKET *request;
 
-	MEM(request = fr_radius_alloc(input, true));
+	MEM(request = fr_radius_alloc(ctx, true));
+
+	DPC_DEBUG_TRACE("New packet allocated");
 
 	// fill in the packet value pairs
 	dpc_pair_list_append(request, &request->vps, input->vps);
@@ -262,19 +266,47 @@ static RADIUS_PACKET *request_init(dpc_input_t *input)
 	return request;
 }
 
+/*
+ *	Initialize a new session.
+ */
+static dpc_session_ctx_t *dpc_init_session(TALLOC_CTX *ctx)
+{
+	dpc_input_t *input = NULL;
+	dpc_session_ctx_t *session = NULL;
+	RADIUS_PACKET *packet = NULL;
+
+	DPC_DEBUG_TRACE("Initializing a new session");
+
+	input = dpc_get_input_list_head(&vps_list_in);
+	if (!input) { /* No input: cannot create new session. */
+		return NULL;
+	}
+
+	packet = request_init(ctx, input);
+	if (packet) {
+		MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
+
+		session->packet = packet;
+
+		// TODO: more stuff here. Later.
+	}
+
+	talloc_free(input);
+	return session;
+}
+
 static int dpc_do_request(void)
 {
-	RADIUS_PACKET *request = NULL;
-	RADIUS_PACKET *reply = NULL;
 	int ret;
 
-	// grab one input entry
-	dpc_input_t *input = dpc_get_input_list_head(&vps_list_in);
+	/*
+	 *	Initialize a new session, along with the packet to send.
+	 */
+	dpc_session_ctx_t *session = dpc_init_session(autofree);
 
-	request = request_init(input);
-	if (request) {
+	if (session) {
 
-		ret = dpc_send_one_packet(&request);
+		ret = dpc_send_one_packet(&session->packet);
 		if (ret < 0) {
 			ERROR("Error sending packet");
 		} else {
@@ -287,13 +319,12 @@ static int dpc_do_request(void)
 		}
 
 		// Remove from packet list. For now.
-		if (!dpc_packet_list_id_free(pl, request, true)) {
-			WARN("Failed to free from packet list, id: %u", request->id);
-		}
+//		if (!dpc_packet_list_id_free(pl, request, true)) {
+//			WARN("Failed to free from packet list, id: %u", request->id);
+//		}
 
 	}
 
-	talloc_free(input);
 	return ret;
 }
 

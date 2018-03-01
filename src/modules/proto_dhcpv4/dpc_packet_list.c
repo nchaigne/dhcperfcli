@@ -388,7 +388,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
 		fr_strerror_printf("Failed to find socket allocated with fd: %d", sockfd);
 		return false;
 	}
-	DPC_DEBUG_TRACE("Socket retrieved (fd: %d), now trying to get an id...", sockfd);
+	DPC_DEBUG_TRACE("Socket retrieved (fd: %d), now trying to get an id", sockfd);
 
 	/*
 	 *	Set the ID, source IP, and source port.
