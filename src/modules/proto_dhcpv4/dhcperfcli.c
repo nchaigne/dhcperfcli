@@ -181,10 +181,9 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		return -1;
 	}
 
-	fr_ipaddr_t src_ipaddr = reply->src_ipaddr;
-	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &src_ipaddr);
-	DEBUG2("Received packet from: %s, id: %u (0x%08x)", src_ipaddr_buf, reply->id, reply->id);
+	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
+	                dpc_print_packet_from_to(from_to_buf, reply), reply->id, reply->id);
 
 	/*
 	 *	Query the packet list to get the original packet to which this is a reply.
@@ -329,7 +328,7 @@ static dpc_session_ctx_t *dpc_init_session(TALLOC_CTX *ctx)
 	dpc_session_ctx_t *session = NULL;
 	RADIUS_PACKET *packet = NULL;
 
-	DPC_DEBUG_TRACE("Initializing a new session");
+	DPC_DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
 
 	input = dpc_get_input_list_head(&vps_list_in);
 	if (!input) { /* No input: cannot create new session. */
@@ -400,8 +399,7 @@ static char *ether_addr_print(const uint8_t *addr, char *buf)
  */
 static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received)
 {
-	char src_ipaddr[128] = "";
-	char dst_ipaddr[128] = "";
+	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
 	uint32_t yiaddr;
 	char lease_ipaddr[128] = "";
@@ -434,13 +432,9 @@ static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool receiv
 	}
 	fprintf(fp, ")");
 
-	/* Generic protocol information. */
-	fprintf(fp, " Id %u (0x%08x) from %s:%i to %s:%i length %zu\n",
+	fprintf(fp, " Id %u (0x%08x) %s length %zu\n",
 	        packet->id, packet->id,
-	        inet_ntop(packet->src_ipaddr.af, &packet->src_ipaddr.addr, src_ipaddr, sizeof(src_ipaddr)),
-	        packet->src_port,
-	        inet_ntop(packet->dst_ipaddr.af, &packet->dst_ipaddr.addr, dst_ipaddr, sizeof(dst_ipaddr)),
-	        packet->dst_port,
+	        dpc_print_packet_from_to(from_to_buf, packet),
 	        packet->data_len);
 }
 

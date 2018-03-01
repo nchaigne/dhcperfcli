@@ -64,6 +64,22 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
 }
 
 /*
+ *	Print packet source and destination IP/port.
+ *	Caller is responsible for passing an output buffer (buf) with sufficient space (DPC_FROM_TO_STRLEN).
+ */
+char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet)
+{
+	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	char dst_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+
+	sprintf(buf, "from %s:%u to %s:%u",
+	        fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &packet->src_ipaddr), packet->src_port,
+	        fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->dst_ipaddr), packet->dst_port
+	);
+	return buf;
+}
+
+/*
  *	Print information on a socket from its file descriptor.
  */
 int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
