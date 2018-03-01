@@ -133,6 +133,63 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	return 0;
 }
 
+// receive one packet, maybe.
+static int dpc_recv_one_packet(struct timeval *tv_wait_time)
+{
+	fd_set set;
+	struct timeval  tv;
+	RADIUS_PACKET *reply = NULL, **packet_p;
+	volatile int max_fd;
+
+	/* Wait for reply, timing out as necessary */
+	FD_ZERO(&set);
+
+	max_fd = dpc_packet_list_fd_set(pl, &set);
+	if (max_fd < 0) {
+		/* no sockets to listen on! */
+		return 0;
+	}
+
+	if (NULL == tv_wait_time) {
+		timerclear(&tv);
+	} else {
+		tv.tv_sec = tv_wait_time->tv_sec;
+		tv.tv_usec = tv_wait_time->tv_usec;
+	}
+
+	/*
+	 *	No packet was received.
+	 */
+	if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
+		return 0;
+	}
+
+	/*
+	 *	Fetch one incoming packet.
+	 */
+	reply = dpc_packet_list_recv(pl, &set); // warning: reply is allocated on NULL context.
+	if (!reply) {
+		ERROR("Received bad packet: %s", fr_strerror());
+		return -1;
+	}
+
+	fr_ipaddr_t src_ipaddr = reply->src_ipaddr;
+	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &src_ipaddr);
+	DEBUG2("Received packet from: %s, id: %u (0x%08x)", src_ipaddr_buf, reply->id, reply->id);
+
+	// for now
+	if (fr_dhcpv4_packet_decode(reply) < 0) {
+		ERROR("Failed decoding reply packet");
+		return -1;
+	}
+	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
+
+
+	return 0;
+}
+
+
 static RADIUS_PACKET *request_init(dpc_input_t *input)
 {
 	vp_cursor_t cursor;
@@ -209,7 +266,7 @@ static int dpc_do_request(void)
 {
 	RADIUS_PACKET *request = NULL;
 	RADIUS_PACKET *reply = NULL;
-	UNUSED int ret;
+	int ret;
 
 	// grab one input entry
 	dpc_input_t *input = dpc_get_input_list_head(&vps_list_in);
@@ -217,31 +274,27 @@ static int dpc_do_request(void)
 	request = request_init(input);
 	if (request) {
 
-		if (dpc_send_one_packet(&request) < 0) {
+		ret = dpc_send_one_packet(&request);
+		if (ret < 0) {
 			ERROR("Error sending packet");
-			return -1;
-		}
+		} else {
 
-		reply = fr_dhcpv4_udp_packet_recv(request->sockfd); /* Receive using a connectionless UDP socket (recvfromto). */
-		if (!reply) {
-			if (errno == EAGAIN) {
-				fr_strerror(); /* Clear the error buffer */
-				ERROR("Timed out waiting for reply");
-			} else {
-				ERROR("Error receiving reply");
+			// for now. TODO: in receive loop.
+			ret = dpc_recv_one_packet(&tv_timeout);
+			if (ret < 0) {
+				ERROR("Error receiving packet");
 			}
-			return -1;
 		}
 
-		if (fr_dhcpv4_packet_decode(reply) < 0) {
-			ERROR("Failed decoding reply packet");
-			ret = -1;
+		// Remove from packet list. For now.
+		if (!dpc_packet_list_id_free(pl, request, true)) {
+			WARN("Failed to free from packet list, id: %u", request->id);
 		}
-		dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
+
 	}
 
 	talloc_free(input);
-	return 0;
+	return ret;
 }
 
 
