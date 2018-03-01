@@ -39,7 +39,11 @@ extern int dpc_debug_lvl;
 
 #define DHCP_PORT_SERVER	67
 #define DHCP_MAX_MESSAGE_TYPE (16)
-// DHCP_MAX_MESSAGE_TYPE is defined in src/protocols/dhcpv4/base.c, we need our own.
+// DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
+
+/* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
+#define FR_DHCPV4_TRANSACTION_ID         260
+
 
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 

@@ -39,6 +39,8 @@ static int packet_code = FR_CODE_UNDEFINED;
 static float timeout = 3.0;
 static struct timeval tv_timeout;
 
+static uint32_t session_num = 0; /* Number of sessions initialized. */
+
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover", FR_DHCPV4_DISCOVER },
 	{ "request",  FR_DHCPV4_REQUEST },
@@ -59,6 +61,7 @@ static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
 static void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
+static int dpc_dhcp_encode(RADIUS_PACKET *packet);
 
 
 // in progress. TODO.
@@ -115,7 +118,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	 *	Encode the packet.
 	 */
 	DPC_DEBUG_TRACE("Encoding packet");
-	if (fr_dhcpv4_packet_encode(packet) < 0) {
+	if (dpc_dhcp_encode(packet) < 0) {
 		ERROR("Failed encoding request packet");
 		exit(EXIT_FAILURE);
 	}
@@ -135,12 +138,15 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	return 0;
 }
 
-// receive one packet, maybe.
+/*
+ *	Receive one packet, maybe.
+ */
 static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 {
 	fd_set set;
 	struct timeval  tv;
 	RADIUS_PACKET *reply = NULL, **packet_p;
+	dpc_session_ctx_t *session;
 	volatile int max_fd;
 
 	/* Wait for reply, timing out as necessary */
@@ -180,13 +186,37 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &src_ipaddr);
 	DEBUG2("Received packet from: %s, id: %u (0x%08x)", src_ipaddr_buf, reply->id, reply->id);
 
-	// for now
-	if (fr_dhcpv4_packet_decode(reply) < 0) {
-		ERROR("Failed decoding reply packet");
+	/*
+	 *	Query the packet list to get the original packet to which this is a reply.
+	 */
+	packet_p = dpc_packet_list_find_byreply(pl, reply);
+	if (!packet_p) {
+		DEBUG("Received reply to unknown packet, id: %u (0x%08x)", reply->id, reply->id);
+		fr_radius_free(&reply);
 		return -1;
 	}
-	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 
+	/*
+	 *	Retrieve the session to which belongs the original packet.
+	 *	To do so we use fr_packet2myptr, this is a magical macro defined in include/packet.h
+	 */
+	session = fr_packet2myptr(dpc_session_ctx_t, packet, packet_p);
+
+	DPC_DEBUG_TRACE("Packet belongs to session id: %d", session->id);
+
+	/*
+	 *	Decode the reply packet.
+	 */
+	if (fr_dhcpv4_packet_decode(reply) < 0) {
+		ERROR("Failed to decode reply packet (xid: %u)", reply->id);
+		fr_radius_free(&reply);
+		return -1;
+	}
+
+	session->reply = reply;
+	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
+
+	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 
 	return 0;
 }
@@ -266,6 +296,30 @@ static RADIUS_PACKET *request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 	return request;
 }
 
+
+
+/*
+ *	Encode a DHCP packet.
+ */
+static int dpc_dhcp_encode(RADIUS_PACKET *packet)
+{
+	int r;
+
+	/*
+	 *	Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
+	 *	the requested id may not have been available).
+	 */
+	fr_pair_delete_by_num(&packet->vps, FR_DHCPV4_TRANSACTION_ID, DHCP_MAGIC_VENDOR, TAG_ANY);
+	VALUE_PAIR *vp_xid = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
+	vp_xid->data.vb_uint32 = packet->id;
+	fr_pair_add(&packet->vps, vp_xid);
+
+	r = fr_dhcpv4_packet_encode(packet);
+	fr_strerror(); /* Clear the error buffer */
+
+	return r;
+}
+
 /*
  *	Initialize a new session.
  */
@@ -289,6 +343,7 @@ static dpc_session_ctx_t *dpc_init_session(TALLOC_CTX *ctx)
 		session->packet = packet;
 
 		// TODO: more stuff here. Later.
+		session->id = session_num ++;
 	}
 
 	talloc_free(input);
