@@ -12,7 +12,8 @@
 
 /* We need as many sockets as source IP / port. In most cases, only one will be used. */
 #define DPC_MAX_SOCKETS         32  // Is this enough ?
-#define DPC_ID_ALLOC_MAX_TRIES  100
+//#define DPC_ID_ALLOC_MAX_TRIES  100
+#define DPC_ID_ALLOC_MAX_TRIES  10
 
 /*
  *	TODO: once this works, implement something better.
@@ -229,6 +230,8 @@ static int dpc_packet_entry_cmp(void const *one, void const *two)
 	RADIUS_PACKET const * const *b = two;
 
 	return fr_packet_cmp(*a, *b); // use comparison function from list.c, this is good enough.
+
+// fr_packet_cmp is called with the same id each ?? bug in rbtree ?? TODO: check.
 }
 
 
@@ -368,121 +371,28 @@ uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl)
  *	If caller wants a specific ID, we try to comply, and if it's not available we fall back to
  *	the linear allocation mechanism.
  */
-bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, void **pctx)
+bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET **request_p)
 {
-	if (!pl || !request_p) return false;
+	if (!pl || !request_p || sockfd == -1) {
+		fr_strerror_printf("Invalid argument");
+		return false;
+	}
 
-	int i, fd, id;
-	int src_any = 0;
+	int id = DPC_PACKET_ID_UNASSIGNED;
 	dpc_packet_socket_t *ps = NULL;
 	RADIUS_PACKET *request = *request_p;
 	int tries = 0;
 
-	if ((request->dst_ipaddr.af == AF_UNSPEC) ||
-	    (request->dst_port == 0)) {
-		fr_strerror_printf("No destination address/port specified");
+	/*
+	 *	Find the socket.
+	 */
+	ps = dpc_socket_find(pl, sockfd);
+	if (ps == NULL) {
+		// try to allocate one instead ? ... TODO
+		fr_strerror_printf("Failed to find socket allocated with fd: %d", sockfd);
 		return false;
 	}
-
-	/*
-	 *	Special case: unspec == "don't care"
-	 */
-	if (request->src_ipaddr.af == AF_UNSPEC) {
-		memset(&request->src_ipaddr, 0, sizeof(request->src_ipaddr));
-		request->src_ipaddr.af = request->dst_ipaddr.af;
-	}
-
-	src_any = fr_ipaddr_is_inaddr_any(&request->src_ipaddr);
-	if (src_any < 0) {
-		fr_strerror_printf("Can't check src_ipaddr");
-		return false;
-	}
-
-	/*
-	 *	MUST specify a destination address.
-	 */
-	if (fr_ipaddr_is_inaddr_any(&request->dst_ipaddr) != 0) {
-		fr_strerror_printf("Must specify a dst_ipaddr");
-		return false;
-	}
-
-	/*
-	 *	Warning: id in RADIUS_PACKET is of type "int".
-	 *	For DHCP the xid is a number ranging from 0 to 2^32-1.
-	 *	But we need a way to keep track of packets initialized but with no assigned id yet.
-	 *	So We will consider the "id" as if unsigned, and special value -1 will mean "unassigned"
-	 *	(Even though 0xffffffff is normally a valid xid value for DHCP. We can live with this.)
-	 */
-	fd = -1;
-
-	/*
-	 *	Note: the search randomization mechanism from fr_packet_list_id_alloc is not useful here
-	 *	for DHCP, so we'll just get rid of it.
-	 */
-	for (i = 0; i < DPC_MAX_SOCKETS; i++) {
-		if (pl->sockets[i].sockfd == -1) continue; /* paranoia */
-
-		ps = &(pl->sockets[i]);
-
-		/*
-		 *	This socket is marked as "don't use for new packets". But we can still receive packets
-		 *	that are outstanding.
-		 */
-		if (ps->dont_use) continue;
-
-		/*
-		 *	Address families don't match, skip it.
-		 */
-		if (ps->src_ipaddr.af != request->dst_ipaddr.af) continue;
-
-		/*
-		 *	MUST match dst port, if we have one.
-		 */
-		if ((ps->dst_port != 0) &&
-		    (ps->dst_port != request->dst_port)) continue;
-
-		/*
-		 *	MUST match requested src port, if one has been given.
-		 */
-		if ((request->src_port != 0) &&
-		    (ps->src_port != request->src_port)) continue;
-
-		/*
-		 *	We're sourcing from *, and they asked for a specific source address: ignore it.
-		 */
-		if (ps->src_any && !src_any) continue;
-
-		/*
-		 *	We're sourcing from a specific IP, and they asked for a source IP that isn't us: ignore it.
-		 */
-		if (!ps->src_any && !src_any &&
-		    (fr_ipaddr_cmp(&request->src_ipaddr,
-				   &ps->src_ipaddr) != 0)) continue;
-
-		/*
-		 *	UDP sockets are allowed to match destination IPs exactly, OR a socket with destination * is allowed
-		 *	to match any requested destination.
-		 */
-		if (!ps->dst_any &&
-		    (fr_ipaddr_cmp(&request->dst_ipaddr,
-				   &ps->dst_ipaddr) != 0)) continue;
-
-		/*
-		 *	Otherwise, this socket is OK to use.
-		 */
-
-		/* The DHCP way: use this fd, then try and allocate an unused ID. */
-		fd = i;
-		break;
-	}
-
-	/*
-	 *	Ask the caller to allocate a new socket.
-	 */
-	if (fd < 0) {
-		fr_strerror_printf("Failed finding socket, caller must allocate a new one");
-		return false;
-	}
+	DPC_DEBUG_TRACE("Socket retrieved (fd: %d), now trying to get an id...", sockfd);
 
 	/*
 	 *	Set the ID, source IP, and source port.
@@ -491,7 +401,6 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 	request->src_ipaddr = ps->src_ipaddr;
 	request->src_port = ps->src_port;
 
-	id = DPC_PACKET_ID_UNASSIGNED;
 	if (request->id == DPC_PACKET_ID_UNASSIGNED) { /* If not, first try with the id they want. */
 		id = ++ pl->prev_id;
 		request->id = id;
@@ -511,7 +420,8 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 			 *	Try to insert into the packet list. If successful, it means the ID was available.
 			*/
 			if (dpc_packet_list_insert(pl, request_p)) {
-				if (pctx) *pctx = ps->ctx;
+				DPC_DEBUG_TRACE("Successful insert into packet list (allocated xid: %d)", request->id);
+//				if (pctx) *pctx = ps->ctx; // what for ?
 				ps->num_outgoing ++;
 				pl->num_outgoing ++;
 				return true;
@@ -523,6 +433,8 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, RADIUS_PACKET **request_p, 
 		id = ++ pl->prev_id;
 		request->id = id;
 	}
+
+	DPC_DEBUG_TRACE("Giving up after %d tries, last xid tried: %d", tries, pl->prev_id);
 
 	/*
 	 *	We failed to allocate an ID. Reset information in the packet before returning.

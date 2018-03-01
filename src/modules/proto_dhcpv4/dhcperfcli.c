@@ -79,20 +79,28 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 		return -1;
 	}
 
+	/*
+	 *	Set option 'receive timeout' on socket.
+	 *	Note: in case of a timeout, the error will be "Resource temporarily unavailable".
+	 */
+	// temporary. TODO.
+	if (setsockopt(my_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_timeout, sizeof(struct timeval)) == -1) {
+		ERROR("Failed setting socket timeout: %s", fr_syserror(errno));
+		return -1;
+	}
+
 	if (packet->id == DPC_PACKET_ID_UNASSIGNED) {
 		/* Need to assign an xid to this packet. */
 
 		bool rcode;
 
 		DPC_DEBUG_TRACE("Get xid...");
-/*
-		rcode = dpc_packet_list_id_alloc(pl, packet_p, NULL);
+
+		rcode = dpc_packet_list_id_alloc(pl, my_sockfd, packet_p);
 		if (!rcode) {
-			ERROR("Failed to get an ID");
+			ERROR("Failed to allocate xid");
 			return -1;
 		}
-*/
-		packet->id = 1; // for now
 	}
 
 	assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
@@ -120,72 +128,6 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
 		ERROR("Failed to send packet: %s", fr_syserror(errno));
 		exit(EXIT_FAILURE);
-	}
-
-	return 0;
-}
-
-/*
- *	Basic send / receive, for now.
- */
-static int my_sockfd = -1;
-static int send_with_socket(RADIUS_PACKET **reply, RADIUS_PACKET *request)
-{
-	int on = 1;
-
-	if (my_sockfd != -1) { // for now: just reopen a socket each time we have a packet to send.
-		close(my_sockfd);
-		my_sockfd = -1;
-	}
-
-	if (my_sockfd == -1) {
-		/* Open a connectionless UDP socket for sending and receiving. */
-		my_sockfd = fr_socket_server_udp(&request->src_ipaddr, &request->src_port, NULL, false);
-		if (my_sockfd < 0) {
-			ERROR("Error opening socket: %s", fr_strerror());
-			return -1;
-		}
-
-		if (fr_socket_bind(my_sockfd, &request->src_ipaddr, &request->src_port, NULL) < 0) {
-			ERROR("Error binding socket: %s", fr_strerror());
-			return -1;
-		}
-	}
-
-	/*
-	 *	Set option 'receive timeout' on socket.
-	 *	Note: in case of a timeout, the error will be "Resource temporarily unavailable".
-	 */
-	if (setsockopt(my_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_timeout, sizeof(struct timeval)) == -1) {
-		ERROR("Failed setting socket timeout: %s", fr_syserror(errno));
-		return -1;
-	}
-
-	if (setsockopt(my_sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
-		ERROR("Can't set broadcast option: %s", fr_syserror(errno));
-		return -1;
-	}
-	request->sockfd = my_sockfd;
-
-	dpc_socket_inspect(fr_log_fp, "", my_sockfd, NULL, NULL, NULL, NULL); // debug socket
-
-	DPC_DEBUG_TRACE("sending one packet, id: %u, len: %zu", request->id, request->data_len);
-	DPC_DEBUG_HEX_DUMP("data", request->data, request->data_len);
-
-	if (fr_dhcpv4_udp_packet_send(request) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
-		ERROR("Failed sending: %s", fr_syserror(errno));
-		return -1;
-	}
-
-	*reply = fr_dhcpv4_udp_packet_recv(my_sockfd); /* Receive using a connectionless UDP socket (recvfromto). */
-	if (!*reply) {
-		if (errno == EAGAIN) {
-			fr_strerror(); /* Clear the error buffer */
-			ERROR("Timed out waiting for reply");
-		} else {
-			ERROR("Error receiving reply");
-		}
-		return -1;
 	}
 
 	return 0;
@@ -275,9 +217,10 @@ static int dpc_do_request(void)
 	request = request_init(input);
 	if (request) {
 
-
-		dpc_send_one_packet(&request); // in progress. TODO.
-
+		if (dpc_send_one_packet(&request) < 0) {
+			ERROR("Error sending packet");
+			return -1;
+		}
 
 		reply = fr_dhcpv4_udp_packet_recv(request->sockfd); /* Receive using a connectionless UDP socket (recvfromto). */
 		if (!reply) {
@@ -300,6 +243,8 @@ static int dpc_do_request(void)
 	talloc_free(input);
 	return 0;
 }
+
+
 
 /*
  *	Print an ethernet address in a buffer.
