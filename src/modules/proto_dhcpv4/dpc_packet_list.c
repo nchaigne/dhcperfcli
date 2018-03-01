@@ -230,11 +230,7 @@ static int dpc_packet_entry_cmp(void const *one, void const *two)
 	RADIUS_PACKET const * const *b = two;
 
 	return fr_packet_cmp(*a, *b); // use comparison function from list.c, this is good enough.
-
-// fr_packet_cmp is called with the same id each ?? bug in rbtree ?? TODO: check.
 }
-
-
 
 /*
  *	Free the DHCP packet list.
@@ -514,24 +510,27 @@ RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 {
 	int start;
 	RADIUS_PACKET *packet;
+	dpc_packet_socket_t *ps;
 
 	if (!pl || !set) return NULL;
 
 	start = pl->last_recv;
 	do {
 		start = (start + 1) % DPC_MAX_SOCKETS;
+		ps = &pl->sockets[start];
 
-		if (pl->sockets[start].sockfd == -1) continue;
+		if (ps->sockfd == -1) continue;
 
-		if (!FD_ISSET(pl->sockets[start].sockfd, set)) continue;
+		if (!FD_ISSET(ps->sockfd, set)) continue;
 
-		packet = fr_dhcpv4_udp_packet_recv(pl->sockets[start].sockfd);
+		packet = fr_dhcpv4_udp_packet_recv(ps->sockfd);
 		if (!packet) continue;
 
 		/*
 		 *	We've received a packet, but are not guaranteed this was an expected reply.
 		 *	Call fr_packet_list_find_byreply(). If it doesn't find anything, discard the reply.
 		 */
+		DPC_DEBUG_TRACE("Received packet on socket fd: %d (index in array: %d)", ps->sockfd, start);
 
 		pl->last_recv = start;
 		return packet;

@@ -4,6 +4,7 @@
 #include <freeradius-devel/libradius.h>
 
 void dpc_printf_log(char const *fmt, ...);
+void dpc_dev_print(char const *file, int line, char const *fmt, ...);
 int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
                        fr_ipaddr_t *src_ipaddr, uint16_t *src_port, fr_ipaddr_t *dst_ipaddr, uint16_t *dst_port);
 
