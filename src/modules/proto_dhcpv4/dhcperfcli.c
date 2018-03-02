@@ -708,11 +708,17 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in)
 			talloc_free(input);
 			break;
 		}
+		fr_strerror(); /* Clear the error buffer */
+		/*
+		 *	After calling fr_pair_list_afrom_file we get weird things in FreeRADIUS error buffer, e.g.
+		 *	"Invalid character ':' in attribute name". This happens apparently when handling an ethernet address
+		 *	(which is a value, not an attribute name).
+		 *	Just ignore this.
+		*/
 
 		dpc_handle_input(input);
 
 	} while (!file_done);
-	fr_strerror(); /* Clear the error buffer */
 
 	DEBUG("Done reading input, list size: %d", vps_list_in.size);
 }
