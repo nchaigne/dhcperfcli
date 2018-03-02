@@ -12,12 +12,7 @@
 
 /* We need as many sockets as source IP / port. In most cases, only one will be used. */
 #define DPC_MAX_SOCKETS         32  // Is this enough ?
-//#define DPC_ID_ALLOC_MAX_TRIES  100
-#define DPC_ID_ALLOC_MAX_TRIES  10
-
-/*
- *	TODO: once this works, implement something better.
- */
+#define DPC_ID_ALLOC_MAX_TRIES  32
 
 
 /*
@@ -28,21 +23,13 @@
  *	Note: we do not keep track of used ID's.
  */
 typedef struct dpc_packet_socket {
-// TODO: clean this up. We don't need destination, maybe not ctx...
 	int sockfd;
-	void *ctx;
 
-	uint32_t num_outgoing;
+	uint32_t num_outgoing;  //!< Number of packets to which a reply is expected on this socket.
 
 	int src_any;
 	fr_ipaddr_t src_ipaddr;
 	uint16_t src_port;
-
-	int dst_any;
-	fr_ipaddr_t dst_ipaddr;
-	uint16_t dst_port;
-
-	bool dont_use; // TODO: remove. We probably don't need this.
 
 } dpc_packet_socket_t;
 
@@ -64,23 +51,17 @@ typedef struct dpc_packet_socket {
  *	Structure defining a list of DHCP packets (incoming or outgoing)
  *	that should be managed.
  *	(ref: structure dpc_packet_list_t from protocols/radius/list.c)
- *
- *	Notes:
- *	- although we only need one socket here, we manage an array as is done for RADIUS.
- *	- alloc_id is not used by FreeRADIUS.
- *	- prev_id is a new field added to keep track of xid's allocated in a linear fashion.
  */
 typedef struct dpc_packet_list {
 	rbtree_t *tree;
 
-	//int alloc_id;
-	uint32_t num_outgoing;
-	int last_recv;
-	int num_sockets;
+	uint32_t num_outgoing;  //!< Number of packets to which a reply is currently expected.
+	int last_recv;          //!< On which socket did we last receive a packet.
+	int num_sockets;        //!< Number of managed sockets.
 
 	dpc_packet_socket_t sockets[DPC_MAX_SOCKETS];
 
-	uint32_t prev_id; // useful for DHCP, to allocate xid's in a linear fashion.
+	uint32_t prev_id;       //!< Previously allocated xid. Allows to allocate xid's in a linear fashion.
 } dpc_packet_list_t;
 
 
@@ -194,75 +175,7 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 }
 
 /*
- *	TODO: this is ugly...
- *	(ref: function fr_packet_list_socket_add from protocols/radius/list.c)
- */
-bool dpc_packet_list_socket_add(dpc_packet_list_t *pl, int sockfd,
-                                fr_ipaddr_t *dst_ipaddr, uint16_t dst_port, void *ctx)
-{
-	struct sockaddr_storage src;
-	socklen_t sizeof_src;
-	dpc_packet_socket_t *ps;
-
-	if (!pl || !dst_ipaddr || (dst_ipaddr->af == AF_UNSPEC)) {
-		fr_strerror_printf("Invalid argument");
-		return false;
-	}
-
-	if (pl->num_sockets >= DPC_MAX_SOCKETS) {
-		fr_strerror_printf("Too many open sockets");
-		return false;
-	}
-
-	/*
-	 *	Just add it at the end. We don't need to ever remove sockets.
-	 */
-	ps = &pl->sockets[pl->num_sockets];
-	if (ps->sockfd != -1) {
-		fr_strerror_printf("Socket already allocated"); /* This should never happen. */
-		return false;
-	}
-
-	memset(ps, 0, sizeof(*ps));
-	ps->ctx = ctx;
-
-	/*
-	 *	Get address family, etc. first, so we know if we need to do udpfromto.
-	 *
-	 *	FIXME: udpfromto also does this, but it's not a critical problem.
-	 */
-	sizeof_src = sizeof(src);
-	memset(&src, 0, sizeof_src);
-	if (getsockname(sockfd, (struct sockaddr *) &src, &sizeof_src) < 0) {
-		fr_strerror_printf("%s", fr_syserror(errno));
-		return false;
-	}
-
-	if (fr_ipaddr_from_sockaddr(&src, sizeof_src, &ps->src_ipaddr, &ps->src_port) < 0) {
-		fr_strerror_printf("Failed to get IP");
-		return false;
-	}
-
-	ps->dst_ipaddr = *dst_ipaddr;
-	ps->dst_port = dst_port;
-
-	ps->src_any = fr_ipaddr_is_inaddr_any(&ps->src_ipaddr);
-	if (ps->src_any < 0) return false;
-
-	ps->dst_any = fr_ipaddr_is_inaddr_any(&ps->dst_ipaddr);
-	if (ps->dst_any < 0) return false;
-
-	/*
-	 *	As the last step before returning.
-	 */
-	ps->sockfd = sockfd;
-	pl->num_sockets ++;
-
-	return true;
-}
-
-/*
- *	Find out if two packet entries are "identical" as compared by fr_packet_cmp:
+ *	Find out if two packet entries are "identical", i.e. same
  *	packet id, socket, src port, src ip, dst ip, dst port.
  */
 static int dpc_packet_entry_cmp(void const *one, void const *two)
@@ -435,7 +348,6 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
 	 */
 	ps = dpc_socket_find(pl, sockfd);
 	if (ps == NULL) {
-		// try to allocate one instead ? ... TODO
 		fr_strerror_printf("Failed to find socket allocated with fd: %d", sockfd);
 		return false;
 	}

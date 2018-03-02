@@ -59,9 +59,9 @@ typedef struct dpc_session_ctx dpc_session_ctx_t;
  *	Holds input data (vps read from file or stdin).
  */
 struct dpc_input {
-	uint32_t id; // id of input (0 for the first one).
+	uint32_t id;            //!< Id of input (0 for the first one).
 
-	VALUE_PAIR *vps; // list of input value pairs read
+	VALUE_PAIR *vps;        //!< List of input value pairs read.
 
 	unsigned int code;      //!< Packet code (type).
 	fr_ipaddr_t src_ipaddr; //!< Src IP address of packet.
@@ -69,7 +69,7 @@ struct dpc_input {
 	uint16_t src_port;      //!< Src port of packet.
 	uint16_t dst_port;      //!< Dst port of packet.
 
-	dpc_input_list_t *list; // the list to which this entry belongs (NULL for an unchained entry).
+	dpc_input_list_t *list; //!< The list to which this entry belongs (NULL for an unchained entry).
 
 	dpc_input_t *prev;
 	dpc_input_t *next;
@@ -88,7 +88,7 @@ struct dpc_input_list {
  *	Session context.
  */
 struct dpc_session_ctx {
-	uint32_t id; // id of session (0 for the first one).
+	uint32_t id;            //!< Id of session (0 for the first one).
 
 	RADIUS_PACKET *packet;
 	RADIUS_PACKET *reply;
