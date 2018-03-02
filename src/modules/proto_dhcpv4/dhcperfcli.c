@@ -75,10 +75,6 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 	DPC_DEBUG_TRACE("Preparing to send one packet");
 
-// WARN: if no "Packet-Src-IP-Address" then a socket is allocated with src = 0.0.0.0
-// when a packet is sent, a suitable IP is automatically picked by the system... but we can't see which it is!
-// TODO => issue a warning ?
-
 	int my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
 	if (my_sockfd < 0) {
 		ERROR("Failed to provide a suitable socket");
@@ -579,6 +575,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 {
 	vp_cursor_t cursor;
 	VALUE_PAIR *vp;
+	static bool warn_inaddr_any = true;
 
 	input->code = FR_CODE_UNDEFINED;
 
@@ -651,6 +648,15 @@ static bool dpc_parse_input(dpc_input_t *input)
 		ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
 		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src_ipaddr), input->src_port);
 		exit(EXIT_FAILURE);
+	}
+
+	/*
+	 *	If we're using INADDR_ANY, make sure we know what we're doing.
+	 */
+	if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src_ipaddr)) {
+		WARN("You didn't specify a source IP address. Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
+		     " Please make sure this is really what you intended.");
+		warn_inaddr_any = false; /* Once is enough. */
 	}
 
 	/* All good. */

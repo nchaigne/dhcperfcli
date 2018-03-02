@@ -57,9 +57,6 @@ typedef struct dpc_packet_socket {
  *
  *	Conversely, if we first bind a socket with a source IP address, we cannot later bind another
  *	socket with 0.0.0.0. It would fail with "Bind failed: EADDRINUSE: Address already in use".
- *
- *	TODO: how do we handle this properly ?
- *	=> maybe: pre-parse all inputs, ensure: either all want to use INADDR_ANY, or none at all.
  */
 
 
