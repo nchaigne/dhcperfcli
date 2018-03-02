@@ -454,8 +454,6 @@ static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received)
 
 	dpc_packet_header_print(fp, packet, received);
 
-	if (!packet->vps) return;
-
 	fprintf(fp, "DHCP vps fields:\n");
 	dpc_packet_fields_print(fp, packet->vps);
 
