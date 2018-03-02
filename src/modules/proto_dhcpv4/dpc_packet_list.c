@@ -223,7 +223,7 @@ dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id)
 	}
 
 	/* Initialize "previously allocated xid", which is used to allocate xid's in a linear fashion. */
-	pl->prev_id = base_id;
+	pl->prev_id = base_id - 1;
 
 	return pl;
 }
@@ -239,10 +239,11 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
 	if (!pl || !request_p || !*request_p) return false;
 
 	bool r = rbtree_insert(pl->tree, request_p);
-
-	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
-	DPC_DEBUG_TRACE("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
-	                dpc_print_packet_from_to(from_to_buf, *request_p, true));
+	if (r) {
+		char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+		DPC_DEBUG_TRACE("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
+		                dpc_print_packet_from_to(from_to_buf, *request_p, true));
+	}
 
 	return r;
 }
@@ -360,9 +361,12 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
 	request->src_ipaddr = ps->src_ipaddr;
 	request->src_port = ps->src_port;
 
-	if (request->id == DPC_PACKET_ID_UNASSIGNED) { /* If not, first try with the id they want. */
+	if (request->id == DPC_PACKET_ID_UNASSIGNED) {
 		id = ++ pl->prev_id;
 		request->id = id;
+	} else {
+		 /* First try with the id they want. */
+		id = request->id;
 	}
 
 	/*
@@ -380,7 +384,6 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
 			*/
 			if (dpc_packet_list_insert(pl, request_p)) {
 				DPC_DEBUG_TRACE("Successful insert into packet list (allocated xid: %d)", request->id);
-//				if (pctx) *pctx = ps->ctx; // what for ?
 				ps->num_outgoing ++;
 				pl->num_outgoing ++;
 				return true;

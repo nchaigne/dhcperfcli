@@ -163,3 +163,12 @@ int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
 
 	return 0;
 }
+
+
+/*
+ *	Find the matching DHCP attribute.
+ */
+VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag)
+{
+	return fr_pair_find_by_num(head, DHCP_MAGIC_VENDOR, attr, tag);
+}

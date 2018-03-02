@@ -11,4 +11,6 @@ char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra);
 int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
                        fr_ipaddr_t *src_ipaddr, uint16_t *src_port, fr_ipaddr_t *dst_ipaddr, uint16_t *dst_port);
 
+VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
+
 #endif

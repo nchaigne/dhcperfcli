@@ -39,6 +39,7 @@ static int packet_code = FR_CODE_UNDEFINED;
 
 static float timeout = 3.0;
 static struct timeval tv_timeout;
+static uint32_t base_xid = 0;
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -62,6 +63,7 @@ static void usage(int);
 static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 static VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
+static int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);
 static void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
 
@@ -93,10 +95,16 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 	if (packet->id == DPC_PACKET_ID_UNASSIGNED) {
 		/* Need to assign an xid to this packet. */
-
 		bool rcode;
 
-		DPC_DEBUG_TRACE("Get xid");
+		/* Get DHCP-Transaction-Id from input, if set use it. */
+		VALUE_PAIR *vp_xid;
+		if ((vp_xid = dpc_pair_find_dhcp(packet->vps, FR_DHCPV4_TRANSACTION_ID, TAG_ANY))) {
+			packet->id = vp_xid->data.vb_uint32;
+			DPC_DEBUG_TRACE("Allocate xid (prefered value: %u)", packet->id);
+		} else {
+			DPC_DEBUG_TRACE("Allocate xid (don't care which)");
+		}
 
 		rcode = dpc_packet_list_id_alloc(pl, my_sockfd, packet_p);
 		if (!rcode) {
@@ -255,7 +263,8 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	 *	Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
 	 *	the requested id may not have been available).
 	 */
-	fr_pair_delete_by_num(&packet->vps, FR_DHCPV4_TRANSACTION_ID, DHCP_MAGIC_VENDOR, TAG_ANY);
+
+	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
 	VALUE_PAIR *vp_xid = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
 	vp_xid->data.vb_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp_xid);
@@ -369,15 +378,17 @@ static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool receiv
 		else fprintf(fp, " (code %u)", code);
 	}
 
-	/* DHCP specific information */
-	memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
-	fprintf(fp, " (hwaddr: %s", ether_addr_print(hwaddr, buf_hwaddr) );
+	/* DHCP specific information. */
+	if (packet->data) { // don't crash if called before packet is encoded.
+		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
+		fprintf(fp, " (hwaddr: %s", ether_addr_print(hwaddr, buf_hwaddr) );
 
-	if (packet->code == FR_DHCPV4_ACK || packet->code == FR_DHCPV4_OFFER) {
-		memcpy(&yiaddr, packet->data + 16, 4);
-		fprintf(fp, ", yiaddr: %s", inet_ntop(AF_INET, &yiaddr, lease_ipaddr, sizeof(lease_ipaddr)) );
+		if (packet->code == FR_DHCPV4_ACK || packet->code == FR_DHCPV4_OFFER) {
+			memcpy(&yiaddr, packet->data + 16, 4);
+			fprintf(fp, ", yiaddr: %s", inet_ntop(AF_INET, &yiaddr, lease_ipaddr, sizeof(lease_ipaddr)) );
+		}
+		fprintf(fp, ")");
 	}
-	fprintf(fp, ")");
 
 	fprintf(fp, " Id %u (0x%08x) %s length %zu\n",
 	        packet->id, packet->id,
@@ -439,7 +450,11 @@ static int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
  */
 static void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received)
 {
+	if (!fp || !packet) return;
+
 	dpc_packet_header_print(fp, packet, received);
+
+	if (!packet->vps) return;
 
 	fprintf(fp, "DHCP vps fields:\n");
 	dpc_packet_fields_print(fp, packet->vps);
@@ -807,8 +822,6 @@ static void dpc_event_list_init(TALLOC_CTX *ctx)
  */
 static void dpc_packet_list_init(void)
 {
-	int base_xid = 0; // TODO
-
 	pl = dpc_packet_list_create(base_xid);
 	if (!pl) {
 		ERROR("Failed to create packet list");
@@ -860,7 +873,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:ht:vxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:hi:t:vxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -868,6 +881,11 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'h':
 			usage(0);
+			break;
+
+		case 'i':
+			if (!isdigit((int) *optarg)) usage(1);
+			base_xid = atoi(optarg);
 			break;
 
 		case 't':
@@ -972,6 +990,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(output, " Options:\n");
 	fprintf(output, "  -f <file>        Read input vps from <file>, not stdin.\n");
 	fprintf(output, "  -h               Print this help message.\n");
+	fprintf(output, "  -i <num>         Start generating xid values with <num>.\n");
 	fprintf(output, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(output, "  -v               Print version information.\n");
 	fprintf(output, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
