@@ -37,12 +37,15 @@ extern int dpc_debug_lvl;
 #endif
 
 
-#define DHCP_PORT_SERVER	67
-#define DHCP_MAX_MESSAGE_TYPE (16)
+#define DHCP_PORT_SERVER  67
+#define DHCP_PORT_CLIENT  68
+#define DHCP_PORT_RELAY   67
+
+#define DHCP_MAX_MESSAGE_TYPE  (16)
 // DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
 
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
-#define FR_DHCPV4_TRANSACTION_ID         260
+#define FR_DHCPV4_TRANSACTION_ID  260
 
 
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
@@ -56,7 +59,15 @@ typedef struct dpc_session_ctx dpc_session_ctx_t;
  *	Holds input data (vps read from file or stdin).
  */
 struct dpc_input {
-	VALUE_PAIR *vps;
+	uint32_t id; // id of input (0 for the first one).
+
+	VALUE_PAIR *vps; // list of input value pairs read
+
+	unsigned int code;      //!< Packet code (type).
+	fr_ipaddr_t src_ipaddr; //!< Src IP address of packet.
+	fr_ipaddr_t dst_ipaddr; //!< Dst IP address of packet.
+	uint16_t src_port;      //!< Src port of packet.
+	uint16_t dst_port;      //!< Dst port of packet.
 
 	dpc_input_list_t *list; // the list to which this entry belongs (NULL for an unchained entry).
 

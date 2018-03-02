@@ -33,6 +33,7 @@ static dpc_input_list_t vps_list_in = { 0 };
 static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
 static uint16_t server_port = DHCP_PORT_SERVER;
+static uint16_t client_port = DHCP_PORT_CLIENT;
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
 
@@ -40,6 +41,7 @@ static float timeout = 3.0;
 static struct timeval tv_timeout;
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
+static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover", FR_DHCPV4_DISCOVER },
@@ -220,7 +222,9 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	return 0;
 }
 
-
+/*
+ *	Initialize a DHCP packet from an input item.
+ */
 static RADIUS_PACKET *request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 {
 	vp_cursor_t cursor;
@@ -231,71 +235,20 @@ static RADIUS_PACKET *request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 
 	DPC_DEBUG_TRACE("New packet allocated");
 
-	// fill in the packet value pairs
+	/* Fill in the packet value pairs. */
 	dpc_pair_list_append(request, &request->vps, input->vps);
 
 	/*
-	 *	Fix / set various options
+	 *	Use values prepared earlier.
 	 */
-	for (vp = fr_pair_cursor_init(&cursor, &input->vps);
-	     vp;
-	     vp = fr_pair_cursor_next(&cursor)) {
-		/*
-		 *	Allow to set packet type using DHCP-Message-Type
-		 */
-		if (vp->da->vendor == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
-			request->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
-		} else if (!vp->da->vendor) switch (vp->da->attr) {
-		/*
-		 *	Also allow to set packet type using Packet-Type
-		 *	(this takes precedence over the command argument.)
-		 */
-		case FR_PACKET_TYPE:
-			request->code = vp->vp_uint32;
-			break;
-
-		case FR_PACKET_DST_PORT:
-			request->dst_port = vp->vp_uint16;
-			break;
-
-		case FR_PACKET_DST_IP_ADDRESS:
-		case FR_PACKET_DST_IPV6_ADDRESS:
-			memcpy(&request->dst_ipaddr, &vp->vp_ip, sizeof(request->src_ipaddr));
-			break;
-
-		case FR_PACKET_SRC_PORT:
-			request->src_port = vp->vp_uint16;
-			break;
-
-		case FR_PACKET_SRC_IP_ADDRESS:
-		case FR_PACKET_SRC_IPV6_ADDRESS:
-			memcpy(&request->src_ipaddr, &vp->vp_ip, sizeof(request->src_ipaddr));
-			break;
-
-		default:
-			break;
-		} /* switch over the attribute */
-
-	} /* loop over the input vps */
-
-	/*
-	 *	Set defaults if they weren't specified via pairs
-	 */
-	if (request->src_port == 0) request->src_port = server_port + 1;
-	if (request->dst_port == 0) request->dst_port = server_port;
-	if (request->src_ipaddr.af == AF_UNSPEC) request->src_ipaddr = client_ipaddr;
-	if (request->dst_ipaddr.af == AF_UNSPEC) request->dst_ipaddr = server_ipaddr;
-	if (!request->code) request->code = packet_code;
-
-	if (!request->code) {
-		ERROR("No packet type specified in command line or input vps");
-		return NULL;
-	}
+	request->code = input->code;
+	request->src_port = input->src_port;
+	request->dst_port = input->dst_port;
+	request->src_ipaddr = input->src_ipaddr;
+	request->dst_ipaddr = input->dst_ipaddr;
 
 	return request;
 }
-
-
 
 /*
  *	Encode a DHCP packet.
@@ -622,16 +575,105 @@ static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
 }
 
 /*
+ *	Parse an input item and prepare information necessary to build a packet.
+ */
+static bool dpc_parse_input(dpc_input_t *input)
+{
+	vp_cursor_t cursor;
+	VALUE_PAIR *vp;
+
+	input->code = FR_CODE_UNDEFINED;
+
+	/*
+	 *	Loop over input value pairs.
+	 */
+	for (vp = fr_pair_cursor_init(&cursor, &input->vps);
+	     vp;
+	     vp = fr_pair_cursor_next(&cursor)) {
+		/*
+		 *	Allow to set packet type using DHCP-Message-Type
+		 */
+		if (vp->da->vendor == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
+			input->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
+		} else if (!vp->da->vendor) switch (vp->da->attr) {
+		/*
+		 *	Also allow to set packet type using Packet-Type
+		 *	(this takes precedence over the command argument.)
+		 */
+		case FR_PACKET_TYPE:
+			input->code = vp->vp_uint32;
+			break;
+
+		case FR_PACKET_DST_PORT:
+			input->dst_port = vp->vp_uint16;
+			break;
+
+		case FR_PACKET_DST_IP_ADDRESS:
+		case FR_PACKET_DST_IPV6_ADDRESS:
+			memcpy(&input->dst_ipaddr, &vp->vp_ip, sizeof(input->src_ipaddr));
+			break;
+
+		case FR_PACKET_SRC_PORT:
+			input->src_port = vp->vp_uint16;
+			break;
+
+		case FR_PACKET_SRC_IP_ADDRESS:
+		case FR_PACKET_SRC_IPV6_ADDRESS:
+			memcpy(&input->src_ipaddr, &vp->vp_ip, sizeof(input->src_ipaddr));
+			break;
+
+		default:
+			break;
+		} /* switch over the attribute */
+
+	} /* loop over the input vps */
+
+	/*
+	 *	If not specified in input vps, use default values.
+	 */
+	if (!input->code) input->code = packet_code;
+
+	if (!input->src_port) input->src_port = client_port;
+	if (!input->dst_port) input->dst_port = server_port;
+
+	if (input->src_ipaddr.af == AF_UNSPEC) input->src_ipaddr = client_ipaddr;
+	if (input->dst_ipaddr.af == AF_UNSPEC) input->dst_ipaddr = server_ipaddr;
+
+	if (input->code == FR_CODE_UNDEFINED) {
+		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
+		return false;
+	}
+
+	// TODO: also allocate socket here.
+
+	/* All good. */
+	return true;
+}
+
+/*
  *	Handle a list of input vps we've just read.
  */
 static void dpc_handle_input(dpc_input_t *input)
 {
+	input->id = input_num ++;
+
 	// for now, just trace what we've read.
 	if (dpc_debug_lvl > 1) {
-		DEBUG2("Input vps read:");
+		DEBUG2("Input (id: %u) vps read:", input->id);
 		fr_pair_list_fprint(fr_log_fp, input->vps);
 	}
 
+	if (!dpc_parse_input(input)) {
+		/*
+		 *	Invalid item. Discard.
+		 */
+		talloc_free(input);
+		return;
+	}
+
+	/*
+	 *	Add it to the list of input items.
+	 */
 	dpc_input_item_add(&vps_list_in, input);
 }
 

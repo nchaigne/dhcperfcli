@@ -89,7 +89,7 @@ typedef struct dpc_packet_list {
 
 /*
  *	Check if two packets are identical from the packet list perspective.
-  *	(ref: function fr_packet_cmp from protocols/radius/list.c)
+ *	(ref: function fr_packet_cmp from protocols/radius/list.c)
  */
 static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
 {
