@@ -227,8 +227,6 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
  */
 static RADIUS_PACKET *request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 {
-	vp_cursor_t cursor;
-	VALUE_PAIR *vp;
 	RADIUS_PACKET *request;
 
 	MEM(request = fr_radius_alloc(ctx, true));
@@ -644,7 +642,16 @@ static bool dpc_parse_input(dpc_input_t *input)
 		return false;
 	}
 
-	// TODO: also allocate socket here.
+	/*
+	 *	Allocate the socket now. If we can't, stop everything now.
+	 */
+	int my_sockfd = dpc_socket_provide(pl, &input->src_ipaddr, input->src_port);
+	if (my_sockfd < 0) {
+		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+		ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
+		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src_ipaddr), input->src_port);
+		exit(EXIT_FAILURE);
+	}
 
 	/* All good. */
 	return true;
@@ -746,13 +753,13 @@ static void dpc_dict_init(void)
 {
 	fr_dict_attr_t const *da;
 
-	DEBUG("Including dictionary file \"%s/%s\"", dict_dir, FR_DICTIONARY_FILE);
-	if (fr_dict_from_file(NULL, &dict, dict_dir, FR_DICTIONARY_FILE, "dhcperfcli") < 0) {
+	DEBUG("Including dictionary file: %s/%s", dict_dir, FR_DICTIONARY_FILE);
+	if (fr_dict_from_file(NULL, &dict, dict_dir, FR_DICTIONARY_FILE, progname) < 0) {
 		fr_perror("dhcperfcli");
 		exit(EXIT_FAILURE);
 	}
 
-	DEBUG("Including dictionary file \"%s/%s\"", radius_dir, FR_DICTIONARY_FILE);
+	DEBUG("Including dictionary file: %s/%s", radius_dir, FR_DICTIONARY_FILE);
 	if (fr_dict_read(dict, radius_dir, FR_DICTIONARY_FILE) == -1) {
 		fr_log_perror(&default_log, L_ERR, "Failed to initialize the dictionaries");
 		exit(EXIT_FAILURE);
@@ -926,6 +933,10 @@ int main(int argc, char **argv)
 	dpc_packet_list_init();
 
 	dpc_input_load(autofree);
+
+	if (vps_list_in.size == 0) {
+		WARN("No valid input loaded, nothing to do");
+	}
 
 	// for now
 	while (vps_list_in.size > 0) {
