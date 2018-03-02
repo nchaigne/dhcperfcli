@@ -67,15 +67,24 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
  *	Print packet source and destination IP/port.
  *	Caller is responsible for passing an output buffer (buf) with sufficient space (DPC_FROM_TO_STRLEN).
  */
-char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet)
+char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
 {
 	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	char dst_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 
-	sprintf(buf, "from %s:%u to %s:%u",
-	        fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &packet->src_ipaddr), packet->src_port,
-	        fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->dst_ipaddr), packet->dst_port
-	);
+	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &packet->src_ipaddr);
+	fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->dst_ipaddr);
+
+	if (!extra) {
+		sprintf(buf, "from %s:%u to %s:%u",
+		        src_ipaddr_buf, packet->src_port, dst_ipaddr_buf, packet->dst_port
+		);
+	} else {
+		sprintf(buf, "from %s:%u (prefix: %d) to %s:%u (prefix: %d)",
+		        src_ipaddr_buf, packet->src_port, packet->src_ipaddr.prefix,
+		        dst_ipaddr_buf, packet->dst_port, packet->dst_ipaddr.prefix
+		);
+	}
 	return buf;
 }
 

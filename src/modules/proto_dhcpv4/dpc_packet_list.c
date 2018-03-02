@@ -284,7 +284,13 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
 {
 	if (!pl || !request_p || !*request_p) return false;
 
-	return rbtree_insert(pl->tree, request_p);
+	bool r = rbtree_insert(pl->tree, request_p);
+
+	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+	DPC_DEBUG_TRACE("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
+	                dpc_print_packet_from_to(from_to_buf, *request_p, true));
+
+	return r;
 }
 
 /*
@@ -321,6 +327,10 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 	my_request.dst_port = reply->src_port;
 
 	request = &my_request;
+
+	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+	DPC_DEBUG_TRACE("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
+	                 dpc_print_packet_from_to(from_to_buf, request, true));
 
 	return rbtree_finddata(pl->tree, &request);
 }

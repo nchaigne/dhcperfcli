@@ -30,8 +30,8 @@ static fr_event_list_t *event_list = NULL;
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
 
-static fr_ipaddr_t server_ipaddr = { 0 };
-static fr_ipaddr_t client_ipaddr = { 0 };
+static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
+static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
@@ -183,7 +183,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
-	                dpc_print_packet_from_to(from_to_buf, reply), reply->id, reply->id);
+	                dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
 
 	/*
 	 *	Query the packet list to get the original packet to which this is a reply.
@@ -434,7 +434,7 @@ static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool receiv
 
 	fprintf(fp, " Id %u (0x%08x) %s length %zu\n",
 	        packet->id, packet->id,
-	        dpc_print_packet_from_to(from_to_buf, packet),
+	        dpc_print_packet_from_to(from_to_buf, packet, false),
 	        packet->data_len);
 }
 
@@ -842,6 +842,7 @@ static void dpc_options_parse(int argc, char **argv)
 	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
 		dpc_host_addr_resolve(argv[1], &server_ipaddr, &server_port);
 		client_ipaddr.af = server_ipaddr.af;
+		client_ipaddr.prefix = server_ipaddr.prefix;
 	}
 
 	/*
