@@ -47,6 +47,23 @@ typedef struct dpc_packet_socket {
 } dpc_packet_socket_t;
 
 /*
+ *	Note on sockets:
+ *
+ *	If we're using a socket bound to source 0.0.0.0 (INADDR_ANY) to send a packet, the system
+ *	will pick an appropriate source IP address for our packet. We *cannot* know which it is.
+ *
+ *	If we bind a socket with source 0.0.0.0, we cannot use another socket with a source IP address
+ *	(for the same source port).
+ *
+ *	Conversely, if we first bind a socket with a source IP address, we cannot later bind another
+ *	socket with 0.0.0.0. It would fail with "Bind failed: EADDRINUSE: Address already in use".
+ *
+ *	TODO: how do we handle this properly ?
+ *	=> maybe: pre-parse all inputs, ensure: either all want to use INADDR_ANY, or none at all.
+ */
+
+
+/*
  *	Structure defining a list of DHCP packets (incoming or outgoing)
  *	that should be managed.
  *	(ref: structure dpc_packet_list_t from protocols/radius/list.c)
@@ -69,6 +86,33 @@ typedef struct dpc_packet_list {
 	uint32_t prev_id; // useful for DHCP, to allocate xid's in a linear fashion.
 } dpc_packet_list_t;
 
+
+/*
+ *	Check if two packets are identical from the packet list perspective.
+  *	(ref: function fr_packet_cmp from protocols/radius/list.c)
+ */
+static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
+{
+	int rcode;
+
+	if (a->id < b->id) return -1;
+	if (a->id > b->id) return +1;
+
+	if (a->sockfd < b->sockfd) return -1;
+	if (a->sockfd > b->sockfd) return +1;
+
+	rcode = (int) a->src_port - (int) b->src_port;
+	if (rcode != 0) return rcode;
+
+	rcode = fr_ipaddr_cmp(&a->src_ipaddr, &b->src_ipaddr);
+	if (rcode != 0) return rcode;
+
+	rcode = fr_ipaddr_cmp(&a->dst_ipaddr, &b->dst_ipaddr);
+	if (rcode != 0) return rcode;
+
+	rcode = (int) a->dst_port - (int) b->dst_port;
+	return rcode;
+}
 
 /*
  *	From a given socket FD, retrieve the corresponding element of the socket array
@@ -229,7 +273,7 @@ static int dpc_packet_entry_cmp(void const *one, void const *two)
 	RADIUS_PACKET const * const *a = one;
 	RADIUS_PACKET const * const *b = two;
 
-	return fr_packet_cmp(*a, *b); // use comparison function from list.c, this is good enough.
+	return dpc_packet_cmp(*a, *b);
 }
 
 /*
