@@ -40,10 +40,13 @@ static int packet_code = FR_CODE_UNDEFINED;
 static float timeout = 3.0;
 static struct timeval tv_timeout;
 static uint32_t base_xid = 0;
+static uint32_t session_max_active = 1;
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 static bool job_done = false;
+
+static uint32_t session_num_active = 0; /* Number of active sessions. */
 
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover", FR_DHCPV4_DISCOVER },
@@ -275,7 +278,7 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 /*
  *	Initialize a new session.
  */
-static dpc_session_ctx_t *dpc_init_session(TALLOC_CTX *ctx)
+static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 {
 	dpc_input_t *input = NULL;
 	dpc_session_ctx_t *session = NULL;
@@ -296,10 +299,23 @@ static dpc_session_ctx_t *dpc_init_session(TALLOC_CTX *ctx)
 
 		// TODO: more stuff here. Later.
 		session->id = session_num ++;
+
+		session_num_active ++;
 	}
 
 	talloc_free(input);
 	return session;
+}
+
+/*
+ *	One session is finished.
+ */
+static void dpc_session_finish(dpc_session_ctx_t *session)
+{
+	DPC_DEBUG_TRACE("Terminating session (id: %u)", session->id);
+
+	talloc_free(session);
+	session_num_active --;
 }
 
 static int dpc_do_request(void)
@@ -309,7 +325,7 @@ static int dpc_do_request(void)
 	/*
 	 *	Initialize a new session, along with the packet to send.
 	 */
-	dpc_session_ctx_t *session = dpc_init_session(autofree);
+	dpc_session_ctx_t *session = dpc_session_init(autofree);
 
 	if (session) {
 
@@ -336,6 +352,32 @@ static int dpc_do_request(void)
 }
 
 /*
+ *	Start new sessions.
+ */
+static void dpc_loop_start_sessions(void)
+{
+	bool done = false;
+
+	while (!done) {
+		if (vps_list_in.size == 0) break;
+
+		if (session_num_active >= session_max_active) break;
+
+		/*
+		 *	Initialize a new session and send the packet.
+		 */
+		dpc_session_ctx_t *session = dpc_session_init(autofree);
+		if (session) {
+			ret = dpc_send_one_packet(&session->packet);
+			if (ret < 0) {
+				ERROR("Error sending packet");
+				dpc_session_finish(session);
+			}
+		}
+	}
+}
+
+/*
  *	Check if we're done with the main processing loop.
  */
 static bool dpc_loop_check_done(void)
@@ -354,7 +396,7 @@ static bool dpc_loop_check_done(void)
 /*
  *	Main processing loop.
  */
-static void dpc_main_loop()
+static void dpc_main_loop(void)
 {
 	job_done = false;
 
