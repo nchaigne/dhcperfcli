@@ -43,6 +43,7 @@ static uint32_t base_xid = 0;
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
+static bool job_done = false;
 
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover", FR_DHCPV4_DISCOVER },
@@ -334,7 +335,40 @@ static int dpc_do_request(void)
 	return ret;
 }
 
+/*
+ *	Check if we're done with the main processing loop.
+ */
+static bool dpc_loop_check_done(void)
+{
+	/* There are still ongoing requests, to which we expect a reply or wait for a timeout. */
+	if (dpc_packet_list_num_elements(pl) > 0) return false;
 
+	/* There's still input data to consume. */
+	if (vps_list_in.size > 0) return false;
+
+	/* No more work. */
+	job_done = true;
+	return true;
+}
+
+/*
+ *	Main processing loop.
+ */
+static void dpc_main_loop()
+{
+	job_done = false;
+
+	while (!job_done) {
+		/* Receive and process reply packets. */
+		dpc_loop_recv();
+		
+		/* Start new sessions. */
+		dpc_loop_start_sessions();
+		
+		/* Check if we're done. */
+		dpc_loop_check_done();
+	}
+}
 
 /*
  *	Add an allocated input entry to the tail of the list.
@@ -794,16 +828,16 @@ int main(int argc, char **argv)
 	dpc_event_list_init(autofree);
 	dpc_packet_list_init();
 
+	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
 
 	if (vps_list_in.size == 0) {
 		WARN("No valid input loaded, nothing to do");
+		exit(0);
 	}
 
-	// for now
-	while (vps_list_in.size > 0) {
-		dpc_do_request();
-	}
+	/* Execute the main processing loop. */
+	dpc_main_loop();
 
 	exit(0);
 }
