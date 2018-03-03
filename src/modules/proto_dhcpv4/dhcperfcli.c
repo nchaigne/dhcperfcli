@@ -64,11 +64,39 @@ static const FR_NAME_NUMBER request_types[] = {
  *	Static functions declaration.
  */
 static void usage(int);
-static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
+
+static int dpc_send_one_packet(RADIUS_PACKET **packet_p);
+static int dpc_recv_one_packet(struct timeval *tv_wait_time);
+static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
+static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
+static void dpc_session_finish(dpc_session_ctx_t *session);
+
+static void dpc_loop_recv(void);
+static void dpc_loop_start_sessions(void);
+static bool dpc_loop_check_done(void);
+static void dpc_main_loop(void);
+
+static void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);
+static dpc_input_t *dpc_input_item_draw(dpc_input_t *entry);
+static dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
+static bool dpc_parse_input(dpc_input_t *input);
+static void dpc_handle_input(dpc_input_t *input);
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in);
+static int dpc_input_load(TALLOC_CTX *ctx);
+
+static void dpc_dict_init(void);
+static void dpc_event_list_init(TALLOC_CTX *ctx);
+static void dpc_packet_list_init(void);
+static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port);
+static void dpc_command_parse(char const *command);
+static void dpc_options_parse(int argc, char **argv);
 
 
-// in progress. TODO.
+/*
+ *	Send one packet.
+ *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
+ */
 static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 // note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
 {
@@ -83,16 +111,6 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 		return -1;
 	}
 
-	/*
-	 *	Set option 'receive timeout' on socket.
-	 *	Note: in case of a timeout, the error will be "Resource temporarily unavailable".
-	 */
-	// temporary. TODO.
-	if (setsockopt(my_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_timeout, sizeof(struct timeval)) == -1) {
-		ERROR("Failed setting socket timeout: %s", fr_syserror(errno));
-		return -1;
-	}
-
 	if (packet->id == DPC_PACKET_ID_UNASSIGNED) {
 		/* Need to assign an xid to this packet. */
 		bool rcode;
@@ -100,7 +118,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 		/* Get DHCP-Transaction-Id from input, if set use it. */
 		VALUE_PAIR *vp_xid;
 		if ((vp_xid = dpc_pair_find_dhcp(packet->vps, FR_DHCPV4_TRANSACTION_ID, TAG_ANY))) {
-			packet->id = vp_xid->data.vb_uint32;
+			packet->id = vp_xid->data.vb_uint32; /* Note: packet->id will be reset if allocation fails. */
 			DPC_DEBUG_TRACE("Allocate xid (prefered value: %u)", packet->id);
 		} else {
 			DPC_DEBUG_TRACE("Allocate xid (don't care which)");
@@ -146,6 +164,8 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 /*
  *	Receive one packet, maybe.
+ *	If tv_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
+ *	If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
  *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
 static int dpc_recv_one_packet(struct timeval *tv_wait_time)
@@ -224,13 +244,15 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 
+	dpc_session_finish(session); // For now. More later. TODO.
+
 	return 1;
 }
 
 /*
  *	Initialize a DHCP packet from an input item.
  */
-static RADIUS_PACKET *request_init(TALLOC_CTX *ctx, dpc_input_t *input)
+static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 {
 	RADIUS_PACKET *request;
 
@@ -292,7 +314,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		return NULL;
 	}
 
-	packet = request_init(ctx, input);
+	packet = dpc_request_init(ctx, input);
 	if (packet) {
 		MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 
@@ -313,7 +335,16 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
  */
 static void dpc_session_finish(dpc_session_ctx_t *session)
 {
+	if (!session) return;
+
 	DPC_DEBUG_TRACE("Terminating session (id: %u)", session->id);
+
+	/* Remove the packet from the list, and free the id we've been using. */
+	if (session->packet && session->packet->id != DPC_PACKET_ID_UNASSIGNED) {
+		if (!dpc_packet_list_id_free(pl, session->packet, true)) {
+			WARN("Failed to free from packet list, id: %u", session->packet->id);
+		}
+	}
 
 	talloc_free(session);
 	session_num_active --;
