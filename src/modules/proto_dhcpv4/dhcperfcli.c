@@ -146,6 +146,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 /*
  *	Receive one packet, maybe.
+ *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
 static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 {
@@ -223,7 +224,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 
-	return 0;
+	return 1;
 }
 
 /*
@@ -349,6 +350,21 @@ static int dpc_do_request(void)
 	}
 
 	return ret;
+}
+
+/*
+ *	Receive and handle reply packets.
+ */
+static void dpc_loop_recv(void)
+{
+	bool done = false;
+
+	while (!done) {
+		/*
+		 *	Receive and process packets (no waiting) until there's nothing left incoming.
+		 */
+		if (dpc_recv_one_packet(NULL) < 1) break;
+	}
 }
 
 /*
