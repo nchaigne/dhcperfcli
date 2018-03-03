@@ -339,7 +339,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
 		return false;
 	}
 
-	int id = DPC_PACKET_ID_UNASSIGNED;
+	int id;
 	dpc_packet_socket_t *ps = NULL;
 	RADIUS_PACKET *request = *request_p;
 	int tries = 0;
