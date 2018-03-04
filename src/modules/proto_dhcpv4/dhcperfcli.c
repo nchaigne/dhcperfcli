@@ -67,6 +67,7 @@ static void usage(int);
 
 static int dpc_send_one_packet(RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
+static bool dpc_recv_post_action(dpc_session_ctx_t *session);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
 static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
@@ -171,7 +172,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	struct timeval  tv;
 	RADIUS_PACKET *reply = NULL, **packet_p;
 	dpc_session_ctx_t *session;
-	volatile int max_fd;
+	int max_fd;
 
 	/* Wait for reply, timing out as necessary */
 	FD_ZERO(&set);
@@ -241,9 +242,25 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
 
-	dpc_session_finish(session); // For now. More later. TODO.
+	/*
+	 *	Perform post reception actions, and determine if session should be finished.
+	 */
+	if (!dpc_recv_post_action(session)) {
+		dpc_session_finish(session);
+	}
 
 	return 1;
+}
+
+/*
+ *	Perform actions after reception of a reply.
+ *	Returns true if we're not done with the session (so it should not be terminated yet), false otherwise.
+ */
+static bool dpc_recv_post_action(dpc_session_ctx_t *session)
+{
+	// More later. TODO.
+
+	return false;
 }
 
 /*
