@@ -24,4 +24,8 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 
 void dpc_float_to_timeval(struct timeval *tv, float f_val);
 
+void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);
+dpc_input_t *dpc_input_item_draw(dpc_input_t *entry);
+dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
+
 #endif

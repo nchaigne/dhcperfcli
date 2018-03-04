@@ -333,3 +333,82 @@ void dpc_float_to_timeval(struct timeval *tv, float f_val)
 	tv->tv_sec = (time_t)f_val;
 	tv->tv_usec = (uint64_t)(f_val * USEC) - (tv->tv_sec * USEC);
 }
+
+/*
+ *	Add an allocated input entry to the tail of the list.
+ */
+void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)
+{
+	if (!list || !entry) return;
+
+	if (!list->head) {
+		assert(list->tail == NULL);
+		list->head = entry;
+		entry->prev = NULL;
+	} else {
+		assert(list->tail != NULL);
+		assert(list->tail->next == NULL);
+		list->tail->next = entry;
+		entry->prev = list->tail;
+	}
+	list->tail = entry;
+	entry->next = NULL;
+	entry->list = list;
+	list->size ++;
+}
+
+/*
+ *	Remove an input entry from its list.
+ */
+dpc_input_t *dpc_input_item_draw(dpc_input_t *entry)
+{
+	if (!entry) return NULL; // should not happen.
+	if (!entry->list) return entry; // not in a list: just return the entry.
+
+	dpc_input_t *prev, *next;
+
+	prev = entry->prev;
+	next = entry->next;
+
+	dpc_input_list_t *list = entry->list;
+
+	assert(list->head != NULL); // entry belongs to a list, so the list can't be empty.
+	assert(list->tail != NULL); // same.
+
+	if (prev) {
+		assert(list->head != entry); // if entry has a prev, then entry can't be head.
+		prev->next = next;
+	}
+	else {
+		assert(list->head == entry); // if entry has no prev, then entry must be head.
+		list->head = next;
+	}
+
+	if (next) {
+		assert(list->tail != entry); // if entry has a next, then entry can't be tail.
+		next->prev = prev;
+	}
+	else {
+		assert(list->tail == entry); // if entry has no next, then entry must be tail.
+		list->tail = prev;
+	}
+
+	entry->list = NULL;
+	entry->prev = NULL;
+	entry->next = NULL;
+	list->size --;
+	return entry;
+}
+
+/*
+ *	Get the head input entry from a list.
+ */
+dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
+{
+	if (!list) return NULL;
+	if (!list->head || list->size == 0) { // list is empty.
+		return NULL;
+	}
+	// list is valid and has at least one element.
+	return dpc_input_item_draw(list->head);
+}
