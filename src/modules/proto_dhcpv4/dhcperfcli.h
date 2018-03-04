@@ -45,8 +45,9 @@ extern int dpc_debug_lvl;
 // DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
 
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
-#define FR_DHCP_DHCP_SERVER_IDENTIFIER  54
-#define FR_DHCPV4_TRANSACTION_ID        260
+#define FR_DHCPV4_REQUESTED_IP_ADDRESS    50
+#define FR_DHCPV4_DHCP_SERVER_IDENTIFIER  54
+#define FR_DHCPV4_TRANSACTION_ID          260
 
 
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
@@ -100,6 +101,8 @@ struct dpc_input_list {
  */
 struct dpc_session_ctx {
 	uint32_t id;            //!< Id of session (0 for the first one).
+
+	dpc_input_t *input;     //!< Input data.
 
 	RADIUS_PACKET *packet;
 	RADIUS_PACKET *reply;

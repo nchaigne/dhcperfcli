@@ -264,10 +264,17 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
 	 */
 	if (session->state == DPC_STATE_DORA_EXPECT_OFFER) {
-		VALUE_PAIR *vp_yiaddr, *vp_server_id;
+		VALUE_PAIR *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
+		RADIUS_PACKET *packet;
 
 		if (session->reply->code != FR_DHCPV4_OFFER) { /* Not an Offer. */
 			DEBUG2("Session DORA: expected Offer reply, instead got: %d", session->reply->code);
+			return false;
+		}
+
+		/* Get the Offer xid. */
+		vp_xid = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
+		if (!vp_xid) { /* Should never happen (DHCP field). */
 			return false;
 		}
 
@@ -279,14 +286,58 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		}
 
 		/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_DHCP_SERVER_IDENTIFIER, TAG_ANY);
 		if (!vp_server_id) || vp_server_id->vp_ipv4addr == 0) {
 			DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 			return false;
 		}
 
-		// TODO. Prepare and send the Request.
+		/*
+		 *	Prepare a new DHCP Request packet.
+		 */
+		packet = dpc_request_init(ctx, input);
+		if (!packet) return false;
 
+		packet->code = FR_DHCPV4_REQUEST;
+
+		/*
+		 *	Use information from the Offer reply to complete the new packet.
+		 */
+
+		/* Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr */
+		vp_requested_ip = radius_pair_create(packet, &packet->vps, FR_DHCPV4_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		vp_requested_ip->vp_ipv4addr = vp_yiaddr->vp_ipv4addr;
+
+		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+
+		/* Remove xid if there was one in input. Add xid from Offer reply instead. */
+		fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
+		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_xid));
+
+		/*
+		 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+		 */
+		talloc_free(session->reply);
+		session->reply = NULL;
+
+		if (!dpc_packet_list_id_free(pl, session->packet, true)) {
+			WARN("Failed to free from packet list, id: %u", session->packet->id);
+		}
+		talloc_free(session->packet);
+		session->packet = packet;
+
+		/*
+		 *	Encode and send packet.
+		 */
+		ret = dpc_send_one_packet(&session->packet);
+		if (ret < 0) {
+			ERROR("Error sending packet");
+			return false;
+		}
+
+		/* All good. */
+		return true;
 	}
 
 	return false;
@@ -299,7 +350,7 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 {
 	RADIUS_PACKET *request;
 
-	MEM(request = fr_radius_alloc(ctx, true));
+	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
 	DPC_DEBUG_TRACE("New packet allocated");
 
@@ -363,9 +414,13 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 	packet = dpc_request_init(ctx, input);
 	if (packet) {
 		MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
+		session->id = session_num ++;
 
 		session->packet = packet;
-		session->id = session_num ++;
+		talloc_steal(session, packet);
+
+		session->input = input;
+		talloc_steal(session, input);
 
 		/*
 		 *	These kind of packets do not get a reply, so don't wait for one.
@@ -378,7 +433,11 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		session_num_active ++;
 	}
 
-	talloc_free(input);
+	/* Free this input now if we could not initialize a session from it. */
+	if (!session) {
+		talloc_free(input);
+	}
+
 	return session;
 }
 
@@ -510,10 +569,10 @@ static void dpc_main_loop(void)
 	while (!job_done) {
 		/* Receive and process reply packets. */
 		dpc_loop_recv();
-		
+
 		/* Start new sessions. */
 		dpc_loop_start_sessions();
-		
+
 		/* Check if we're done. */
 		dpc_loop_check_done();
 	}
