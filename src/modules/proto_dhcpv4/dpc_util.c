@@ -335,6 +335,40 @@ void dpc_float_to_timeval(struct timeval *tv, float f_val)
 }
 
 /*
+ *	Check that a string represents a valid positive floating point number (e.g. 3, 2.5, .542).
+ *	If so convert it to float.
+ *	Note: not using strtof because we want to be more restrictive.
+ */
+bool dpc_str_to_float(float *out, char const *value)
+{
+	if (!value || strlen(value) == 0) return false;
+
+	while (*value != '\0') {
+		if (isdigit(*value)) {
+			value ++;
+			continue;
+		}
+		if (*value == '.') {
+			value ++;
+			if (*value == '\0') return false; /* Do not allow a dot without any following digit. */
+			break;
+		}
+		return false; /* Not a digit or dot. */
+	}
+
+	while (*value != '\0') { /* Everything after the dot must be a digit. */
+		if (!isdigit(*value)) return false;
+		value ++;
+	}
+
+	/* Format is correct. */
+	if (out) {
+		*out = atof(value);
+	}
+	return true;
+}
+
+/*
  *	Add an allocated input entry to the tail of the list.
  */
 void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)

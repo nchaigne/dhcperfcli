@@ -774,13 +774,18 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'i':
-			if (!isdigit((int) *optarg)) usage(1);
+			if (!is_integer(optarg)) { // lib/util/misc.c
+				ERROR("Invalid value for option -i (integer expected)");
+				usage(1);
+			}
 			base_xid = atoi(optarg);
 			break;
 
 		case 't':
-			if (!isdigit((int) *optarg)) usage(1);
-			timeout = atof(optarg);
+			if (!dpc_str_to_float(&timeout, optarg)) {
+				ERROR("Invalid value for option -t (floating point number expected)");
+				usage(1);
+			}
 			break;
 
 		case 'v':
