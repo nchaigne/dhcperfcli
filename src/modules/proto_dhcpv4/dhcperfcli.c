@@ -36,6 +36,7 @@ static uint16_t server_port = DHCP_PORT_SERVER;
 static uint16_t client_port = DHCP_PORT_CLIENT;
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
+static int workflow_code = DPC_WORKFLOW_NONE;
 
 static float timeout = 3.0;
 static struct timeval tv_timeout;
@@ -49,13 +50,18 @@ static bool job_done = false;
 static uint32_t session_num_active = 0; /* Number of active sessions. */
 
 static const FR_NAME_NUMBER request_types[] = {
-	{ "discover", FR_DHCPV4_DISCOVER },
-	{ "request",  FR_DHCPV4_REQUEST },
-	{ "decline",  FR_DHCPV4_DECLINE },
-	{ "release",  FR_DHCPV4_RELEASE },
-	{ "inform",   FR_DHCPV4_INFORM },
-	{ "lease_query",  FR_DHCPV4_LEASE_QUERY },
-	{ "auto",     FR_CODE_UNDEFINED },
+	{ "discover",    FR_DHCPV4_DISCOVER },
+	{ "request",     FR_DHCPV4_REQUEST },
+	{ "decline",     FR_DHCPV4_DECLINE },
+	{ "release",     FR_DHCPV4_RELEASE },
+	{ "inform",      FR_DHCPV4_INFORM },
+	{ "lease_query", FR_DHCPV4_LEASE_QUERY },
+	{ "auto",        FR_CODE_UNDEFINED },
+	{ NULL, 0}
+};
+
+static const FR_NAME_NUMBER workflow_types[] = {
+	{ "dora",        DPC_WORKFLOW_DORA },
 	{ NULL, 0}
 };
 
@@ -258,6 +264,8 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
  */
 static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 {
+	int ret;
+
 	if (!session || !session->reply) return false;
 
 	/*
@@ -295,7 +303,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		/*
 		 *	Prepare a new DHCP Request packet.
 		 */
-		packet = dpc_request_init(ctx, input);
+		packet = dpc_request_init(session, session->input);
 		if (!packet) return false;
 
 		packet->code = FR_DHCPV4_REQUEST;
@@ -637,6 +645,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If not specified in input vps, use default values.
 	 */
 	if (!input->code) input->code = packet_code;
+	// TODO: workflows.
 
 	if (!input->src_port) input->src_port = client_port;
 	if (!input->dst_port) input->dst_port = server_port;
@@ -844,20 +853,28 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 }
 
 /*
- *	See what kind of request we want to send.
+ *	See what kind of request we want to send, or workflow to handle.
  */
 static void dpc_command_parse(char const *command)
 {
-	// request types (or "auto")
-	if (!isdigit((int) command[0])) {
-		packet_code = fr_str2int(request_types, command, -2);
-		if (packet_code == -2) {
-			ERROR("Unrecognised packet type \"%s\"", command);
-			usage(1);
-		}
-	} else {
-		packet_code = atoi(command);
+	/* If an integer, assume this is the packet type (1 = discover, ...) */
+	if (is_integer(command)) {
+		packet_code = atoi(command) + FR_DHCPV4_OFFSET;
+		return;
 	}
+
+	/* Maybe it's a workflow. */
+	workflow_code = fr_str2int(workflow_types, command, DPC_WORKFLOW_NONE);
+	if (workflow_code != DPC_WORKFLOW_NONE) return;
+	// TODO: define an internal attribute so we can specify this in input vps.
+
+	/* Or a packet type. */
+	packet_code = fr_str2int(request_types, command, -1);
+	if (packet_code != -1) return;
+
+	/* Nothing goes. */
+	ERROR("Unrecognised command \"%s\"", command);
+	usage(1);
 }
 
 /*

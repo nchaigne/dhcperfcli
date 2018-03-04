@@ -56,11 +56,17 @@ extern int dpc_debug_lvl;
 /* Specific states of a session. */
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,
-
 	DPC_STATE_EXPECT_REPLY,       //!< Expecting reply to a request.
 	DPC_STATE_DORA_EXPECT_OFFER,  //!< DORA workflow expecting an Offer reply to the Discover request.
 	DPC_STATE_MAX
 } dpc_state_t;
+
+/* DHCP workflows. */
+typedef enum {
+	DPC_WORKFLOW_NONE = 0,  //<! Any packet - reply (unless none expected).
+	DPC_WORKFLOW_DORA,      //<! Discover - Offer, Request - Ack.
+	DPC_WORKFLOW_MAX
+} dpc_workflow_type_t;
 
 
 typedef struct dpc_input dpc_input_t;
