@@ -258,7 +258,36 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
  */
 static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 {
-	// More later. TODO.
+	if (!session || !session->reply) return false;
+
+	/*
+	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
+	 */
+	if (session->state == DPC_STATE_DORA_EXPECT_OFFER) {
+		VALUE_PAIR *vp_yiaddr, *vp_server_id;
+
+		if (session->reply->code != FR_DHCPV4_OFFER) { /* Not an Offer. */
+			DEBUG2("Session DORA: expected Offer reply, instead got: %d", session->reply->code);
+			return false;
+		}
+
+		/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
+		vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_YOUR_IP_ADDRESS, TAG_ANY);
+		if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
+			DEBUG2("Session DORA: no yiaddr provided in Offer reply");
+			return false;
+		}
+
+		/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+		if (!vp_server_id) || vp_server_id->vp_ipv4addr == 0) {
+			DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
+			return false;
+		}
+
+		// TODO. Prepare and send the Request.
+
+	}
 
 	return false;
 }

@@ -45,10 +45,21 @@ extern int dpc_debug_lvl;
 // DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
 
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
-#define FR_DHCPV4_TRANSACTION_ID  260
+#define FR_DHCP_DHCP_SERVER_IDENTIFIER  54
+#define FR_DHCPV4_TRANSACTION_ID        260
 
 
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
+
+
+/* Specific states of a session. */
+typedef enum {
+	DPC_STATE_UNDEFINED = 0,
+
+	DPC_STATE_EXPECT_REPLY,       //!< Expecting reply to a request.
+	DPC_STATE_DORA_EXPECT_OFFER,  //!< DORA workflow expecting an Offer reply to the Discover request.
+	DPC_STATE_MAX
+} dpc_state_t;
 
 
 typedef struct dpc_input dpc_input_t;
@@ -93,5 +104,6 @@ struct dpc_session_ctx {
 	RADIUS_PACKET *packet;
 	RADIUS_PACKET *reply;
 
+	dpc_state_t state;
 	bool reply_expected;    //!< Whether a reply is expected or not.
 };
