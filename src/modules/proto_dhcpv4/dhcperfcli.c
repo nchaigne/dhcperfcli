@@ -763,7 +763,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:hi:t:vxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:hi:p:t:vxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -779,6 +779,15 @@ static void dpc_options_parse(int argc, char **argv)
 				usage(1);
 			}
 			base_xid = atoi(optarg);
+			break;
+
+		case 'p':
+			if (!is_integer(optarg)) {
+				ERROR("Invalid value for option -p (integer expected)");
+				usage(1);
+			}
+			session_max_active = atoi(optarg);
+			if (session_max_active == 0) session_max_active = 1;
 			break;
 
 		case 't':
@@ -886,6 +895,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(output, "  -f <file>        Read input vps from <file>, not stdin.\n");
 	fprintf(output, "  -h               Print this help message.\n");
 	fprintf(output, "  -i <num>         Start generating xid values with <num>.\n");
+	fprintf(output, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(output, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(output, "  -v               Print version information.\n");
 	fprintf(output, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
