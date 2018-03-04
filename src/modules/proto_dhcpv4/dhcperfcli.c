@@ -314,14 +314,23 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		return NULL;
 	}
 
+	/*
+	 *	Prepare a DHCP packet to send for this session.
+	 */
 	packet = dpc_request_init(ctx, input);
 	if (packet) {
 		MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 
 		session->packet = packet;
-
-		// TODO: more stuff here. Later.
 		session->id = session_num ++;
+
+		/*
+		 *	These kind of packets do not get a reply, so don't wait for one.
+	 	 */
+		session->reply_expected = true;
+		if ((packet->code == FR_DHCPV4_RELEASE) || (packet->code == FR_DHCPV4_DECLINE)) {
+			session->reply_expected = false;
+		}
 
 		session_num_active ++;
 	}
@@ -350,6 +359,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	session_num_active --;
 }
 
+// TODO: remove this (not used anymore).
 static int dpc_do_request(void)
 {
 	int ret;
@@ -404,6 +414,7 @@ static void dpc_loop_recv(void)
 static void dpc_loop_start_sessions(void)
 {
 	bool done = false;
+	int ret;
 
 	while (!done) {
 		if (vps_list_in.size == 0) break;
@@ -414,12 +425,18 @@ static void dpc_loop_start_sessions(void)
 		 *	Initialize a new session and send the packet.
 		 */
 		dpc_session_ctx_t *session = dpc_session_init(autofree);
-		if (session) {
-			ret = dpc_send_one_packet(&session->packet);
-			if (ret < 0) {
-				ERROR("Error sending packet");
-				dpc_session_finish(session);
-			}
+		if (!session) continue;
+
+		ret = dpc_send_one_packet(&session->packet);
+		if (ret < 0) {
+			ERROR("Error sending packet");
+			dpc_session_finish(session);
+			continue;
+		}
+
+		if (!session->reply_expected) {
+			/* We've sent a packet to which no reply is expected. So this session ends right now. */
+			dpc_session_finish(session);
 		}
 	}
 }

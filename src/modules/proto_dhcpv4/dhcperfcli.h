@@ -92,4 +92,6 @@ struct dpc_session_ctx {
 
 	RADIUS_PACKET *packet;
 	RADIUS_PACKET *reply;
+
+	bool reply_expected;    //!< Whether a reply is expected or not.
 };
