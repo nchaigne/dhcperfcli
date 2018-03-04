@@ -14,7 +14,7 @@ typedef struct dpc_packet_list dpc_packet_list_t;
 
 
 void dpc_packet_list_free(dpc_packet_list_t *pl);
-dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id);
+dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id);
 
 int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t src_port);
 

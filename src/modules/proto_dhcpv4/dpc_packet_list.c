@@ -203,16 +203,15 @@ void dpc_packet_list_free(dpc_packet_list_t *pl)
  *	Caller is responsible for managing the packet entries.
  *	(ref: function fr_packet_list_create from protocols/radius/list.c)
  */
-dpc_packet_list_t *dpc_packet_list_create(uint32_t base_id)
+dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
 {
 	int i;
 	dpc_packet_list_t *pl;
 
-	pl = malloc(sizeof(*pl)); // TODO: talloc this.
+	pl = talloc_zero(ctx, fr_packet_list_t);
 	if (!pl) return NULL;
-	memset(pl, 0, sizeof(*pl));
 
-	pl->tree = rbtree_create(NULL, dpc_packet_entry_cmp, NULL, 0);
+	pl->tree = rbtree_create(pl, dpc_packet_entry_cmp, NULL, 0);
 	if (!pl->tree) {
 		dpc_packet_list_free(pl);
 		return NULL;

@@ -82,9 +82,9 @@ static void dpc_handle_input(dpc_input_t *input);
 static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
-static void dpc_dict_init(void);
+static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
-static void dpc_packet_list_init(void);
+static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port);
 static void dpc_command_parse(char const *command);
 static void dpc_options_parse(int argc, char **argv);
@@ -666,12 +666,12 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 /*
  *	Load dictionaries.
  */
-static void dpc_dict_init(void)
+static void dpc_dict_init(TALLOC_CTX *ctx)
 {
 	fr_dict_attr_t const *da;
 
 	DEBUG("Including dictionary file: %s/%s", dict_dir, FR_DICTIONARY_FILE);
-	if (fr_dict_from_file(NULL, &dict, dict_dir, FR_DICTIONARY_FILE, progname) < 0) {
+	if (fr_dict_from_file(ctx, &dict, dict_dir, FR_DICTIONARY_FILE, progname) < 0) {
 		fr_perror("dhcperfcli");
 		exit(EXIT_FAILURE);
 	}
@@ -710,9 +710,9 @@ static void dpc_event_list_init(TALLOC_CTX *ctx)
 /*
  *	Initialize the packet list.
  */
-static void dpc_packet_list_init(void)
+static void dpc_packet_list_init(TALLOC_CTX *ctx)
 {
-	pl = dpc_packet_list_create(base_xid);
+	pl = dpc_packet_list_create(ctx, base_xid);
 	if (!pl) {
 		ERROR("Failed to create packet list");
 		exit(EXIT_FAILURE);
@@ -861,10 +861,10 @@ int main(int argc, char **argv)
 
 	dpc_options_parse(argc, argv);
 
-	dpc_dict_init();
+	dpc_dict_init(autofree);
 
 	dpc_event_list_init(autofree);
-	dpc_packet_list_init();
+	dpc_packet_list_init(autofree);
 
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
