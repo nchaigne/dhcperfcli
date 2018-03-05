@@ -214,18 +214,22 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
+void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent, int trace_lvl)
 {
 	if (!fp || !packet) return;
 
-	dpc_packet_header_print(fp, packet, pevent);
+	if (trace_lvl >= 1) {
+		dpc_packet_header_print(fp, packet, pevent);
+	}
 
-	fprintf(fp, "DHCP vps fields:\n");
-	dpc_packet_fields_print(fp, packet->vps);
+	if (trace_lvl >= 2) {
+		fprintf(fp, "DHCP vps fields:\n");
+		dpc_packet_fields_print(fp, packet->vps);
 
-	fprintf(fp, "DHCP vps options:\n");
-	if (dpc_packet_options_print(fp, packet->vps) == 0) {
-		fprintf(fp, "\t(empty list)\n");
+		fprintf(fp, "DHCP vps options:\n");
+		if (dpc_packet_options_print(fp, packet->vps) == 0) {
+			fprintf(fp, "\t(empty list)\n");
+		}
 	}
 }
 

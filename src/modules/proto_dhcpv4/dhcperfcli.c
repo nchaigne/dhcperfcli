@@ -17,14 +17,16 @@ static char const *prog_version = "(FreeRADIUS version " RADIUSD_VERSION_STRING 
 /*
  *	Global variables.
  */
-char const *radius_dir = RADDBDIR;
-char const *dict_dir = DICTDIR;
-fr_dict_t *dict = NULL;
+TALLOC_CTX *autofree = NULL;
+
+struct timeval tv_start; /* Program execution start time. */
 int	dpc_debug_lvl = 0;
 
-TALLOC_CTX *autofree = NULL;
-char const *progname = NULL;
-struct timeval tv_start; /* Program execution start time. */
+static char const *progname = NULL;
+static char const *radius_dir = RADDBDIR;
+static char const *dict_dir = DICTDIR;
+static fr_dict_t *dict = NULL;
+static int packet_trace_lvl = 1; /* Default: trace packet headers only. */
 
 static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
 static fr_event_list_t *event_list = NULL;
@@ -111,7 +113,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 
 	DPC_DEBUG_TRACE("Request timed out");
 
-	dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
+	if (packet_trace_lvl) dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
 
 	/* Finish the session. */
 	dpc_session_finish(session);
@@ -188,7 +190,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	/*
 	 *	Send the packet.
 	 */
-	dpc_packet_print(fr_log_fp, packet, DPC_PACKET_SENT); /* print request packet. */
+	dpc_packet_print(fr_log_fp, packet, DPC_PACKET_SENT, packet_trace_lvl); /* print request packet. */
 
 	packet->sockfd = my_sockfd;
 	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
@@ -279,7 +281,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	session->reply = reply;
 	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
 
-	dpc_packet_print(fr_log_fp, reply, DPC_PACKET_RECEIVED); /* print reply packet. */
+	dpc_packet_print(fr_log_fp, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
 	/*
 	 *	Perform post reception actions, and determine if session should be finished.
@@ -941,7 +943,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:hi:p:t:vxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:hi:p:P:t:vxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -966,6 +968,14 @@ static void dpc_options_parse(int argc, char **argv)
 			}
 			session_max_active = atoi(optarg);
 			if (session_max_active == 0) session_max_active = 1;
+			break;
+
+		case 'P':
+			if (!is_integer(optarg)) {
+				ERROR("Invalid value for option -P (integer expected)");
+				usage(1);
+			}
+			packet_trace_lvl = atoi(optarg);
 			break;
 
 		case 't':
@@ -1014,6 +1024,7 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	dpc_float_to_timeval(&tv_timeout, timeout);
+
 }
 
 
@@ -1065,21 +1076,23 @@ int main(int argc, char **argv)
  */
 static void NEVER_RETURNS usage(int status)
 {
-	FILE *output = status?stderr:stdout;
+	FILE *fd = status ? stderr : stdout;
 
-	fprintf(output, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
-	fprintf(output, "  <server>:<port>  The DHCP server. If omitted, it must be specified in inputs vps.\n");
-	fprintf(output, "  <command>        One of (packet type): discover, request, decline, release, inform.\n");
-	fprintf(output, "                   If omitted, packet type must be specified in input vps.\n");
-	fprintf(output, " Options:\n");
-	fprintf(output, "  -f <file>        Read input vps from <file>, not stdin.\n");
-	fprintf(output, "  -h               Print this help message.\n");
-	fprintf(output, "  -i <num>         Start generating xid values with <num>.\n");
-	fprintf(output, "  -p <num>         Send up to <num> session packets in parallel.\n");
-	fprintf(output, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
-	fprintf(output, "  -v               Print version information.\n");
-	fprintf(output, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
-	fprintf(output, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
+	fprintf(fd, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
+	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in inputs vps.\n");
+	fprintf(fd, "  <command>        One of (packet type): discover, request, decline, release, inform.\n");
+	fprintf(fd, "                   Or (workflow): dora.\n");
+	fprintf(fd, "                   If omitted, packet type must be specified in input vps.\n");
+	fprintf(fd, " Options:\n");
+	fprintf(fd, "  -f <file>        Read input vps from <file>, not stdin.\n");
+	fprintf(fd, "  -h               Print this help message.\n");
+	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
+	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
+	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
+	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
+	fprintf(fd, "  -v               Print version information.\n");
+	fprintf(fd, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
+	fprintf(fd, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
 
 	exit(status);
 }

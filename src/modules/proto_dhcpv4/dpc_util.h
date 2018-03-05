@@ -15,7 +15,7 @@ char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when
 void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);
-void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
+void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent, int trace_lvl);
 
 char *dpc_ether_addr_print(const uint8_t *addr, char *buf);
 char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra);
