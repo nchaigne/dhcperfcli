@@ -71,6 +71,9 @@ static const FR_NAME_NUMBER workflow_types[] = {
  */
 static void usage(int);
 
+static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
+
 static int dpc_send_one_packet(RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
 static bool dpc_recv_post_action(dpc_session_ctx_t *session);
@@ -96,6 +99,39 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 static void dpc_command_parse(char const *command);
 static void dpc_options_parse(int argc, char **argv);
 
+
+/*
+ *	Event callback: request timeout.
+ */
+static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx)
+{
+	dpc_session_ctx_t *session = talloc_get_type_abort(uctx, dpc_session_ctx_t);
+
+	DEBUG2("TIMER - request timeout");
+
+	/* Finish the session. */
+	dpc_session_finish(session);
+
+	// TODO: disarm timer when session gets a reply.
+}
+
+/*
+ *	Add timer event: request timeout.
+ */
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
+{
+	struct timeval tv_event;
+	gettimeofday(&tv_event, NULL);
+
+	struct timeval *my_timeout = &tv_timeout;
+
+	timeradd(&tv_event, my_timeout, &tv_event);
+
+	if (fr_event_timer_insert(session, event_list, NULL,
+	                          &tv_event, dpc_request_timeout, session) < 0) {
+		ERROR("Failed inserting request timeout event");
+	}
+}
 
 /*
  *	Send one packet.
@@ -348,6 +384,11 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 			return false;
 		}
 
+		/*
+		 *	Arm request timeout.
+		 */
+		dpc_event_add_request_timeout(session);
+
 		/* All good. */
 		return true;
 	}
@@ -434,8 +475,11 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		session->input = input;
 		talloc_steal(session, input);
 
-		/* Prepare dealing with reply. */
-		session->reply_expected = true;
+		/*
+		 *	Prepare dealing with reply and workflow sequence.
+		 */
+		session->reply_expected = true; /* First assume we're expecting a reply. */
+
 		if (input->workflow == DPC_WORKFLOW_DORA) {
 			session->state = DPC_STATE_DORA_EXPECT_OFFER;
 		} else {
@@ -481,40 +525,6 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	session_num_active --;
 }
 
-// TODO: remove this (not used anymore).
-static int dpc_do_request(void)
-{
-	int ret;
-
-	/*
-	 *	Initialize a new session, along with the packet to send.
-	 */
-	dpc_session_ctx_t *session = dpc_session_init(autofree);
-
-	if (session) {
-
-		ret = dpc_send_one_packet(&session->packet);
-		if (ret < 0) {
-			ERROR("Error sending packet");
-		} else {
-
-			// for now. TODO: in receive loop.
-			ret = dpc_recv_one_packet(&tv_timeout);
-			if (ret < 0) {
-				ERROR("Error receiving packet");
-			}
-		}
-
-		// Remove from packet list. For now.
-//		if (!dpc_packet_list_id_free(pl, request, true)) {
-//			WARN("Failed to free from packet list, id: %u", request->id);
-//		}
-
-	}
-
-	return ret;
-}
-
 /*
  *	Receive and handle reply packets.
  */
@@ -556,7 +566,12 @@ static void dpc_loop_start_sessions(void)
 			continue;
 		}
 
-		if (!session->reply_expected) {
+		if (session->reply_expected) {
+			/*
+			 *	Arm request timeout.
+			 */
+			dpc_event_add_request_timeout(session);
+		} else {
 			/* We've sent a packet to which no reply is expected. So this session ends right now. */
 			dpc_session_finish(session);
 		}
