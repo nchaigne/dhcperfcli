@@ -2,6 +2,9 @@
  * dhcperfcli.h
  */
 
+#ifndef _DHCPERFCLI_H
+#define _DHCPERFCLI_H
+
 #include <freeradius-devel/radiusd.h>
 #include <freeradius-devel/libradius.h>
 #include <freeradius-devel/event.h>
@@ -70,6 +73,13 @@ typedef enum {
 	DPC_WORKFLOW_MAX
 } dpc_workflow_type_t;
 
+/* Packet events. */
+typedef enum {
+	DPC_PACKET_SENT = 1,
+	DPC_PACKET_RECEIVED,
+	DPC_PACKET_TIMEOUT
+} dpc_packet_event_t;
+
 
 typedef struct dpc_input dpc_input_t;
 typedef struct dpc_input_list dpc_input_list_t;
@@ -118,4 +128,8 @@ struct dpc_session_ctx {
 
 	dpc_state_t state;
 	bool reply_expected;    //!< Whether a reply is expected or not.
+
+	fr_event_timer_t const *event; //<! armed timer event (if any).
 };
+
+#endif

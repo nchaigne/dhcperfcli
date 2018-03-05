@@ -109,10 +109,10 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 
 	DEBUG2("TIMER - request timeout");
 
+	dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
+
 	/* Finish the session. */
 	dpc_session_finish(session);
-
-	// TODO: disarm timer when session gets a reply.
 }
 
 /*
@@ -127,7 +127,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
 
 	timeradd(&tv_event, my_timeout, &tv_event);
 
-	if (fr_event_timer_insert(session, event_list, NULL,
+	if (fr_event_timer_insert(session, event_list, &session->event,
 	                          &tv_event, dpc_request_timeout, session) < 0) {
 		ERROR("Failed inserting request timeout event");
 	}
@@ -191,7 +191,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	/*
 	 *	Send the packet.
 	 */
-	dpc_packet_print(fr_log_fp, packet, false); /* print request packet. */
+	dpc_packet_print(fr_log_fp, packet, DPC_PACKET_SENT); /* print request packet. */
 
 	packet->sockfd = my_sockfd;
 	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
@@ -282,7 +282,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	session->reply = reply;
 	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
 
-	dpc_packet_print(fr_log_fp, reply, true); /* print reply packet. */
+	dpc_packet_print(fr_log_fp, reply, DPC_PACKET_RECEIVED); /* print reply packet. */
 
 	/*
 	 *	Perform post reception actions, and determine if session should be finished.
@@ -521,6 +521,12 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 		}
 	}
 
+	/* Clear the event timer if it is armed. */
+	if (session->event) {
+		fr_event_timer_delete(event_list, &session->event);
+		session->event = NULL;
+	}
+
 	talloc_free(session);
 	session_num_active --;
 }
@@ -579,6 +585,23 @@ static void dpc_loop_start_sessions(void)
 }
 
 /*
+ *	Handle timer events.
+ */
+static void dpc_loop_timer_events(void)
+{
+	int nb_processed = 0; /* Number of timers events triggered. */
+	struct timeval when;
+
+	if (fr_event_list_num_timers(event_list) <= 0) return;
+
+	gettimeofday(&when, NULL); /* Now. */
+	while (fr_event_timer_run(event_list, &when)) {
+		nb_processed ++;
+	}
+
+}
+
+/*
  *	Check if we're done with the main processing loop.
  */
 static bool dpc_loop_check_done(void)
@@ -602,6 +625,9 @@ static void dpc_main_loop(void)
 	job_done = false;
 
 	while (!job_done) {
+		/* Handle timer events. */
+		dpc_loop_timer_events();
+
 		/* Receive and process reply packets. */
 		dpc_loop_recv();
 

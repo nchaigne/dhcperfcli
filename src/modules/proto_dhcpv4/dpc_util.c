@@ -66,7 +66,7 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
 /*
  *	Print the packet header.
  */
-void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received)
+void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
 {
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
@@ -81,7 +81,17 @@ void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received)
 	/* Internally, DHCP packet code starts with an offset of 1024 (hack), so... */
 	int code = packet->code - FR_DHCPV4_OFFSET;
 
-	fprintf(fp, "%s", received ? "Received" : "Sent");
+	switch (pevent) {
+		case DPC_PACKET_SENT:
+			fprintf(fp, "Sent");
+			break;
+		case DPC_PACKET_RECEIVED:
+			fprintf(fp, "Received");
+			break;
+		case DPC_PACKET_TIMEOUT:
+			fprintf(fp, "Timed out");
+			break;
+	}
 
 	if (is_dhcp_code(code)) {
 		fprintf(fp, " %s", dhcp_message_types[code]);
@@ -161,11 +171,11 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received)
+void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
 {
 	if (!fp || !packet) return;
 
-	dpc_packet_header_print(fp, packet, received);
+	dpc_packet_header_print(fp, packet, pevent);
 
 	fprintf(fp, "DHCP vps fields:\n");
 	dpc_packet_fields_print(fp, packet->vps);

@@ -1,6 +1,7 @@
 #ifndef _DPC_UTIL_H
 #define _DPC_UTIL_H
 
+#include "dhcperfcli.h"
 #include <freeradius-devel/libradius.h>
 
 #define DPC_FROM_TO_STRLEN (21 + (FR_IPADDR_STRLEN*2))
@@ -8,10 +9,10 @@
 void dpc_printf_log(char const *fmt, ...);
 void dpc_dev_print(char const *file, int line, char const *fmt, ...);
 
-void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received);
+void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);
-void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);
+void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
 
 char *dpc_ether_addr_print(const uint8_t *addr, char *buf);
 char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra);
