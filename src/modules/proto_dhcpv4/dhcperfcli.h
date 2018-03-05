@@ -57,6 +57,7 @@ extern int dpc_debug_lvl;
 /* Specific states of a session. */
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,
+	DPC_STATE_NO_REPLY,           //!< No reply is expected to the request.
 	DPC_STATE_EXPECT_REPLY,       //!< Expecting reply to a request.
 	DPC_STATE_DORA_EXPECT_OFFER,  //!< DORA workflow expecting an Offer reply to the Discover request.
 	DPC_STATE_MAX
@@ -83,6 +84,7 @@ struct dpc_input {
 	VALUE_PAIR *vps;        //!< List of input value pairs read.
 
 	unsigned int code;      //!< Packet code (type).
+	unsigned int workflow;  //!< Workflow (if handling one).
 	fr_ipaddr_t src_ipaddr; //!< Src IP address of packet.
 	fr_ipaddr_t dst_ipaddr; //!< Dst IP address of packet.
 	uint16_t src_port;      //!< Src port of packet.

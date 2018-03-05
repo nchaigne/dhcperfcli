@@ -303,10 +303,13 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		/*
 		 *	Prepare a new DHCP Request packet.
 		 */
+		DPC_DEBUG_TRACE("DORA: received valid Offer, now preparing Request");
+
 		packet = dpc_request_init(session, session->input);
 		if (!packet) return false;
 
 		packet->code = FR_DHCPV4_REQUEST;
+		session->state = DPC_STATE_EXPECT_REPLY;
 
 		/*
 		 *	Use information from the Offer reply to complete the new packet.
@@ -314,7 +317,8 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 
 		/* Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr */
 		vp_requested_ip = radius_pair_create(packet, &packet->vps, FR_DHCPV4_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
-		vp_requested_ip->vp_ipv4addr = vp_yiaddr->vp_ipv4addr;
+		//vp_requested_ip->vp_ipv4addr = vp_yiaddr->vp_ipv4addr; // not good enough.
+		fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
@@ -430,12 +434,20 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		session->input = input;
 		talloc_steal(session, input);
 
-		/*
-		 *	These kind of packets do not get a reply, so don't wait for one.
-	 	 */
+		/* Prepare dealing with reply. */
 		session->reply_expected = true;
-		if ((packet->code == FR_DHCPV4_RELEASE) || (packet->code == FR_DHCPV4_DECLINE)) {
-			session->reply_expected = false;
+		if (input->workflow == DPC_WORKFLOW_DORA) {
+			session->state = DPC_STATE_DORA_EXPECT_OFFER;
+		} else {
+			/*
+			 *	These kind of packets do not get a reply, so don't wait for one.
+			 */
+			if ((packet->code == FR_DHCPV4_RELEASE) || (packet->code == FR_DHCPV4_DECLINE)) {
+				session->reply_expected = false;
+				session->state = DPC_STATE_NO_REPLY;
+			} else {
+				session->state = DPC_STATE_EXPECT_REPLY;
+			}
 		}
 
 		session_num_active ++;
@@ -644,8 +656,14 @@ static bool dpc_parse_input(dpc_input_t *input)
 	/*
 	 *	If not specified in input vps, use default values.
 	 */
-	if (!input->code) input->code = packet_code;
-	// TODO: workflows.
+	if (input->code == FR_CODE_UNDEFINED) {
+		/* Handling a workflow, which determines the packet type. */
+		if (workflow_code == DPC_WORKFLOW_DORA) {
+			input->workflow = workflow_code;
+			input->code = FR_DHCPV4_DISCOVER;
+		}
+	}
+	if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
 
 	if (!input->src_port) input->src_port = client_port;
 	if (!input->dst_port) input->dst_port = server_port;
