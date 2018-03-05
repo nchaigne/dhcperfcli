@@ -143,7 +143,6 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 // note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
 {
 	RADIUS_PACKET *packet = *packet_p;
-	int i;
 
 	DPC_DEBUG_TRACE("Preparing to send one packet");
 
@@ -175,10 +174,6 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 
 	assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
 	assert(packet->data == NULL);
-
-	for (i = 0; i < 4; i++) {
-		((uint32_t *) packet->vector)[i] = fr_rand(); // TODO: do we need this ??
-	}
 
 	/*
 	 *	Encode the packet.
