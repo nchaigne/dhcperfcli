@@ -8,7 +8,7 @@
 void dpc_printf_log(char const *fmt, ...);
 void dpc_dev_print(char const *file, int line, char const *fmt, ...);
 
-static void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received);
+void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, bool received);
 void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);
 void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, bool received);

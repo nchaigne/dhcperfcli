@@ -208,7 +208,7 @@ dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
 	int i;
 	dpc_packet_list_t *pl;
 
-	pl = talloc_zero(ctx, fr_packet_list_t);
+	pl = talloc_zero(ctx, dpc_packet_list_t);
 	if (!pl) return NULL;
 
 	pl->tree = rbtree_create(pl, dpc_packet_entry_cmp, NULL, 0);

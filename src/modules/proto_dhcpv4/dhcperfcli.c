@@ -295,7 +295,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 
 		/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_DHCP_SERVER_IDENTIFIER, TAG_ANY);
-		if (!vp_server_id) || vp_server_id->vp_ipv4addr == 0) {
+		if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 			DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 			return false;
 		}
