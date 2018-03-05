@@ -6,6 +6,7 @@
 #include "dhcperfcli.h"
 #include "dpc_util.h"
 
+extern struct timeval tv_start;
 
 /*
  *	Print a log message.
@@ -29,7 +30,7 @@ void dpc_printf_log(char const *fmt, ...)
 
 /*
  *	"Developer" debug print.
-*	(ref: function fr_proto_print from lib/util/proto.c)
+ *	(ref: function fr_proto_print from lib/util/proto.c)
  */
 #define DEV_PRINT_BASENAME 1
 static unsigned int dev_log_indent = 30;
@@ -55,12 +56,54 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
 
 	fprintf(fr_log_fp, "%s%.*s: ", prefix, (int)(dev_log_indent - len), spaces);
 
+	/* Print elapsed time. */
+	char time_buf[DPC_TIME_STRLEN];
+	fprintf(fr_log_fp, "t(%s) ", dpc_print_delta_time(time_buf, &tv_start, NULL, 3));
+
 	va_start(ap, fmt);
 	vfprintf(fr_log_fp, fmt, ap);
 	va_end(ap);
 
 	fprintf(fr_log_fp, "\n");
 	fflush(fr_log_fp);
+}
+
+/*
+ *	Print a time difference, in format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
+ *	Hour and minute printed only if relevant, decimals optional.
+ *	If when is NULL, now is used instead.
+ */
+char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when, uint8_t decimals)
+{
+	struct timeval delta, to;
+	uint32_t sec, min, hour;
+
+	if (!when) {
+		gettimeofday(&to, NULL);
+		when = &to;
+	}
+
+	timersub(when, from, &delta); /* delta = when - from */
+
+	hour = (uint32_t)(delta.tv_sec / 3600);
+	min = (uint32_t)(delta.tv_sec % 3600) / 60;
+	sec = (uint32_t)(delta.tv_sec % 3600) % 60;
+
+	if (hour > 0) {
+		sprintf(out, "%d:%.02d:%.02d", hour, min, sec);
+	} else if (min > 0) {
+		sprintf(out, "%d:%.02d", min, sec);
+	} else {
+		sprintf(out, "%d", sec);
+	}
+
+	if (decimals) {
+		char buffer[32] = "";
+		sprintf(buffer, ".%06ld", delta.tv_usec);
+		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
+	}
+
+	return out;
 }
 
 /*

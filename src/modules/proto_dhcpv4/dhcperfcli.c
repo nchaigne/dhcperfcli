@@ -24,6 +24,8 @@ int	dpc_debug_lvl = 0;
 
 TALLOC_CTX *autofree = NULL;
 char const *progname = NULL;
+struct timeval tv_start; /* Program execution start time. */
+
 static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
 static fr_event_list_t *event_list = NULL;
 
@@ -107,7 +109,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 {
 	dpc_session_ctx_t *session = talloc_get_type_abort(uctx, dpc_session_ctx_t);
 
-	DEBUG2("TIMER - request timeout");
+	DPC_DEBUG_TRACE("Request timed out");
 
 	dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
 
@@ -181,7 +183,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	/*
 	 *	Encode the packet.
 	 */
-	DPC_DEBUG_TRACE("Encoding packet");
+	DPC_DEBUG_TRACE("Encoding and sending packet");
 	if (dpc_dhcp_encode(packet) < 0) {
 		ERROR("Failed encoding request packet");
 		exit(EXIT_FAILURE);
@@ -1031,6 +1033,8 @@ int main(int argc, char **argv)
 	fr_debug_lvl = 0; /* FreeRADIUS libraries debug. */
 	dpc_debug_lvl = 0; /* Our own debug. */
 	fr_log_fp = stdout; /* Both will go there. */
+
+	gettimeofday(&tv_start, NULL);
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
