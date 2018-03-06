@@ -51,7 +51,9 @@ extern int dpc_debug_lvl;
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
 #define FR_DHCPV4_REQUESTED_IP_ADDRESS    50
 #define FR_DHCPV4_DHCP_SERVER_IDENTIFIER  54
+#define FR_DHCPV4_HOP_COUNT               259
 #define FR_DHCPV4_TRANSACTION_ID          260
+#define FR_DHCPV4_GATEWAY_IP_ADDRESS      266
 
 
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))

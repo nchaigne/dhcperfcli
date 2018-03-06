@@ -433,7 +433,6 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	 *	Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
 	 *	the requested id may not have been available).
 	 */
-
 	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
 	VALUE_PAIR *vp_xid = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
 	vp_xid->data.vb_uint32 = packet->id;
@@ -442,14 +441,30 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	/*
 	 *	We've been told to handle sent packets as if relayed through a gateway.
 	 *	This means:
-	 *	- packet source IP / port = gateway IP / port
+	 *	- packet source IP / port = gateway IP / port (those we've already set)
 	 *	- giaddr = gateway IP
 	 *	- hops = 1 (arbitrary)
 	 *	All of these can be overriden (entirely or partially) through input vps.
 	 *	Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
 	 */
 	if (gateway) {
-		// TODO.
+		VALUE_PAIR *vp_giaddr, *vp_hops;
+
+		/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
+		vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_GATEWAY_IP_ADDRESS, TAG_ANY);
+		if (!vp_giaddr) {
+			vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCPV4_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+			vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
+			vp_giaddr->vp_ip.af = AF_INET;
+			vp_giaddr->vp_ip.prefix = 32;
+		}
+
+		/* set hops if not specified in input vps (DHCP-Hop-Count). */
+		vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_HOP_COUNT, TAG_ANY);
+		if (!vp_hops) {
+			vp_hops = radius_pair_create(packet, &packet->vps, FR_DHCPV4_HOP_COUNT, DHCP_MAGIC_VENDOR);
+			vp_hops->vp_uint8 = 1;
+		}
 	}
 
 	r = fr_dhcpv4_packet_encode(packet);
