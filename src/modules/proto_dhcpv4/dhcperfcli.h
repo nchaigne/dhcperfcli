@@ -81,6 +81,11 @@ typedef enum {
 } dpc_packet_event_t;
 
 
+typedef struct dpc_endpoint {
+	fr_ipaddr_t ipaddr;
+	uint16_t port;
+} dpc_endpoint_t;
+
 typedef struct dpc_input dpc_input_t;
 typedef struct dpc_input_list dpc_input_list_t;
 typedef struct dpc_session_ctx dpc_session_ctx_t;

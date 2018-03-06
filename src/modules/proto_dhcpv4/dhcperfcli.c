@@ -38,6 +38,7 @@ static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static uint16_t client_port = DHCP_PORT_CLIENT;
+static dpc_endpoint_t *gateway = NULL;
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
@@ -438,6 +439,19 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	vp_xid->data.vb_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp_xid);
 
+	/*
+	 *	We've been told to handle sent packets as if relayed through a gateway.
+	 *	This means:
+	 *	- packet source IP / port = gateway IP / port
+	 *	- giaddr = gateway IP
+	 *	- hops = 1 (arbitrary)
+	 *	All of these can be overriden (entirely or partially) through input vps.
+	 *	Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
+	 */
+	if (gateway) {
+		// TODO.
+	}
+
 	r = fr_dhcpv4_packet_encode(packet);
 	fr_strerror(); /* Clear the error buffer */
 
@@ -705,10 +719,20 @@ static bool dpc_parse_input(dpc_input_t *input)
 	}
 	if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
 
-	if (!input->src_port) input->src_port = client_port;
-	if (!input->dst_port) input->dst_port = server_port;
+	/*
+	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
+	 *	If nothing goes, fall back to default.
+	 */
+	if (!input->src_port) {
+		if (gateway) input->src_port = gateway->port;
+		else input->src_port = client_port;
+	}
+	if (input->src_ipaddr.af == AF_UNSPEC) {
+		if (gateway) input->src_ipaddr = gateway->ipaddr;
+		else input->src_ipaddr = client_ipaddr;
+	}
 
-	if (input->src_ipaddr.af == AF_UNSPEC) input->src_ipaddr = client_ipaddr;
+	if (!input->dst_port) input->dst_port = server_port;
 	if (input->dst_ipaddr.af == AF_UNSPEC) input->dst_ipaddr = server_ipaddr;
 
 	if (input->code == FR_CODE_UNDEFINED) {
@@ -943,10 +967,16 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:hi:p:P:t:vxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hi:p:P:t:vxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
+			break;
+
+		case 'g':
+			MEM(gateway = talloc_zero(autofree, dpc_endpoint_t));
+			gateway->port = DHCP_PORT_RELAY;
+			dpc_host_addr_resolve(optarg, &gateway->ipaddr, &gateway->port);
 			break;
 
 		case 'h':
@@ -1085,6 +1115,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   If omitted, packet type must be specified in input vps.\n");
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -f <file>        Read input vps from <file>, not stdin.\n");
+	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "  -h               Print this help message.\n");
 	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
