@@ -33,6 +33,7 @@ static fr_event_list_t *event_list = NULL;
 
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
+static bool with_template = false;
 
 static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
@@ -93,8 +94,8 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_parse_input(dpc_input_t *input);
-static void dpc_handle_input(dpc_input_t *input);
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in);
+static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list);
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
 static void dpc_dict_init(TALLOC_CTX *ctx);
@@ -782,7 +783,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-static void dpc_handle_input(dpc_input_t *input)
+static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
 {
 	input->id = input_num ++;
 
@@ -803,13 +804,13 @@ static void dpc_handle_input(dpc_input_t *input)
 	/*
 	 *	Add it to the list of input items.
 	 */
-	dpc_input_item_add(&vps_list_in, input);
+	dpc_input_item_add(list, input);
 }
 
 /*
  *	Load input vps.
  */
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in)
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -838,11 +839,19 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in)
 		 *	Just ignore this.
 		*/
 
-		dpc_handle_input(input);
+		dpc_handle_input(input, list);
+
+ 		/* Template needs two input items only, ignore if there are more. */
+		if (with_template && list->size == 2) break;
 
 	} while (!file_done);
 
-	DEBUG("Done reading input, list size: %d", vps_list_in.size);
+	if (list->size == 0) {
+		WARN("No valid input loaded, nothing to do");
+		exit(0);
+	}
+
+	DEBUG("Done reading input, list size: %d", list->size);
 }
 
 /*
@@ -868,7 +877,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		file_in = stdin;
 	}
 
-	dpc_input_load_from_fd(ctx, file_in);
+	dpc_input_load_from_fd(ctx, file_in, &vps_list_in);
 
 	if (file_in != stdin) fclose(file_in);
 	return 0;
@@ -1104,11 +1113,6 @@ int main(int argc, char **argv)
 
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
-
-	if (vps_list_in.size == 0) {
-		WARN("No valid input loaded, nothing to do");
-		exit(0);
-	}
 
 	/* Execute the main processing loop. */
 	dpc_main_loop();
