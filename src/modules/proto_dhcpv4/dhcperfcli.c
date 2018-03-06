@@ -34,6 +34,8 @@ static fr_event_list_t *event_list = NULL;
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
 static bool with_template = false;
+static dpc_input_t *template_invariant = NULL;
+static dpc_input_t *template_variable = NULL;
 
 static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
@@ -85,6 +87,9 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time);
 static bool dpc_recv_post_action(dpc_session_ctx_t *session);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
+
+static dpc_input_t *dpc_gen_input_from_template(void);
+static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
@@ -475,6 +480,28 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 }
 
 /*
+ *	Dynamically generate an input item from template.
+ */
+dpc_input_t *dpc_gen_input_from_template()
+{
+	// TODO
+
+	return NULL;
+}
+
+/*
+ *	Get an input item. If using a template, dynamically generate a new item.
+ */
+dpc_input_t *dpc_get_input()
+{
+	if (!with_template) {
+		return dpc_get_input_list_head(&vps_list_in);
+	} else {
+		return dpc_gen_input_from_template();
+	}
+}
+
+/*
  *	Initialize a new session.
  */
 static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
@@ -485,7 +512,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 
 	DPC_DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
 
-	input = dpc_get_input_list_head(&vps_list_in);
+	input = dpc_get_input();
 	if (!input) { /* No input: cannot create new session. */
 		return NULL;
 	}
@@ -793,7 +820,10 @@ static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
 		fr_pair_list_fprint(fr_log_fp, input->vps);
 	}
 
-	if (!dpc_parse_input(input)) {
+	/*
+	 *	Parse item if not using a template.
+	 */
+	if (!with_template && !dpc_parse_input(input)) {
 		/*
 		 *	Invalid item. Discard.
 		 */
@@ -819,6 +849,9 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 	 *	Loop until the file is done.
 	 */
 	do {
+ 		/* Template needs two input items only, ignore if there are more. */
+		if (with_template && list->size >= 2) break;
+
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
 		if (fr_pair_list_afrom_file(input, &input->vps, file_in, &file_done) < 0) {
@@ -840,9 +873,6 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		*/
 
 		dpc_handle_input(input, list);
-
- 		/* Template needs two input items only, ignore if there are more. */
-		if (with_template && list->size == 2) break;
 
 	} while (!file_done);
 
@@ -891,6 +921,15 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	}
 
 	DEBUG("Done reading input, list size: %d", vps_list_in.size);
+
+	/* Template: keep track of the two input items we'll need. */
+	if (with_template) {
+		template_invariant = vps_list_in.head;
+		template_variable = vps_list_in.tail;
+
+		/* If only one input item provided: this will be the variable list (no invariant). */
+		if (vps_list_in.size < 2) template_invariant = NULL;
+	}
 
 	return 0;
 }
@@ -1158,7 +1197,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   Or (workflow): dora.\n");
 	fprintf(fd, "                   If omitted, packet type must be specified in input vps.\n");
 	fprintf(fd, " Options:\n");
-	fprintf(fd, "  -f <file>        Read input vps from <file>, not stdin.\n");
+	fprintf(fd, "  -f <file>        Read input vps from <file>, in addition to stdin\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "  -h               Print this help message.\n");
 	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
