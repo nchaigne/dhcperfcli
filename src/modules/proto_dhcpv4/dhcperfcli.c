@@ -88,7 +88,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
 
-static dpc_input_t *dpc_gen_input_from_template(void);
+static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
@@ -482,22 +482,75 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 /*
  *	Dynamically generate an input item from template.
  */
-dpc_input_t *dpc_gen_input_from_template()
+static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 {
-	// TODO
+	dpc_input_t *input = NULL;
+	MEM(input = talloc_zero(ctx, dpc_input_t));
 
-	return NULL;
+	/*
+	 *	Fill input with template invariant attributes.
+	 */
+	if (template_invariant) {
+		dpc_pair_list_append(input, &input->vps, template_invariant->vps);
+	}
+
+	/*
+	 *	Append input with template variable attributes, then update them for next generation.
+	 */
+	if (template_variable) {
+		dpc_pair_list_append(input, &input->vps, template_variable->vps);
+
+		vp_cursor_t cursor;
+		VALUE_PAIR *vp;
+
+		for (vp = fr_pair_cursor_init(&cursor, &template_variable->vps);
+			vp;
+			vp = fr_pair_cursor_next(&cursor)) {
+
+			switch (vp->da->type) {
+			case FR_TYPE_UINT8:
+				vp->vp_uint8 += 1;
+				break;
+
+			case FR_TYPE_UINT16:
+				vp->vp_uint16 += 1;
+				break;
+
+			case FR_TYPE_UINT32:
+				vp->vp_uint32 += 1;
+				break;
+
+			case FR_TYPE_STRING: // vp_strvalue TODO
+				break;
+
+			case FR_TYPE_OCTETS: // vp_octets TODO
+				break;
+
+			case FR_TYPE_IPV4_ADDR:
+				vp->vp_ipv4addr = htonl(ntohl(vp->vp_ipv4addr) + 1);
+				break;
+
+			case FR_TYPE_ETHERNET: // vp_ether TODO
+				break;
+
+			default: /* Not handled, so this will be treated as invariant/ */
+				break;
+			}
+		}
+	}
+
+	return input;
 }
 
 /*
  *	Get an input item. If using a template, dynamically generate a new item.
  */
-dpc_input_t *dpc_get_input()
+static dpc_input_t *dpc_get_input()
 {
 	if (!with_template) {
 		return dpc_get_input_list_head(&vps_list_in);
 	} else {
-		return dpc_gen_input_from_template();
+		return dpc_gen_input_from_template(autofree);
 	}
 }
 
@@ -666,7 +719,7 @@ static bool dpc_loop_check_done(void)
 	if (dpc_packet_list_num_elements(pl) > 0) return false;
 
 	/* There's still input data to consume. */
-	if (vps_list_in.size > 0) return false;
+	if (!with_template && vps_list_in.size > 0) return false;
 
 	/* No more work. */
 	job_done = true;
@@ -1042,7 +1095,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hi:p:P:t:vxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hi:p:P:t:TvxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -1088,6 +1141,10 @@ static void dpc_options_parse(int argc, char **argv)
 				ERROR("Invalid value for option -t (floating point number expected)");
 				usage(1);
 			}
+			break;
+
+		case 'T':
+			with_template = true;
 			break;
 
 		case 'v':
@@ -1204,6 +1261,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
+	fprintf(fd, "  -T               Template mode. Sessions input is generated from invariant and variable input vps.\n");
 	fprintf(fd, "  -v               Print version information.\n");
 	fprintf(fd, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
 	fprintf(fd, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
