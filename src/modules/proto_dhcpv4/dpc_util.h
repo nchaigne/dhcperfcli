@@ -33,4 +33,6 @@ void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);
 dpc_input_t *dpc_input_item_draw(dpc_input_t *entry);
 dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 
+bool dpc_stdin_peek(void);
+
 #endif

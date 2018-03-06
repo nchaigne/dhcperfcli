@@ -503,3 +503,23 @@ dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
 	// list is valid and has at least one element.
 	return dpc_input_item_draw(list->head);
 }
+
+/*
+ *	Peek at stdin (fd 0) to see if it has input.
+ */
+bool dpc_stdin_peek()
+{
+	fd_set set;
+	int max_fd = 1;
+	struct timeval tv;
+
+	FD_ZERO(&set);
+	FD_SET(0, &set);
+	timerclear(&tv);
+
+    if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
+		return false;
+	}
+
+	return true;
+}

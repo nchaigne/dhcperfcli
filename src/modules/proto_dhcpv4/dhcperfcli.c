@@ -846,12 +846,6 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 
 	} while (!file_done);
 
-	if (list->size == 0) {
-		WARN("No valid input loaded, nothing to do");
-		exit(0);
-	}
-
-	DEBUG("Done reading input, list size: %d", list->size);
 }
 
 /*
@@ -862,24 +856,42 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	FILE *file_in = NULL;
 
 	/*
+	 *	If there's something on stdin, read it.
+	 */
+	if (dpc_stdin_peek()) {
+		DEBUG("Reading input from stdin");
+		dpc_input_load_from_fd(ctx, stdin, &vps_list_in);
+	} else {
+		DPC_DEBUG_TRACE("Nothing to read on stdin");
+	}
+
+	/*
 	 *	Determine where to read the vps from.
 	 */
 	if (file_vps_in && strcmp(file_vps_in, "-") != 0) {
-		DEBUG("Opening input file: %s", file_vps_in);
+		DEBUG("Reading input from file: %s", file_vps_in);
 
 		file_in = fopen(file_vps_in, "r");
 		if (!file_in) {
 			ERROR("Error opening %s: %s", file_vps_in, strerror(errno));
-			return -1;
+			exit(EXIT_FAILURE);
 		}
-	} else {
-		DEBUG("Reading input vps from stdin");
-		file_in = stdin;
+
+		dpc_input_load_from_fd(ctx, file_in, &vps_list_in);
+
+		fclose(file_in);
 	}
 
-	dpc_input_load_from_fd(ctx, file_in, &vps_list_in);
+	/*
+	 *	Ensure we have something to work with.
+	 */
+	if (vps_list_in.size == 0) {
+		WARN("No valid input loaded, nothing to do");
+		exit(0);
+	}
 
-	if (file_in != stdin) fclose(file_in);
+	DEBUG("Done reading input, list size: %d", vps_list_in.size);
+
 	return 0;
 }
 
