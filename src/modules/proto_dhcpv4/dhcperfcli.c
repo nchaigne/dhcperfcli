@@ -50,6 +50,7 @@ static float timeout = 3.0;
 static struct timeval tv_timeout;
 static uint32_t base_xid = 0;
 static uint32_t session_max_active = 1;
+static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -484,8 +485,19 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
  */
 static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 {
+	if (!template_invariant && !template_variable) return NULL;
+
 	dpc_input_t *input = NULL;
+	dpc_input_t *transport = template_invariant ? template_invariant : template_variable;
+
 	MEM(input = talloc_zero(ctx, dpc_input_t));
+
+	// these should probably be in a separate struct... TODO.
+	input->code = transport->code;
+	input->src_port = transport->src_port;
+	input->dst_port = transport->dst_port;
+	input->src_ipaddr = transport->src_ipaddr;
+	input->dst_ipaddr = transport->dst_ipaddr;
 
 	/*
 	 *	Fill input with template invariant attributes.
@@ -665,6 +677,8 @@ static void dpc_loop_start_sessions(void)
 
 	while (!done) {
 		if (vps_list_in.size == 0) break;
+
+		if (session_max_num && session_num >= session_max_num) break;
 
 		if (session_num_active >= session_max_active) break;
 
@@ -873,10 +887,7 @@ static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
 		fr_pair_list_fprint(fr_log_fp, input->vps);
 	}
 
-	/*
-	 *	Parse item if not using a template.
-	 */
-	if (!with_template && !dpc_parse_input(input)) {
+	if (!dpc_parse_input(input)) {
 		/*
 		 *	Invalid item. Discard.
 		 */
@@ -1095,7 +1106,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hi:p:P:t:TvxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hi:N:p:P:t:TvxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -1117,6 +1128,14 @@ static void dpc_options_parse(int argc, char **argv)
 				usage(1);
 			}
 			base_xid = atoi(optarg);
+			break;
+
+		case 'N':
+			if (!is_integer(optarg)) {
+				ERROR("Invalid value for option -N (integer expected)");
+				usage(1);
+			}
+			session_max_num = atoi(optarg);
 			break;
 
 		case 'p':
@@ -1258,6 +1277,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "  -h               Print this help message.\n");
 	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
+	fprintf(fd, "  -N <num>         Start at most <num> sessions (in template mode: generate <num> sessions).\n");
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
