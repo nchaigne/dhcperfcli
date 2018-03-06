@@ -757,7 +757,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	}
 
 	/*
-	 *	Allocate the socket now. If we can't, stop everything now.
+	 *	Allocate the socket now. If we can't, stop.
 	 */
 	int my_sockfd = dpc_socket_provide(pl, &input->src_ipaddr, input->src_port);
 	if (my_sockfd < 0) {
@@ -1110,6 +1110,19 @@ int main(int argc, char **argv)
 
 	dpc_event_list_init(autofree);
 	dpc_packet_list_init(autofree);
+
+	if (gateway) {
+		/*
+		 *	Allocate the socket now. If we can't, stop.
+		 */
+		int my_sockfd = dpc_socket_provide(pl, &gateway->ipaddr, gateway->port);
+		if (my_sockfd < 0) {
+			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+			ERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
+			      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &gateway->ipaddr), gateway->port);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
