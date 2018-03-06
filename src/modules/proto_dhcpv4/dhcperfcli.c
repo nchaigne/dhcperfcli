@@ -542,8 +542,16 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 				vp->vp_ipv4addr = htonl(ntohl(vp->vp_ipv4addr) + 1);
 				break;
 
-			case FR_TYPE_ETHERNET: // vp_ether TODO
+			case FR_TYPE_ETHERNET:
+			{
+				/* Hackish way to increment the 6 octets of hwaddr. */
+				uint64_t hwaddr = 0;
+				memcpy(&hwaddr, vp->vp_ether, 6);
+				hwaddr = ntohll(hwaddr) + (1 << 16);
+				hwaddr = htonll(hwaddr);
+				memcpy(vp->vp_ether, &hwaddr, 6);
 				break;
+			}
 
 			default: /* Not handled, so this will be treated as invariant/ */
 				break;
