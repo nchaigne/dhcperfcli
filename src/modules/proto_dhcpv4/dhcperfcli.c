@@ -26,7 +26,7 @@ static char const *progname = NULL;
 static char const *radius_dir = RADDBDIR;
 static char const *dict_dir = DICTDIR;
 static fr_dict_t *dict = NULL;
-static int packet_trace_lvl = 1; /* Default: trace packet headers only. */
+static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
 static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
 static fr_event_list_t *event_list = NULL;
@@ -121,7 +121,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 
 	DPC_DEBUG_TRACE("Request timed out");
 
-	if (packet_trace_lvl) dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
+	if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
 
 	/* Finish the session. */
 	dpc_session_finish(session);
@@ -540,7 +540,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 
 				buff = talloc_zero_array(vp, char, len + 1);
 				for (i = 0; i < vp->vp_length; i ++) {
-					buff[i] = vp->vp_strvalue[(i+1) % len];
+					buff[i] = vp->vp_strvalue[(i + 1) % len];
 				}
 				fr_pair_value_strsteal(vp, (char *)buff);
 			}
@@ -1216,6 +1216,20 @@ static void dpc_options_parse(int argc, char **argv)
 	argv += (optind - 1);
 
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
+
+	/* If packet trace level is unspecified, figure out something automatically. */
+	if (packet_trace_lvl == -1) {
+		if (session_max_num == 1 || (!with_template && vps_list_in.size < 2)) {
+			/* Only one request: full packet print. */
+			packet_trace_lvl = 2;
+		} else if (session_max_active == 1) {
+			/* Several requests but no parallelism: print packet headers. */
+			packet_trace_lvl = 1;
+		} else {
+			/* Several request in parallel: no packet print. */
+			packet_trace_lvl = 0;
+		}
+	}
 
 	/*
 	 *	Resolve server host address and port.
