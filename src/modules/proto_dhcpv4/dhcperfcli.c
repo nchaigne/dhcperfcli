@@ -51,6 +51,7 @@ static struct timeval tv_timeout;
 static uint32_t base_xid = 0;
 static uint32_t session_max_active = 1;
 static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
+static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -704,11 +705,26 @@ static void dpc_loop_start_sessions(void)
 	bool done = false;
 	int ret;
 
+ 	/* If we've flagged that sessions should be be started anymore, return immediately. */
+	if (!start_sessions_flag) return;
+
 	while (!done) {
-		if (vps_list_in.size == 0) break;
+		/* Max session limit reached. */
+		if (session_max_num && session_num >= session_max_num) {
+			if (start_sessions_flag) {
+				DEBUG("Maximum number of sessions reached (%u): stop starting new sessions", session_max_num);
+			}
+			start_sessions_flag = false;
+			break;
+		}
 
-		if (session_max_num && session_num >= session_max_num) break;
+		/* No more input. */
+		if (!with_template && vps_list_in.size == 0) {
+			start_sessions_flag = false;
+			break;
+		}
 
+		/* Max active session reached. Try again later when we've finished some ongoing sessions. */
 		if (session_num_active >= session_max_active) break;
 
 		/*
@@ -761,8 +777,11 @@ static bool dpc_loop_check_done(void)
 	/* There are still ongoing requests, to which we expect a reply or wait for a timeout. */
 	if (dpc_packet_list_num_elements(pl) > 0) return false;
 
-	/* There's still input data to consume. */
-	if (!with_template && vps_list_in.size > 0) return false;
+	/* There are still events to process. */
+	if (fr_event_list_num_timers(event_list) > 0) return false;
+
+	/* We still have sessions to start. */
+	if (start_sessions_flag) return false;
 
 	/* No more work. */
 	job_done = true;
@@ -966,6 +985,9 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		*/
 
 		dpc_handle_input(input, list);
+
+		/* Stop reading if we know we won't need it. */
+		if (session_max_num && list->size >= session_max_num) break;
 
 	} while (!file_done);
 
