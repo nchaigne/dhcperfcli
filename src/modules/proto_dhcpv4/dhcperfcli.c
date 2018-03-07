@@ -514,6 +514,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 
 		vp_cursor_t cursor;
 		VALUE_PAIR *vp;
+		unsigned int i;
 
 		for (vp = fr_pair_cursor_init(&cursor, &template_variable->vps);
 			vp;
@@ -532,10 +533,30 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 				vp->vp_uint32 += 1;
 				break;
 
-			case FR_TYPE_STRING: // vp_strvalue TODO
+			case FR_TYPE_STRING: /* Circular shift on the left, e.g.: abcd -> bcda */
+			{
+				char *buff;
+				int len = vp->vp_length;
+
+				buff = talloc_zero_array(vp, char, len + 1);
+				for (i = 0; i < vp->vp_length; i ++) {
+					buff[i] = vp->vp_strvalue[(i+1) % len];
+				}
+				fr_pair_value_strsteal(vp, (char *)buff);
+			}
 				break;
 
-			case FR_TYPE_OCTETS: // vp_octets TODO
+			case FR_TYPE_OCTETS: /* +1 on each octet */
+			{
+				uint8_t *buff;
+
+				buff = talloc_array(vp, uint8_t, vp->vp_length);
+				memcpy(buff, vp->vp_octets, vp->vp_length);
+				for (i = 0; i < vp->vp_length; i ++) {
+					buff[i] ++;
+				}
+				fr_pair_value_memsteal(vp, buff);
+			}
 				break;
 
 			case FR_TYPE_IPV4_ADDR:
