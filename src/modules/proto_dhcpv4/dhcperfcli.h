@@ -25,11 +25,14 @@ extern int dpc_debug_lvl;
 #undef DEBUG2
 #define DEBUG2(fmt, ...)	if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
 
+// INFO, WARN, ERROR and PERROR defined in log.h should be sufficient (for now at least)
+/*
 #undef WARN
 #define WARN(fmt, ...)		fr_perror("Warning: " fmt, ## __VA_ARGS__)
 
 #undef ERROR
 #define ERROR(fmt, ...)		fr_perror("ERROR: " fmt, ## __VA_ARGS__)
+*/
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
 #ifndef NDEBUG

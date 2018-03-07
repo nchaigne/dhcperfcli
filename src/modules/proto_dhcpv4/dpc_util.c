@@ -517,7 +517,7 @@ bool dpc_stdin_peek()
 	FD_SET(0, &set);
 	timerclear(&tv);
 
-    if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
+	if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
 		return false;
 	}
 

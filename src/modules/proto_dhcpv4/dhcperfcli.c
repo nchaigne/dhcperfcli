@@ -56,6 +56,7 @@ static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 static bool job_done = false;
+static bool signal_done = false;
 
 static uint32_t session_num_active = 0; /* Number of active sessions. */
 
@@ -252,7 +253,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	 */
 	reply = dpc_packet_list_recv(pl, &set); // warning: reply is allocated on NULL context.
 	if (!reply) {
-		ERROR("Received bad packet: %s", fr_strerror());
+		PERROR("Received bad packet");
 		return -1;
 	}
 
@@ -1273,6 +1274,23 @@ static void dpc_options_parse(int argc, char **argv)
 
 }
 
+/*
+ *	Signal handler.
+ */
+static void dpc_signal(int sig)
+{
+	if (!signal_done) {
+		/* Allow ongoing sessions to be finished gracefully. */
+		INFO("Received signal [%d] (%s): No more session will be started.", sig, strsignal(sig));
+		INFO("Send another signal if you wish to abort immediately.");
+		signal_done = true;
+		start_sessions_flag = false;
+	} else {
+		/* ... unless someone's getting really impatient. */
+		INFO("Received signal [%d] (%s): Aborting.", sig, strsignal(sig));
+		exit(0);
+	}
+}
 
 
 /*
@@ -1314,6 +1332,17 @@ int main(int argc, char **argv)
 			      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &gateway->ipaddr), gateway->port);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	/*
+	 *	Set signal handler.
+	 */
+	if ( (fr_set_signal(SIGHUP, dpc_signal) < 0) ||
+	     (fr_set_signal(SIGINT, dpc_signal) < 0) ||
+	     (fr_set_signal(SIGTERM, dpc_signal) < 0))
+	{
+		PERROR("Failed installing signal handler");
+		exit(EXIT_FAILURE);
 	}
 
 	/* Load input data used to build the packets. */
