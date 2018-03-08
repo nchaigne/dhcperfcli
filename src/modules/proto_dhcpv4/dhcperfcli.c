@@ -143,6 +143,10 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	/* Update 'rtt_cumul' and 'num'. */
 	timeradd(&my_stats->rtt_cumul, rtt, &my_stats->rtt_cumul);
 	my_stats->num ++;
+
+	DPC_DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
+	                tr_type, my_stats->num, dpc_timeval_to_float(rtt),
+	                dpc_timeval_to_float(&my_stats->rtt_min), dpc_timeval_to_float(&my_stats->rtt_max));
 }
 
 /*
@@ -161,6 +165,8 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 	if (request_code == FR_DHCPV4_DISCOVER && reply_code == FR_DHCPV4_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
 	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_REQUEST_ACK;
 	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_NAK) tr_type = DPC_TR_REQUEST_NAK;
+
+	timersub(&reply->timestamp, &request->timestamp, &rtt);
 
 	/* Update statistics for that kind of transaction. */
 	dpc_tr_stats_update(tr_type, &rtt);
@@ -373,6 +379,9 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 	int ret;
 
 	if (!session || !session->reply) return false;
+
+	/* Update statistics. */
+	dpc_statistics_update(session->packet, session->reply);
 
 	/*
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
