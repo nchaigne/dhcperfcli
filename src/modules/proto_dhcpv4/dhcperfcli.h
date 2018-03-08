@@ -78,6 +78,15 @@ typedef enum {
 	DPC_WORKFLOW_MAX
 } dpc_workflow_type_t;
 
+/* Transactions (request / reply) */
+typedef enum {
+	DPC_TR_ALL = 0,
+	DPC_TR_DISCOVER_OFFER,
+	DPC_TR_REQUEST_ACK,
+	DPC_TR_REQUEST_NAK,
+	DPC_TR_MAX
+} dpc_transaction_type_t;
+
 /* Packet events. */
 typedef enum {
 	DPC_PACKET_SENT = 1,
@@ -86,6 +95,26 @@ typedef enum {
 } dpc_packet_event_t;
 
 
+/*
+ *	Holds statistics for a given transaction type.
+ */
+typedef struct dpc_transaction_stats {
+	uint32_t       num;       //!< Number of completed transactions
+	struct timeval rtt_cumul; //!< Cumulated rtt (request to reply time)
+	struct timeval rtt_min;   //!< Lowest rtt
+	struct timeval rtt_max;   //!< Highest rtt (timeout are not included)
+} dpc_transaction_stats_t;
+
+/*
+ *	All statistics.
+ */
+typedef struct dpc_statistics {
+	dpc_transaction_stats_t tr_stats[DPC_TR_MAX];
+	// just these for now. TODO.
+} dpc_statistics_t;
+
+
+/* Endpoint: IP address and port. */
 typedef struct dpc_endpoint {
 	fr_ipaddr_t ipaddr;
 	uint16_t port;

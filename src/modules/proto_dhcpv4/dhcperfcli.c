@@ -59,6 +59,7 @@ static bool job_done = false;
 static bool signal_done = false;
 
 static uint32_t session_num_active = 0; /* Number of active sessions. */
+static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
 
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover",    FR_DHCPV4_DISCOVER },
@@ -81,6 +82,9 @@ static const FR_NAME_NUMBER workflow_types[] = {
  *	Static functions declaration.
  */
 static void usage(int);
+
+static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
+static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
 
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
@@ -113,6 +117,54 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 static void dpc_command_parse(char const *command);
 static void dpc_options_parse(int argc, char **argv);
 
+
+/*
+ *	Update statistics for a type of transaction: number of transactions, cumulated rtt, min/max rtt.
+ */
+static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt)
+{
+	if (tr_type < 0 || tr_type >= DPC_TR_MAX) return;
+	if (!rtt) return;
+
+	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type]; /* For easier access. */
+
+	/* Update 'rtt_min'. */
+	if ((0 == my_stats->num) || (timercmp(rtt, &my_stats->rtt_min, <))) {
+		my_stats->rtt_min.tv_sec = rtt->tv_sec;
+		my_stats->rtt_min.tv_usec = rtt->tv_usec;
+	}
+
+	/* Update 'rtt_max'. */
+	if ((0 == my_stats->num) || (timercmp(rtt, &my_stats->rtt_max, >=))) {
+		my_stats->rtt_max.tv_sec = rtt->tv_sec;
+		my_stats->rtt_max.tv_usec = rtt->tv_usec;
+	}
+
+	/* Update 'rtt_cumul' and 'num'. */
+	timeradd(&my_stats->rtt_cumul, rtt, &my_stats->rtt_cumul);
+	my_stats->num ++;
+}
+
+/*
+ *	Update statistics.
+ */
+static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
+{
+	if (!request || !reply) return;
+
+	dpc_transaction_type_t tr_type = -1;
+	struct timeval rtt;
+	int request_code = request->code;
+	int reply_code = reply->code;
+
+	/* Identify the transaction (request / reply). */
+	if (request_code == FR_DHCPV4_DISCOVER && reply_code == FR_DHCPV4_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
+	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_REQUEST_ACK;
+	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_NAK) tr_type = DPC_TR_REQUEST_NAK;
+
+	/* Update statistics for that kind of transaction. */
+	dpc_tr_stats_update(tr_type, &rtt);
+}
 
 /*
  *	Event callback: request timeout.
