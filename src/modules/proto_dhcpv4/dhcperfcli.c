@@ -77,6 +77,16 @@ static const FR_NAME_NUMBER workflow_types[] = {
 	{ NULL, 0}
 };
 
+/* Transaction type labels. */
+static char const *transaction_types[DPC_TR_MAX] = {
+	"(All)",
+	"Discover:Offer",
+	"Request:Ack",
+	"Request:Nak"
+};
+#define LG_PAD_WF_TYPES 20
+#define LG_PAD_STATS    20
+
 
 /*
  *	Static functions declaration.
@@ -117,6 +127,40 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 static void dpc_command_parse(char const *command);
 static void dpc_options_parse(int argc, char **argv);
 
+
+
+/*
+ *	Print per-transaction type statistics.
+ */
+static void dpc_tr_stats_print(FILE *fp)
+{
+	int i;
+	int i_start = 0;
+	int num_stat = 0;
+
+	/* Check the number of statistics types with actual data. */
+	for (i = 1; i < DPC_TR_MAX; i ++) {
+		if (stat_ctx.tr_stats[i].num > 0) num_stat ++;
+	}
+	if (num_stat == 0) return; /* If we got nothing, do nothing. */
+
+	fprintf(fp, "*** Statistics (per-transaction):\n");
+
+	if (num_stat == 1) i_start = 1; /* only print "All" if we have more than one (otherwise it's redundant). */
+
+	for (i = i_start; i < DPC_TR_MAX; i++) {
+		dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
+
+		if (my_stats->num == 0) continue;
+
+		float avg_rtt = 1000 * dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
+		float min_rtt = 1000 * dpc_timeval_to_float(&my_stats->rtt_min);
+		float max_rtt = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
+
+		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]\n",
+				LG_PAD_WF_TYPES, LG_PAD_WF_TYPES, transaction_types[i], my_stats->num, avg_rtt, min_rtt, max_rtt);
+	}
+}
 
 /*
  *	Update statistics for a type of transaction: number of transactions, cumulated rtt, min/max rtt.
@@ -1423,6 +1467,9 @@ int main(int argc, char **argv)
 
 	/* Execute the main processing loop. */
 	dpc_main_loop();
+
+	/* Print statistics. */
+	dpc_tr_stats_print(stdout);
 
 	exit(0);
 }
