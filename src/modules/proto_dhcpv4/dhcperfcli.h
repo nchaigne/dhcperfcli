@@ -129,15 +129,16 @@ struct dpc_input_list {
  *	Session context.
  */
 struct dpc_session_ctx {
-	uint32_t id;            //!< Id of session (0 for the first one).
+	uint32_t id;             //!< Id of session (0 for the first one).
 
-	dpc_input_t *input;     //!< Input data.
+	dpc_input_t *input;      //!< Input data.
+	struct timeval tv_start; //<! Session start timestamp.
 
 	RADIUS_PACKET *packet;
 	RADIUS_PACKET *reply;
 
 	dpc_state_t state;
-	bool reply_expected;    //!< Whether a reply is expected or not.
+	bool reply_expected;     //!< Whether a reply is expected or not.
 
 	fr_event_timer_t const *event; //<! armed timer event (if any).
 };

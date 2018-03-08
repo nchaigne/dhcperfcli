@@ -200,7 +200,11 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	/*
 	 *	Send the packet.
 	 */
-	dpc_packet_print(fr_log_fp, packet, DPC_PACKET_SENT, packet_trace_lvl); /* print request packet. */
+	gettimeofday(&packet->timestamp, NULL); /* Store packet send time. */
+	// shouldn't FreeRADIUS lib do that ? TODO.
+	// (on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv.)
+
+	dpc_packet_print(fr_log_fp, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	packet->sockfd = my_sockfd;
 	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
@@ -290,6 +294,11 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	session->reply = reply;
 	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
+
+	/* Compute rtt. */
+	struct timeval rtt;
+	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
+	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
 
 	dpc_packet_print(fr_log_fp, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
@@ -645,6 +654,9 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 				session->state = DPC_STATE_EXPECT_REPLY;
 			}
 		}
+
+		/* Store session start time. */
+		gettimeofday(&session->tv_start, NULL);
 
 		session_num_active ++;
 	}

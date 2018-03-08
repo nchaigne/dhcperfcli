@@ -58,7 +58,7 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
 
 	/* Print elapsed time. */
 	char time_buf[DPC_TIME_STRLEN];
-	fprintf(fr_log_fp, "t(%s) ", dpc_print_delta_time(time_buf, &tv_start, NULL, 3));
+	fprintf(fr_log_fp, "t(%s) ", dpc_print_delta_time(time_buf, &tv_start, NULL, DPC_DELTA_TIME_DECIMALS));
 
 	va_start(ap, fmt);
 	vfprintf(fr_log_fp, fmt, ap);
@@ -383,12 +383,21 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 }
 
 /*
- * Convert a float to struct timeval.
+ *	Convert a float to struct timeval.
  */
 void dpc_float_to_timeval(struct timeval *tv, float f_val)
 {
 	tv->tv_sec = (time_t)f_val;
 	tv->tv_usec = (uint64_t)(f_val * USEC) - (tv->tv_sec * USEC);
+}
+
+/*
+ *	Convert a struct timeval to float.
+ */
+float dpc_timeval_to_float(struct timeval *tv)
+{
+	float value = (tv->tv_sec + (float)tv->tv_usec / USEC);
+	return value;
 }
 
 /*

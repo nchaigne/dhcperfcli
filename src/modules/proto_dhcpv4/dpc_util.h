@@ -4,8 +4,11 @@
 #include "dhcperfcli.h"
 #include <freeradius-devel/libradius.h>
 
+
 #define DPC_FROM_TO_STRLEN (21 + (FR_IPADDR_STRLEN*2))
 #define DPC_TIME_STRLEN    (15 + 1)
+
+#define DPC_DELTA_TIME_DECIMALS  3
 
 
 void dpc_printf_log(char const *fmt, ...);
@@ -27,6 +30,7 @@ VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 
 void dpc_float_to_timeval(struct timeval *tv, float f_val);
+float dpc_timeval_to_float(struct timeval *tv);
 bool dpc_str_to_float(float *out, char const *value);
 
 void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);
