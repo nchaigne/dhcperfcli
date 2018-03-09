@@ -82,7 +82,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
 	"(All)",
 	"Discover:Offer",
 	"Request:Ack",
-	"Request:Nak"
+	"Request:Nak",
+	"<DORA>"
 };
 #define LG_PAD_WF_TYPES 20
 #define LG_PAD_STATS    20
@@ -193,9 +194,6 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	DPC_DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
 	                tr_type, my_stats->num, dpc_timeval_to_float(rtt),
 	                dpc_timeval_to_float(&my_stats->rtt_min), dpc_timeval_to_float(&my_stats->rtt_max));
-
-	/* Also update for 'All'. */
-	if (tr_type != DPC_TR_ALL) dpc_tr_stats_update(DPC_TR_ALL, rtt);
 }
 
 /*
@@ -219,6 +217,9 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 
 	/* Update statistics for that kind of transaction. */
 	dpc_tr_stats_update(tr_type, &rtt);
+
+	/* Also update for 'All'. */
+	dpc_tr_stats_update(DPC_TR_ALL, &rtt);
 }
 
 /*
@@ -432,6 +433,13 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 	/* Update statistics. */
 	dpc_statistics_update(session->packet, session->reply);
 
+	/* We've completed a DORA workflow. */
+	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCPV4_ACK) {
+		struct timeval rtt;
+		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
+		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
+	}
+
 	/*
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
 	 */
@@ -473,7 +481,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		if (!packet) return false;
 
 		packet->code = FR_DHCPV4_REQUEST;
-		session->state = DPC_STATE_EXPECT_REPLY;
+		session->state = DPC_STATE_DORA_EXPECT_ACK;
 
 		/*
 		 *	Use information from the Offer reply to complete the new packet.

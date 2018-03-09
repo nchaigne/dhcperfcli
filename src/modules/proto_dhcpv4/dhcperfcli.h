@@ -66,8 +66,9 @@ extern int dpc_debug_lvl;
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,
 	DPC_STATE_NO_REPLY,           //!< No reply is expected to the request.
-	DPC_STATE_EXPECT_REPLY,       //!< Expecting reply to a request.
-	DPC_STATE_DORA_EXPECT_OFFER,  //!< DORA workflow expecting an Offer reply to the Discover request.
+	DPC_STATE_EXPECT_REPLY,       //!< Expecting any reply to a request.
+	DPC_STATE_DORA_EXPECT_OFFER,  //!< DORA workflow expecting an Offer reply to the Discover.
+	DPC_STATE_DORA_EXPECT_ACK,    //!< DORA workflow expecting an Ack reply to the Request.
 	DPC_STATE_MAX
 } dpc_state_t;
 
@@ -78,12 +79,13 @@ typedef enum {
 	DPC_WORKFLOW_MAX
 } dpc_workflow_type_t;
 
-/* Transactions (request / reply) */
+/* Transactions (request / reply, or workflow). */
 typedef enum {
-	DPC_TR_ALL = 0,
-	DPC_TR_DISCOVER_OFFER,
-	DPC_TR_REQUEST_ACK,
-	DPC_TR_REQUEST_NAK,
+	DPC_TR_ALL = 0,         //<! All unitary packet - reply transactions (DORA not included)
+	DPC_TR_DISCOVER_OFFER,  //<! Discover - Offer
+	DPC_TR_REQUEST_ACK,     //<! Request - Ack
+	DPC_TR_REQUEST_NAK,     //<! Request - Nak
+	DPC_TR_DORA,            //<! Discover - Offer, Request - Ack (a.k.a "DORA")
 	DPC_TR_MAX
 } dpc_transaction_type_t;
 
@@ -109,7 +111,12 @@ typedef struct dpc_transaction_stats {
  *	All statistics.
  */
 typedef struct dpc_statistics {
+	/*
+	 *	Statistics per transaction or workflow type.
+	 *	Note: entry "All" aggregates all unitary transactions (i.e. DORA workflow not included).
+	 */
 	dpc_transaction_stats_t tr_stats[DPC_TR_MAX];
+
 	// just these for now. TODO.
 } dpc_statistics_t;
 
