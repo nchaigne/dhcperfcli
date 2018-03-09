@@ -169,6 +169,30 @@ static void dpc_tr_stats_print(FILE *fp)
 }
 
 /*
+ *	Print global statistics.
+ */
+static void dpc_stats_print(FILE *fp)
+{
+	if (!fp) return;
+
+	fprintf(fp, "*** Statistics (global):\n");
+
+	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
+
+	fprintf(fp, "\t%-*.*s: %d (Discover: %d, Request: %d, Decline: %d, Release: %d, Inform: %d)\n",
+	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent",
+	        stat_ctx.num_packet_sent[0], stat_ctx.num_packet_sent[1], stat_ctx.num_packet_sent[3],
+	        stat_ctx.num_packet_sent[4], stat_ctx.num_packet_sent[7], stat_ctx.num_packet_sent[8]);
+
+	fprintf(fp, "\t%-*.*s: %d (Offer: %d, Ack: %d, Nak: %d)\n",
+	        LG_PAD_STATS, LG_PAD_STATS, "Packets received",
+	        stat_ctx.num_packet_recv[0], stat_ctx.num_packet_recv[2], stat_ctx.num_packet_recv[5],
+	        stat_ctx.num_packet_recv[6]);
+
+	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
+}
+
+/*
  *	Update statistics for a type of transaction: number of transactions, cumulated rtt, min/max rtt.
  */
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt)
@@ -323,6 +347,9 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 		exit(EXIT_FAILURE);
 	}
 
+	/* Statistics. */
+	STAT_INCR_PACKET_SENT(packet->code);
+
 	return 0;
 }
 
@@ -412,6 +439,9 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
 
 	dpc_packet_print(fr_log_fp, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
+
+	/* Statistics. */
+	STAT_INCR_PACKET_RECV(reply->code);
 
 	/*
 	 *	Perform post reception actions, and determine if session should be finished.
@@ -1452,6 +1482,7 @@ static void dpc_signal(int sig)
 static void dpc_end(void)
 {
 	/* Statistics report. */
+	dpc_stats_print(stdout);
 	dpc_tr_stats_print(stdout);
 
 	/* And we're done. */

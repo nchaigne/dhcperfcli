@@ -62,6 +62,27 @@ extern int dpc_debug_lvl;
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
 
+/*
+ *	Statistics update.
+ */
+#define STAT_INCR_PACKET_SENT(packet_code) \
+{ \
+	int code = packet_code - FR_DHCPV4_OFFSET; \
+	if (is_dhcp_code(code)) { \
+		stat_ctx.num_packet_sent[code] ++; \
+		stat_ctx.num_packet_sent[0] ++; \
+	} \
+}
+#define STAT_INCR_PACKET_RECV(packet_code) \
+{ \
+	int code = packet_code - FR_DHCPV4_OFFSET; \
+	if (is_dhcp_code(code)) { \
+		stat_ctx.num_packet_recv[code] ++; \
+		stat_ctx.num_packet_recv[0] ++; \
+	} \
+}
+
+
 /* Specific states of a session. */
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,
@@ -117,7 +138,10 @@ typedef struct dpc_statistics {
 	 */
 	dpc_transaction_stats_t tr_stats[DPC_TR_MAX];
 
-	// just these for now. TODO.
+	uint32_t num_packet_sent[DHCP_MAX_MESSAGE_TYPE];
+	uint32_t num_packet_lost[DHCP_MAX_MESSAGE_TYPE];
+	uint32_t num_packet_recv[DHCP_MAX_MESSAGE_TYPE];
+
 } dpc_statistics_t;
 
 
