@@ -127,6 +127,8 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 static void dpc_command_parse(char const *command);
 static void dpc_options_parse(int argc, char **argv);
 
+static void dpc_signal(int sig);
+static void dpc_end(void);
 
 
 /*
@@ -191,6 +193,9 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	DPC_DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
 	                tr_type, my_stats->num, dpc_timeval_to_float(rtt),
 	                dpc_timeval_to_float(&my_stats->rtt_min), dpc_timeval_to_float(&my_stats->rtt_max));
+
+	/* Also update for 'All'. */
+	if (tr_type != DPC_TR_ALL) dpc_tr_stats_update(DPC_TR_ALL, rtt);
 }
 
 /*
@@ -1409,8 +1414,20 @@ static void dpc_signal(int sig)
 	} else {
 		/* ... unless someone's getting really impatient. */
 		INFO("Received signal [%d] (%s): Aborting.", sig, strsignal(sig));
-		exit(0);
+		dpc_end();
 	}
+}
+
+/*
+ *	The end.
+ */
+static void dpc_end(void)
+{
+	/* Statistics report. */
+	dpc_tr_stats_print(stdout);
+
+	/* And we're done. */
+	exit(0);
 }
 
 
@@ -1472,10 +1489,8 @@ int main(int argc, char **argv)
 	/* Execute the main processing loop. */
 	dpc_main_loop();
 
-	/* Print statistics. */
-	dpc_tr_stats_print(stdout);
-
-	exit(0);
+	/* This is the end. */
+	dpc_end();
 }
 
 /*
