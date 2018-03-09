@@ -97,6 +97,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
  */
 static void usage(int);
 
+static void dpc_tr_stats_print(FILE *fp);
+static void dpc_stats_print(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
 static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
 
@@ -159,12 +161,12 @@ static void dpc_tr_stats_print(FILE *fp)
 
 		if (my_stats->num == 0) continue;
 
-		float avg_rtt = 1000 * dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
-		float min_rtt = 1000 * dpc_timeval_to_float(&my_stats->rtt_min);
-		float max_rtt = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
+		float rtt_avg = 1000 * dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
+		float rtt_min = 1000 * dpc_timeval_to_float(&my_stats->rtt_min);
+		float rtt_max = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
 
 		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]\n",
-				LG_PAD_WF_TYPES, LG_PAD_WF_TYPES, transaction_types[i], my_stats->num, avg_rtt, min_rtt, max_rtt);
+		        LG_PAD_WF_TYPES, LG_PAD_WF_TYPES, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
 	}
 }
 
@@ -179,10 +181,11 @@ static void dpc_stats_print(FILE *fp)
 
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
-	fprintf(fp, "\t%-*.*s: %d (Discover: %d, Request: %d, Decline: %d, Release: %d, Inform: %d)\n",
+	fprintf(fp, "\t%-*.*s: %d (Discover: %d, Request: %d, Decline: %d, Release: %d, Inform: %d, Lease-Query: %d)\n",
 	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent",
 	        stat_ctx.num_packet_sent[0], stat_ctx.num_packet_sent[1], stat_ctx.num_packet_sent[3],
-	        stat_ctx.num_packet_sent[4], stat_ctx.num_packet_sent[7], stat_ctx.num_packet_sent[8]);
+	        stat_ctx.num_packet_sent[4], stat_ctx.num_packet_sent[7], stat_ctx.num_packet_sent[8],
+	        stat_ctx.num_packet_sent[10]);
 
 	fprintf(fp, "\t%-*.*s: %d (Offer: %d, Ack: %d, Nak: %d)\n",
 	        LG_PAD_STATS, LG_PAD_STATS, "Packets received",
@@ -259,6 +262,9 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 	DPC_DEBUG_TRACE("Request timed out");
 
 	if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
+
+	/* Statistics. */
+	STAT_INCR_PACKET_LOST(session->packet->code);
 
 	/* Finish the session. */
 	dpc_session_finish(session);
@@ -1424,7 +1430,9 @@ static void dpc_options_parse(int argc, char **argv)
 
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
-	/* If packet trace level is unspecified, figure out something automatically. */
+	/*
+	 *	If packet trace level is unspecified, figure out something automatically.
+	 */
 	if (packet_trace_lvl == -1) {
 		if (session_max_num == 1 || (!with_template && vps_list_in.size < 2)) {
 			/* Only one request: full packet print. */

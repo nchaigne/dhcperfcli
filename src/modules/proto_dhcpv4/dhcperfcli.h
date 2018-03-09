@@ -68,20 +68,21 @@ extern int dpc_debug_lvl;
 #define STAT_INCR_PACKET_SENT(packet_code) \
 { \
 	int code = packet_code - FR_DHCPV4_OFFSET; \
-	if (is_dhcp_code(code)) { \
-		stat_ctx.num_packet_sent[code] ++; \
-		stat_ctx.num_packet_sent[0] ++; \
-	} \
+	stat_ctx.num_packet_sent[0] ++; \
+	if (is_dhcp_code(code)) stat_ctx.num_packet_sent[code] ++; \
 }
 #define STAT_INCR_PACKET_RECV(packet_code) \
 { \
 	int code = packet_code - FR_DHCPV4_OFFSET; \
-	if (is_dhcp_code(code)) { \
-		stat_ctx.num_packet_recv[code] ++; \
-		stat_ctx.num_packet_recv[0] ++; \
-	} \
+	stat_ctx.num_packet_recv[0] ++; \
+	if (is_dhcp_code(code)) stat_ctx.num_packet_recv[code] ++; \
 }
-
+#define STAT_INCR_PACKET_LOST(packet_code) \
+{ \
+	int code = packet_code - FR_DHCPV4_OFFSET; \
+	stat_ctx.num_packet_lost[0] ++; \
+	if (is_dhcp_code(code)) stat_ctx.num_packet_lost[code] ++; \
+}
 
 /* Specific states of a session. */
 typedef enum {
