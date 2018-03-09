@@ -610,6 +610,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 
 	// these should probably be in a separate struct... TODO.
 	input->code = transport->code;
+	input->workflow = transport->workflow;
 	input->src_port = transport->src_port;
 	input->dst_port = transport->dst_port;
 	input->src_ipaddr = transport->src_ipaddr;
@@ -894,6 +895,9 @@ static bool dpc_loop_check_done(void)
 {
 	/* There are still ongoing requests, to which we expect a reply or wait for a timeout. */
 	if (dpc_packet_list_num_elements(pl) > 0) return false;
+
+	/* There are still active sessions. */
+	if (session_num_active > 0) return false;
 
 	/* There are still events to process. */
 	if (fr_event_list_num_timers(event_list) > 0) return false;
