@@ -409,22 +409,24 @@ bool dpc_str_to_float(float *out, char const *value)
 {
 	if (!value || strlen(value) == 0) return false;
 
-	while (*value != '\0') {
-		if (isdigit(*value)) {
-			value ++;
+	char const *p = value;
+
+	while (*p != '\0') {
+		if (isdigit(*p)) {
+			p ++;
 			continue;
 		}
-		if (*value == '.') {
-			value ++;
-			if (*value == '\0') return false; /* Do not allow a dot without any following digit. */
+		if (*p == '.') {
+			p ++;
+			if (*p == '\0') return false; /* Do not allow a dot without any following digit. */
 			break;
 		}
 		return false; /* Not a digit or dot. */
 	}
 
-	while (*value != '\0') { /* Everything after the dot must be a digit. */
-		if (!isdigit(*value)) return false;
-		value ++;
+	while (*p != '\0') { /* Everything after the dot must be a digit. */
+		if (!isdigit(*p)) return false;
+		p ++;
 	}
 
 	/* Format is correct. */

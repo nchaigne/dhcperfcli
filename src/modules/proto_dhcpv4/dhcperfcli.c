@@ -19,7 +19,7 @@ static char const *prog_version = "(FreeRADIUS version " RADIUSD_VERSION_STRING 
  */
 TALLOC_CTX *autofree = NULL;
 
-struct timeval tv_start; /* Program execution start time. */
+struct timeval tv_start; /* Program execution start timestamp. */
 int	dpc_debug_lvl = 0;
 
 static char const *progname = NULL;
@@ -52,6 +52,9 @@ static uint32_t base_xid = 0;
 static uint32_t session_max_active = 1;
 static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
+static struct timeval tv_start_job; /* Job start timestamp. */
+static float duration_max = 0; /* Default: unlimited. */
+static struct timeval tv_time_limit; /* When we have to stop (if max duration is set). */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -843,11 +846,21 @@ static void dpc_loop_start_sessions(void)
 	while (!done) {
 		/* Max session limit reached. */
 		if (session_max_num && session_num >= session_max_num) {
-			if (start_sessions_flag) {
-				DEBUG("Maximum number of sessions reached (%u): stop starting new sessions", session_max_num);
-			}
+			INFO("Max number of sessions (%u) reached: will not start any new session.", session_max_num);
 			start_sessions_flag = false;
 			break;
+		}
+
+		/* Time limit reached. */
+		if (duration_max) {
+			struct timeval tv_now;
+			gettimeofday(&tv_now, NULL);
+
+			if (timercmp(&tv_now, &tv_time_limit, >=)) {
+				INFO("Max duration (%.3f s) reached: will not start any new session.", duration_max);
+				start_sessions_flag = false;
+				break;
+			}
 		}
 
 		/* No more input. */
@@ -1292,7 +1305,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hi:N:p:P:t:TvxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hi:L:N:p:P:t:TvxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -1314,6 +1327,13 @@ static void dpc_options_parse(int argc, char **argv)
 				usage(1);
 			}
 			base_xid = atoi(optarg);
+			break;
+
+		case 'L':
+			if (!dpc_str_to_float(&duration_max, optarg)) {
+				ERROR("Invalid value for option -L (floating point number expected)");
+				usage(1);
+			}
 			break;
 
 		case 'N':
@@ -1415,8 +1435,8 @@ static void dpc_signal(int sig)
 {
 	if (!signal_done) {
 		/* Allow ongoing sessions to be finished gracefully. */
-		INFO("Received signal [%d] (%s): No more session will be started.", sig, strsignal(sig));
-		INFO("Send another signal if you wish to abort immediately.");
+		INFO("Received signal [%d] (%s): will not start any new session.", sig, strsignal(sig));
+		INFO("Send another signal if you wish to terminate immediately.");
 		signal_done = true;
 		start_sessions_flag = false;
 	} else {
@@ -1450,7 +1470,7 @@ int main(int argc, char **argv)
 	dpc_debug_lvl = 0; /* Our own debug. */
 	fr_log_fp = stdout; /* Both will go there. */
 
-	gettimeofday(&tv_start, NULL);
+	gettimeofday(&tv_start, NULL); /* Program start timestamp. */
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -1494,6 +1514,16 @@ int main(int argc, char **argv)
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
 
+	gettimeofday(&tv_start_job, NULL); /* Job start timestamp. */
+
+	/* If we have a time limit, prepare it for later use. */
+	if (duration_max) {
+		struct timeval tv_duration_max;
+		dpc_float_to_timeval(&tv_duration_max, duration_max);
+		gettimeofday(&tv_time_limit, NULL);
+		timeradd(&tv_time_limit, &tv_duration_max, &tv_time_limit);
+	}
+
 	/* Execute the main processing loop. */
 	dpc_main_loop();
 
@@ -1518,6 +1548,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "  -h               Print this help message.\n");
 	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
+	fprintf(fd, "  -L <seconds>     Limit duration (beyond which no new session will be started).\n");
 	fprintf(fd, "  -N <num>         Start at most <num> sessions (in template mode: generate <num> sessions).\n");
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
