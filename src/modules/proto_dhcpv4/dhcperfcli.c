@@ -1430,8 +1430,16 @@ static void dpc_options_parse(int argc, char **argv)
 			/* Only one request: full packet print. */
 			packet_trace_lvl = 2;
 		} else if (session_max_active == 1) {
-			/* Several requests but no parallelism: print packet headers. */
-			packet_trace_lvl = 1;
+			/*
+			 *	Several requests, but no parallelism.
+			 *	If the number of sessions and the max duration are reasonably small, print packets header.
+			 *	Otherwise: no packet print.
+			 */
+			if (session_max_num > 50 || duration_max > 1.0) {
+				packet_trace_lvl = 0;
+			} else {
+				packet_trace_lvl = 1;
+			}
 		} else {
 			/* Several request in parallel: no packet print. */
 			packet_trace_lvl = 0;
