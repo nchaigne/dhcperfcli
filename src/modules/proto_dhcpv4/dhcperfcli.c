@@ -64,6 +64,30 @@ static bool signal_done = false;
 static uint32_t session_num_active = 0; /* Number of active sessions. */
 static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
 
+
+/*
+ *	More concise version of dhcp_message_types defined in protocols/dhcpv4/base.c
+ *	(Stripped of the "DHCP-" prefix. We only do DHCP.)
+ */
+char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE] = {
+	"",
+	"Discover",
+	"Offer",
+	"Request",
+	"Decline",
+	"Ack",
+	"NAK",
+	"Release",
+	"Inform",
+	"Force-Renew",
+	"Lease-Query",
+	"Lease-Unassigned",
+	"Lease-Unknown",
+	"Lease-Active",
+	"Bulk-Lease-Query",
+	"Lease-Query-Done"
+};
+
 static const FR_NAME_NUMBER request_types[] = {
 	{ "discover",    FR_DHCPV4_DISCOVER },
 	{ "request",     FR_DHCPV4_REQUEST },
@@ -1195,7 +1219,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	}
 
 	/*
-	 *	Determine where to read the vps from.
+	 *	If an input file is provided, read it.
 	 */
 	if (file_vps_in && strcmp(file_vps_in, "-") != 0) {
 		DEBUG("Reading input from file: %s", file_vps_in);
@@ -1471,7 +1495,6 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	dpc_float_to_timeval(&tv_timeout, timeout);
-
 }
 
 /*
@@ -1587,7 +1610,7 @@ static void NEVER_RETURNS usage(int status)
 
 	fprintf(fd, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
 	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in inputs vps.\n");
-	fprintf(fd, "  <command>        One of (packet type): discover, request, decline, release, inform.\n");
+	fprintf(fd, "  <command>        One of (packet type): discover, request, decline, release, inform, lease_query.\n");
 	fprintf(fd, "                   Or (workflow): dora.\n");
 	fprintf(fd, "                   If omitted, packet type must be specified in input vps.\n");
 	fprintf(fd, " Options:\n");
