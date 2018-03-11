@@ -52,7 +52,8 @@ static uint32_t base_xid = 0;
 static uint32_t session_max_active = 1;
 static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
-static struct timeval tv_start_job; /* Job start timestamp. */
+static struct timeval tv_job_start; /* Job start timestamp. */
+static struct timeval tv_job_end; /* Job end timestamp. */
 static float duration_max = 0; /* Default: unlimited. */
 static struct timeval tv_time_limit; /* When we have to stop (if max duration is set). */
 
@@ -121,6 +122,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
  */
 static void usage(int);
 
+static float dpc_job_elapsed_time_get(void);
+static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static void dpc_tr_stats_print(FILE *fp);
 static void dpc_stats_print(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
@@ -160,6 +163,45 @@ static void dpc_options_parse(int argc, char **argv);
 static void dpc_signal(int sig);
 static void dpc_end(void);
 
+
+/*
+ *	Obtain the job (either ongoing or finished) elapsed time.
+ */
+static float dpc_job_elapsed_time_get(void)
+{
+	float elapsed;
+	struct timeval tv_elapsed;
+
+	/*
+	 *	If job is finished, get elapsed time from start to end.
+	 *	Otherwise, get elapsed time from start to now.
+	 */
+	if (timerisset(&tv_job_end) {
+		timersub(&tv_job_end, &tv_job_start, tv_elapsed);
+	} else {
+		struct timeval tv_now;
+		gettimeofday(&tv_now, NULL);
+		timersub(&tv_now, &tv_job_start, tv_elapsed);
+	}
+	elapsed = dpc_timeval_to_float(tv_elapsed);
+
+	return elapsed;
+}
+
+/*
+ *	Compute the effective rate (reply per second) of a given transaction type (or all).
+ *	Note: for a workflow (DORA), this is based on the final reply (Ack).
+ */
+static float dpc_get_tr_rate(dpc_transaction_type_t i)
+{
+	assert(i < DPC_TR_MAX);
+
+	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
+	float elapsed = dpc_job_elapsed_time_get();
+
+	if (elapsed <= 0) return 0; /* Should not happen. */
+	return (float)my_stats->num / elapsed;
+}
 
 /*
  *	Print per-transaction type statistics.
@@ -1522,6 +1564,9 @@ static void dpc_signal(int sig)
  */
 static void dpc_end(void)
 {
+	/* Job end timestamp. */
+	gettimeofday(&tv_job_end, NULL);
+
 	/* Statistics report. */
 	dpc_stats_print(stdout);
 	dpc_tr_stats_print(stdout);
@@ -1586,7 +1631,7 @@ int main(int argc, char **argv)
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
 
-	gettimeofday(&tv_start_job, NULL); /* Job start timestamp. */
+	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
 
 	/* If we have a time limit, prepare it for later use. */
 	if (duration_max) {
