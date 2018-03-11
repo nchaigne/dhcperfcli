@@ -56,7 +56,7 @@ static struct timeval tv_job_start; /* Job start timestamp. */
 static struct timeval tv_job_end; /* Job end timestamp. */
 static float duration_max = 0; /* Default: unlimited. */
 static struct timeval tv_time_limit; /* When we have to stop (if max duration is set). */
-static int rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
+static float rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -145,6 +145,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
+static bool dpc_rate_limit_calc(int *max_new_sessions);
 static void dpc_loop_start_sessions(void);
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
@@ -942,6 +943,50 @@ static void dpc_loop_recv(void)
 		 */
 		if (dpc_recv_one_packet(NULL) < 1) break;
 	}
+}
+
+/*
+ *	Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
+ *	Returns: true if a limit has to be enforced at the moment, false otherwise.
+ */
+static bool dpc_rate_limit_calc(int *max_new_sessions)
+{
+	if (!rate_limit) return false;
+
+	int num_new_sessions = 0;
+
+	/*
+	 *	Now = T1. We've received so far N1 replies (having a current rate/s = N1 / <elapsed time>).
+	 *	Project ourselves in the future at T2 = T1 + <average rtt>.
+	 *	At this point we expect to have received replies to all the ongoing requests (active sessions).
+	 *	If the projected rate/s is higher than the rate limit, do not allow new sessions to be started.
+	 *	Otherwise, compute what we would need to attain this rate limit.
+	 */
+	float elapsed = dpc_job_elapsed_time_get();
+
+	/* Only start limiting after a time offset, otherwise we don't have any data to make useful calculations. */
+	if (elapsed < 0.5) return false;
+
+	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[DPC_TR_ALL];
+	float rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num; // is float sufficient for cumulated rtt ? TODO.
+	float elapsed_T2 = elapsed + rtt_avg;
+
+	float rate_T2 = (my_stats->num + session_num_active) / elapsed_T2;
+
+	/* We already expect to be beyond the limit at T2, so do not allow new sessions to be started for now. */
+	if (rate_T2 >= rate_limit) {
+		*max_new_sessions = 0;
+		return true;
+	}
+
+	/*
+	 *	Compute how many new sessions we would need to start now, assuming they are answered in <averate rtt>,
+	 *	to reach the desired rate limit:
+	 *	rate limit = ( N1 + <currently active sessions> + <new sessions to start> ) / ( <elapsed> + <rtt avg> )
+	 */
+	*max_new_sessions = (rate_limit * elapsed_T2) - (my_stats->num + session_num_active);
+
+	return true;
 }
 
 /*
