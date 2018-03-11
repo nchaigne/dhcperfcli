@@ -56,6 +56,7 @@ static struct timeval tv_job_start; /* Job start timestamp. */
 static struct timeval tv_job_end; /* Job end timestamp. */
 static float duration_max = 0; /* Default: unlimited. */
 static struct timeval tv_time_limit; /* When we have to stop (if max duration is set). */
+static int rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -1416,7 +1417,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hi:L:N:p:P:t:TvxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hi:L:N:p:P:r:t:TvxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -1470,6 +1471,14 @@ static void dpc_options_parse(int argc, char **argv)
 				usage(1);
 			}
 			packet_trace_lvl = atoi(optarg);
+			break;
+
+		case 'r':
+			if (!is_integer(optarg)) {
+				ERROR("Invalid value for option -r (integer expected)");
+				usage(1);
+			}
+			rate_limit = atoi(optarg);
 			break;
 
 		case 't':
@@ -1676,6 +1685,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -N <num>         Start at most <num> sessions (in template mode: generate <num> sessions).\n");
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
+	fprintf(fd, "  -r <num>         Rate limit (transaction replies /s)\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(fd, "  -T               Template mode. Sessions input is generated from invariant and variable input vps.\n");
 	fprintf(fd, "  -v               Print version information.\n");
