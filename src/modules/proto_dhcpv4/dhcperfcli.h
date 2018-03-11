@@ -50,6 +50,7 @@ extern int dpc_debug_lvl;
 
 #define DHCP_MAX_MESSAGE_TYPE  (16)
 // DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
+extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */

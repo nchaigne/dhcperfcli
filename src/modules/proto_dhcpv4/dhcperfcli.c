@@ -112,7 +112,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 	"Request:Nak",
 	"<DORA>"
 };
-#define LG_PAD_WF_TYPES 20
+#define LG_PAD_TR_TYPES 20
 #define LG_PAD_STATS    20
 
 
@@ -190,7 +190,7 @@ static void dpc_tr_stats_print(FILE *fp)
 		float rtt_max = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
 
 		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]\n",
-		        LG_PAD_WF_TYPES, LG_PAD_WF_TYPES, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
+		        LG_PAD_TR_TYPES, LG_PAD_TR_TYPES, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
 	}
 }
 
@@ -201,20 +201,19 @@ static void dpc_stats_print(FILE *fp)
 {
 	if (!fp) return;
 
+	char messages[DPC_MSG_NUM_STRLEN];
+
 	fprintf(fp, "*** Statistics (global):\n");
 
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
-	fprintf(fp, "\t%-*.*s: %d (Discover: %d, Request: %d, Decline: %d, Release: %d, Inform: %d, Lease-Query: %d)\n",
+	fprintf(fp, "\t%-*.*s: %d (%s)\n",
 	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent",
-	        stat_ctx.num_packet_sent[0], stat_ctx.num_packet_sent[1], stat_ctx.num_packet_sent[3],
-	        stat_ctx.num_packet_sent[4], stat_ctx.num_packet_sent[7], stat_ctx.num_packet_sent[8],
-	        stat_ctx.num_packet_sent[10]);
+	        dpc_num_message_type_print(messages, stat_ctx.num_packet_sent));
 
-	fprintf(fp, "\t%-*.*s: %d (Offer: %d, Ack: %d, Nak: %d)\n",
+	fprintf(fp, "\t%-*.*s: %d (%s)\n",
 	        LG_PAD_STATS, LG_PAD_STATS, "Packets received",
-	        stat_ctx.num_packet_recv[0], stat_ctx.num_packet_recv[2], stat_ctx.num_packet_recv[5],
-	        stat_ctx.num_packet_recv[6]);
+	        dpc_num_message_type_print(messages, stat_ctx.num_packet_recv));
 
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
 }
@@ -710,8 +709,11 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 		unsigned int i;
 
 		for (vp = fr_pair_cursor_init(&cursor, &template_variable->vps);
-			vp;
-			vp = fr_pair_cursor_next(&cursor)) {
+		     vp;
+		     vp = fr_pair_cursor_next(&cursor))
+		{
+			/* Only DHCP attributes can be variable. */
+			if (vp->da->vendor != DHCP_MAGIC_VENDOR) continue;
 
 			switch (vp->da->type) {
 			case FR_TYPE_UINT8:

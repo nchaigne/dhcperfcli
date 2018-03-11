@@ -107,6 +107,27 @@ char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when
 }
 
 /*
+ *	Print number of each type of message (sent or received).
+ */
+char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
+{
+	char *p = out;
+	size_t len = 0;
+
+	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
+		if (num_packet[i] > 0) {
+			if (p != out) {
+				len = sprintf(p, ", ");
+				p += len;
+			}
+			len = sprintf(p, "%s: %u", dpc_message_types[i], num_packet[i]);
+			p += len;
+		}
+	}
+	return out;
+}
+
+/*
  *	Print the packet header.
  */
 void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
@@ -156,10 +177,8 @@ void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t
 		fprintf(fp, ")");
 	}
 
-	fprintf(fp, " Id %u (0x%08x) %s length %zu\n",
-	        packet->id, packet->id,
-	        dpc_print_packet_from_to(from_to_buf, packet, false),
-	        packet->data_len);
+	fprintf(fp, " Id %u (0x%08x) %s length %zu\n", packet->id, packet->id,
+	        dpc_print_packet_from_to(from_to_buf, packet, false), packet->data_len);
 }
 
 /*
@@ -409,24 +428,22 @@ bool dpc_str_to_float(float *out, char const *value)
 {
 	if (!value || strlen(value) == 0) return false;
 
-	char const *p = value;
-
-	while (*p != '\0') {
-		if (isdigit(*p)) {
-			p ++;
+	while (*value != '\0') {
+		if (isdigit(*value)) {
+			value ++;
 			continue;
 		}
-		if (*p == '.') {
-			p ++;
-			if (*p == '\0') return false; /* Do not allow a dot without any following digit. */
+		if (*value == '.') {
+			value ++;
+			if (*value == '\0') return false; /* Do not allow a dot without any following digit. */
 			break;
 		}
 		return false; /* Not a digit or dot. */
 	}
 
-	while (*p != '\0') { /* Everything after the dot must be a digit. */
-		if (!isdigit(*p)) return false;
-		p ++;
+	while (*value != '\0') { /* Everything after the dot must be a digit. */
+		if (!isdigit(*value)) return false;
+		value ++;
 	}
 
 	/* Format is correct. */
