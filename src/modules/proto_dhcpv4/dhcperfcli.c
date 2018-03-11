@@ -231,8 +231,15 @@ static void dpc_tr_stats_print(FILE *fp)
 		float rtt_min = 1000 * dpc_timeval_to_float(&my_stats->rtt_min);
 		float rtt_max = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
 
-		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]\n",
+		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 		        LG_PAD_TR_TYPES, LG_PAD_TR_TYPES, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
+
+		/* Print rate if job elapsed time is at least 1 s. */
+		if (dpc_job_elapsed_time_get() < 1.0) {
+			fprintf(fp, ", rate (avg/s): %.3f", dpc_get_tr_rate(i));
+		}
+
+		fprintf(fp, "\n");
 	}
 }
 
