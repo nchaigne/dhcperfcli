@@ -145,8 +145,8 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
-static bool dpc_rate_limit_calc(int *max_new_sessions);
-static void dpc_loop_start_sessions(void);
+static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
+static uint32_t dpc_loop_start_sessions(void)
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
@@ -949,11 +949,9 @@ static void dpc_loop_recv(void)
  *	Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
  *	Returns: true if a limit has to be enforced at the moment, false otherwise.
  */
-static bool dpc_rate_limit_calc(int *max_new_sessions)
+static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
 	if (!rate_limit) return false;
-
-	int num_new_sessions = 0;
 
 	/*
 	 *	Now = T1. We've received so far N1 replies (having a current rate/s = N1 / <elapsed time>).
@@ -990,15 +988,20 @@ static bool dpc_rate_limit_calc(int *max_new_sessions)
 }
 
 /*
- *	Start new sessions.
+ *	Start new sessions, if possible.
+ *	Returns: number of new sessions effectively started.
  */
-static void dpc_loop_start_sessions(void)
+static uint32_t dpc_loop_start_sessions(void)
 {
 	bool done = false;
 	int ret;
+	uint32_t num_started = 0; /* Number of sessions started in this iteration. */
 
  	/* If we've flagged that sessions should be be started anymore, return immediately. */
 	if (!start_sessions_flag) return;
+
+	uint32_t limit_new_sessions = 0;
+	bool do_limit = dpc_rate_limit_calc(&limit_new_sessions);
 
 	while (!done) {
 		/* Max session limit reached. */
@@ -1029,11 +1032,16 @@ static void dpc_loop_start_sessions(void)
 		/* Max active session reached. Try again later when we've finished some ongoing sessions. */
 		if (session_num_active >= session_max_active) break;
 
+		/* Rate limit enforced and we've already started as many sessions as allowed for now. */
+		if (do_limit && num_started >= limit_new_sessions) break;
+
 		/*
 		 *	Initialize a new session and send the packet.
 		 */
 		dpc_session_ctx_t *session = dpc_session_init(autofree);
 		if (!session) continue;
+
+		num_started ++;
 
 		ret = dpc_send_one_packet(&session->packet);
 		if (ret < 0) {
@@ -1052,6 +1060,8 @@ static void dpc_loop_start_sessions(void)
 			dpc_session_finish(session);
 		}
 	}
+
+	return num_started;
 }
 
 /*
