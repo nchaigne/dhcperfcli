@@ -111,9 +111,11 @@ char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when
  */
 char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
 {
+	int i;
 	char *p = out;
 	size_t len = 0;
 
+	*p = '\0';
 	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
 		if (num_packet[i] > 0) {
 			if (p != out) {

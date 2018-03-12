@@ -146,7 +146,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
-static uint32_t dpc_loop_start_sessions(void)
+static uint32_t dpc_loop_start_sessions(void);
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
@@ -178,14 +178,14 @@ static float dpc_job_elapsed_time_get(void)
 	 *	If job is finished, get elapsed time from start to end.
 	 *	Otherwise, get elapsed time from start to now.
 	 */
-	if (timerisset(&tv_job_end) {
-		timersub(&tv_job_end, &tv_job_start, tv_elapsed);
+	if (timerisset(&tv_job_end)) {
+		timersub(&tv_job_end, &tv_job_start, &tv_elapsed);
 	} else {
 		struct timeval tv_now;
 		gettimeofday(&tv_now, NULL);
-		timersub(&tv_now, &tv_job_start, tv_elapsed);
+		timersub(&tv_now, &tv_job_start, &tv_elapsed);
 	}
-	elapsed = dpc_timeval_to_float(tv_elapsed);
+	elapsed = dpc_timeval_to_float(&tv_elapsed);
 
 	return elapsed;
 }
@@ -259,11 +259,11 @@ static void dpc_stats_print(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	fprintf(fp, "\t%-*.*s: %d (%s)\n",
-	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent",
+	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.num_packet_sent[0],
 	        dpc_num_message_type_print(messages, stat_ctx.num_packet_sent));
 
 	fprintf(fp, "\t%-*.*s: %d (%s)\n",
-	        LG_PAD_STATS, LG_PAD_STATS, "Packets received",
+	        LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.num_packet_recv[0],
 	        dpc_num_message_type_print(messages, stat_ctx.num_packet_recv));
 
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
@@ -998,7 +998,7 @@ static uint32_t dpc_loop_start_sessions(void)
 	uint32_t num_started = 0; /* Number of sessions started in this iteration. */
 
  	/* If we've flagged that sessions should be be started anymore, return immediately. */
-	if (!start_sessions_flag) return;
+	if (!start_sessions_flag) return 0;
 
 	uint32_t limit_new_sessions = 0;
 	bool do_limit = dpc_rate_limit_calc(&limit_new_sessions);
