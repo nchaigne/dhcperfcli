@@ -55,7 +55,6 @@ static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 static struct timeval tv_job_start; /* Job start timestamp. */
 static struct timeval tv_job_end; /* Job end timestamp. */
 static float duration_max = 0; /* Default: unlimited. */
-static struct timeval tv_time_limit; /* When we have to stop (if max duration is set). */
 static float rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
@@ -237,7 +236,7 @@ static void dpc_tr_stats_print(FILE *fp)
 		        LG_PAD_TR_TYPES, LG_PAD_TR_TYPES, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
 
 		/* Print rate if job elapsed time is at least 1 s. */
-		if (dpc_job_elapsed_time_get() < 1.0) {
+		if (dpc_job_elapsed_time_get() >= 1.0) {
 			fprintf(fp, ", rate (avg/s): %.3f", dpc_get_tr_rate(i));
 		}
 
@@ -258,14 +257,19 @@ static void dpc_stats_print(FILE *fp)
 
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
+	/* Packets sent (total, and of each message type). */
 	fprintf(fp, "\t%-*.*s: %d (%s)\n",
 	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.num_packet_sent[0],
 	        dpc_num_message_type_print(messages, stat_ctx.num_packet_sent));
 
-	fprintf(fp, "\t%-*.*s: %d (%s)\n",
-	        LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.num_packet_recv[0],
-	        dpc_num_message_type_print(messages, stat_ctx.num_packet_recv));
+	/* Packets received (total, and of each message type - if any). */
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.num_packet_recv[0]);
+	if (stat_ctx.num_packet_recv[0] > 0) {
+		fprintf(fp, " (%s)", dpc_num_message_type_print(messages, stat_ctx.num_packet_recv));
+	}
+	fprintf(fp, "\n");
 
+	/* Packets to which no response was received. */
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
 }
 
@@ -1012,15 +1016,10 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Time limit reached. */
-		if (duration_max) {
-			struct timeval tv_now;
-			gettimeofday(&tv_now, NULL);
-
-			if (timercmp(&tv_now, &tv_time_limit, >=)) {
-				INFO("Max duration (%.3f s) reached: will not start any new session.", duration_max);
-				start_sessions_flag = false;
-				break;
-			}
+		if (duration_max && dpc_job_elapsed_time_get() >= duration_max) {
+			INFO("Max duration (%.3f s) reached: will not start any new session.", duration_max);
+			start_sessions_flag = false;
+			break;
 		}
 
 		/* No more input. */
@@ -1703,14 +1702,6 @@ int main(int argc, char **argv)
 	dpc_input_load(autofree);
 
 	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
-
-	/* If we have a time limit, prepare it for later use. */
-	if (duration_max) {
-		struct timeval tv_duration_max;
-		dpc_float_to_timeval(&tv_duration_max, duration_max);
-		gettimeofday(&tv_time_limit, NULL);
-		timeradd(&tv_time_limit, &tv_duration_max, &tv_time_limit);
-	}
 
 	/* Execute the main processing loop. */
 	dpc_main_loop();
