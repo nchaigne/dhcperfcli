@@ -64,6 +64,9 @@ static bool signal_done = false;
 
 static uint32_t session_num_active = 0; /* Number of active sessions. */
 static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
+fr_event_timer_t const *ev_ongoing_stats = NULL;
+static float progress_interval = 1.0; /* Periodically produce ongoing statistics summary. */
+struct timeval tv_progress_interval;
 
 
 /*
@@ -133,6 +136,8 @@ static void dpc_stats_print(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
 static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
 
+static void dpc_ongoing_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
+static void dpc_event_add_ongoing_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
 
@@ -293,6 +298,10 @@ static void dpc_stats_print(FILE *fp)
 
 	fprintf(fp, "*** Statistics (global):\n");
 
+	/* Job elapsed time, from start to end. */
+	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
+		dpc_print_delta_time(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
+
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	/* Packets sent (total, and of each message type). */
@@ -369,6 +378,35 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 }
 
 /*
+ *	Event callback: ongoing statistics summary.
+ */
+static void dpc_ongoing_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, UNUSED void *uctx)
+{
+	/* Do statistics summary. */
+	dpc_ongoing_stats_print(stdout);
+
+	/* ... and schedule next time. */
+	dpc_event_add_ongoing_stats();
+}
+
+/*
+ *	Add timer event: ongoing statistics summary.
+ */
+static void dpc_event_add_ongoing_stats(void)
+{
+	if (!timerisset(&tv_progress_interval)) return;
+
+	struct timeval tv_event;
+	gettimeofday(&tv_event, NULL);
+	timeradd(&tv_event, &tv_progress_interval, &tv_event);
+
+	if (fr_event_timer_insert(autofree, event_list, &ev_ongoing_stats,
+	                          &tv_event, dpc_ongoing_stats, NULL) < 0) {
+		ERROR("Failed inserting ongoing statistics event");
+	}
+}
+
+/*
  *	Event callback: request timeout.
  */
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx)
@@ -393,10 +431,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
 {
 	struct timeval tv_event;
 	gettimeofday(&tv_event, NULL);
-
-	struct timeval *my_timeout = &tv_timeout;
-
-	timeradd(&tv_event, my_timeout, &tv_event);
+	timeradd(&tv_event, &tv_timeout, &tv_event);
 
 	if (fr_event_timer_insert(session, event_list, &session->event,
 	                          &tv_event, dpc_request_timeout, session) < 0) {
@@ -1140,8 +1175,10 @@ static bool dpc_loop_check_done(void)
 	/* There are still active sessions. */
 	if (session_num_active > 0) return false;
 
-	/* There are still events to process. */
-	if (fr_event_list_num_timers(event_list) > 0) return false;
+	/* There are still events to process (ignoring the ongoing statistics event if it is armed). */
+	//if (fr_event_list_num_timers(event_list) > 0) return false;
+
+	if (fr_event_list_num_timers(event_list) - ( (ev_ongoing_stats != NULL) ? 1 : 0) > 0) return false;
 
 	/* We still have sessions to start. */
 	if (start_sessions_flag) return false;
@@ -1658,6 +1695,7 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	dpc_float_to_timeval(&tv_timeout, timeout);
+	dpc_float_to_timeval(&tv_progress_interval, progress_interval);
 }
 
 /*
@@ -1751,6 +1789,9 @@ int main(int argc, char **argv)
 	dpc_input_load(autofree);
 
 	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
+
+	/* Arm a timer to produce periodic statistics. */
+	dpc_event_add_ongoing_stats();
 
 	/* Execute the main processing loop. */
 	dpc_main_loop();
