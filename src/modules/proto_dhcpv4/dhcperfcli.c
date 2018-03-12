@@ -116,12 +116,16 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_TR_TYPES 20
 #define LG_PAD_STATS    20
 
+char elapsed_buf[DPC_TIME_STRLEN];
+#define ELAPSED dpc_print_delta_time(elapsed_buf, &tv_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+
 
 /*
  *	Static functions declaration.
  */
 static void usage(int);
 
+static void dpc_ongoing_stats_print(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static void dpc_tr_stats_print(FILE *fp);
@@ -164,6 +168,40 @@ static void dpc_options_parse(int argc, char **argv);
 static void dpc_signal(int sig);
 static void dpc_end(void);
 
+
+/*
+ *	Print ongoing job statistics summary.
+ *	E.g.:
+ *	t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
+ */
+// TODO: add an event to print this.
+static void dpc_ongoing_stats_print(FILE *fp)
+{
+	/* Elapsed time. */
+	fprintf(fp, "t(%s)", ELAPSED);
+	if (duration_max) {
+		/* And percentage of max duration (if set). */
+		float duration_progress = 100 * dpc_job_elapsed_time_get() / duration_max;
+		fprintf(fp, " (%.1f%%)", duration_progress);
+	}
+
+	/* Number of started sessions. */
+	fprintf(fp, " sessions: [started: %u", session_num);
+	if (session_max_num) {
+		/* And percentage of max number of sessions (if set). */
+		float session_progress = 100 * (float)session_num / session_max_num;
+		fprintf(fp, " (%.1f%%)", session_progress);
+	}
+
+	/* Ongoing (active) sessions. (== number of packets to which we're waiting for a reply) */
+	fprintf(fp, ", ongoing: %u]", session_num_active);
+
+	/* Print rate if job elapsed time is at least 1 s. */
+	if (dpc_job_elapsed_time_get() >= 1.0) {
+		fprintf(fp, ", rate (/s): %.3f", dpc_get_tr_rate(DPC_TR_ALL));
+	}
+	fprintf(fp, "\n");
+}
 
 /*
  *	Obtain the job (either ongoing or finished) elapsed time.
@@ -985,7 +1023,6 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 	 */
 	rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num; // is float sufficient for cumulated rtt ? TODO.
 	elapsed_T2 = elapsed + rtt_avg;
-
 	rate_T2 = (my_stats->num + session_num_active) / elapsed_T2;
 
 	/* We already expect to be beyond the limit at T2, so do not allow new sessions to be started for now. */
@@ -1000,7 +1037,6 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 	 *	rate limit = ( N1 + <currently active sessions> + <new sessions to start> ) / ( <elapsed> + <rtt avg> )
 	 */
 	*max_new_sessions = (rate_limit * elapsed_T2) - (my_stats->num + session_num_active);
-
 	return true;
 }
 
