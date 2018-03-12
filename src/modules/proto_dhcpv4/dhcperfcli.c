@@ -20,7 +20,7 @@ static char const *prog_version = "(FreeRADIUS version " RADIUSD_VERSION_STRING 
 TALLOC_CTX *autofree = NULL;
 
 struct timeval tv_start; /* Program execution start timestamp. */
-int	dpc_debug_lvl = 0;
+int dpc_debug_lvl = 0;
 
 static char const *progname = NULL;
 static char const *radius_dir = RADDBDIR;
@@ -41,7 +41,11 @@ static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static uint16_t client_port = DHCP_PORT_CLIENT;
-static dpc_endpoint_t *gateway = NULL;
+static dpc_endpoint_t *gateway = NULL; // TODO: round robin on gateways.
+static char const *gateway_opt = NULL;
+static unsigned int client_num = 0;
+static dpc_endpoint_t *client_list = NULL;
+
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
@@ -168,6 +172,8 @@ static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port);
 static void dpc_command_parse(char const *command);
+static void dpc_gateway_add(char *addr);
+static void dpc_gateway_parse(char const *param);
 static void dpc_options_parse(int argc, char **argv);
 
 static void dpc_signal(int sig);
@@ -1514,7 +1520,7 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 	uint16_t port;
 
 	if (fr_inet_pton_port(host_ipaddr, &port, host_arg, -1, force_af, true, true) < 0) {
-		ERROR("Failed to parse host address");
+		PERROR("Failed to parse host address");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1549,6 +1555,35 @@ static void dpc_command_parse(char const *command)
 }
 
 /*
+ *	Add a gateway endpoint to the list.
+ */
+static void dpc_gateway_add(char *addr)
+{
+	dpc_endpoint_t this = { .port = DHCP_PORT_RELAY };
+
+	dpc_host_addr_resolve(addr, &this.ipaddr, &this.port);
+
+	client_num ++;
+	client_list = talloc_realloc(autofree, client_list, dpc_endpoint_t, client_num);
+	memcpy(&client_list[client_num - 1], &this, sizeof(this));
+}
+
+/*
+ *	Parse the gateway parameter.
+ */
+static void dpc_gateway_parse(char const *param)
+{
+	if (!param) return;
+
+	char *param_dup = strdup(param);
+	char *p = strsep(&param_dup, ",");
+	while (p) {
+		dpc_gateway_add(p);
+		p = strsep(&param_dup, ",");
+	}
+}
+
+/*
  *	Process command line options and arguments.
  */
 static void dpc_options_parse(int argc, char **argv)
@@ -1563,9 +1598,9 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			MEM(gateway = talloc_zero(autofree, dpc_endpoint_t));
-			gateway->port = DHCP_PORT_RELAY;
-			dpc_host_addr_resolve(optarg, &gateway->ipaddr, &gateway->port);
+			gateway_opt = optarg;
+			dpc_gateway_parse(gateway_opt);
+			gateway = &client_list[0]; // for now. TODO.
 			break;
 
 		case 'h':
