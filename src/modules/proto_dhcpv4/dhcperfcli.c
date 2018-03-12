@@ -957,6 +957,25 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
 	if (!rate_limit) return false;
 
+	float elapsed, elapsed_T2, rtt_avg, rate_T2;
+	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[DPC_TR_ALL];
+
+	elapsed = dpc_job_elapsed_time_get();
+
+	/*
+	 *	Right at the beginning we do not have enough data to make accurate calculations.
+	 *	So it will be either all or nothing (the latter if we're already beyond the limit).
+	 */
+	if (elapsed < 0.5) {
+		/* If we are already beyond the limit, we're too fast. Hold back. */
+		if (my_stats->num >= rate_limit) {
+			*max_new_sessions = 0;
+			return true;
+		}
+		/* No limit. */
+		return false;
+	}
+
 	/*
 	 *	Now = T1. We've received so far N1 replies (having a current rate/s = N1 / <elapsed time>).
 	 *	Project ourselves in the future at T2 = T1 + <average rtt>.
@@ -964,16 +983,10 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 	 *	If the projected rate/s is higher than the rate limit, do not allow new sessions to be started.
 	 *	Otherwise, compute what we would need to attain this rate limit.
 	 */
-	float elapsed = dpc_job_elapsed_time_get();
+	rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num; // is float sufficient for cumulated rtt ? TODO.
+	elapsed_T2 = elapsed + rtt_avg;
 
-	/* Only start limiting after a time offset, otherwise we don't have any data to make useful calculations. */
-	if (elapsed < 0.5) return false;
-
-	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[DPC_TR_ALL];
-	float rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num; // is float sufficient for cumulated rtt ? TODO.
-	float elapsed_T2 = elapsed + rtt_avg;
-
-	float rate_T2 = (my_stats->num + session_num_active) / elapsed_T2;
+	rate_T2 = (my_stats->num + session_num_active) / elapsed_T2;
 
 	/* We already expect to be beyond the limit at T2, so do not allow new sessions to be started for now. */
 	if (rate_T2 >= rate_limit) {
