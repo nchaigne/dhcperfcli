@@ -64,8 +64,8 @@ static bool signal_done = false;
 
 static uint32_t session_num_active = 0; /* Number of active sessions. */
 static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
-fr_event_timer_t const *ev_ongoing_stats = NULL;
-static float progress_interval = 1.0; /* Periodically produce ongoing statistics summary. */
+fr_event_timer_t const *ev_progress_stats = NULL;
+static float progress_interval = 10.0; /* Periodically produce progress statistics summary. */
 struct timeval tv_progress_interval;
 
 
@@ -128,7 +128,7 @@ char elapsed_buf[DPC_TIME_STRLEN];
  */
 static void usage(int);
 
-static void dpc_ongoing_stats_print(FILE *fp);
+static void dpc_progress_stats_print(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static void dpc_tr_stats_print(FILE *fp);
@@ -136,8 +136,8 @@ static void dpc_stats_print(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
 static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
 
-static void dpc_ongoing_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
-static void dpc_event_add_ongoing_stats(void);
+static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
+static void dpc_event_add_progress_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
 
@@ -180,7 +180,7 @@ static void dpc_end(void);
  *	t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
  */
 // TODO: add an event to print this.
-static void dpc_ongoing_stats_print(FILE *fp)
+static void dpc_progress_stats_print(FILE *fp)
 {
 	/* Elapsed time. */
 	fprintf(fp, "t(%s)", ELAPSED);
@@ -378,21 +378,21 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 }
 
 /*
- *	Event callback: ongoing statistics summary.
+ *	Event callback: progress statistics summary.
  */
-static void dpc_ongoing_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, UNUSED void *uctx)
+static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, UNUSED void *uctx)
 {
 	/* Do statistics summary. */
-	dpc_ongoing_stats_print(stdout);
+	dpc_progress_stats_print(stdout);
 
 	/* ... and schedule next time. */
-	dpc_event_add_ongoing_stats();
+	dpc_event_add_progress_stats();
 }
 
 /*
- *	Add timer event: ongoing statistics summary.
+ *	Add timer event: progress statistics summary.
  */
-static void dpc_event_add_ongoing_stats(void)
+static void dpc_event_add_progress_stats(void)
 {
 	if (!timerisset(&tv_progress_interval)) return;
 
@@ -400,9 +400,9 @@ static void dpc_event_add_ongoing_stats(void)
 	gettimeofday(&tv_event, NULL);
 	timeradd(&tv_event, &tv_progress_interval, &tv_event);
 
-	if (fr_event_timer_insert(autofree, event_list, &ev_ongoing_stats,
-	                          &tv_event, dpc_ongoing_stats, NULL) < 0) {
-		ERROR("Failed inserting ongoing statistics event");
+	if (fr_event_timer_insert(autofree, event_list, &ev_progress_stats,
+	                          &tv_event, dpc_progress_stats, NULL) < 0) {
+		ERROR("Failed inserting progress statistics event");
 	}
 }
 
@@ -426,6 +426,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 
 /*
  *	Add timer event: request timeout.
+ *	Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
  */
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
 {
@@ -1175,10 +1176,8 @@ static bool dpc_loop_check_done(void)
 	/* There are still active sessions. */
 	if (session_num_active > 0) return false;
 
-	/* There are still events to process (ignoring the ongoing statistics event if it is armed). */
-	//if (fr_event_list_num_timers(event_list) > 0) return false;
-
-	if (fr_event_list_num_timers(event_list) - ( (ev_ongoing_stats != NULL) ? 1 : 0) > 0) return false;
+	/* There are still events to process (ignoring the progress statistics event if it is armed). */
+	if (fr_event_list_num_timers(event_list) - ((ev_progress_stats != NULL) ? 1 : 0) > 0) return false;
 
 	/* We still have sessions to start. */
 	if (start_sessions_flag) return false;
@@ -1557,7 +1556,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hi:L:N:p:P:r:t:TvxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hi:L:N:p:P:r:s:t:TvxX")) != EOF) {
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -1619,6 +1618,13 @@ static void dpc_options_parse(int argc, char **argv)
 				usage(1);
 			}
 			rate_limit = atoi(optarg);
+			break;
+
+		case 's':
+			if (!dpc_str_to_float(&progress_interval, optarg)) {
+				ERROR("Invalid value for option -s (floating point number expected)");
+				usage(1);
+			}
 			break;
 
 		case 't':
@@ -1724,6 +1730,9 @@ static void dpc_end(void)
 	/* Job end timestamp. */
 	gettimeofday(&tv_job_end, NULL);
 
+	/* If we're producing progress statistics, do it one last time. */
+	if (timerisset(&tv_progress_interval)) dpc_progress_stats_print(stdout);
+
 	/* Statistics report. */
 	dpc_stats_print(stdout);
 	dpc_tr_stats_print(stdout);
@@ -1791,7 +1800,7 @@ int main(int argc, char **argv)
 	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
 
 	/* Arm a timer to produce periodic statistics. */
-	dpc_event_add_ongoing_stats();
+	dpc_event_add_progress_stats();
 
 	/* Execute the main processing loop. */
 	dpc_main_loop();
@@ -1822,6 +1831,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
 	fprintf(fd, "  -r <num>         Rate limit (transaction replies /s)\n");
+	fprintf(fd, "  -s <seconds>     Periodically report progress statistics information.\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(fd, "  -T               Template mode. Sessions input is generated from invariant and variable input vps.\n");
 	fprintf(fd, "  -v               Print version information.\n");
