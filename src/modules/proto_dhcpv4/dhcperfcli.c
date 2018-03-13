@@ -1048,7 +1048,8 @@ static void dpc_loop_recv(void)
 		 *	We know we don't have anything else to do until then. It will avoid needlessly hogging one full CPU.
 		 */
 		struct timeval now, when, wait_max = { 0 };
-		if (fr_event_timer_peek(event_list, &when)) {
+
+		if (session_num_active >= session_max_active && fr_event_timer_peek(event_list, &when)) {
 			gettimeofday(&now, NULL);
 			timersub(&when, &now, &wait_max);
 		}
