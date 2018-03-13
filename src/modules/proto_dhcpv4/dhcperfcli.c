@@ -787,10 +787,10 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 	 *	Use values prepared earlier.
 	 */
 	request->code = input->code;
-	request->src_port = input->src_port;
-	request->dst_port = input->dst_port;
-	request->src_ipaddr = input->src_ipaddr;
-	request->dst_ipaddr = input->dst_ipaddr;
+	request->src_port = input->src.port;
+	request->dst_port = input->dst.port;
+	request->src_ipaddr = input->src.ipaddr;
+	request->dst_ipaddr = input->dst.ipaddr;
 
 	return request;
 }
@@ -832,21 +832,17 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	// these should probably be in a separate struct... TODO.
 	input->code = transport->code;
 	input->workflow = transport->workflow;
-	input->src_port = transport->src_port;
-	input->dst_port = transport->dst_port;
-	input->src_ipaddr = transport->src_ipaddr;
-	input->dst_ipaddr = transport->dst_ipaddr;
+	input->src = transport->src;
+	input->dst = transport->dst;
 
 	/*
 	 *	Associate input to gateway, if one is defined (or several).
 	 */
-	if (gateway_list) {
+	if (!ipaddr_defined(input->src.ipaddr) && gateway_list) {
 		input->gateway = &gateway_list[gateway_next];
 		gateway_next = (gateway_next + 1) % gateway_num;
 
-		input->src_port = input->gateway->port;
-		input->src_ipaddr = input->gateway->ipaddr;
-		// TODO: make precedence work again.
+		input->src = *(input->gateway);
 	}
 
 	/*
@@ -1270,21 +1266,21 @@ static bool dpc_parse_input(dpc_input_t *input)
 			break;
 
 		case FR_PACKET_DST_PORT:
-			input->dst_port = vp->vp_uint16;
+			input->dst.port = vp->vp_uint16;
 			break;
 
 		case FR_PACKET_DST_IP_ADDRESS:
 		case FR_PACKET_DST_IPV6_ADDRESS:
-			memcpy(&input->dst_ipaddr, &vp->vp_ip, sizeof(input->src_ipaddr));
+			memcpy(&input->dst.ipaddr, &vp->vp_ip, sizeof(input->dst.ipaddr));
 			break;
 
 		case FR_PACKET_SRC_PORT:
-			input->src_port = vp->vp_uint16;
+			input->src.port = vp->vp_uint16;
 			break;
 
 		case FR_PACKET_SRC_IP_ADDRESS:
 		case FR_PACKET_SRC_IPV6_ADDRESS:
-			memcpy(&input->src_ipaddr, &vp->vp_ip, sizeof(input->src_ipaddr));
+			memcpy(&input->src.ipaddr, &vp->vp_ip, sizeof(input->src.ipaddr));
 			break;
 
 		default:
@@ -1309,28 +1305,25 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
 	 *	If nothing goes, fall back to default.
 	 */
-	if (input->src_ipaddr.af == AF_UNSPEC) {
-		/*
-		 *	Associate input to one gateway (if available).
-		 */
-		if (!with_template && gateway_list) {
-			input->gateway = &gateway_list[gateway_next];
-			gateway_next = (gateway_next + 1) % gateway_num;
+	if (   !ipaddr_defined(input->src.ipaddr)
+	    && (!with_template && gateway_list)
+	) {
+		input->gateway = &gateway_list[gateway_next];
+		gateway_next = (gateway_next + 1) % gateway_num;
 
-			input->src_ipaddr = input->gateway->ipaddr;
-			input->src_port = input->gateway->port;
-		}
+		input->src = *(input->gateway);
 	}
 
-	if (!input->src_port) {
-		input->src_port = client_port;
-	}
-	if (input->src_ipaddr.af == AF_UNSPEC) {
-		input->src_ipaddr = client_ipaddr;
+	if (!input->src.port) input->src.port = client_port;
+
+	if (   !ipaddr_defined(input->src.ipaddr)
+	    && !(with_template && gateway_list) /* If using a template with gateway, let this unspecified for now. */
+	   ) {
+		input->src.ipaddr = client_ipaddr;
 	}
 
-	if (!input->dst_port) input->dst_port = server_port;
-	if (input->dst_ipaddr.af == AF_UNSPEC) input->dst_ipaddr = server_ipaddr;
+	if (!input->dst.port) input->dst.port = server_port;
+	if (!ipaddr_defined(input->dst.ipaddr)) input->dst.ipaddr = server_ipaddr;
 
 	if (input->code == FR_CODE_UNDEFINED) {
 		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
@@ -1341,18 +1334,18 @@ static bool dpc_parse_input(dpc_input_t *input)
 		/*
 		*	Allocate the socket now. If we can't, stop.
 		*/
-		int my_sockfd = dpc_socket_provide(pl, &input->src_ipaddr, input->src_port);
+		int my_sockfd = dpc_socket_provide(pl, &input->src.ipaddr, input->src.port);
 		if (my_sockfd < 0) {
 			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 			ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
-				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src_ipaddr), input->src_port);
+				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src.ipaddr), input->src.port);
 			exit(EXIT_FAILURE);
 		}
 
 		/*
 		 *	If we're using INADDR_ANY, make sure we know what we're doing.
 		 */
-		if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src_ipaddr)) {
+		if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src.ipaddr)) {
 			WARN("You didn't specify a source IP address. Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
 				" Please make sure this is really what you intended.");
 			warn_inaddr_any = false; /* Once is enough. */

@@ -60,6 +60,8 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define FR_DHCPV4_TRANSACTION_ID          260
 #define FR_DHCPV4_GATEWAY_IP_ADDRESS      266
 
+#define ipaddr_defined(_x) (_x.af != AF_UNSPEC)
+
 
 /*
  *	Statistics update.
@@ -165,11 +167,9 @@ struct dpc_input {
 
 	unsigned int code;       //!< Packet code (type).
 	unsigned int workflow;   //!< Workflow (if handling one).
-	fr_ipaddr_t src_ipaddr;  //!< Src IP address of packet.
-	fr_ipaddr_t dst_ipaddr;  //!< Dst IP address of packet.
-	uint16_t src_port;       //!< Src port of packet.
-	uint16_t dst_port;       //!< Dst port of packet.
 
+	dpc_endpoint_t src;      //!< Src IP address and port.
+	dpc_endpoint_t dst;      //!< Dst IP address and port.
 	dpc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
 
 	dpc_input_list_t *list;  //!< The list to which this entry belongs (NULL for an unchained entry).
