@@ -165,7 +165,7 @@ char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
 /*
  *	Print the packet header.
  */
-void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
+void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
 {
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
@@ -180,6 +180,8 @@ void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t
 	/* Internally, DHCP packet code starts with an offset of 1024 (hack), so... */
 	int code = packet->code - FR_DHCPV4_OFFSET;
 
+	if (session) fprintf(fp, "(%u) ", session->id);
+
 	switch (pevent) {
 		case DPC_PACKET_SENT:
 			fprintf(fp, "Sent");
@@ -193,7 +195,7 @@ void dpc_packet_header_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t
 	}
 
 	if (is_dhcp_code(code)) {
-		fprintf(fp, " %s", dhcp_message_types[code]);
+		fprintf(fp, " %s", dpc_message_types[code]);
 	} else {
 		fprintf(fp, " DHCP packet");
 		if (code <= 0) fprintf(fp, " (BOOTP)"); /* No DHCP Message Type: BOOTP (or malformed DHCP packet). */
@@ -268,12 +270,12 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_print(FILE *fp, RADIUS_PACKET *packet, dpc_packet_event_t pevent, int trace_lvl)
+void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent, int trace_lvl)
 {
 	if (!fp || !packet) return;
 
 	if (trace_lvl >= 1) {
-		dpc_packet_header_print(fp, packet, pevent);
+		dpc_packet_header_print(fp, session, packet, pevent);
 	}
 
 	if (trace_lvl >= 2) {

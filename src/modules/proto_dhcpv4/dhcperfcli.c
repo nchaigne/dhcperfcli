@@ -140,7 +140,7 @@ static void dpc_event_add_progress_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
 
-static int dpc_send_one_packet(RADIUS_PACKET **packet_p);
+static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
 static bool dpc_recv_post_action(dpc_session_ctx_t *session);
 static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway);
@@ -416,7 +416,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 
 	DPC_DEBUG_TRACE("Request timed out");
 
-	if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session->packet, DPC_PACKET_TIMEOUT);
+	if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session, session->packet, DPC_PACKET_TIMEOUT);
 
 	/* Statistics. */
 	STAT_INCR_PACKET_LOST(session->packet->code);
@@ -445,7 +445,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
  *	Send one packet.
  *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
  */
-static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
+static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p)
 // note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
 {
 	RADIUS_PACKET *packet = *packet_p;
@@ -498,7 +498,7 @@ static int dpc_send_one_packet(RADIUS_PACKET **packet_p)
 	// shouldn't FreeRADIUS lib do that ? TODO.
 	// (on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv.)
 
-	dpc_packet_print(fr_log_fp, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
+	dpc_packet_print(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	packet->sockfd = my_sockfd;
 	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
@@ -599,7 +599,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
 	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
 
-	dpc_packet_print(fr_log_fp, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
+	dpc_packet_print(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
 	/* Statistics. */
 	STAT_INCR_PACKET_RECV(reply->code);
@@ -708,7 +708,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		/*
 		 *	Encode and send packet.
 		 */
-		ret = dpc_send_one_packet(&session->packet);
+		ret = dpc_send_one_packet(session, &session->packet);
 		if (ret < 0) {
 			ERROR("Error sending packet");
 			return false;
@@ -1160,7 +1160,7 @@ static uint32_t dpc_loop_start_sessions(void)
 
 		num_started ++;
 
-		ret = dpc_send_one_packet(&session->packet);
+		ret = dpc_send_one_packet(session, &session->packet);
 		if (ret < 0) {
 			ERROR("Error sending packet");
 			dpc_session_finish(session);
