@@ -12,6 +12,20 @@
 #define DPC_DELTA_TIME_DECIMALS  3
 
 
+/* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
+typedef struct dpc_fr_event_timer {
+	struct timeval		when;			//!< When this timer should fire.
+	/* We don't need anything beyond that. */
+} dpc_fr_event_timer_t;
+
+/* Get visibility on fr_event_list_t opaque struct (fr_event_list is defined in lib/util/event.c) */
+typedef struct dpc_fr_event_list {
+	fr_heap_t		*times;			//!< of timer events to be executed.
+	/* We don't need anything beyond that. */
+} dpc_fr_event_list_t;
+
+int fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when);
+
 void dpc_printf_log(char const *fmt, ...);
 void dpc_dev_print(char const *file, int line, char const *fmt, ...);
 char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);

@@ -8,6 +8,39 @@
 
 extern struct timeval tv_start;
 
+
+/*
+ *	Peek into an event list to retrieve the timestamp of next event.
+ *
+ *	Note: structures fr_event_list_t and fr_event_timer_t are opaque, so we have to partially redefine them
+ *	so we can access what we need.
+ *	(I know, this is dangerous. We'll be fine as long as they do not change.)
+ *	Ideally, this should be provided by FreeRADIUS lib. TODO: ask them ?
+ */
+int fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when)
+{
+	dpc_fr_event_list_t *el = (dpc_fr_event_list_t *)fr_el;
+	dpc_fr_event_timer_t *ev;
+
+	if (unlikely(!el)) return 0;
+
+	if (fr_heap_num_elements(el->times) == 0) {
+		when->tv_sec = 0;
+		when->tv_usec = 0;
+		return 0;
+	}
+
+	ev = fr_heap_peek(el->times);
+	if (!ev) {
+		when->tv_sec = 0;
+		when->tv_usec = 0;
+		return 0;
+	}
+
+	*when = ev->when;
+	return 1;
+}
+
 /*
  *	Print a log message.
  *	Substitute for fr_printf_log so we can use our own debug level.

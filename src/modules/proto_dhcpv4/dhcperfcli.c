@@ -540,11 +540,13 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		return 0;
 	}
 
-	if (NULL == tv_wait_time) {
+	if (NULL == tv_wait_time || !timerisset(tv_wait_time)) {
 		timerclear(&tv);
 	} else {
 		tv.tv_sec = tv_wait_time->tv_sec;
 		tv.tv_usec = tv_wait_time->tv_usec;
+
+		DPC_DEBUG_TRACE("Max wait time: %.6f", dpc_timeval_to_float(&tv));
 	}
 
 	/*
@@ -1042,9 +1044,19 @@ static void dpc_loop_recv(void)
 
 	while (!done) {
 		/*
-		 *	Receive and process packets (no waiting) until there's nothing left incoming.
+		 *	Allow to block waiting until the next scheduled event.
+		 *	We know we don't have anything else to do until then. It will avoid needlessly hogging one full CPU.
 		 */
-		if (dpc_recv_one_packet(NULL) < 1) break;
+		struct timeval now, when, wait_max = { 0 };
+		if (fr_event_timer_peek(event_list, &when)) {
+			gettimeofday(&now, NULL);
+			timersub(&when, &now, &wait_max);
+		}
+
+		/*
+		 *	Receive and process packets until there's nothing left incoming.
+		 */
+		if (dpc_recv_one_packet(&wait_max) < 1) break;
 	}
 }
 
@@ -1178,16 +1190,15 @@ static uint32_t dpc_loop_start_sessions(void)
  */
 static void dpc_loop_timer_events(void)
 {
-	int nb_processed = 0; /* Number of timers events triggered. */
+	int num_processed = 0; /* Number of timers events triggered. */
 	struct timeval when;
 
 	if (fr_event_list_num_timers(event_list) <= 0) return;
 
 	gettimeofday(&when, NULL); /* Now. */
 	while (fr_event_timer_run(event_list, &when)) {
-		nb_processed ++;
+		num_processed ++;
 	}
-
 }
 
 /*
@@ -1220,14 +1231,14 @@ static void dpc_main_loop(void)
 	job_done = false;
 
 	while (!job_done) {
-		/* Handle timer events. */
-		dpc_loop_timer_events();
+		/* Start new sessions. */
+		dpc_loop_start_sessions();
 
 		/* Receive and process reply packets. */
 		dpc_loop_recv();
 
-		/* Start new sessions. */
-		dpc_loop_start_sessions();
+		/* Handle timer events. */
+		dpc_loop_timer_events();
 
 		/* Check if we're done. */
 		dpc_loop_check_done();
@@ -1306,7 +1317,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If nothing goes, fall back to default.
 	 */
 	if (   !ipaddr_defined(input->src.ipaddr)
-	    && (!with_template && gateway_list)
+	    && (!with_template && gateway_list) /* If using a template, do not assign a gateway now. */
 	) {
 		input->gateway = &gateway_list[gateway_next];
 		gateway_next = (gateway_next + 1) % gateway_num;
@@ -1315,7 +1326,6 @@ static bool dpc_parse_input(dpc_input_t *input)
 	}
 
 	if (!input->src.port) input->src.port = client_port;
-
 	if (   !ipaddr_defined(input->src.ipaddr)
 	    && !(with_template && gateway_list) /* If using a template with gateway, let this unspecified for now. */
 	   ) {
