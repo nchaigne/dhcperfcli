@@ -35,13 +35,14 @@ extern int dpc_debug_lvl;
 */
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#ifndef NDEBUG
-#  define DPC_DEBUG_TRACE(_x, ...)	if (fr_log_fp && (dpc_debug_lvl > 3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
-#  define DPC_DEBUG_HEX_DUMP(_x, _y, _z)	if (fr_log_fp && (dpc_debug_lvl > 3)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
-#else
-#  define DPC_DEBUG_TRACE(_x, ...)
-#  define DPC_DEBUG_HEX_DUMP(_x, _y, _z)
-#endif
+#define DPC_DEBUG_TRACE(_x, ...)	if (fr_log_fp && (dpc_debug_lvl > 3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
+#define DPC_DEBUG_HEX_DUMP(_x, _y, _z)	if (fr_log_fp && (dpc_debug_lvl > 3)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
+/*
+ *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
+ *	With it we can do only about ~5k req/s (Discover - Offer), whereas in non developer mode we can go up to ~10k req/s.
+ *	Moreover, at this rate the limiting factor is the DHCP server: we're only using about 35% of our CPU (on my test system),
+ *	so we could potentially go much higher.
+ */
 
 
 #define DHCP_PORT_SERVER  67
