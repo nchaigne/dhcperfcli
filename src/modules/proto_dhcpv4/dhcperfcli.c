@@ -6,12 +6,7 @@
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 
-
-static char const *prog_version = "(FreeRADIUS version " RADIUSD_VERSION_STRING ")"
-#ifdef RADIUSD_VERSION_COMMIT
-" (git #" STRINGIFY(RADIUSD_VERSION_COMMIT) ")"
-#endif
-", built on " __DATE__ " at " __TIME__;
+static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 
 
 /*
@@ -1649,7 +1644,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			gateway_opt = optarg; /* Parse later. */
+			gateway_opt = optarg; /* Parse later (need the packet list). */
 			break;
 
 		case 'h':
@@ -1723,8 +1718,8 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'v':
-			printf("%s %s\n", progname, prog_version);
-			exit(0);
+			printf("%s: %s\n", progname, prog_version);
+			exit(EXIT_SUCCESS);
 
 		case 'x':
 			dpc_debug_lvl ++;
@@ -1822,7 +1817,7 @@ static void dpc_end(void)
 	dpc_tr_stats_print(stdout);
 
 	/* And we're done. */
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 

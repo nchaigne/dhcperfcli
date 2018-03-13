@@ -203,7 +203,7 @@ struct dpc_session_ctx {
 	dpc_state_t state;
 	bool reply_expected;     //!< Whether a reply is expected or not.
 
-	fr_event_timer_t const *event; //<! armed timer event (if any).
+	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
 
 #endif
