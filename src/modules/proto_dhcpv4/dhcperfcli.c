@@ -36,7 +36,6 @@ static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static uint16_t client_port = DHCP_PORT_CLIENT;
-static char const *gateway_opt = NULL;
 static unsigned int gateway_num = 0; /* Number of gateways. */
 static unsigned int gateway_next = 0; /* Next gateway to be used. */
 static dpc_endpoint_t *gateway_list = NULL; /* List of gateways. */
@@ -1340,8 +1339,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 		/*
 		*	Allocate the socket now. If we can't, stop.
 		*/
-		int my_sockfd = dpc_socket_provide(pl, &input->src.ipaddr, input->src.port);
-		if (my_sockfd < 0) {
+		if (dpc_socket_provide(pl, &input->src.ipaddr, input->src.port) < 0) {
 			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 			ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
 				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src.ipaddr), input->src.port);
@@ -1601,17 +1599,6 @@ static void dpc_gateway_add(char *addr)
 	gateway_num ++;
 	gateway_list = talloc_realloc(autofree, gateway_list, dpc_endpoint_t, gateway_num);
 	memcpy(&gateway_list[gateway_num - 1], &this, sizeof(this));
-
-	/*
-	 *	Allocate the socket now. If we can't, stop.
-	 */
-	int my_sockfd = dpc_socket_provide(pl, &this.ipaddr, this.port);
-	if (my_sockfd < 0) {
-		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-		ERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
-				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this.ipaddr), this.port);
-		exit(EXIT_FAILURE);
-	}
 }
 
 /*
@@ -1644,7 +1631,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			gateway_opt = optarg; /* Parse later (need the packet list). */
+			dpc_gateway_parse(optarg);
 			break;
 
 		case 'h':
@@ -1827,6 +1814,7 @@ static void dpc_end(void)
 int main(int argc, char **argv)
 {
 	char *p;
+	unsigned int i;
 
 	fr_debug_lvl = 0; /* FreeRADIUS libraries debug. */
 	dpc_debug_lvl = 0; /* Our own debug. */
@@ -1850,9 +1838,18 @@ int main(int argc, char **argv)
 	dpc_packet_list_init(autofree);
 
 	/*
-	 *	Parse gateways and allocate sockets.
+	 *	Allocate sockets for gateways.
 	 */
-	dpc_gateway_parse(gateway_opt);
+	for (i = 0; i < gateway_num; i++) {
+		dpc_endpoint_t *this = &gateway_list[i];
+
+		if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
+			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+			ERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
+					fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr), this->port);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	/*
 	 *	Set signal handler.
@@ -1895,6 +1892,8 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -f <file>        Read input vps from <file>, in addition to stdin\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
+	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
+	fprintf(fd, "                   of those gateways in a round-robin fashion.\n");
 	fprintf(fd, "  -h               Print this help message.\n");
 	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
 	fprintf(fd, "  -L <seconds>     Limit duration (beyond which no new session will be started).\n");
