@@ -159,18 +159,20 @@ typedef struct dpc_session_ctx dpc_session_ctx_t;
  *	Holds input data (vps read from file or stdin).
  */
 struct dpc_input {
-	uint32_t id;            //!< Id of input (0 for the first one).
+	uint32_t id;             //!< Id of input (0 for the first one).
 
-	VALUE_PAIR *vps;        //!< List of input value pairs read.
+	VALUE_PAIR *vps;         //!< List of input value pairs read.
 
-	unsigned int code;      //!< Packet code (type).
-	unsigned int workflow;  //!< Workflow (if handling one).
-	fr_ipaddr_t src_ipaddr; //!< Src IP address of packet.
-	fr_ipaddr_t dst_ipaddr; //!< Dst IP address of packet.
-	uint16_t src_port;      //!< Src port of packet.
-	uint16_t dst_port;      //!< Dst port of packet.
+	unsigned int code;       //!< Packet code (type).
+	unsigned int workflow;   //!< Workflow (if handling one).
+	fr_ipaddr_t src_ipaddr;  //!< Src IP address of packet.
+	fr_ipaddr_t dst_ipaddr;  //!< Dst IP address of packet.
+	uint16_t src_port;       //!< Src port of packet.
+	uint16_t dst_port;       //!< Dst port of packet.
 
-	dpc_input_list_t *list; //!< The list to which this entry belongs (NULL for an unchained entry).
+	dpc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
+
+	dpc_input_list_t *list;  //!< The list to which this entry belongs (NULL for an unchained entry).
 
 	dpc_input_t *prev;
 	dpc_input_t *next;

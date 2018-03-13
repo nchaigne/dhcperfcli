@@ -41,10 +41,10 @@ static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
 static uint16_t server_port = DHCP_PORT_SERVER;
 static uint16_t client_port = DHCP_PORT_CLIENT;
-static dpc_endpoint_t *gateway = NULL; // TODO: round robin on gateways.
 static char const *gateway_opt = NULL;
-static unsigned int client_num = 0;
-static dpc_endpoint_t *client_list = NULL;
+static unsigned int gateway_num = 0; /* Number of gateways. */
+static unsigned int gateway_next = 0; /* Next gateway to be used. */
+static dpc_endpoint_t *gateway_list = NULL; /* List of gateways. */
 
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
@@ -148,6 +148,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
 static int dpc_send_one_packet(RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
 static bool dpc_recv_post_action(dpc_session_ctx_t *session);
+static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
 
@@ -185,7 +186,6 @@ static void dpc_end(void);
  *	E.g.:
  *	t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
  */
-// TODO: add an event to print this.
 static void dpc_progress_stats_print(FILE *fp)
 {
 	/* Elapsed time. */
@@ -730,6 +730,43 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 }
 
 /*
+ *	Prepare a request to be sent as if relayed through a gateway.
+ */
+static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway)
+{
+	if (!gateway) return;
+
+	DPC_DEBUG_TRACE("Assigning packet to gateway");
+
+	/*
+	 *	We've been told to handle sent packets as if relayed through a gateway.
+	 *	This means:
+	 *	- packet source IP / port = gateway IP / port (those we've already set)
+	 *	- giaddr = gateway IP
+	 *	- hops = 1 (arbitrary)
+	 *	All of these can be overriden (entirely or partially) through input vps.
+	 *	Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
+	 */
+	VALUE_PAIR *vp_giaddr, *vp_hops;
+
+	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
+	vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_GATEWAY_IP_ADDRESS, TAG_ANY);
+	if (!vp_giaddr) {
+		vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCPV4_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
+		vp_giaddr->vp_ip.af = AF_INET;
+		vp_giaddr->vp_ip.prefix = 32;
+	}
+
+	/* set hops if not specified in input vps (DHCP-Hop-Count). */
+	vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_HOP_COUNT, TAG_ANY);
+	if (!vp_hops) {
+		vp_hops = radius_pair_create(packet, &packet->vps, FR_DHCPV4_HOP_COUNT, DHCP_MAGIC_VENDOR);
+		vp_hops->vp_uint8 = 1;
+	}
+}
+
+/*
  *	Initialize a DHCP packet from an input item.
  */
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
@@ -742,6 +779,9 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 
 	/* Fill in the packet value pairs. */
 	dpc_pair_list_append(request, &request->vps, input->vps);
+
+	/* Prepare gateway handling. */
+	dpc_request_gateway_handle(request, input->gateway);
 
 	/*
 	 *	Use values prepared earlier.
@@ -771,35 +811,6 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	vp_xid->data.vb_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp_xid);
 
-	/*
-	 *	We've been told to handle sent packets as if relayed through a gateway.
-	 *	This means:
-	 *	- packet source IP / port = gateway IP / port (those we've already set)
-	 *	- giaddr = gateway IP
-	 *	- hops = 1 (arbitrary)
-	 *	All of these can be overriden (entirely or partially) through input vps.
-	 *	Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
-	 */
-	if (gateway) {
-		VALUE_PAIR *vp_giaddr, *vp_hops;
-
-		/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
-		vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_GATEWAY_IP_ADDRESS, TAG_ANY);
-		if (!vp_giaddr) {
-			vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCPV4_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
-			vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
-			vp_giaddr->vp_ip.af = AF_INET;
-			vp_giaddr->vp_ip.prefix = 32;
-		}
-
-		/* set hops if not specified in input vps (DHCP-Hop-Count). */
-		vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_HOP_COUNT, TAG_ANY);
-		if (!vp_hops) {
-			vp_hops = radius_pair_create(packet, &packet->vps, FR_DHCPV4_HOP_COUNT, DHCP_MAGIC_VENDOR);
-			vp_hops->vp_uint8 = 1;
-		}
-	}
-
 	r = fr_dhcpv4_packet_encode(packet);
 	fr_strerror(); /* Clear the error buffer */
 
@@ -825,6 +836,18 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	input->dst_port = transport->dst_port;
 	input->src_ipaddr = transport->src_ipaddr;
 	input->dst_ipaddr = transport->dst_ipaddr;
+
+	/*
+	 *	Associate input to gateway, if one is defined (or several).
+	 */
+	if (gateway_list) {
+		input->gateway = &gateway_list[gateway_next];
+		gateway_next = (gateway_next + 1) % gateway_num;
+
+		input->src_port = input->gateway->port;
+		input->src_ipaddr = input->gateway->ipaddr;
+		// TODO: make precedence work again.
+	}
 
 	/*
 	 *	Fill input with template invariant attributes.
@@ -1286,13 +1309,24 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
 	 *	If nothing goes, fall back to default.
 	 */
+	if (input->src_ipaddr.af == AF_UNSPEC) {
+		/*
+		 *	Associate input to one gateway (if available).
+		 */
+		if (!with_template && gateway_list) {
+			input->gateway = &gateway_list[gateway_next];
+			gateway_next = (gateway_next + 1) % gateway_num;
+
+			input->src_ipaddr = input->gateway->ipaddr;
+			input->src_port = input->gateway->port;
+		}
+	}
+
 	if (!input->src_port) {
-		if (gateway) input->src_port = gateway->port;
-		else input->src_port = client_port;
+		input->src_port = client_port;
 	}
 	if (input->src_ipaddr.af == AF_UNSPEC) {
-		if (gateway) input->src_ipaddr = gateway->ipaddr;
-		else input->src_ipaddr = client_ipaddr;
+		input->src_ipaddr = client_ipaddr;
 	}
 
 	if (!input->dst_port) input->dst_port = server_port;
@@ -1303,24 +1337,26 @@ static bool dpc_parse_input(dpc_input_t *input)
 		return false;
 	}
 
-	/*
-	 *	Allocate the socket now. If we can't, stop.
-	 */
-	int my_sockfd = dpc_socket_provide(pl, &input->src_ipaddr, input->src_port);
-	if (my_sockfd < 0) {
-		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-		ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
-		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src_ipaddr), input->src_port);
-		exit(EXIT_FAILURE);
-	}
+	if (!with_template || !gateway_list) {
+		/*
+		*	Allocate the socket now. If we can't, stop.
+		*/
+		int my_sockfd = dpc_socket_provide(pl, &input->src_ipaddr, input->src_port);
+		if (my_sockfd < 0) {
+			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+			ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
+				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src_ipaddr), input->src_port);
+			exit(EXIT_FAILURE);
+		}
 
-	/*
-	 *	If we're using INADDR_ANY, make sure we know what we're doing.
-	 */
-	if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src_ipaddr)) {
-		WARN("You didn't specify a source IP address. Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
-		     " Please make sure this is really what you intended.");
-		warn_inaddr_any = false; /* Once is enough. */
+		/*
+		 *	If we're using INADDR_ANY, make sure we know what we're doing.
+		 */
+		if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src_ipaddr)) {
+			WARN("You didn't specify a source IP address. Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
+				" Please make sure this is really what you intended.");
+			warn_inaddr_any = false; /* Once is enough. */
+		}
 	}
 
 	/* All good. */
@@ -1563,9 +1599,20 @@ static void dpc_gateway_add(char *addr)
 
 	dpc_host_addr_resolve(addr, &this.ipaddr, &this.port);
 
-	client_num ++;
-	client_list = talloc_realloc(autofree, client_list, dpc_endpoint_t, client_num);
-	memcpy(&client_list[client_num - 1], &this, sizeof(this));
+	gateway_num ++;
+	gateway_list = talloc_realloc(autofree, gateway_list, dpc_endpoint_t, gateway_num);
+	memcpy(&gateway_list[gateway_num - 1], &this, sizeof(this));
+
+	/*
+	 *	Allocate the socket now. If we can't, stop.
+	 */
+	int my_sockfd = dpc_socket_provide(pl, &this.ipaddr, this.port);
+	if (my_sockfd < 0) {
+		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+		ERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
+				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this.ipaddr), this.port);
+		exit(EXIT_FAILURE);
+	}
 }
 
 /*
@@ -1598,9 +1645,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			gateway_opt = optarg;
-			dpc_gateway_parse(gateway_opt);
-			gateway = &client_list[0]; // for now. TODO.
+			gateway_opt = optarg; /* Parse later. */
 			break;
 
 		case 'h':
@@ -1805,18 +1850,10 @@ int main(int argc, char **argv)
 	dpc_event_list_init(autofree);
 	dpc_packet_list_init(autofree);
 
-	if (gateway) {
-		/*
-		 *	Allocate the socket now. If we can't, stop.
-		 */
-		int my_sockfd = dpc_socket_provide(pl, &gateway->ipaddr, gateway->port);
-		if (my_sockfd < 0) {
-			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-			ERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
-			      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &gateway->ipaddr), gateway->port);
-			exit(EXIT_FAILURE);
-		}
-	}
+	/*
+	 *	Parse gateways and allocate sockets.
+	 */
+	dpc_gateway_parse(gateway_opt);
 
 	/*
 	 *	Set signal handler.
