@@ -1619,10 +1619,10 @@ static void dpc_gateway_parse(char const *param)
 {
 	if (!param) return;
 
-	char *param_dup = strdup(param);
+	char *param_dup = talloc_strdup(autofree, param);
 	char *p = strsep(&param_dup, ",");
 	while (p) {
-		dpc_gateway_add(p);
+		dpc_gateway_add(dpc_str_trim(p)); /* Trim spaces before trying to add this. */
 		p = strsep(&param_dup, ",");
 	}
 }

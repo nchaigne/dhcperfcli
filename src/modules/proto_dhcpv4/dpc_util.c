@@ -492,6 +492,19 @@ bool dpc_str_to_float(float *out, char const *value)
 }
 
 /*
+ *	Trim a string from spaces (left and right).
+ *	(Note: this alters the original string in case of right triming.)
+ */
+char *dpc_str_trim(char *str)
+{
+	char *p = str;
+	char *end = str + strlen(p) - 1;
+	while (isspace(*p)) p ++;
+	while (end > p && isspace(*end)) *end-- = '\0';
+	return p;
+}
+
+/*
  *	Add an allocated input entry to the tail of the list.
  */
 void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)

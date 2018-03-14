@@ -49,6 +49,7 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 void dpc_float_to_timeval(struct timeval *tv, float f_val);
 float dpc_timeval_to_float(struct timeval *tv);
 bool dpc_str_to_float(float *out, char const *value);
+char *dpc_str_trim(char *str);
 
 void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);
 dpc_input_t *dpc_input_item_draw(dpc_input_t *entry);
