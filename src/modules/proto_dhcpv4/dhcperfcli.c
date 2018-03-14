@@ -446,6 +446,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
 /*
  *	Send one packet.
  *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
+ *	Returns: 0 = success, -1 = error.
  */
 static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p)
 // note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
@@ -475,7 +476,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 
 		rcode = dpc_packet_list_id_alloc(pl, my_sockfd, packet_p);
 		if (!rcode) {
-			ERROR("Failed to allocate xid");
+			SERROR("Failed to allocate packet xid");
 			return -1;
 		}
 	}
@@ -630,8 +631,6 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
  */
 static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 {
-	int ret;
-
 	if (!session || !session->reply) return false;
 
 	/* Update statistics. */
@@ -718,9 +717,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		/*
 		 *	Encode and send packet.
 		 */
-		ret = dpc_send_one_packet(session, &session->packet);
-		if (ret < 0) {
-			ERROR("Error sending packet");
+		if (dpc_send_one_packet(session, &session->packet) < 0) {
 			return false;
 		}
 
@@ -1004,6 +1001,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		gettimeofday(&session->tv_start, NULL);
 
 		session_num_active ++;
+		SDEBUG2("New session initialized - active sessions: %u", session_num_active);
 	}
 
 	/* Free this input now if we could not initialize a session from it. */
@@ -1036,8 +1034,9 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 		session->event = NULL;
 	}
 
-	talloc_free(session);
 	session_num_active --;
+	SDEBUG2("Session terminated - active sessions: %u", session_num_active);
+	talloc_free(session);
 }
 
 /*
@@ -1126,7 +1125,6 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 static uint32_t dpc_loop_start_sessions(void)
 {
 	bool done = false;
-	int ret;
 	uint32_t num_started = 0; /* Number of sessions started in this iteration. */
 
  	/* If we've flagged that sessions should be be started anymore, return immediately. */
@@ -1170,9 +1168,7 @@ static uint32_t dpc_loop_start_sessions(void)
 
 		num_started ++;
 
-		ret = dpc_send_one_packet(session, &session->packet);
-		if (ret < 0) {
-			ERROR("Error sending packet");
+		if (dpc_send_one_packet(session, &session->packet) < 0) {
 			dpc_session_finish(session);
 			continue;
 		}
@@ -1830,6 +1826,8 @@ int main(int argc, char **argv)
 	fr_debug_lvl = 0; /* FreeRADIUS libraries debug. */
 	dpc_debug_lvl = 0; /* Our own debug. */
 	fr_log_fp = stdout; /* Both will go there. */
+
+	autofree = talloc_autofree_context();
 
 	gettimeofday(&tv_start, NULL); /* Program start timestamp. */
 

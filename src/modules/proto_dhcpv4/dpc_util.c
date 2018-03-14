@@ -50,7 +50,7 @@ void dpc_printf_log(char const *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	if ((dpc_debug_lvl == 0) || !fr_log_fp) {
+	if (!fr_log_fp) {
 		va_end(ap);
 		return;
 	}

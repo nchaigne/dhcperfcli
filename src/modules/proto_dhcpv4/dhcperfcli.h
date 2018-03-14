@@ -20,10 +20,10 @@
 extern int dpc_debug_lvl;
 
 #undef DEBUG
-#define DEBUG(fmt, ...)		if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
+#define DEBUG(fmt, ...)  if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
 
 #undef DEBUG2
-#define DEBUG2(fmt, ...)	if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
+#define DEBUG2(fmt, ...) if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
 
 // INFO, WARN, ERROR and PERROR defined in log.h should be sufficient (for now at least)
 /*
@@ -33,6 +33,11 @@ extern int dpc_debug_lvl;
 #undef ERROR
 #define ERROR(fmt, ...)		fr_perror("ERROR: " fmt, ## __VA_ARGS__)
 */
+
+/* Trace macros with prefixed session id. */
+#define SDEBUG(fmt, ...)  if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
+#define SDEBUG2(fmt, ...) if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
+#define SERROR(fmt, ...)  if (fr_log_fp) dpc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
 #define DPC_DEBUG_TRACE(_x, ...)	if (fr_log_fp && (dpc_debug_lvl > 3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
