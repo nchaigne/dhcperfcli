@@ -145,6 +145,8 @@ typedef struct dpc_statistics {
 	uint32_t num_packet_lost[DHCP_MAX_MESSAGE_TYPE];
 	uint32_t num_packet_recv[DHCP_MAX_MESSAGE_TYPE];
 
+	uint32_t num_packet_recv_unexpected;
+
 } dpc_statistics_t;
 
 

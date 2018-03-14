@@ -318,6 +318,9 @@ static void dpc_stats_print(FILE *fp)
 
 	/* Packets to which no response was received. */
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
+
+	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
+	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected", stat_ctx.num_packet_recv_unexpected);
 }
 
 /*
@@ -524,6 +527,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	RADIUS_PACKET *reply = NULL, **packet_p;
 	dpc_session_ctx_t *session;
 	int max_fd;
+	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
 	/* Wait for reply, timing out as necessary */
 	FD_ZERO(&set);
@@ -559,7 +563,6 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		return -1;
 	}
 
-	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
 	                dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
 
@@ -568,7 +571,15 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	 */
 	packet_p = dpc_packet_list_find_byreply(pl, reply);
 	if (!packet_p) {
-		DEBUG("Received reply to unknown packet, id: %u (0x%08x)", reply->id, reply->id);
+		/*
+		 *	We did not find the packet in the packet list. This can happen in several situations:
+		 *	- The initial packet timed out and we receive the response later (likely the DHCP server is overloaded)
+		 *	- The IP address to which the reply was sent does not match (maybe giaddr / source IP address mixup)
+		 *	- The transaction ID does not match (DHCP server is broken)
+		 */
+		DEBUG("Received unexpected packet %s, id: %u (0x%08x)",
+		      dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
+		stat_ctx.num_packet_recv_unexpected ++;
 		fr_radius_free(&reply);
 		return -1;
 	}
