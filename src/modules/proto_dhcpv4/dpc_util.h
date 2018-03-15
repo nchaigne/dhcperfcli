@@ -36,7 +36,10 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);
 void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent, int trace_lvl);
+void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet);
 
+char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *sep,
+                         char const *prefix, int line_max_len);
 char *dpc_ether_addr_print(const uint8_t *addr, char *buf);
 char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra);
 

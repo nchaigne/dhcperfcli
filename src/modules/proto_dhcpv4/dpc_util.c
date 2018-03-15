@@ -9,6 +9,27 @@
 extern struct timeval tv_start;
 
 
+typedef struct {
+	uint8_t size;
+	char const *name;
+} dpc_dhcp_header_t;
+
+dpc_dhcp_header_t dpc_dhcp_headers[] = {
+	{  1, "op" }, {  1, "htype" }, {  1, "hlen" }, {  1, "hops" },
+	{  4, "xid" },
+	{  2, "secs" }, {  2, "flags" },
+	{  4, "ciaddr" },
+	{  4, "yiaddr" },
+	{  4, "siaddr" },
+	{  4, "giaddr" },
+	{  DHCP_CHADDR_LEN, "chaddr" },
+	{  DHCP_SNAME_LEN,  "sname" },
+	{  DHCP_FILE_LEN,   "file" },
+	{  4, "options" },
+	{ -1, NULL}
+};
+
+
 /*
  *	Peek into an event list to retrieve the timestamp of next event.
  *
@@ -287,6 +308,81 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 			fprintf(fp, "\t(empty list)\n");
 		}
 	}
+
+	if (trace_lvl >= 3) {
+		fprintf(fp, "DHCP hex data:\n");
+		dpc_packet_data_print(fp, packet);
+	}
+}
+
+/*
+ *	Print the data of a DHCP packet.
+ *	Fields and options are printed in hex, along with their position in the packet.
+ *	This allows to see what is exactly in a packet and where.
+ */
+void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
+{
+	uint8_t const *p;
+	char header[64];
+	char buf[1024];
+	int i;
+
+	if (!packet->data) return;
+
+	p = packet->data;
+
+	unsigned int cur_pos = 0;
+	for (i = 0; dpc_dhcp_headers[i].name; i++) {
+		if (cur_pos + dpc_dhcp_headers[i].size > packet->data_len) {
+			fprintf(fp, "  incomplete/malformed DHCP data (len: %zu)\n", packet->data_len);
+			int remain = packet->data_len - cur_pos;
+			if (remain > 0) {
+				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
+				dpc_print_hex_data(buf, p, remain, " ", header, 16);
+				fprintf(fp, "%s\n", buf);
+			}
+			return;
+		}
+
+		sprintf(header, "  %04x  %10s: ", cur_pos, dpc_dhcp_headers[i].name);
+		dpc_print_hex_data(buf, p, dpc_dhcp_headers[i].size, " ", header, 16);
+		fprintf(fp, "%s\n", buf);
+
+		p += dpc_dhcp_headers[i].size;
+		cur_pos += dpc_dhcp_headers[i].size;
+	}
+
+	// TODO: options.
+}
+
+/*
+ *	Print a data buffer in hexadecimal representation.
+ */
+char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *sep,
+                         char const *prefix, int line_max_len)
+{
+	int i;
+	int k = 0; /* Position in the current line. */
+
+	int prefix_len = 0;
+	if (prefix) {
+		prefix_len = strlen(prefix);
+		out += sprintf(out, "%s", prefix);
+	}
+
+	for (i = 0; i < in_len; i++) {
+		if (line_max_len && (k == line_max_len)) { /* Start a new line. */
+			out += sprintf(out, "\n%*s", prefix_len, "");
+			k = 0;
+		}
+		if (k && sep) {
+			out += sprintf(out, "%s", sep);
+		}
+		out += sprintf(out, "%02x", in[i]);
+		k ++;
+	}
+	*out = '\0';
+	return out;
 }
 
 /*
@@ -294,8 +390,8 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
  */
 char *dpc_ether_addr_print(const uint8_t *addr, char *buf)
 {
-	sprintf (buf, "%02x:%02x:%02x:%02x:%02x:%02x",
-		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x",
+	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return buf;
 }
 
