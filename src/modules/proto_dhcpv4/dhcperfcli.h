@@ -35,9 +35,10 @@ extern int dpc_debug_lvl;
 */
 
 /* Trace macros with prefixed session id. */
-#define SDEBUG(fmt, ...)  if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
-#define SDEBUG2(fmt, ...) if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
-#define SERROR(fmt, ...)  if (fr_log_fp) dpc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
+#define SDEBUG(fmt, ...)   if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
+#define SDEBUG2(fmt, ...)  if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
+#define SERROR(fmt, ...)   if (fr_log_fp) dpc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
+#define SPERROR(fmt, ...)  if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
 #define DPC_DEBUG_TRACE(_x, ...)	if (fr_log_fp && (dpc_debug_lvl > 3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)

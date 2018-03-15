@@ -457,7 +457,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 
 	int my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
 	if (my_sockfd < 0) {
-		ERROR("Failed to provide a suitable socket");
+		SERROR("Failed to provide a suitable socket");
 		return -1;
 	}
 
@@ -488,11 +488,10 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 	 *	Encode the packet.
 	 */
 	DPC_DEBUG_TRACE("Encoding and sending packet");
-	if (dpc_dhcp_encode(packet) < 0) {
-		ERROR("Failed encoding request packet");
+	if (dpc_dhcp_encode(packet) < 0) { /* Should never happen. */
+		SERROR("Failed encoding request packet");
 		exit(EXIT_FAILURE);
 	}
-	fr_strerror(); /* Clear the error buffer */
 
 	/*
 	 *	Send the packet.
@@ -504,9 +503,10 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 	dpc_packet_print(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	packet->sockfd = my_sockfd;
+
 	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
-		ERROR("Failed to send packet: %s", fr_syserror(errno));
-		exit(EXIT_FAILURE);
+		SPERROR("Failed to send packet");
+		return -1;
 	}
 
 	/* Statistics. */
@@ -597,8 +597,12 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	 *	Decode the reply packet.
 	 */
 	if (fr_dhcpv4_packet_decode(reply) < 0) {
-		ERROR("Failed to decode reply packet (xid: %u)", reply->id);
+		SPERROR("Failed to decode reply packet (id: %u)", reply->id);
 		fr_radius_free(&reply);
+		/*
+		 *	Don't give hope and kill the session now. Maybe we'll receive something better.
+		 *	If not, well... the timeout event will do its dirty job.
+		 */
 		return -1;
 	}
 
@@ -815,7 +819,7 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	vp_xid->data.vb_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp_xid);
 
-	r = fr_dhcpv4_packet_encode(packet);
+	r = fr_dhcpv4_packet_encode(packet); /* This always returns 0. */
 	fr_strerror(); /* Clear the error buffer */
 
 	return r;
