@@ -985,20 +985,12 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		/*
 		 *	Prepare dealing with reply and workflow sequence.
 		 */
-		session->reply_expected = true; /* First assume we're expecting a reply. */
+		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some types of messages do not get a reply. */
 
 		if (input->workflow == DPC_WORKFLOW_DORA) {
 			session->state = DPC_STATE_DORA_EXPECT_OFFER;
 		} else {
-			/*
-			 *	These kind of packets do not get a reply, so don't wait for one.
-			 */
-			if ((packet->code == FR_DHCPV4_RELEASE) || (packet->code == FR_DHCPV4_DECLINE)) {
-				session->reply_expected = false;
-				session->state = DPC_STATE_NO_REPLY;
-			} else {
-				session->state = DPC_STATE_EXPECT_REPLY;
-			}
+			session->state = (session->reply_expected ? DPC_STATE_EXPECT_REPLY : DPC_STATE_NO_REPLY);
 		}
 
 		/* Store session start time. */

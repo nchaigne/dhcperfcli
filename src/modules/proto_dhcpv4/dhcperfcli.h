@@ -60,6 +60,13 @@ extern int dpc_debug_lvl;
 extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
+#define is_dhcp_reply_expected(_x) (_x == FR_DHCPV4_DISCOVER || _x == FR_DHCPV4_REQUEST || _x == FR_DHCPV4_INFORM || _x == FR_DHCPV4_LEASE_QUERY)
+/*
+ *	Decline, Release: these messages do not get a reply.
+ *	Inform: "The servers SHOULD unicast the DHCPACK reply to the address given in the 'ciaddr' field of the DHCPINFORM message." (RFC 2131)
+ *	This means we'll only get the reply if setting ciaddr to address we've used as source.
+*/
+
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
 #define FR_DHCPV4_REQUESTED_IP_ADDRESS    50
 #define FR_DHCPV4_DHCP_SERVER_IDENTIFIER  54
