@@ -15,6 +15,13 @@
 
 
 /*
+ *	Assuming an upper rate of 20 000 packets sent per second, constant over a period of time.
+ *	With a uint32_t we can store up to (2^32-1) / 20 000 = ~ 60H of traffic.
+ *	We might want to move to uint64_t for counting packets. TODO.
+ */
+
+
+/*
  *	Trace / logging.
  */
 extern int dpc_debug_lvl;

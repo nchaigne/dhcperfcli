@@ -1097,7 +1097,12 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 	 *	If the projected rate/s is higher than the rate limit, do not allow new sessions to be started.
 	 *	Otherwise, compute what we would need to attain this rate limit.
 	 */
-	rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num; // is float sufficient for cumulated rtt ? TODO.
+	rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
+	/*
+	 *	Note: we might lose a few milliseconds of precision with a float.
+	 *	But we use that to compute an average, so it will be completely invisible.
+	 */
+
 	elapsed_T2 = elapsed + rtt_avg;
 	rate_T2 = (my_stats->num + session_num_active) / elapsed_T2;
 
