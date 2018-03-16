@@ -19,11 +19,14 @@
  */
 extern int dpc_debug_lvl;
 
+#define DPC_DEBUG_ENABLED(_p) (fr_log_fp && dpc_debug_lvl >= _p)
+#define DPC_DEBUG(_p_, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log(_f "\n", ## __VA_ARGS__)
+
 #undef DEBUG
-#define DEBUG(fmt, ...)  if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
+#define DEBUG(fmt, ...)  DPC_DEBUG(1, fmt, ## __VA_ARGS__)
 
 #undef DEBUG2
-#define DEBUG2(fmt, ...) if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log(fmt "\n", ## __VA_ARGS__)
+#define DEBUG2(fmt, ...) DPC_DEBUG(2, fmt, ## __VA_ARGS__)
 
 // INFO, WARN, ERROR and PERROR defined in log.h should be sufficient (for now at least)
 /*
@@ -35,19 +38,21 @@ extern int dpc_debug_lvl;
 */
 
 /* Trace macros with prefixed session id. */
-#define SDEBUG(fmt, ...)   if (fr_log_fp && (dpc_debug_lvl > 0)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
-#define SDEBUG2(fmt, ...)  if (fr_log_fp && (dpc_debug_lvl > 1)) dpc_printf_log("(%u) " fmt "\n", session->id, ## __VA_ARGS__)
-#define SERROR(fmt, ...)   if (fr_log_fp) dpc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
-#define SPERROR(fmt, ...)  if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
+#define DPC_SDEBUG(_p, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log("(%u) " _f "\n", session->id, ## __VA_ARGS__)
+
+#define SDEBUG(fmt, ...)  DPC_SDEBUG(1, fmt, ## __VA_ARGS__)
+#define SDEBUG2(fmt, ...) DPC_SDEBUG(2, fmt, ## __VA_ARGS__)
+#define SERROR(fmt, ...)  if (fr_log_fp) dpc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
+#define SPERROR(fmt, ...) if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#define DPC_DEBUG_TRACE(_x, ...)	if (fr_log_fp && (dpc_debug_lvl > 3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
-#define DPC_DEBUG_HEX_DUMP(_x, _y, _z)	if (fr_log_fp && (dpc_debug_lvl > 3)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
+#define DPC_DEBUG_TRACE(_x, ...)       if (DPC_DEBUG_ENABLED(4)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
+#define DPC_DEBUG_HEX_DUMP(_x, _y, _z) if (DPC_DEBUG_ENABLED(4)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
- *	With it we can do only about ~5k req/s (Discover - Offer), whereas in non developer mode we can go up to ~10k req/s.
- *	Moreover, at this rate the limiting factor is the DHCP server: we're only using about 35% of our CPU (on my test system),
- *	so we could potentially go much higher.
+ *	With it we can do only about ~5k req/s (Discover - Offer). In non developer mode we can go up to ~10k req/s.
+ *	Moreover, at this rate the limiting factor is the DHCP server: we're only using about 35% of our own CPU
+ *	(on my test system), so we could potentially go much higher.
  */
 
 
@@ -60,11 +65,12 @@ extern int dpc_debug_lvl;
 extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
-#define is_dhcp_reply_expected(_x) (_x == FR_DHCPV4_DISCOVER || _x == FR_DHCPV4_REQUEST || _x == FR_DHCPV4_INFORM || _x == FR_DHCPV4_LEASE_QUERY)
+#define is_dhcp_(_x) (_x == FR_DHCPV4_DISCOVER || _x == FR_DHCPV4_REQUEST || _x == FR_DHCPV4_INFORM \
+	|| _x == FR_DHCPV4_LEASE_QUERY)
 /*
  *	Decline, Release: these messages do not get a reply.
- *	Inform: "The servers SHOULD unicast the DHCPACK reply to the address given in the 'ciaddr' field of the DHCPINFORM message." (RFC 2131)
- *	This means we'll only get the reply if setting ciaddr to address we've used as source.
+ *	Inform: "The servers SHOULD unicast the DHCPACK reply to the address given in the 'ciaddr' field of the DHCPINFORM
+ *	message." (RFC 2131). This means we'll only get the reply if setting ciaddr to address we've used as source.
 */
 
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
@@ -216,7 +222,7 @@ struct dpc_session_ctx {
 	RADIUS_PACKET *reply;
 
 	dpc_state_t state;
-	bool reply_expected;     //!< Whether a reply is expected or not.
+	bool ;     //!< Whether a reply is expected or not.
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };

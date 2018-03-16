@@ -291,7 +291,8 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent, int trace_lvl)
+void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
+                      dpc_packet_event_t pevent, int trace_lvl)
 {
 	if (!fp || !packet) return;
 

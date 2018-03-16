@@ -320,7 +320,8 @@ static void dpc_stats_print(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
-	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected", stat_ctx.num_packet_recv_unexpected);
+	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",
+		stat_ctx.num_packet_recv_unexpected);
 }
 
 /*
@@ -673,7 +674,8 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		}
 
 		/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
+		                                   FR_DHCPV4_DHCP_SERVER_IDENTIFIER, TAG_ANY);
 		if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 			DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 			return false;
@@ -695,8 +697,8 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		 */
 
 		/* Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr */
-		vp_requested_ip = radius_pair_create(packet, &packet->vps, FR_DHCPV4_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
-		//vp_requested_ip->vp_ipv4addr = vp_yiaddr->vp_ipv4addr; // not good enough.
+		vp_requested_ip = radius_pair_create(packet, &packet->vps,
+		                                     FR_DHCPV4_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 		fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -985,7 +987,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		/*
 		 *	Prepare dealing with reply and workflow sequence.
 		 */
-		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some types of messages do not get a reply. */
+		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
 
 		if (input->workflow == DPC_WORKFLOW_DORA) {
 			session->state = DPC_STATE_DORA_EXPECT_OFFER;
@@ -1353,8 +1355,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 		 *	If we're using INADDR_ANY, make sure we know what we're doing.
 		 */
 		if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src.ipaddr)) {
-			WARN("You didn't specify a source IP address. Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
-				" Please make sure this is really what you intended.");
+			WARN("You didn't specify a source IP address."
+			     " Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
+			     " Please make sure this is really what you intended.");
 			warn_inaddr_any = false; /* Once is enough. */
 		}
 	}
@@ -1419,9 +1422,9 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		}
 		fr_strerror(); /* Clear the error buffer */
 		/*
-		 *	After calling fr_pair_list_afrom_file we get weird things in FreeRADIUS error buffer, e.g.
-		 *	"Invalid character ':' in attribute name". This happens apparently when handling an ethernet address
-		 *	(which is a value, not an attribute name).
+		 *	After calling fr_pair_list_afrom_file we get weird things in FreeRADIUS error buffer, e.g.:
+		 *	"Invalid character ':' in attribute name".
+		 *	This happens apparently when handling an ethernet address (which is a value, not an attribute name).
 		 *	Just ignore this.
 		*/
 
