@@ -49,6 +49,7 @@ int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
 
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
+VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp);
 
 void dpc_float_to_timeval(struct timeval *tv, float f_val);
 float dpc_timeval_to_float(struct timeval *tv);

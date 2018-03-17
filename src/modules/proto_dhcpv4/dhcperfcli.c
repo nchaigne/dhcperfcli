@@ -879,63 +879,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 			/* Only DHCP attributes can be variable. */
 			if (vp->da->vendor != DHCP_MAGIC_VENDOR) continue;
 
-			switch (vp->da->type) {
-			case FR_TYPE_UINT8:
-				vp->vp_uint8 += 1;
-				break;
-
-			case FR_TYPE_UINT16:
-				vp->vp_uint16 += 1;
-				break;
-
-			case FR_TYPE_UINT32:
-				vp->vp_uint32 += 1;
-				break;
-
-			case FR_TYPE_STRING: /* Circular shift on the left, e.g.: abcd -> bcda */
-			{
-				char *buff;
-				int len = vp->vp_length;
-
-				buff = talloc_zero_array(vp, char, len + 1);
-				for (i = 0; i < vp->vp_length; i ++) {
-					buff[i] = vp->vp_strvalue[(i + 1) % len];
-				}
-				fr_pair_value_strsteal(vp, (char *)buff);
-			}
-				break;
-
-			case FR_TYPE_OCTETS: /* +1 on each octet */
-			{
-				uint8_t *buff;
-
-				buff = talloc_array(vp, uint8_t, vp->vp_length);
-				memcpy(buff, vp->vp_octets, vp->vp_length);
-				for (i = 0; i < vp->vp_length; i ++) {
-					buff[i] ++;
-				}
-				fr_pair_value_memsteal(vp, buff);
-			}
-				break;
-
-			case FR_TYPE_IPV4_ADDR:
-				vp->vp_ipv4addr = htonl(ntohl(vp->vp_ipv4addr) + 1);
-				break;
-
-			case FR_TYPE_ETHERNET:
-			{
-				/* Hackish way to increment the 6 octets of hwaddr. */
-				uint64_t hwaddr = 0;
-				memcpy(&hwaddr, vp->vp_ether, 6);
-				hwaddr = ntohll(hwaddr) + (1 << 16);
-				hwaddr = htonll(hwaddr);
-				memcpy(vp->vp_ether, &hwaddr, 6);
-				break;
-			}
-
-			default: /* Not handled, so this will be treated as invariant/ */
-				break;
-			}
+			dpc_pair_value_incr(vp);
 		}
 	}
 

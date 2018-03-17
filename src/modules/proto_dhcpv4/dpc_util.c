@@ -536,6 +536,84 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 }
 
 /*
+ *	"Increment" the value of a value pair. (Actual operation depends on the type.)
+ */
+VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp)
+{
+	if (!vp || !vp->da) return;
+
+	switch (vp->da->type) {
+	case FR_TYPE_UINT8:
+		vp->vp_uint8 ++;
+		break;
+
+	case FR_TYPE_UINT16:
+		vp->vp_uint16 ++;
+		break;
+
+	case FR_TYPE_UINT32:
+		vp->vp_uint32 ++;
+		break;
+
+	case FR_TYPE_UINT64:
+		vp->vp_uint64 ++;
+		break;
+
+	case FR_TYPE_STRING: /* Circular shift on the left, e.g.: abcd -> bcda */
+	{
+		char *buff;
+		int len = vp->vp_length;
+
+		buff = talloc_zero_array(vp, char, len + 1);
+		for (i = 0; i < vp->vp_length; i ++) {
+			buff[i] = vp->vp_strvalue[(i + 1) % len];
+		}
+		fr_pair_value_strsteal(vp, (char *)buff);
+	}
+		break;
+
+	case FR_TYPE_OCTETS: /* +1 on each octet */
+	{
+		uint8_t *buff;
+
+		buff = talloc_array(vp, uint8_t, vp->vp_length);
+		memcpy(buff, vp->vp_octets, vp->vp_length);
+		for (i = 0; i < vp->vp_length; i ++) {
+			buff[i] ++;
+		}
+		fr_pair_value_memsteal(vp, buff);
+	}
+		break;
+
+	case FR_TYPE_IPV4_ADDR:
+		vp->vp_ipv4addr = htonl(ntohl(vp->vp_ipv4addr) + 1);
+		break;
+
+	case FR_TYPE_ETHERNET:
+	{
+		/* Hackish way to increment the 6 octets of hwaddr. */
+		uint64_t hwaddr = 0;
+		memcpy(&hwaddr, vp->vp_ether, 6);
+		hwaddr = ntohll(hwaddr) + (1 << 16);
+		hwaddr = htonll(hwaddr);
+		memcpy(vp->vp_ether, &hwaddr, 6);
+
+		/* Don't use broadcast ethernet address. */
+		if ((memcmp(&eth_bcast, &vp->vp_ether, 6) == 0) {
+			memset(vp->vp_ether, '\0', 6);
+			vp->vp_ether[5] ++;
+		}
+		break;
+	}
+
+	default: /* Type not handled. */
+		break;
+	}
+
+	return vp;
+}
+
+/*
  *	Convert a float to struct timeval.
  */
 void dpc_float_to_timeval(struct timeval *tv, float f_val)
