@@ -31,6 +31,7 @@ static dpc_input_list_t vps_list_in = { 0 };
 static bool with_template = false;
 static dpc_input_t *template_invariant = NULL;
 static dpc_input_t *template_variable = NULL;
+static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
 
 static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
@@ -879,7 +880,15 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 			/* Only DHCP attributes can be variable. */
 			if (vp->da->vendor != DHCP_MAGIC_VENDOR) continue;
 
-			dpc_pair_value_increment(vp);
+			/* Update value according to template variable mode. */
+			switch (templ_var) {
+			case DPC_TEMPL_VAR_INCREMENT:
+				dpc_pair_value_increment(vp);
+				break;
+			case DPC_TEMPL_VAR_RANDOM:
+				dpc_pair_value_randomize(vp);
+				break;
+			}
 		}
 	}
 

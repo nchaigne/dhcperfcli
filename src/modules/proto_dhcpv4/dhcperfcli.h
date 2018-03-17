@@ -146,6 +146,13 @@ typedef enum {
 	DPC_PACKET_TIMEOUT
 } dpc_packet_event_t;
 
+/* Template variable update mode. */
+typedef enum {
+	DPC_TEMPL_VAR_NONE = 0,
+	DPC_TEMPL_VAR_INCREMENT,
+	DPC_TEMPL_VAR_RANDOM
+} dpc_templ_var_t;
+
 
 /*
  *	Holds statistics for a given transaction type.
