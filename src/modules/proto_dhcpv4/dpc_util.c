@@ -536,7 +536,7 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 }
 
 /*
- *	"Increment" the value of a value pair. (Actual operation depends on the type.)
+ *	Increment the value of a value pair.
  */
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 {
@@ -598,6 +598,58 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 		}
 		break;
 	}
+
+	default: /* Type not handled. */
+		break;
+	}
+
+	return vp;
+}
+
+/*
+ *	Randomize the value of a value pair.
+ */
+VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp)
+{
+	if (!vp || !vp->da) return;
+
+	switch (vp->da->type) {
+	case FR_TYPE_UINT8:
+		vp->vp_uint8 = fr_rand() & 0xff;
+		break;
+
+	case FR_TYPE_UINT16:
+		vp->vp_uint16 = fr_rand() & 0xffff;
+		break;
+
+	case FR_TYPE_UINT32:
+		vp->vp_uint32 = fr_rand();
+		break;
+
+	case FR_TYPE_UINT64:
+		vp->vp_uint64 = (fr_rand() << 32) | fr_rand();
+		break;
+
+	case FR_TYPE_STRING:
+	{
+		for (i = 0; i < vp->vp_length; i ++) {
+			/* Restrict to printable ASCII-7 characters. */
+			vp->vp_strvalue[i] = (fr_rand() % (126 - 32 + 1)) + 32;
+		}
+		break;
+	}
+
+	case FR_TYPE_OCTETS:
+		fr_rand_buffer(vp->vp_octets, vp->vp_length);
+		break;
+
+	case FR_TYPE_IPV4_ADDR:
+		vp->vp_ipv4addr = fr_rand();
+		break;
+
+	case FR_TYPE_ETHERNET:
+		fr_rand_buffer(vp->vp_ether, 6);
+		break;
 
 	default: /* Type not handled. */
 		break;

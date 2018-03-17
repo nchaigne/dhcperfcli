@@ -50,6 +50,7 @@ int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp);
+VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp);
 void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t high);
 bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high);
 
