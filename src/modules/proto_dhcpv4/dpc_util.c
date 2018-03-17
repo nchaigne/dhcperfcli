@@ -538,7 +538,7 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 /*
  *	"Increment" the value of a value pair. (Actual operation depends on the type.)
  */
-VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp)
+VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 {
 	if (!vp || !vp->da) return;
 
@@ -559,8 +559,8 @@ VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp)
 		vp->vp_uint64 ++;
 		break;
 
-	case FR_TYPE_STRING: /* Circular shift on the left, e.g.: abcd -> bcda */
-	{
+	case FR_TYPE_STRING:
+	/*{
 		char *buff;
 		int len = vp->vp_length;
 
@@ -569,20 +569,13 @@ VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp)
 			buff[i] = vp->vp_strvalue[(i + 1) % len];
 		}
 		fr_pair_value_strsteal(vp, (char *)buff);
-	}
+	}*/
+		/* Technically type string can hold any octet value, but we'll restrict to printable ASCII-7 characters. */
+		dpc_octet_array_increment(vp->vp_strvalue, vp->vp_length, 32, 126);
 		break;
 
-	case FR_TYPE_OCTETS: /* +1 on each octet */
-	{
-		uint8_t *buff;
-
-		buff = talloc_array(vp, uint8_t, vp->vp_length);
-		memcpy(buff, vp->vp_octets, vp->vp_length);
-		for (i = 0; i < vp->vp_length; i ++) {
-			buff[i] ++;
-		}
-		fr_pair_value_memsteal(vp, buff);
-	}
+	case FR_TYPE_OCTETS:
+		dpc_octet_array_increment(vp->vp_octets, vp->vp_length, 0, 255);
 		break;
 
 	case FR_TYPE_IPV4_ADDR:
@@ -599,7 +592,7 @@ VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp)
 		memcpy(vp->vp_ether, &hwaddr, 6);
 
 		/* Don't use broadcast ethernet address. */
-		if ((memcmp(&eth_bcast, &vp->vp_ether, 6) == 0) {
+		if ((memcmp(&eth_bcast, vp->vp_ether, 6) == 0) {
 			memset(vp->vp_ether, '\0', 6);
 			vp->vp_ether[5] ++;
 		}
@@ -611,6 +604,32 @@ VALUE_PAIR *dpc_pair_value_incr(VALUE_PAIR *vp)
 	}
 
 	return vp;
+}
+
+/*
+ *	Increment an octet array (starting at the last octet), restricting value of each octet to a bounded interval.
+ */
+void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t high)
+{
+	int i;
+	for (i = size; i > 0 ; i--) {
+		if (!dpc_octet_increment(&array[i-1], low, high)) break;
+	}
+}
+
+/*
+ *	Increment an octet, restricting its value to a bounded interval.
+ *	Returns true if value fell back to the lower bound.
+ */
+bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
+{
+	uint8_t in = *value;
+	(*value) ++;
+	if (*value > high) {
+		*value = low;
+		return true;
+	}
+	return false;
 }
 
 /*

@@ -879,7 +879,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 			/* Only DHCP attributes can be variable. */
 			if (vp->da->vendor != DHCP_MAGIC_VENDOR) continue;
 
-			dpc_pair_value_incr(vp);
+			dpc_pair_value_increment(vp);
 		}
 	}
 
