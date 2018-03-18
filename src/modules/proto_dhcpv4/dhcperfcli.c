@@ -126,6 +126,7 @@ char elapsed_buf[DPC_TIME_STRLEN];
  *	Static functions declaration.
  */
 static void usage(int);
+static void version_print(void);
 
 static void dpc_progress_stats_print(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
@@ -1679,7 +1680,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'v':
-			printf("%s: %s\n", progname, prog_version);
+			dpc_version_print();
 			exit(EXIT_SUCCESS);
 
 		case 'x':
@@ -1851,6 +1852,21 @@ int main(int argc, char **argv)
 
 	/* This is the end. */
 	dpc_end();
+}
+
+/*
+ *	Print program version.
+ */
+static void version_print(void)
+{
+	printf("%s: %s\n", progname, prog_version);
+	printf("Built with libpcap: %s\n",
+#ifdef HAVE_LIBPCAP
+		"yes"
+#else
+		"no"
+#endif
+	);
 }
 
 /*
