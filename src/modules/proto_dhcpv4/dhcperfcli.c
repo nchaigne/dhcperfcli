@@ -369,10 +369,19 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 	int reply_code = reply->code;
 
 	/* Identify the transaction (request / reply). */
-	if (request_code == FR_DHCPV4_DISCOVER && reply_code == FR_DHCPV4_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
-	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_REQUEST_ACK;
-	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_NAK) tr_type = DPC_TR_REQUEST_NAK;
-	else if (request_code == FR_DHCPV4_DISCOVER && reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_DISCOVER_ACK;
+	if (request_code == FR_DHCPV4_DISCOVER) {
+		if (reply_code == FR_DHCPV4_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
+		else if (reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_DISCOVER_ACK;
+	}
+	else if (request_code == FR_DHCPV4_REQUEST) {
+		if (reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_REQUEST_ACK;
+		else if (reply_code == FR_DHCPV4_NAK) tr_type = DPC_TR_REQUEST_NAK;
+	}
+	else if (request_code == FR_DHCPV4_LEASE_QUERY) {
+		if (reply_code == FR_DHCPV4_LEASE_UNASSIGNED) tr_type = DPC_TR_LEASE_QUERY_UNASSIGNED;
+		else if (reply_code == FR_DHCPV4_LEASE_UNKNOWN) tr_type = DPC_TR_LEASE_QUERY_UNKNOWN;
+		else if (reply_code == FR_DHCPV4_LEASE_ACTIVE) tr_type = DPC_TR_LEASE_QUERY_ACTIVE;
+	}
 
 	timersub(&reply->timestamp, &request->timestamp, &rtt);
 

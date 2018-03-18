@@ -131,12 +131,15 @@ typedef enum {
 
 /* Transactions (request / reply, or workflow). */
 typedef enum {
-	DPC_TR_ALL = 0,         //<! All unitary packet - reply transactions (DORA not included)
-	DPC_TR_DISCOVER_OFFER,  //<! Discover - Offer
-	DPC_TR_REQUEST_ACK,     //<! Request - Ack
-	DPC_TR_REQUEST_NAK,     //<! Request - Nak
-	DPC_TR_DISCOVER_ACK,    //<! Discover - Ack (Rapid Commit - cf. RFC 4039)
-	DPC_TR_DORA,            //<! Discover - Offer, Request - Ack (a.k.a "DORA")
+	DPC_TR_ALL = 0,                //<! All unitary packet - reply transactions (DORA not included)
+	DPC_TR_DISCOVER_OFFER,         //<! Discover - Offer
+	DPC_TR_DISCOVER_ACK,           //<! Discover - Ack (Rapid Commit - cf. RFC 4039)
+	DPC_TR_REQUEST_ACK,            //<! Request - Ack
+	DPC_TR_REQUEST_NAK,            //<! Request - Nak
+	DPC_TR_LEASE_QUERY_UNASSIGNED, //<! Lease-Query - Lease-Query-Unassigned
+	DPC_TR_LEASE_QUERY_UNKNOWN,    //<! Lease-Query - Lease-Query-Unknown
+	DPC_TR_LEASE_QUERY_ACTIVE,     //<! Lease-Query - Lease-Query-Active
+	DPC_TR_DORA,                   //<! Discover - Offer, Request - Ack (a.k.a "DORA")
 	DPC_TR_MAX
 } dpc_transaction_type_t;
 
