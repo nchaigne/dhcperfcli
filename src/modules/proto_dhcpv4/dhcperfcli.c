@@ -372,6 +372,7 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 	if (request_code == FR_DHCPV4_DISCOVER && reply_code == FR_DHCPV4_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
 	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_REQUEST_ACK;
 	else if (request_code == FR_DHCPV4_REQUEST && reply_code == FR_DHCPV4_NAK) tr_type = DPC_TR_REQUEST_NAK;
+	else if (request_code == FR_DHCPV4_DISCOVER && reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_DISCOVER_ACK;
 
 	timersub(&reply->timestamp, &request->timestamp, &rtt);
 

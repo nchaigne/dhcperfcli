@@ -135,6 +135,7 @@ typedef enum {
 	DPC_TR_DISCOVER_OFFER,  //<! Discover - Offer
 	DPC_TR_REQUEST_ACK,     //<! Request - Ack
 	DPC_TR_REQUEST_NAK,     //<! Request - Nak
+	DPC_TR_DISCOVER_ACK,    //<! Discover - Ack (Rapid Commit - cf. RFC 4039)
 	DPC_TR_DORA,            //<! Discover - Offer, Request - Ack (a.k.a "DORA")
 	DPC_TR_MAX
 } dpc_transaction_type_t;
