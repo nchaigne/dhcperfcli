@@ -16,10 +16,8 @@ typedef struct dpc_packet_list dpc_packet_list_t;
 void dpc_packet_list_free(dpc_packet_list_t *pl);
 dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id);
 
+int dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, uint16_t src_port);
 int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t src_port);
-
-bool dpc_packet_list_socket_add(dpc_packet_list_t *pl, int sockfd,
-                                fr_ipaddr_t *dst_ipaddr, uint16_t dst_port, void *ctx);
 
 bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p);
 RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKET *reply);

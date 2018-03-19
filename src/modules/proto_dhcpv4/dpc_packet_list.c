@@ -108,6 +108,44 @@ static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 }
 
 /*
+ *	Add a socket to our list of managed sockets.
+ */
+int dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
+{
+	dpc_packet_socket_t *ps;
+
+	if (pl->num_sockets >= DPC_MAX_SOCKETS) {
+		fr_strerror_printf("Too many open sockets");
+		return -1;
+	}
+
+	ps = &pl->sockets[pl->num_sockets];
+	if (ps->sockfd != -1) {
+		fr_strerror_printf("Socket already allocated"); /* This should never happen. */
+		return -1;
+	}
+
+	/*
+	 *	Fill in the packet list socket.
+	 */
+	memset(ps, 0, sizeof(*ps));
+
+	ps->src_ipaddr = *src_ipaddr;
+	ps->src_port = src_port;
+	ps->sockfd = sockfd;
+
+	pl->num_sockets ++;
+
+	if (dpc_debug_lvl > 0) {
+		dpc_socket_inspect(fr_log_fp, "Adding new managed socket to packet list:", sockfd, NULL, NULL, NULL, NULL);
+	}
+
+	DPC_DEBUG_TRACE("Now managing %d socket(s)", pl->num_sockets);
+
+	return 0;
+}
+
+/*
  *	Provide a suitable socket from our list. If necesary, initialize a new one.
  */
 int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
@@ -128,19 +166,9 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 			return ps->sockfd;
 		}
 	}
-	DPC_DEBUG_TRACE("No suitable managed socket found, need a new one...");
 
 	/* No socket found, we need a new one. */
-	if (pl->num_sockets >= DPC_MAX_SOCKETS) {
-		fr_strerror_printf("Too many open sockets");
-		return -1;
-	}
-
-	ps = &pl->sockets[pl->num_sockets];
-	if (ps->sockfd != -1) {
-		fr_strerror_printf("Socket already allocated"); /* This should never happen. */
-		return -1;
-	}
+	DPC_DEBUG_TRACE("No suitable managed socket found, need a new one...");
 
 	/* Open a connectionless UDP socket for sending and receiving. */
 	int my_sockfd = fr_socket_server_udp(src_ipaddr, &src_port, NULL, false);
@@ -154,23 +182,10 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 		return -1;
 	}
 
-	memset(ps, 0, sizeof(*ps));
-
-	ps->src_ipaddr = *src_ipaddr;
-	ps->src_port = src_port;
-
-	/*
-	 *	As the last step before returning.
-	 */
-	ps->sockfd = my_sockfd;
-	pl->num_sockets ++;
-
-	if (dpc_debug_lvl > 0) {
-		dpc_socket_inspect(fr_log_fp, "Adding new managed socket to packet list:", my_sockfd, NULL, NULL, NULL, NULL);
+	/* Add the socket to our list of managed sockets. */
+	if (dpc_socket_add(pl, my_sockfd, src_ipaddr, src_port) < 0) {
+		return -1;
 	}
-
-	DPC_DEBUG_TRACE("Now managing %d socket(s)", pl->num_sockets);
-
 	return my_sockfd;
 }
 
