@@ -206,6 +206,13 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 		return -1;
 	}
 
+	/* Allow to use this socket to broadcast. */
+	int on = 1;
+	if (setsockopt(my_sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
+		ERROR("Can't set broadcast option: %s", fr_syserror(errno));
+		return -1;
+	}
+
 	/* Add the socket to our list of managed sockets. */
 	if (!dpc_socket_add(pl, my_sockfd, src_ipaddr, src_port)) {
 		return -1;
