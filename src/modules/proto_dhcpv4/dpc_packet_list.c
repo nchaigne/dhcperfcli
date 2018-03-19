@@ -31,6 +31,10 @@ typedef struct dpc_packet_socket {
 	fr_ipaddr_t src_ipaddr;
 	uint16_t src_port;
 
+#ifdef HAVE_LIBPCAP
+	fr_pcap_t *pcap;
+#endif
+
 } dpc_packet_socket_t;
 
 /*
@@ -73,6 +77,8 @@ static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
 {
 	int rcode;
 
+	DPC_DEBUG_TRACE("id: (%u <-> %u), sockfd: (%d <-> %d)", a->id, b->id, a->sockfd, b->sockfd);
+
 	if (a->id < b->id) return -1;
 	if (a->id > b->id) return +1;
 
@@ -110,19 +116,19 @@ static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 /*
  *	Add a socket to our list of managed sockets.
  */
-int dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
+static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
 {
 	dpc_packet_socket_t *ps;
 
 	if (pl->num_sockets >= DPC_MAX_SOCKETS) {
 		fr_strerror_printf("Too many open sockets");
-		return -1;
+		return NULL;
 	}
 
 	ps = &pl->sockets[pl->num_sockets];
 	if (ps->sockfd != -1) {
 		fr_strerror_printf("Socket already allocated"); /* This should never happen. */
-		return -1;
+		return NULL;
 	}
 
 	/*
@@ -137,13 +143,31 @@ int dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, u
 	pl->num_sockets ++;
 
 	if (dpc_debug_lvl > 0) {
-		dpc_socket_inspect(fr_log_fp, "Adding new managed socket to packet list:", sockfd, NULL, NULL, NULL, NULL);
+		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+		fprintf(fr_log_fp, "Adding new managed socket to packet list: fd: %d, src: %s:%i\n",
+		        sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
 	}
 
 	DPC_DEBUG_TRACE("Now managing %d socket(s)", pl->num_sockets);
 
+	return ps;
+}
+
+#ifdef HAVE_LIBPCAP
+/*
+ *	Add a pcap socket.
+ */
+int dpc_pcap_socket_add(dpc_packet_list_t *pl, fr_pcap_t *pcap, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
+{
+	dpc_packet_socket_t *ps;
+
+	ps = dpc_socket_add(pl, pcap->fd, src_ipaddr, src_port);
+	if (!ps) return -1;
+
+	ps->pcap = pcap; /* Remember this is a pcap socket. */
 	return 0;
 }
+#endif
 
 /*
  *	Provide a suitable socket from our list. If necesary, initialize a new one.
@@ -183,7 +207,7 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 	}
 
 	/* Add the socket to our list of managed sockets. */
-	if (dpc_socket_add(pl, my_sockfd, src_ipaddr, src_port) < 0) {
+	if (!dpc_socket_add(pl, my_sockfd, src_ipaddr, src_port)) {
 		return -1;
 	}
 	return my_sockfd;
@@ -275,7 +299,10 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 	if (!pl || !reply) return NULL;
 
 	ps = dpc_socket_find(pl, reply->sockfd);
-	if (!ps) return NULL;
+	if (!ps) {
+		ERROR("Failed to find socket in packet list, fd: %d", reply->sockfd);
+		return NULL;
+	}
 
 	/*
 	 *	Initialize request from reply, AND from the source IP & port of this socket.
@@ -503,7 +530,15 @@ RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 
 		if (!FD_ISSET(ps->sockfd, set)) continue;
 
+		/* Using either udp or pcap socket for reception. */
+#ifdef HAVE_LIBPCAP
+		if (ps->pcap) {
+			packet = fr_dhcpv4_pcap_recv(ps->pcap);
+			packet->sockfd = ps->pcap->fd; /* fr_dhcpv4_pcap_recv does not fill this. Why!? */
+		} else
+#endif
 		packet = fr_dhcpv4_udp_packet_recv(ps->sockfd);
+
 		if (!packet) continue;
 
 		/*
