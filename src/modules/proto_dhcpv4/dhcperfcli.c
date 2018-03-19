@@ -67,6 +67,10 @@ fr_event_timer_t const *ev_progress_stats = NULL;
 static float progress_interval = 10.0; /* Periodically produce progress statistics summary. */
 struct timeval tv_progress_interval;
 
+#ifdef HAVE_LIBPCAP
+static fr_pcap_t *pcap;
+static char *iface;
+#endif
 
 /*
  *	More concise version of dhcp_message_types defined in protocols/dhcpv4/base.c
@@ -304,12 +308,14 @@ static void dpc_stats_print(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
 		dpc_print_delta_time(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
 
-	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	/* Packets sent (total, and of each message type). */
-	fprintf(fp, "\t%-*.*s: %d (%s)\n",
-	        LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.num_packet_sent[0],
-	        dpc_num_message_type_print(messages, stat_ctx.num_packet_sent));
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.num_packet_sent[0]);
+	if (stat_ctx.num_packet_sent[0] > 0) {
+		fprintf(fp, " (%s)", dpc_num_message_type_print(messages, stat_ctx.num_packet_sent));
+	}
+	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.num_packet_recv[0]);
@@ -319,10 +325,10 @@ static void dpc_stats_print(FILE *fp)
 	fprintf(fp, "\n");
 
 	/* Packets to which no response was received. */
-	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
-	fprintf(fp, "\t%-*.*s: %d\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",
 		stat_ctx.num_packet_recv_unexpected);
 }
 
@@ -461,6 +467,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
  *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
  *	Returns: 0 = success, -1 = error.
  */
+// TODO: with pcap.
 static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p)
 // note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
 {
@@ -470,7 +477,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 
 	int my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
 	if (my_sockfd < 0) {
-		SERROR("Failed to provide a suitable socket");
+		SPERROR("Failed to provide a suitable socket");
 		return -1;
 	}
 
@@ -1018,7 +1025,7 @@ static void dpc_loop_recv(void)
 
 		if (session_num_active >= session_max_active && fr_event_timer_peek(event_list, &when)) {
 			gettimeofday(&now, NULL);
-			timersub(&when, &now, &wait_max);
+			if (timercmp(&when, &now, >)) timersub(&when, &now, &wait_max); /* No negative. */
 		}
 
 		/*
@@ -1216,13 +1223,77 @@ static void dpc_main_loop(void)
 }
 
 /*
+ *	Pre-allocate a socket for an input item.
+ */
+static void dpc_input_socket_allocate(dpc_input_t *input)
+{
+	static bool warn_inaddr_any = true;
+
+#ifdef HAVE_LIBPCAP
+	if (iface && (fr_ipaddr_is_inaddr_any(&input->src.ipaddr) == 1)
+	    && (dpc_ipaddr_is_broadcast(&input->dst.ipaddr) == 1)
+	   ) {
+		DPC_DEBUG_TRACE("Input (id: %u) will be broadcast using pcap raw socket", input->id);
+
+		if (!pcap) {
+			char pcap_filter[255];
+
+			pcap = fr_pcap_init(NULL, iface, PCAP_INTERFACE_IN_OUT);
+			if (!pcap) {
+				ERROR("Failed to initialize pcap");
+				exit(EXIT_FAILURE);
+			}
+
+			if (fr_pcap_open(pcap) < 0) {
+				ERROR("Failed to open pcap interface");
+				exit(EXIT_FAILURE);
+			}
+
+			//sprintf(pcap_filter, "udp and dst port %d", packet->src_port); // TODO: handle different ports ??
+			sprintf(pcap_filter, "udp");
+
+			if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
+				ERROR("Failing to apply pcap filter");
+				exit(EXIT_FAILURE);
+			}
+
+			if (dpc_pcap_socket_add(pl, pcap, &input->src.ipaddr, input->src.port) < 0) {
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		return;
+	}
+#endif
+
+	/*
+	 *	Allocate the socket now. If we can't, stop.
+	 */
+	if (dpc_socket_provide(pl, &input->src.ipaddr, input->src.port) < 0) {
+		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+		ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
+		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src.ipaddr), input->src.port);
+		exit(EXIT_FAILURE);
+	}
+
+	/*
+	 *	If we're using INADDR_ANY, make sure we know what we're doing.
+	 */
+	if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src.ipaddr)) {
+		WARN("You didn't specify a source IP address."
+		     " Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
+		     " Please make sure this is really what you intended.");
+		warn_inaddr_any = false; /* Once is enough. */
+	}
+}
+
+/*
  *	Parse an input item and prepare information necessary to build a packet.
  */
 static bool dpc_parse_input(dpc_input_t *input)
 {
 	vp_cursor_t cursor;
 	VALUE_PAIR *vp;
-	static bool warn_inaddr_any = true;
 
 	input->code = FR_CODE_UNDEFINED;
 
@@ -1310,26 +1381,12 @@ static bool dpc_parse_input(dpc_input_t *input)
 		return false;
 	}
 
+	/*
+	 *	Pre-allocate the socket for this input item.
+	 *	Unless: in template mode *and* with gateway(s) (in which case we already have the sockets allocated).
+	 */
 	if (!with_template || !gateway_list) {
-		/*
-		*	Allocate the socket now. If we can't, stop.
-		*/
-		if (dpc_socket_provide(pl, &input->src.ipaddr, input->src.port) < 0) {
-			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-			ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
-				fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src.ipaddr), input->src.port);
-			exit(EXIT_FAILURE);
-		}
-
-		/*
-		 *	If we're using INADDR_ANY, make sure we know what we're doing.
-		 */
-		if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src.ipaddr)) {
-			WARN("You didn't specify a source IP address."
-			     " Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
-			     " Please make sure this is really what you intended.");
-			warn_inaddr_any = false; /* Once is enough. */
-		}
+		dpc_input_socket_allocate(input);
 	}
 
 	/* All good. */

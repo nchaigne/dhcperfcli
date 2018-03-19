@@ -855,3 +855,21 @@ bool dpc_stdin_peek()
 
 	return true;
 }
+
+/*
+ *	Determine if an IP address is the broadcast address.
+ *	Returns: 0 if it is not, 1 if it is, 0 on error.
+ */
+int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr)
+{
+	if (ipaddr->af == AF_INET) {
+		if (ipaddr->addr.v4.s_addr == htonl(INADDR_BROADCAST)) {
+			return 1;
+		}
+	} else {
+		fr_strerror_printf("Unsupported address family");
+		return -1;
+	}
+
+	return 0;
+}

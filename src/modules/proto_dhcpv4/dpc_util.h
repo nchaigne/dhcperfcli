@@ -64,5 +64,6 @@ dpc_input_t *dpc_input_item_draw(dpc_input_t *entry);
 dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 
 bool dpc_stdin_peek(void);
+int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
 
 #endif
