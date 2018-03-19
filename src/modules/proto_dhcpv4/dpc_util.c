@@ -424,7 +424,7 @@ char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
 /*
  *	Print information on a socket from its file descriptor.
  */
-int dpc_socket_inspect(FILE *fp, const char *log_pre, int sockfd,
+int dpc_socket_inspect(FILE *fp, char const *log_pre, int sockfd,
                        fr_ipaddr_t *src_ipaddr, uint16_t *src_port, fr_ipaddr_t *dst_ipaddr, uint16_t *dst_port)
 {
 	struct sockaddr_storage salocal;
@@ -540,7 +540,7 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
  */
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 {
-	if (!vp || !vp->da) return;
+	if (!vp || !vp->da) return NULL;
 
 	switch (vp->da->type) {
 	case FR_TYPE_UINT8:
@@ -560,23 +560,23 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 		break;
 
 	case FR_TYPE_STRING:
-	/*{
-		char *buff;
-		int len = vp->vp_length;
-
-		buff = talloc_zero_array(vp, char, len + 1);
-		for (i = 0; i < vp->vp_length; i ++) {
-			buff[i] = vp->vp_strvalue[(i + 1) % len];
-		}
-		fr_pair_value_strsteal(vp, (char *)buff);
-	}*/
+	{
 		/* Technically type string can hold any octet value, but we'll restrict to printable ASCII-7 characters. */
-		dpc_octet_array_increment(vp->vp_strvalue, vp->vp_length, 32, 126);
+		char *buff = talloc_zero_array(vp, char, vp->vp_length + 1);
+		memcpy(buff, vp->vp_strvalue, vp->vp_length);
+		dpc_octet_array_increment((uint8_t *)buff, vp->vp_length, 33, 126); /* Also avoid space (32). */
+		fr_pair_value_strsteal(vp, buff);
 		break;
+	}
 
 	case FR_TYPE_OCTETS:
-		dpc_octet_array_increment(vp->vp_octets, vp->vp_length, 0, 255);
+	{
+		uint8_t *buff = talloc_zero_array(vp, uint8_t, vp->vp_length);
+		memcpy(buff, vp->vp_octets, vp->vp_length);
+		dpc_octet_array_increment(buff, vp->vp_length, 0, 255);
+		fr_pair_value_memsteal(vp, buff);
 		break;
+	}
 
 	case FR_TYPE_IPV4_ADDR:
 		vp->vp_ipv4addr = htonl(ntohl(vp->vp_ipv4addr) + 1);
@@ -592,7 +592,7 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 		memcpy(vp->vp_ether, &hwaddr, 6);
 
 		/* Don't use broadcast ethernet address. */
-		if ((memcmp(&eth_bcast, vp->vp_ether, 6) == 0) {
+		if (memcmp(&eth_bcast, vp->vp_ether, 6) == 0) {
 			memset(vp->vp_ether, '\0', 6);
 			vp->vp_ether[5] ++;
 		}
@@ -611,7 +611,7 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
  */
 VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp)
 {
-	if (!vp || !vp->da) return;
+	if (!vp || !vp->da) return NULL;
 
 	switch (vp->da->type) {
 	case FR_TYPE_UINT8:
@@ -627,21 +627,30 @@ VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp)
 		break;
 
 	case FR_TYPE_UINT64:
-		vp->vp_uint64 = (fr_rand() << 32) | fr_rand();
+		vp->vp_uint64 = ((uint64_t)fr_rand() << 32) | fr_rand();
 		break;
 
 	case FR_TYPE_STRING:
 	{
+		unsigned int i;
+		char *buff = talloc_zero_array(vp, char, vp->vp_length + 1);
+		memcpy(buff, vp->vp_strvalue, vp->vp_length);
 		for (i = 0; i < vp->vp_length; i ++) {
 			/* Restrict to printable ASCII-7 characters. */
-			vp->vp_strvalue[i] = (fr_rand() % (126 - 32 + 1)) + 32;
+			buff[i] = (fr_rand() % (126 - 32 + 1)) + 32;
 		}
+		fr_pair_value_strsteal(vp, buff);
 		break;
 	}
 
 	case FR_TYPE_OCTETS:
-		fr_rand_buffer(vp->vp_octets, vp->vp_length);
+	{
+		uint8_t *buff = talloc_zero_array(vp, uint8_t, vp->vp_length);
+		memcpy(buff, vp->vp_octets, vp->vp_length);
+		fr_rand_buffer(buff, vp->vp_length);
+		fr_pair_value_memsteal(vp, buff);
 		break;
+	}
 
 	case FR_TYPE_IPV4_ADDR:
 		vp->vp_ipv4addr = fr_rand();
@@ -676,12 +685,10 @@ void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t hi
 bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
 {
 	uint8_t in = *value;
-	(*value) ++;
-	if (*value > high) {
-		*value = low;
-		return true;
-	}
-	return false;
+	if (*value == high) *value = low;
+	else (*value) ++;
+
+	return (*value < in);
 }
 
 /*

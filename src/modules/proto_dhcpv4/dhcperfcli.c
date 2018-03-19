@@ -882,7 +882,6 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 
 		vp_cursor_t cursor;
 		VALUE_PAIR *vp;
-		unsigned int i;
 
 		for (vp = fr_pair_cursor_init(&cursor, &template_variable->vps);
 		     vp;
@@ -898,6 +897,8 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 				break;
 			case DPC_TEMPL_VAR_RANDOM:
 				dpc_pair_value_randomize(vp);
+				break;
+			default:
 				break;
 			}
 		}
@@ -1680,7 +1681,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'v':
-			dpc_version_print();
+			version_print();
 			exit(EXIT_SUCCESS);
 
 		case 'x':

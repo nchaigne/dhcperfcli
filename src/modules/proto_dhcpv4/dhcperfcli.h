@@ -27,7 +27,7 @@
 extern int dpc_debug_lvl;
 
 #define DPC_DEBUG_ENABLED(_p) (fr_log_fp && dpc_debug_lvl >= _p)
-#define DPC_DEBUG(_p_, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log(_f "\n", ## __VA_ARGS__)
+#define DPC_DEBUG(_p, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log(_f "\n", ## __VA_ARGS__)
 
 #undef DEBUG
 #define DEBUG(fmt, ...)  DPC_DEBUG(1, fmt, ## __VA_ARGS__)
@@ -72,7 +72,7 @@ extern int dpc_debug_lvl;
 extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
-#define is_dhcp_(_x) (_x == FR_DHCPV4_DISCOVER || _x == FR_DHCPV4_REQUEST || _x == FR_DHCPV4_INFORM \
+#define is_dhcp_reply_expected(_x) (_x == FR_DHCPV4_DISCOVER || _x == FR_DHCPV4_REQUEST || _x == FR_DHCPV4_INFORM \
 	|| _x == FR_DHCPV4_LEASE_QUERY)
 /*
  *	Decline, Release: these messages do not get a reply.
@@ -240,7 +240,7 @@ struct dpc_session_ctx {
 	RADIUS_PACKET *reply;
 
 	dpc_state_t state;
-	bool ;     //!< Whether a reply is expected or not.
+	bool reply_expected;     //!< Whether a reply is expected or not.
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
