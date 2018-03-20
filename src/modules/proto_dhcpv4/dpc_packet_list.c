@@ -82,11 +82,14 @@ static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
 	if (a->id < b->id) return -1;
 	if (a->id > b->id) return +1;
 
-	/* Compare chaddr. */
-	if (a->data && b->data && a->data_len >= 34 && b->data_len >= 34) { /* To be safe... */
-		rcode = memcmp(a->data + 28, b->data + 28, 6);
-		if (rcode != 0) return rcode;
-	}
+	/*
+	 *	Do *not* compare chaddr. They do not necessarily match.
+	 *	E.g. a Lease-Query where the query type is not "by MAC address" (cf. RFC 4388 and 6148)
+	 */
+	//if (a->data && b->data && a->data_len >= 34 && b->data_len >= 34) {
+	//	rcode = memcmp(a->data + 28, b->data + 28, 6);
+	//	if (rcode != 0) return rcode;
+	//}
 
 	if (a->sockfd < b->sockfd) return -1;
 	if (a->sockfd > b->sockfd) return +1;
