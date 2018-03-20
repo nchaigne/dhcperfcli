@@ -211,6 +211,7 @@ struct dpc_input {
 	dpc_endpoint_t src;      //!< Src IP address and port.
 	dpc_endpoint_t dst;      //!< Dst IP address and port.
 	dpc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
+	bool with_pcap;          //!< If using a pcap socket (no src IP, dst = broadcast, and pcap is available).
 
 	dpc_input_list_t *list;  //!< The list to which this entry belongs (NULL for an unchained entry).
 

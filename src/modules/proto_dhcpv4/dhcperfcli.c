@@ -467,15 +467,26 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
  *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
  *	Returns: 0 = success, -1 = error.
  */
-// TODO: with pcap.
 static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p)
 // note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
 {
 	RADIUS_PACKET *packet = *packet_p;
+	int my_sockfd;
+	int ret;
 
 	DPC_DEBUG_TRACE("Preparing to send one packet");
 
-	int my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
+	/*
+	 *	Get a socket to send this over.
+	 */
+#ifdef HAVE_LIBPCAP
+	if (session->input->with_pcap) {
+		my_sockfd = pcap->fd;
+	} else
+#endif
+	{
+		my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
+	}
 	if (my_sockfd < 0) {
 		SPERROR("Failed to provide a suitable socket");
 		return -1;
@@ -524,7 +535,17 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 
 	packet->sockfd = my_sockfd;
 
-	if (fr_dhcpv4_udp_packet_send(packet) < 0) { /* Send using a connectionless UDP socket (sendfromto). */
+#ifdef HAVE_LIBPCAP
+	if (session->input->with_pcap) {
+		/* Send using pcap raw socket. */
+		ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
+	} else
+#endif
+	{
+		/* Send using a connectionless UDP socket (sendfromto). */
+		ret = fr_dhcpv4_udp_packet_send(packet);
+	}
+	if (ret < 0) {
 		SPERROR("Failed to send packet");
 		return -1;
 	}
@@ -1234,6 +1255,8 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	    && (dpc_ipaddr_is_broadcast(&input->dst.ipaddr) == 1)
 	   ) {
 		DPC_DEBUG_TRACE("Input (id: %u) will be broadcast using pcap raw socket", input->id);
+
+		input->with_pcap = true;
 
 		if (!pcap) {
 			char pcap_filter[255];

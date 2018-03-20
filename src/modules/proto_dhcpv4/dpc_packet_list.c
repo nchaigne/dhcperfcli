@@ -544,8 +544,9 @@ RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 			packet->sockfd = ps->pcap->fd; /* fr_dhcpv4_pcap_recv does not fill this. Why!? */
 		} else
 #endif
-		packet = fr_dhcpv4_udp_packet_recv(ps->sockfd);
-
+		{
+			packet = fr_dhcpv4_udp_packet_recv(ps->sockfd);
+		}
 		if (!packet) continue;
 
 		/*
