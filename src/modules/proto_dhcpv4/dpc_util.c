@@ -323,18 +323,27 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
  */
 void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 {
-	uint8_t const *p;
+	uint8_t const *p, *data_end;
 	char header[64];
 	char buf[1024];
 	int i;
+	unsigned int cur_pos = 0;
+	int pad_size = 0;
+	uint8_t const *pad_p = NULL;
 
 	if (!packet->data) return;
 
 	p = packet->data;
+	data_end = packet->data + packet->data_len - 1;
 
-	unsigned int cur_pos = 0;
+	/*
+	 *	Print fields.
+	 */
 	for (i = 0; dpc_dhcp_headers[i].name; i++) {
 		if (cur_pos + dpc_dhcp_headers[i].size > packet->data_len) {
+			/*
+			 *	This is malformed. Still print something useful.
+			 */
 			fprintf(fp, "  incomplete/malformed DHCP data (len: %zu)\n", packet->data_len);
 			int remain = packet->data_len - cur_pos;
 			if (remain > 0) {
@@ -345,6 +354,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 			return;
 		}
 
+		/* One valid field to print. */
 		sprintf(header, "  %04x  %10s: ", cur_pos, dpc_dhcp_headers[i].name);
 		dpc_print_hex_data(buf, p, dpc_dhcp_headers[i].size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
@@ -353,7 +363,67 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 		cur_pos += dpc_dhcp_headers[i].size;
 	}
 
-	// TODO: options.
+	/*
+	 *	Print options.
+	 */
+	while (p <= data_end) {
+
+		if (*p == 0) { /* Pad Option. Group consecutive padding in a single string. */
+			if (!pad_p) pad_p = p;
+			pad_size ++;
+			p ++;
+			continue;
+		} else if (pad_p) { /* We're done with padding octets: print them. */
+			sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
+			dpc_print_hex_data(buf, pad_p, pad_size, " ", header, 16);
+			fprintf(fp, "%s\n", buf);
+
+			cur_pos += pad_size;
+			pad_p = NULL;
+			pad_size = 0;
+		}
+
+		if (*p == 255) { /* End Option. */
+			sprintf(header, "  %04x  %10s: ", cur_pos, "end");
+			dpc_print_hex_data(buf, p, 1, " ", header, 16);
+			fprintf(fp, "%s\n", buf);
+
+			p ++;
+			cur_pos ++;
+			continue;
+		}
+
+		/*
+		 *	Option format: <code> <len> <option data>
+		 *	So an option is coded on "1 + 1 + value of <len>" octets.
+		 */
+		if (  ((p + 1) > data_end) /* No room for <len> */
+		   || ((p + 1 + p[1] ) > data_end) /* No room for <option data> */
+		   ) {
+			fprintf(fp, "  incomplete/malformed DHCP data (len: %zu)\n", packet->data_len);
+			int remain = packet->data_len - cur_pos;
+			if (remain > 0) {
+				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
+				dpc_print_hex_data(buf, p, remain, " ", header, 16);
+				fprintf(fp, "%s\n", buf);
+			}
+			return;
+		}
+
+		/* One valid option to print. */
+		int opt_size = p[1] + 2;
+		sprintf(header, "  %04x  %10d: ", cur_pos, p[0]);
+		dpc_print_hex_data(buf, p, opt_size, " ", header, 16);
+		fprintf(fp, "%s\n", buf);
+		p += opt_size;
+		cur_pos += opt_size;
+	}
+
+	if (pad_p) { /* There may be more padding after End Option. */
+		sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
+		dpc_print_hex_data(buf, pad_p, pad_size, " ", header, 16);
+		fprintf(fp, "%s\n", buf);
+	}
 }
 
 /*
