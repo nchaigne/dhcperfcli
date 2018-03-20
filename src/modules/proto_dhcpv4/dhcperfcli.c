@@ -531,13 +531,12 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 	// shouldn't FreeRADIUS lib do that ? TODO.
 	// (on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv.)
 
-	dpc_packet_print(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
-
 	packet->sockfd = my_sockfd;
 
 #ifdef HAVE_LIBPCAP
 	if (session->input->with_pcap) {
 		/* Send using pcap raw socket. */
+		packet->if_index = pcap->if_index; /* So we can trace it. */
 		ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
 	} else
 #endif
@@ -549,6 +548,8 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 		SPERROR("Failed to send packet");
 		return -1;
 	}
+
+	dpc_packet_print(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	/* Statistics. */
 	STAT_INCR_PACKET_SENT(packet->code);

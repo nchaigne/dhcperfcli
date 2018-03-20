@@ -404,6 +404,7 @@ char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
 {
 	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	char dst_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	char via[5 + IFNAMSIZ] = "";
 
 	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &packet->src_ipaddr);
 	fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->dst_ipaddr);
@@ -418,6 +419,15 @@ char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
 		        dst_ipaddr_buf, packet->dst_port, packet->dst_ipaddr.prefix
 		);
 	}
+
+#if defined(WITH_IFINDEX_NAME_RESOLUTION)
+	if (packet->if_index) {
+		char if_name[IFNAMSIZ];
+		sprintf(via, " via %s", fr_ifname_from_ifindex(if_name, packet->if_index));
+		strcat(buf, via);
+	}
+#endif
+
 	return buf;
 }
 
