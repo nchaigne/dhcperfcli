@@ -1263,12 +1263,12 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 
 			pcap = fr_pcap_init(NULL, iface, PCAP_INTERFACE_IN_OUT);
 			if (!pcap) {
-				ERROR("Failed to initialize pcap");
+				PERROR("Failed to initialize pcap");
 				exit(EXIT_FAILURE);
 			}
 
 			if (fr_pcap_open(pcap) < 0) {
-				ERROR("Failed to open pcap interface");
+				PERROR("Failed to open pcap interface");
 				exit(EXIT_FAILURE);
 			}
 
@@ -1276,7 +1276,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 			sprintf(pcap_filter, "udp");
 
 			if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
-				ERROR("Failing to apply pcap filter");
+				PERROR("Failing to apply pcap filter");
 				exit(EXIT_FAILURE);
 			}
 
@@ -1680,7 +1680,12 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hi:L:N:p:P:r:s:t:TvxX")) != EOF) {
+	while ((argval = getopt(argc, argv, "f:g:hI:L:N:p:P:r:s:t:TvxX"
+#ifdef HAVE_LIBPCAP
+	       "i:"
+#endif
+	      )) != EOF)
+	{
 		switch (argval) {
 		case 'f':
 			file_vps_in = optarg;
@@ -1694,7 +1699,13 @@ static void dpc_options_parse(int argc, char **argv)
 			usage(0);
 			break;
 
+#ifdef HAVE_LIBPCAP
 		case 'i':
+			iface = optarg;
+			break;
+#endif
+
+		case 'I':
 			if (!is_integer(optarg)) { // lib/util/misc.c
 				ERROR("Invalid value for option -i (integer expected)");
 				usage(1);
@@ -1968,7 +1979,10 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
 	fprintf(fd, "                   of those gateways in a round-robin fashion.\n");
 	fprintf(fd, "  -h               Print this help message.\n");
-	fprintf(fd, "  -i <num>         Start generating xid values with <num>.\n");
+#ifdef HAVE_LIBPCAP
+	fprintf(fd, "  -i <interface>   Use this interface for unconfigured clients to broadcast through a raw socket.\n");
+#endif
+	fprintf(fd, "  -I <num>         Start generating xid values with <num>.\n");
 	fprintf(fd, "  -L <seconds>     Limit duration (beyond which no new session will be started).\n");
 	fprintf(fd, "  -N <num>         Start at most <num> sessions (in template mode: generate <num> sessions).\n");
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
