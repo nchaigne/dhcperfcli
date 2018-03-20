@@ -886,6 +886,15 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	input->src = transport->src;
 	input->dst = transport->dst;
 
+#ifdef HAVE_LIBPCAP
+	if (iface && (fr_ipaddr_is_inaddr_any(&input->src.ipaddr) == 1)
+	    && (dpc_ipaddr_is_broadcast(&input->dst.ipaddr) == 1)
+	   ) {
+		input->with_pcap = true;
+		/* Note: pcap has been initialized beforehand. */
+	}
+#endif
+
 	/*
 	 *	Associate input to gateway, if one is defined (or several).
 	 */
