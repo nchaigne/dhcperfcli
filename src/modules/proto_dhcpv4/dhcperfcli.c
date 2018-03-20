@@ -755,8 +755,8 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		talloc_free(session->reply);
 		session->reply = NULL;
 
-		if (!dpc_packet_list_id_free(pl, session->packet, true)) {
-			WARN("Failed to free from packet list, id: %u", session->packet->id);
+		if (!dpc_packet_list_id_free(pl, session->packet, true)) { /* Should never fail. */
+			SERROR("Failed to free from packet list, id: %u", session->packet->id);
 		}
 		talloc_free(session->packet);
 		session->packet = packet;
@@ -885,15 +885,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	input->workflow = transport->workflow;
 	input->src = transport->src;
 	input->dst = transport->dst;
-
-#ifdef HAVE_LIBPCAP
-	if (iface && (fr_ipaddr_is_inaddr_any(&input->src.ipaddr) == 1)
-	    && (dpc_ipaddr_is_broadcast(&input->dst.ipaddr) == 1)
-	   ) {
-		input->with_pcap = true;
-		/* Note: pcap has been initialized beforehand. */
-	}
-#endif
+	input->with_pcap = transport->with_pcap;
 
 	/*
 	 *	Associate input to gateway, if one is defined (or several).
@@ -1024,8 +1016,8 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 
 	/* Remove the packet from the list, and free the id we've been using. */
 	if (session->packet && session->packet->id != DPC_PACKET_ID_UNASSIGNED) {
-		if (!dpc_packet_list_id_free(pl, session->packet, true)) {
-			WARN("Failed to free from packet list, id: %u", session->packet->id);
+		if (!dpc_packet_list_id_free(pl, session->packet, true)) { /* Should never fail. */
+			SERROR("Failed to free from packet list, id: %u", session->packet->id);
 		}
 	}
 
@@ -1215,7 +1207,7 @@ static void dpc_loop_timer_events(void)
 static bool dpc_loop_check_done(void)
 {
 	/* There are still ongoing requests, to which we expect a reply or wait for a timeout. */
-	if (dpc_packet_list_num_elements(pl) > 0) return false;
+	//if (dpc_packet_list_num_elements(pl) > 0) return false; // checking active sessions is enough.
 
 	/* There are still active sessions. */
 	if (session_num_active > 0) return false;
@@ -1264,7 +1256,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	if (iface && (fr_ipaddr_is_inaddr_any(&input->src.ipaddr) == 1)
 	    && (dpc_ipaddr_is_broadcast(&input->dst.ipaddr) == 1)
 	   ) {
-		DPC_DEBUG_TRACE("Input (id: %u) will be broadcast using pcap raw socket", input->id);
+		DPC_DEBUG_TRACE("Input (id: %u) involves broadcast using pcap raw socket", input->id);
 
 		input->with_pcap = true;
 

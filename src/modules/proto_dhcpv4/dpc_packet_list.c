@@ -75,12 +75,18 @@ typedef struct dpc_packet_list {
  */
 static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
 {
-	int rcode;
+	int rcode = 0;
 
 	DPC_DEBUG_TRACE("id: (%u <-> %u), sockfd: (%d <-> %d)", a->id, b->id, a->sockfd, b->sockfd);
 
 	if (a->id < b->id) return -1;
 	if (a->id > b->id) return +1;
+
+	/* Compare chaddr. */
+	if (a->data && b->data && a->data_len >= 34 && b->data_len >= 34) { /* To be safe... */
+		rcode = memcmp(a->data + 28, b->data + 28, 6);
+		if (rcode != 0) return rcode;
+	}
 
 	if (a->sockfd < b->sockfd) return -1;
 	if (a->sockfd > b->sockfd) return +1;
@@ -300,7 +306,7 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
  */
 RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKET *reply)
 {
-	RADIUS_PACKET my_request, *request;
+	RADIUS_PACKET my_request = { 0 }, *request;
 	dpc_packet_socket_t *ps;
 
 	if (!pl || !reply) return NULL;
@@ -328,6 +334,10 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 
 	my_request.dst_ipaddr = reply->src_ipaddr;
 	my_request.dst_port = reply->src_port;
+
+	/* Allow chaddr to be accessible. */
+	my_request.data = reply->data;
+	my_request.data_len = reply->data_len;
 
 	request = &my_request;
 
