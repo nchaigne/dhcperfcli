@@ -865,6 +865,13 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	r = fr_dhcpv4_packet_encode(packet); /* This always returns 0. */
 	fr_strerror(); /* Clear the error buffer */
 
+	/*
+	 *	Note: if packet data len < 300 (DEFAULT_PACKET_SIZE), fr_dhcpv4_packet_encode will pad with
+	 *	zeroes at the end of the packet data to fill up 300 octets.
+	 *	From protocols/dhcpv4/dhcpv4.h: "Some clients silently ignore responses less than 300 bytes."
+	 *	(We are a client, but not that dumb.)
+	 */
+
 	return r;
 }
 
