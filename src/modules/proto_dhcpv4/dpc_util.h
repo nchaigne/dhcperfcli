@@ -54,9 +54,10 @@ VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp);
 void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t high);
 bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high);
 
-void dpc_float_to_timeval(struct timeval *tv, float f_val);
-float dpc_timeval_to_float(struct timeval *tv);
-bool dpc_str_to_float(float *out, char const *value);
+void dpc_float_to_timeval(struct timeval *out, float in);
+float dpc_timeval_to_float(struct timeval *in);
+bool dpc_str_to_float(float *out, char const *in);
+bool dpc_str_to_uint32(uint32_t *out, char const *in);
 char *dpc_str_trim(char *str);
 
 void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);

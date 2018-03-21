@@ -774,18 +774,18 @@ bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
 /*
  *	Convert a float to struct timeval.
  */
-void dpc_float_to_timeval(struct timeval *tv, float f_val)
+void dpc_float_to_timeval(struct timeval *tv, float in)
 {
-	tv->tv_sec = (time_t)f_val;
-	tv->tv_usec = (uint64_t)(f_val * USEC) - (tv->tv_sec * USEC);
+	tv->tv_sec = (time_t)in;
+	tv->tv_usec = (uint64_t)(in * USEC) - (tv->tv_sec * USEC);
 }
 
 /*
  *	Convert a struct timeval to float.
  */
-float dpc_timeval_to_float(struct timeval *tv)
+float dpc_timeval_to_float(struct timeval *in)
 {
-	float value = (tv->tv_sec + (float)tv->tv_usec / USEC);
+	float value = (in->tv_sec + (float)in->tv_usec / USEC);
 	return value;
 }
 
@@ -794,11 +794,11 @@ float dpc_timeval_to_float(struct timeval *tv)
  *	If so convert it to float.
  *	Note: not using strtof because we want to be more restrictive.
  */
-bool dpc_str_to_float(float *out, char const *value)
+bool dpc_str_to_float(float *out, char const *in)
 {
-	if (!value || strlen(value) == 0) return false;
+	if (!in || strlen(in) == 0) return false;
 
-	char const *p = value;
+	char const *p = in;
 	while (*p != '\0') {
 		if (isdigit(*p)) {
 			p ++;
@@ -819,9 +819,38 @@ bool dpc_str_to_float(float *out, char const *value)
 
 	/* Format is correct. */
 	if (out) {
-		*out = atof(value);
+		*out = atof(in);
 	}
 	return true;
+}
+
+/*
+ *	Check that a string represents either an integer or a valid hex string.
+ *	If so convert it to uint32.
+ */
+bool dpc_str_to_uint32(uint32_t *out, char const *in)
+{
+	size_t len = strlen(in);
+	char *endptr = NULL;
+
+	if ((len < 2) || (strncasecmp(in, "0x", 2) != 0)) {
+		/* No 0x prefix, it must be an integer. */
+		if (!is_integer(in)) return false;
+
+		/* It's safe to convert. */
+		*out = atoi(in);
+		return true;
+	}
+
+	len -= 2; /* Without 0x prefix. */
+
+	if ( (len & 0x01) != 0 /* Not even. */
+	    || len > 8) /* Too long. */
+		return false;
+
+	errno = 0;
+	*out = (uint32_t)strtol(in + 2, &endptr, 16);
+	return (!(errno || *endptr != '\0'));
 }
 
 /*

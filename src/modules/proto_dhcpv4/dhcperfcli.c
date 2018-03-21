@@ -620,8 +620,9 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		 *	- The IP address to which the reply was sent does not match (maybe giaddr / source IP address mixup)
 		 *	- The transaction ID does not match (DHCP server is broken)
 		 */
-		DEBUG("Received unexpected packet %s, id: %u (0x%08x)",
-		      dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
+		DEBUG("Received unexpected packet Id %u (0x%08x) %s length %zu",
+		      reply->id, reply->id, dpc_print_packet_from_to(from_to_buf, reply, false), reply->data_len);
+
 		stat_ctx.num_packet_recv_unexpected ++;
 		fr_radius_free(&reply);
 		return -1;
@@ -1715,11 +1716,10 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-			if (!is_integer(optarg)) { // lib/util/misc.c
-				ERROR("Invalid value for option -i (integer expected)");
+			if (!dpc_str_to_uint32(&base_xid, optarg)) {
+				ERROR("Invalid value for option -i (integer expected - or hex string)");
 				usage(1);
 			}
-			base_xid = atoi(optarg);
 			break;
 
 		case 'L':
