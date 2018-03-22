@@ -756,7 +756,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		talloc_free(session->reply);
 		session->reply = NULL;
 
-		if (!dpc_packet_list_id_free(pl, session->packet, true)) { /* Should never fail. */
+		if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
 			SERROR("Failed to free from packet list, id: %u", session->packet->id);
 		}
 		talloc_free(session->packet);
@@ -1024,7 +1024,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 
 	/* Remove the packet from the list, and free the id we've been using. */
 	if (session->packet && session->packet->id != DPC_PACKET_ID_UNASSIGNED) {
-		if (!dpc_packet_list_id_free(pl, session->packet, true)) { /* Should never fail. */
+		if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
 			SERROR("Failed to free from packet list, id: %u", session->packet->id);
 		}
 	}
