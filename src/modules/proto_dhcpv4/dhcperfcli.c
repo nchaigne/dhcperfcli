@@ -1554,35 +1554,31 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 }
 
 /*
- *	Load dictionaries.
+ *	Initialize and load dictionaries.
  */
 static void dpc_dict_init(TALLOC_CTX *ctx)
 {
-	fr_dict_attr_t const *da;
-
-	DEBUG("Including dictionary file: %s/%s", dict_dir, FR_DICTIONARY_FILE);
-	if (fr_dict_from_file(ctx, &dict, dict_dir, FR_DICTIONARY_FILE, progname) < 0) {
-		fr_perror("dhcperfcli");
+	/* Initialize dictionary. Read FreeRADIUS internal dictionary first. */
+	DEBUG("Including dictionary file: %s/%s", dict_dir, "dictionary.freeradius.internal");
+	if (fr_dict_from_file(ctx, &dict, dict_dir, "dictionary.freeradius.internal", progname) != 0) {
+		PERROR("Failed to initialize dictionary");
 		exit(EXIT_FAILURE);
 	}
 
-	DEBUG("Including dictionary file: %s/%s", radius_dir, FR_DICTIONARY_FILE);
-	if (fr_dict_read(dict, radius_dir, FR_DICTIONARY_FILE) == -1) {
-		fr_log_perror(&default_log, L_ERR, "Failed to initialize the dictionaries");
+	/* Read the DHCP dictionary. */
+	DEBUG("Including dictionary file: %s/%s", dict_dir, "dictionary.dhcp");
+	if (fr_dict_read(dict, dict_dir, "dictionary.dhcp") != 0) {
+		PERROR("Failed to read DHCP dictionary");
 		exit(EXIT_FAILURE);
+	}
+
+	/* Load user dictionary. */
+	DEBUG("Including dictionary file: %s/%s", radius_dir, FR_DICTIONARY_FILE);
+	if (fr_dict_read(dict, radius_dir, FR_DICTIONARY_FILE) != 0) {
+		DEBUG("No user dictionary");
+		// We don't need this. Maybe later. TODO.
 	}
 	fr_strerror(); /* Clear the error buffer */
-
-	/*
-	 *	Ensure that dictionary.dhcp is loaded.
-	 */
-	da = fr_dict_attr_by_name(NULL, "DHCP-Message-Type");
-	if (!da) {
-		if (fr_dict_read(dict, dict_dir, "dictionary.dhcp") < 0) {
-			ERROR("Failed reading dictionary.dhcp");
-			exit(EXIT_FAILURE);
-		}
-	}
 }
 
 /*
