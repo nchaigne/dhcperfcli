@@ -1686,6 +1686,11 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
+#define ERROR_OPT_VALUE(_l) { \
+		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
+		usage(1); \
+	}
+
 	while ((argval = getopt(argc, argv, "D:f:g:hI:L:N:p:P:r:s:t:TvxX"
 #ifdef HAVE_LIBPCAP
 	       "i:"
@@ -1716,64 +1721,40 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-			if (!dpc_str_to_uint32(&base_xid, optarg)) {
-				ERROR("Invalid value for option -i (expected: integer or hex string)");
-				usage(1);
-			}
+			if (!dpc_str_to_uint32(&base_xid, optarg)) ERROR_OPT_VALUE("integer or hex string");
 			break;
 
 		case 'L':
-			if (!dpc_str_to_float(&duration_max, optarg)) {
-				ERROR("Invalid value for option -L (expected: floating point number)");
-				usage(1);
-			}
+			if (!dpc_str_to_float(&duration_max, optarg)) ERROR_OPT_VALUE("floating point number");
 			break;
 
 		case 'N':
-			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -N (expected: integer)");
-				usage(1);
-			}
+			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			session_max_num = atoi(optarg);
 			break;
 
 		case 'p':
-			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -p (expected: integer)");
-				usage(1);
-			}
+			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			session_max_active = atoi(optarg);
 			if (session_max_active == 0) session_max_active = 1;
 			break;
 
 		case 'P':
-			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -P (expected: integer)");
-				usage(1);
-			}
+			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			packet_trace_lvl = atoi(optarg);
 			break;
 
 		case 'r':
-			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -r (expected: integer)");
-				usage(1);
-			}
+			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			rate_limit = atoi(optarg);
 			break;
 
 		case 's':
-			if (!dpc_str_to_float(&progress_interval, optarg)) {
-				ERROR("Invalid value for option -s (expected: floating point number)");
-				usage(1);
-			}
+			if (!dpc_str_to_float(&progress_interval, optarg)) ERROR_OPT_VALUE("floating point number");
 			break;
 
 		case 't':
-			if (!dpc_str_to_float(&timeout, optarg)) {
-				ERROR("Invalid value for option -t (expected: floating point number)");
-				usage(1);
-			}
+			if (!dpc_str_to_float(&timeout, optarg)) ERROR_OPT_VALUE("floating point number");
 			break;
 
 		case 'T':
