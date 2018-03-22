@@ -830,27 +830,16 @@ bool dpc_str_to_float(float *out, char const *in)
  */
 bool dpc_str_to_uint32(uint32_t *out, char const *in)
 {
-	size_t len = strlen(in);
-	char *endptr = NULL;
+	uint64_t uinteger = 0;
+	char *p = NULL;
 
-	if ((len < 2) || (strncasecmp(in, "0x", 2) != 0)) {
-		/* No 0x prefix, it must be an integer. */
-		if (!is_integer(in)) return false;
+	if (!in || in[0] == '\0') return false;
 
-		/* It's safe to convert. */
-		*out = atoi(in);
-		return true;
-	}
+	uinteger = fr_strtoull(in, &p); /* Allows integer or hex string. */
+	if (*p != '\0' || uinteger > UINT32_MAX) return false;
 
-	len -= 2; /* Without 0x prefix. */
-
-	if ( (len & 0x01) != 0 /* Not even. */
-	    || len > 8) /* Too long. */
-		return false;
-
-	errno = 0;
-	*out = (uint32_t)strtol(in + 2, &endptr, 16);
-	return (!(errno || *endptr != '\0'));
+	*out = (uint32_t) uinteger;
+	return true;
 }
 
 /*

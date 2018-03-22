@@ -1717,21 +1717,21 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'I':
 			if (!dpc_str_to_uint32(&base_xid, optarg)) {
-				ERROR("Invalid value for option -i (integer expected - or hex string)");
+				ERROR("Invalid value for option -i (expected: integer or hex string)");
 				usage(1);
 			}
 			break;
 
 		case 'L':
 			if (!dpc_str_to_float(&duration_max, optarg)) {
-				ERROR("Invalid value for option -L (floating point number expected)");
+				ERROR("Invalid value for option -L (expected: floating point number)");
 				usage(1);
 			}
 			break;
 
 		case 'N':
 			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -N (integer expected)");
+				ERROR("Invalid value for option -N (expected: integer)");
 				usage(1);
 			}
 			session_max_num = atoi(optarg);
@@ -1739,7 +1739,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'p':
 			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -p (integer expected)");
+				ERROR("Invalid value for option -p (expected: integer)");
 				usage(1);
 			}
 			session_max_active = atoi(optarg);
@@ -1748,7 +1748,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'P':
 			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -P (integer expected)");
+				ERROR("Invalid value for option -P (expected: integer)");
 				usage(1);
 			}
 			packet_trace_lvl = atoi(optarg);
@@ -1756,7 +1756,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'r':
 			if (!is_integer(optarg)) {
-				ERROR("Invalid value for option -r (integer expected)");
+				ERROR("Invalid value for option -r (expected: integer)");
 				usage(1);
 			}
 			rate_limit = atoi(optarg);
@@ -1764,14 +1764,14 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 's':
 			if (!dpc_str_to_float(&progress_interval, optarg)) {
-				ERROR("Invalid value for option -s (floating point number expected)");
+				ERROR("Invalid value for option -s (expected: floating point number)");
 				usage(1);
 			}
 			break;
 
 		case 't':
 			if (!dpc_str_to_float(&timeout, optarg)) {
-				ERROR("Invalid value for option -t (floating point number expected)");
+				ERROR("Invalid value for option -t (expected: floating point number)");
 				usage(1);
 			}
 			break;
