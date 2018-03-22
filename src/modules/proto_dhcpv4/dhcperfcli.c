@@ -1686,13 +1686,17 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	bool debug_fr =  false;
 
-	while ((argval = getopt(argc, argv, "f:g:hI:L:N:p:P:r:s:t:TvxX"
+	while ((argval = getopt(argc, argv, "D:f:g:hI:L:N:p:P:r:s:t:TvxX"
 #ifdef HAVE_LIBPCAP
 	       "i:"
 #endif
 	      )) != EOF)
 	{
 		switch (argval) {
+		case 'D':
+			dict_dir = optarg;
+			break;
+
 		case 'f':
 			file_vps_in = optarg;
 			break;
@@ -1979,6 +1983,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   Or (workflow): dora.\n");
 	fprintf(fd, "                   If omitted, packet type must be specified in input vps.\n");
 	fprintf(fd, " Options:\n");
+	fprintf(fd, "  -D <dictdir>     Set main dictionary directory (defaults to " DICTDIR ").\n");
 	fprintf(fd, "  -f <file>        Read input vps from <file>, in addition to stdin\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
