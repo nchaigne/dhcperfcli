@@ -1282,8 +1282,8 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 				exit(EXIT_FAILURE);
 			}
 
-			//sprintf(pcap_filter, "udp and dst port %d", packet->src_port); // TODO: handle different ports ??
 			sprintf(pcap_filter, "udp");
+			//sprintf(pcap_filter, "udp and dst host 255.255.255.255"); // or maybe this ? TODO.
 
 			if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
 				PERROR("Failing to apply pcap filter");

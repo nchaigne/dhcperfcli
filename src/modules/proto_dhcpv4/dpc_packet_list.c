@@ -342,6 +342,17 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 	my_request.data = reply->data;
 	my_request.data_len = reply->data_len;
 
+	/*
+	 *	If we've received this on the raw socket, this has to be handled specifically, e.g.:
+	 *	The packet we've sent : src = 0.0.0.0:68 -> dst = 255.255.255.255:67
+	 *	The reply we get : src = <DHCP server>:67 -> dst = 255.255.255.255:68
+	 */
+	if (ps->pcap) {
+		DPC_DEBUG_TRACE("Reply received through raw socket: looking for broadcast packet.");
+		my_request.src_ipaddr.addr.v4.s_addr = htonl(INADDR_ANY);
+		my_request.dst_ipaddr.addr.v4.s_addr = htonl(INADDR_BROADCAST);
+	}
+
 	request = &my_request;
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
