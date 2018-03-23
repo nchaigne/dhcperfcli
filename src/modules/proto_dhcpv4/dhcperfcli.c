@@ -1691,7 +1691,7 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(1); \
 	}
 
-	while ((argval = getopt(argc, argv, "D:f:g:hI:L:N:p:P:r:s:t:TvxX"
+	while ((argval = getopt(argc, argv, "D:f:g:hI:L:N:p:P:r:Rs:t:TvxX"
 #ifdef HAVE_LIBPCAP
 	       "i:"
 #endif
@@ -1747,6 +1747,10 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'r':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			rate_limit = atoi(optarg);
+			break;
+
+		case 'R':
+			templ_var = DPC_TEMPL_VAR_RANDOM;
 			break;
 
 		case 's':
@@ -1959,13 +1963,13 @@ static void NEVER_RETURNS usage(int status)
 	FILE *fd = status ? stderr : stdout;
 
 	fprintf(fd, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
-	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in inputs vps.\n");
+	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
 	fprintf(fd, "  <command>        One of (packet type): discover, request, decline, release, inform, lease_query.\n");
 	fprintf(fd, "                   Or (workflow): dora.\n");
-	fprintf(fd, "                   If omitted, packet type must be specified in input vps.\n");
+	fprintf(fd, "                   If omitted, packet type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -D <dictdir>     Set main dictionary directory (defaults to " DICTDIR ").\n");
-	fprintf(fd, "  -f <file>        Read input vps from <file>, in addition to stdin\n");
+	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
 	fprintf(fd, "                   of those gateways in a round-robin fashion.\n");
@@ -1979,9 +1983,10 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
 	fprintf(fd, "  -r <num>         Rate limit (transaction replies /s)\n");
+	fprintf(fd, "  -R               Randomize template variable values (instead of increment).\n");
 	fprintf(fd, "  -s <seconds>     Periodically report progress statistics information.\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
-	fprintf(fd, "  -T               Template mode. Sessions input is generated from invariant and variable input vps.\n");
+	fprintf(fd, "  -T               Template mode. Sessions input is generated from invariant and variable input items.\n");
 	fprintf(fd, "  -v               Print version information.\n");
 	fprintf(fd, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
 	fprintf(fd, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
