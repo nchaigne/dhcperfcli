@@ -347,11 +347,13 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 	 *	The packet we've sent : src = 0.0.0.0:68 -> dst = 255.255.255.255:67
 	 *	The reply we get : src = <DHCP server>:67 -> dst = 255.255.255.255:68
 	 */
+#ifdef HAVE_LIBPCAP
 	if (ps->pcap) {
 		DPC_DEBUG_TRACE("Reply received through raw socket: looking for broadcast packet.");
 		my_request.src_ipaddr.addr.v4.s_addr = htonl(INADDR_ANY);
 		my_request.dst_ipaddr.addr.v4.s_addr = htonl(INADDR_BROADCAST);
 	}
+#endif
 
 	request = &my_request;
 
