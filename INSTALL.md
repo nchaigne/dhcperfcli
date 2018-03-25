@@ -18,6 +18,25 @@ To sum up you will need :
 
 - Libkqueue
 
+  - Build from sources:
+
+>__`LIBKQUEUE_VERSION=2.1.0`__<br>
+>__`cd /home/build`__<br>
+>__`wget https://github.com/mheily/libkqueue/archive/v${LIBKQUEUE_VERSION}.tar.gz`__<br>
+>__`tar -xvzf v${LIBKQUEUE_VERSION}.tar.gz`__<br>
+>__`cd libkqueue-${LIBKQUEUE_VERSION}`__<br>
+>__`./configure --prefix=/opt/libkqueue/${LIBKQUEUE_VERSION}`__<br>
+>__`make && make install`__<br>
+
+
+And optionally:
+
+- Libpcap
+
+>__`yum -y install libpcap-devel`__
+
+While libpcap is not mandatory to build, it is needed by *dhcpercli* to send packets directly through the data link layer (Ethernet). You need this to simulate broadcasting directly connected clients (i.e. not relayed) with no assigned IP address.
+
 
 ## Build FreeRADIUS
 
@@ -39,7 +58,9 @@ Then:
 
 ### Build from sources
 
->__`./configure --prefix=/opt/freeradius/4.0.x`__<br>
+>__`./configure --prefix=/opt/freeradius/4.0.x \`__<br>
+>__`--with-kqueue-include-dir=/opt/libkqueue/2.1.0/include/kqueue \`__<br>
+>__`--with-kqueue-lib-dir=/opt/libkqueue/2.1.0/lib`__<br>
 >__`make`__<br>
 >__`make install`__<br>
 
@@ -70,7 +91,7 @@ All you need is located in directory `src/modules/proto_dhcpv4`
 
 Copy the files to the same directory in FreeRADIUS sources tree:
 
->__`cp -f src/modules/proto_dhcpv4/* <FreeRADIUS sources>/src/modules/proto_dhcpv4`__
+>__`cp -f src/modules/proto_dhcpv4/* <FreeRADIUS sources>/src/modules/proto_dhcpv4/`__
 
 Note: file `all.mk` will be overwritten. This is necessary so FreeRADIUS knows that it has to build *dhcperfcli*.
 
@@ -82,7 +103,7 @@ Then build FreeRADIUS again:
 
 You will need to update your PATH environment variable so you can execute the program from wherever.<br>
 For example:
->__`export PATH=/opt/freeradius/4.0.x/sbin`__
+>__`export PATH=/opt/freeradius/4.0.x/sbin:$PATH`__
 
 Finally, check installation:
 
