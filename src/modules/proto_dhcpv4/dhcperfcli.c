@@ -165,7 +165,7 @@ static void dpc_main_loop(void);
 
 static bool dpc_parse_input(dpc_input_t *input);
 static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list);
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list);
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
 static void dpc_dict_init(TALLOC_CTX *ctx);
@@ -1456,7 +1456,7 @@ static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
 /*
  *	Load input vps.
  */
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list)
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list, char const *filename)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -1471,8 +1471,8 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
 		if (fr_pair_list_afrom_file(input, &input->vps, file_in, &file_done) < 0) {
-			ERROR("Error parsing input vps");
-			talloc_free(input);
+			PERROR("Failed to read input items from %s", filename);
+			exit(EXIT_FAILURE); /* Be unforgiving. */
 			break;
 		}
 		if (NULL == input->vps) {
@@ -1509,7 +1509,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	 */
 	if (dpc_stdin_peek()) {
 		DEBUG("Reading input from stdin");
-		dpc_input_load_from_fd(ctx, stdin, &vps_list_in);
+		dpc_input_load_from_fd(ctx, stdin, &vps_list_in, "stdin");
 	} else {
 		DPC_DEBUG_TRACE("Nothing to read on stdin");
 	}
@@ -1526,7 +1526,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 			exit(EXIT_FAILURE);
 		}
 
-		dpc_input_load_from_fd(ctx, file_in, &vps_list_in);
+		dpc_input_load_from_fd(ctx, file_in, &vps_list_in, file_vps_in);
 
 		fclose(file_in);
 	}
@@ -1788,30 +1788,6 @@ static void dpc_options_parse(int argc, char **argv)
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
 	/*
-	 *	If packet trace level is unspecified, figure out something automatically.
-	 */
-	if (packet_trace_lvl == -1) {
-		if (session_max_num == 1 || (!with_template && vps_list_in.size < 2)) {
-			/* Only one request: full packet print. */
-			packet_trace_lvl = 2;
-		} else if (session_max_active == 1) {
-			/*
-			 *	Several requests, but no parallelism.
-			 *	If the number of sessions and the max duration are reasonably small, print packets header.
-			 *	Otherwise: no packet print.
-			 */
-			if (session_max_num > 50 || duration_max > 1.0) {
-				packet_trace_lvl = 0;
-			} else {
-				packet_trace_lvl = 1;
-			}
-		} else {
-			/* Several request in parallel: no packet print. */
-			packet_trace_lvl = 0;
-		}
-	}
-
-	/*
 	 *	Resolve server host address and port.
 	 */
 	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
@@ -1927,6 +1903,31 @@ int main(int argc, char **argv)
 
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
+
+	/*
+	 *	If packet trace level is unspecified, figure out something automatically.
+	 */
+	if (packet_trace_lvl == -1) {
+		if (session_max_num == 1 || (!with_template && vps_list_in.size < 2)) {
+			/* Only one request: full packet print. */
+			packet_trace_lvl = 2;
+		} else if (session_max_active == 1) {
+			/*
+			 *	Several requests, but no parallelism.
+			 *	If the number of sessions and the max duration are reasonably small, print packets header.
+			 *	Otherwise: no packet print.
+			 */
+			if (session_max_num > 50 || duration_max > 1.0) {
+				packet_trace_lvl = 0;
+			} else {
+				packet_trace_lvl = 1;
+			}
+		} else {
+			/* Several request in parallel: no packet print. */
+			packet_trace_lvl = 0;
+		}
+		DPC_DEBUG_TRACE("Packet trace level set to: %d", packet_trace_lvl);
+	}
 
 	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
 
