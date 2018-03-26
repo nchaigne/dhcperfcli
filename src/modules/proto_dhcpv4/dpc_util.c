@@ -247,7 +247,7 @@ void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp)
 	fr_cursor_t cursor;
 
 	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
-		if ((vp->da->vendor == DHCP_MAGIC_VENDOR) && (vp->da->attr >= 256 && vp->da->attr <= 269)) {
+		if ((fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) && (vp->da->attr >= 256 && vp->da->attr <= 269)) {
 			fr_pair_fprint(fp, vp);
 		}
 	}
@@ -264,7 +264,8 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 
 	fr_cursor_t cursor;
 	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
-		if ((vp->da->vendor == DHCP_MAGIC_VENDOR) && !(vp->da->attr >= 256 && vp->da->attr <= 269)) {
+		if ((fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) && !(vp->da->attr >= 256 && vp->da->attr <= 269)) {
+
 			num ++;
 
 			p = buf;

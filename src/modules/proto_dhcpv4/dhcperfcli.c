@@ -926,7 +926,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 		     vp = fr_pair_cursor_next(&cursor))
 		{
 			/* Only DHCP attributes can be variable. */
-			if (vp->da->vendor != DHCP_MAGIC_VENDOR) continue;
+			if (fr_dict_vendor_num_by_da(vp->da) != DHCP_MAGIC_VENDOR) continue;
 
 			/* Update value according to template variable mode. */
 			switch (templ_var) {
@@ -1339,9 +1339,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 		/*
 		 *	Allow to set packet type using DHCP-Message-Type
 		 */
-		if (vp->da->vendor == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
+		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
 			input->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
-		} else if (!vp->da->vendor) switch (vp->da->attr) {
+		} else if (fr_dict_attr_is_top_level(vp->da)) switch (vp->da->attr) {
 		/*
 		 *	Also allow to set packet type using Packet-Type
 		 *	(this takes precedence over the command argument.)
@@ -1981,7 +1981,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -L <seconds>     Limit duration (beyond which no new session will be started).\n");
 	fprintf(fd, "  -N <num>         Start at most <num> sessions (in template mode: generate <num> sessions).\n");
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
-	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: +attributes).\n");
+	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
 	fprintf(fd, "  -r <num>         Rate limit (transaction replies /s)\n");
 	fprintf(fd, "  -R               Randomize template variable values (instead of increment).\n");
 	fprintf(fd, "  -s <seconds>     Periodically report progress statistics information.\n");
