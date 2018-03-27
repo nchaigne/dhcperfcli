@@ -505,6 +505,9 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 			DPC_DEBUG_TRACE("Allocate xid (don't care which)");
 		}
 
+		/*
+		 *	Allocate an id, and prepare the packet (socket fd, src addr)
+		 */
 		rcode = dpc_packet_list_id_alloc(pl, my_sockfd, packet_p);
 		if (!rcode) {
 			SERROR("Failed to allocate packet xid");
@@ -827,8 +830,6 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
-	DPC_DEBUG_TRACE("New packet allocated");
-
 	/* Fill in the packet value pairs. */
 	dpc_pair_list_append(request, &request->vps, input->vps);
 
@@ -843,6 +844,10 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 	request->dst_port = input->dst.port;
 	request->src_ipaddr = input->src.ipaddr;
 	request->dst_ipaddr = input->dst.ipaddr;
+
+	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+	DPC_DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
+	                dpc_print_packet_from_to(from_to_buf, request, false));
 
 	return request;
 }

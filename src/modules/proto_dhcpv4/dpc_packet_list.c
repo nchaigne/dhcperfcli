@@ -77,7 +77,8 @@ static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
 {
 	int rcode = 0;
 
-	DPC_DEBUG_TRACE("id: (%u <-> %u), sockfd: (%d <-> %d)", a->id, b->id, a->sockfd, b->sockfd);
+	DPC_DEBUG_TRACE("id: (%u <-> %u), sockfd: (%d <-> %d), src_port: (%d <-> %d), dst_port: (%d <-> %d)",
+	                a->id, b->id, a->sockfd, b->sockfd, a->src_port, b->src_port, a->dst_port, b->dst_port);
 
 	if (a->id < b->id) return -1;
 	if (a->id > b->id) return +1;
@@ -94,8 +95,10 @@ static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
 	if (a->sockfd < b->sockfd) return -1;
 	if (a->sockfd > b->sockfd) return +1;
 
-	rcode = (int) a->src_port - (int) b->src_port;
-	if (rcode != 0) return rcode;
+	if (a->src_port && b->src_port) { /* Only compare source port if <> 0. */
+		rcode = (int) a->src_port - (int) b->src_port;
+		if (rcode != 0) return rcode;
+	}
 
 	rcode = fr_ipaddr_cmp(&a->src_ipaddr, &b->src_ipaddr);
 	if (rcode != 0) return rcode;
@@ -352,6 +355,7 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
 		DPC_DEBUG_TRACE("Reply received through raw socket: looking for broadcast packet.");
 		my_request.src_ipaddr.addr.v4.s_addr = htonl(INADDR_ANY);
 		my_request.dst_ipaddr.addr.v4.s_addr = htonl(INADDR_BROADCAST);
+		my_request.src_port = 0; /* Match all. This allows to handle multiple source ports with a single pcap socket. */
 	}
 #endif
 
@@ -433,7 +437,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
 	 */
 	request->sockfd = ps->sockfd;
 	request->src_ipaddr = ps->src_ipaddr;
-	request->src_port = ps->src_port;
+	//request->src_port = ps->src_port; /* Keep source port set by requestor. */
 
 	if (request->id == DPC_PACKET_ID_UNASSIGNED) {
 		id = ++ pl->prev_id;
