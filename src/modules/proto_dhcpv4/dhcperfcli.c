@@ -880,9 +880,6 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 		uint8_t *p = packet->data + 4;
 		memcpy(p, &lvalue, 4);
 
-		/* Extract message type from raw data so we can know which it is. */
-		// TODO.
-
 		return 0;
 	}
 
@@ -1377,6 +1374,13 @@ static bool dpc_parse_input(dpc_input_t *input)
 		} /* switch over the attribute */
 
 	} /* loop over the input vps */
+
+	/*
+	 *	Extract message type (if there is one) from pre-encoded data.
+	 */
+	if (da_encoded_data && (vp = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
+		input->code = dpc_message_type_extract(vp);
+	}
 
 	/*
 	 *	If not specified in input vps, use default values.

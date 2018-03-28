@@ -772,6 +772,44 @@ bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
 	return (*value < in);
 }
 
+
+/*
+ *	Try and extract the message type from the DHCP pre-encoded data provided.
+ */
+unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
+{
+	uint8_t const *p;
+	uint8_t const *end;
+	unsigned int code = FR_CODE_UNDEFINED;
+
+	if (vp->vp_length <= 240) goto end; /* No options. */
+
+	/*
+	 *	Loop over the DHCP options.
+	 */
+	p = vp->vp_octets + 240;
+	end = p + (vp->vp_length - 240);
+
+	while (p < end) {
+		if (p[0] == 0) { /* Pad Option. */
+			p ++;
+			continue;
+		}
+		if (p[0] == 255) break; /* End Option. */
+
+		if (p[0] == FR_DHCPV4_DHCP_MESSAGE_TYPE) {
+			code = p[2] + FR_DHCPV4_OFFSET;
+			break;
+		}
+
+		p += p[1] + 2; /* Hop to next option. */
+	}
+
+end:
+	DPC_DEBUG_TRACE("Extracted message code: %u", code);
+	return code;
+}
+
 /*
  *	Convert a float to struct timeval.
  */

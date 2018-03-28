@@ -82,6 +82,7 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 
 /* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
 #define FR_DHCPV4_REQUESTED_IP_ADDRESS    50
+#define FR_DHCPV4_DHCP_MESSAGE_TYPE       53
 #define FR_DHCPV4_DHCP_SERVER_IDENTIFIER  54
 #define FR_DHCPV4_HOP_COUNT               259
 #define FR_DHCPV4_TRANSACTION_ID          260
