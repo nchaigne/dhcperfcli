@@ -893,6 +893,8 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	fr_pair_add(&packet->vps, vp);
 
 	r = fr_dhcpv4_packet_encode(packet); /* This always returns 0. */
+	/* Note: fr_dhcpv4_packet_encode encodes a NAK if there is no message type provided. */
+
 	fr_strerror(); /* Clear the error buffer */
 
 	/*
@@ -1328,6 +1330,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 {
 	vp_cursor_t cursor;
 	VALUE_PAIR *vp;
+	VALUE_PAIR *vp_data = NULL;
 
 	input->code = FR_CODE_UNDEFINED;
 
@@ -1378,8 +1381,8 @@ static bool dpc_parse_input(dpc_input_t *input)
 	/*
 	 *	Extract message type (if there is one) from pre-encoded data.
 	 */
-	if (da_encoded_data && (vp = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
-		input->code = dpc_message_type_extract(vp);
+	if (da_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
+		input->code = dpc_message_type_extract(vp_data);
 	}
 
 	/*
@@ -1417,11 +1420,11 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!input->dst.port) input->dst.port = server_port;
 	if (!ipaddr_defined(input->dst.ipaddr)) input->dst.ipaddr = server_ipaddr;
 
-	//if (input->code == FR_CODE_UNDEFINED) {
-	//	WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
-	//	return false;
-	//}
-	/* Allow this so we can send BOOTP, or use pre-encoded data. */
+	if (!vp_data && input->code == FR_CODE_UNDEFINED) {
+		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
+		return false;
+	}
+	// TODO: allow to send without a type (BOOTP) ? for that we would need our own encoding function.
 
 	/*
 	 *	Pre-allocate the socket for this input item.

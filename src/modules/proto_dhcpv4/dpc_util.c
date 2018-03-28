@@ -169,6 +169,8 @@ char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
 	char *p = out;
 	size_t len = 0;
 
+	uint32_t remain = num_packet[0]; /* Total. */
+
 	*p = '\0';
 	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
 		if (num_packet[i] > 0) {
@@ -178,7 +180,15 @@ char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
 			}
 			len = sprintf(p, "%s: %u", dpc_message_types[i], num_packet[i]);
 			p += len;
+			remain -= num_packet[i];
 		}
+	}
+	if (remain) { /* Unknown message types. */
+		if (p != out) {
+			len = sprintf(p, ", ");
+			p += len;
+		}
+		sprintf(p, "%s: %u", "unknown", remain);
 	}
 	return out;
 }
@@ -220,7 +230,7 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 	} else {
 		fprintf(fp, " DHCP packet");
 		if (code <= 0) fprintf(fp, " (BOOTP)"); /* No DHCP Message Type: BOOTP (or malformed DHCP packet). */
-		else fprintf(fp, " (code %u)", code);
+		else fprintf(fp, " (unknown type: %u)", code);
 	}
 
 	/* DHCP specific information. */
