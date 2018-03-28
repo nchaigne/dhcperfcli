@@ -18,9 +18,16 @@ struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 static char const *progname = NULL;
+
+/* Dictionaries. */
 static char const *radius_dir = RADDBDIR;
 static char const *dict_dir = DICTDIR;
+static char const *dict_freeradius = "dictionary.freeradius.internal";
+static char const *dict_dhcp = "dictionary.dhcp";
+static char const *dict_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
+static fr_dict_attr_t const *da_encoded_data = NULL;
+
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
 static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
@@ -1536,7 +1543,6 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 #ifdef HAVE_LIBPCAP
 static void dpc_pcap_init(TALLOC_CTX *ctx)
 {
-
 	char pcap_filter[255];
 
 	pcap = fr_pcap_init(ctx, iface, PCAP_INTERFACE_IN_OUT);
@@ -1576,17 +1582,26 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 static void dpc_dict_init(TALLOC_CTX *ctx)
 {
 	/* Initialize dictionary. Read FreeRADIUS internal dictionary first. */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, "dictionary.freeradius.internal");
-	if (fr_dict_from_file(ctx, &dict, dict_dir, "dictionary.freeradius.internal", progname) != 0) {
+	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_freeradius);
+	if (fr_dict_from_file(ctx, &dict, dict_dir, dict_freeradius, progname) != 0) {
 		PERROR("Failed to initialize dictionary");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Read the DHCP dictionary. */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, "dictionary.dhcp");
-	if (fr_dict_read(dict, dict_dir, "dictionary.dhcp") != 0) {
-		PERROR("Failed to read DHCP dictionary");
+	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_dhcp);
+	if (fr_dict_read(dict, dict_dir, dict_dhcp) != 0) {
+		PERROR("Failed to read dictionary: %s", dict_dhcp);
 		exit(EXIT_FAILURE);
+	}
+
+	/* Read dhcperfcli internal dictionary. */
+	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_dhcperfcli);
+	if (fr_dict_read(dict, dict_dir, dict_dhcperfcli) != 0) {
+		WARN("Failed to read dictionary: %s", dict_dhcperfcli);
+		/* Do not exit. Maybe we can live without this. */
+	} else {
+		da_encoded_data = fr_dict_attr_by_name(dict, "DHCP-Encoded-Data");
 	}
 
 	/* Load user dictionary. */
@@ -1995,7 +2010,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   Or (workflow): dora.\n");
 	fprintf(fd, "                   If omitted, packet type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
-	fprintf(fd, "  -D <dictdir>     Set main dictionary directory (defaults to " DICTDIR ").\n");
+	fprintf(fd, "  -D <dictdir>     Set dictionaries directory (defaults to " DICTDIR ").\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
