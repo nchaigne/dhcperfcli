@@ -865,15 +865,35 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 {
 	int r;
+	VALUE_PAIR *vp;
+
+	/*
+	 *	If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
+	 */
+	if (da_encoded_data && (vp = fr_pair_find_by_da(packet->vps, da_encoded_data, TAG_ANY))) {
+		packet->data_len = vp->vp_length;
+		packet->data = talloc_zero_array(packet, uint8_t, packet->data_len);
+		memcpy(packet->data, vp->vp_octets, vp->vp_length);
+
+		/* Overwrite xid in packet data with id allocated. */
+		uint32_t lvalue = htonl(packet->id);
+		uint8_t *p = packet->data + 4;
+		memcpy(p, &lvalue, 4);
+
+		/* Extract message type from raw data so we can know which it is. */
+		// TODO.
+
+		return 0;
+	}
 
 	/*
 	 *	Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
 	 *	the requested id may not have been available).
 	 */
 	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
-	VALUE_PAIR *vp_xid = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
-	vp_xid->data.vb_uint32 = packet->id;
-	fr_pair_add(&packet->vps, vp_xid);
+	vp = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
+	vp->data.vb_uint32 = packet->id;
+	fr_pair_add(&packet->vps, vp);
 
 	r = fr_dhcpv4_packet_encode(packet); /* This always returns 0. */
 	fr_strerror(); /* Clear the error buffer */
@@ -1393,10 +1413,11 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!input->dst.port) input->dst.port = server_port;
 	if (!ipaddr_defined(input->dst.ipaddr)) input->dst.ipaddr = server_ipaddr;
 
-	if (input->code == FR_CODE_UNDEFINED) {
-		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
-		return false;
-	}
+	//if (input->code == FR_CODE_UNDEFINED) {
+	//	WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
+	//	return false;
+	//}
+	/* Allow this so we can send BOOTP, or use pre-encoded data. */
 
 	/*
 	 *	Pre-allocate the socket for this input item.
