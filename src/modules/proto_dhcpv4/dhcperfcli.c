@@ -1272,34 +1272,6 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 		DPC_DEBUG_TRACE("Input (id: %u) involves broadcast using pcap raw socket", input->id);
 
 		input->with_pcap = true;
-
-		if (!pcap) {
-			char pcap_filter[255];
-
-			pcap = fr_pcap_init(NULL, iface, PCAP_INTERFACE_IN_OUT);
-			if (!pcap) {
-				PERROR("Failed to initialize pcap");
-				exit(EXIT_FAILURE);
-			}
-
-			if (fr_pcap_open(pcap) < 0) {
-				PERROR("Failed to open pcap interface");
-				exit(EXIT_FAILURE);
-			}
-
-			sprintf(pcap_filter, "udp");
-			//sprintf(pcap_filter, "udp and dst host 255.255.255.255"); // or maybe this ? TODO.
-
-			if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
-				PERROR("Failing to apply pcap filter");
-				exit(EXIT_FAILURE);
-			}
-
-			if (dpc_pcap_socket_add(pl, pcap, &input->src.ipaddr, input->src.port) < 0) {
-				exit(EXIT_FAILURE);
-			}
-		}
-
 		return;
 	}
 #endif
@@ -1557,6 +1529,46 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 
 	return 0;
 }
+
+/*
+ *	Initialize the pcap raw socket.
+ */
+#ifdef HAVE_LIBPCAP
+static void dpc_pcap_init(TALLOC_CTX *ctx)
+{
+
+	char pcap_filter[255];
+
+	pcap = fr_pcap_init(ctx, iface, PCAP_INTERFACE_IN_OUT);
+	if (!pcap) {
+		PERROR("Failed to initialize pcap");
+		exit(EXIT_FAILURE);
+	}
+
+	if (fr_pcap_open(pcap) < 0) {
+		PERROR("Failed to open pcap interface");
+		exit(EXIT_FAILURE);
+	}
+
+	sprintf(pcap_filter, "udp");
+	//sprintf(pcap_filter, "udp and dst host 255.255.255.255"); // or maybe this ? TODO.
+
+	if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
+		PERROR("Failing to apply pcap filter");
+		exit(EXIT_FAILURE);
+	}
+
+	/*
+	 *	Add a raw socket to our list of managed sockets.
+	 *	Note: even though we tag it with source port 68 (the DHCP port for clients), we can really
+	 *	send using any source port with it (it's a raw socket) if we want to. The DHCP server probably
+	 *	won't care, but will send the response using destination port 68.
+	 */
+	if (dpc_pcap_socket_add(pl, pcap, &client_ipaddr, 68) < 0) {
+		exit(EXIT_FAILURE);
+	}
+}
+#endif
 
 /*
  *	Initialize and load dictionaries.
@@ -1894,6 +1906,15 @@ int main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	/*
+	 *	And a pcap raw socket (if we need one).
+	 */
+#ifdef HAVE_LIBPCAP
+	if (iface) {
+		dpc_pcap_init(autofree);
+	}
+#endif
 
 	/*
 	 *	Set signal handler.
