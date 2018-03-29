@@ -110,6 +110,7 @@ static const FR_NAME_NUMBER request_types[] = {
 	{ "inform",      FR_DHCPV4_INFORM },
 	{ "lease_query", FR_DHCPV4_LEASE_QUERY },
 	{ "auto",        FR_CODE_UNDEFINED },
+	{ "-",           FR_CODE_UNDEFINED },
 	{ NULL, 0}
 };
 
@@ -1335,6 +1336,15 @@ static bool dpc_parse_input(dpc_input_t *input)
 	input->code = FR_CODE_UNDEFINED;
 
 	/*
+	 *	Check if we are provided with pre-encoded DHCP data.
+	 *	If so, extract (if there is one) the message type.
+	 *	All other DHCP attributes provided are ignored (with the exception of DHCP-Transaction-Id).
+	 */
+	if (da_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
+		input->code = dpc_message_type_extract(vp_data);
+	}
+
+	/*
 	 *	Loop over input value pairs.
 	 */
 	for (vp = fr_pair_cursor_init(&cursor, &input->vps);
@@ -1343,7 +1353,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 		/*
 		 *	Allow to set packet type using DHCP-Message-Type
 		 */
-		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
+		if (!vp_data && fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
 			input->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
 		} else if (fr_dict_attr_is_top_level(vp->da)) switch (vp->da->attr) {
 		/*
@@ -1379,23 +1389,18 @@ static bool dpc_parse_input(dpc_input_t *input)
 	} /* loop over the input vps */
 
 	/*
-	 *	Extract message type (if there is one) from pre-encoded data.
-	 */
-	if (da_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
-		input->code = dpc_message_type_extract(vp_data);
-	}
-
-	/*
 	 *	If not specified in input vps, use default values.
 	 */
-	if (input->code == FR_CODE_UNDEFINED) {
-		/* Handling a workflow, which determines the packet type. */
-		if (workflow_code == DPC_WORKFLOW_DORA) {
-			input->workflow = workflow_code;
-			input->code = FR_DHCPV4_DISCOVER;
+	if (!vp_data) {
+		if (input->code == FR_CODE_UNDEFINED) {
+			/* Handling a workflow, which determines the packet type. */
+			if (workflow_code == DPC_WORKFLOW_DORA) {
+				input->workflow = workflow_code;
+				input->code = FR_DHCPV4_DISCOVER;
+			}
 		}
+		if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
 	}
-	if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
 
 	/*
 	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
