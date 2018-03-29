@@ -208,6 +208,7 @@ struct dpc_input {
 
 	unsigned int code;       //!< Packet code (type).
 	unsigned int workflow;   //!< Workflow (if handling one).
+	uint32_t xid;            //!< Prefered value for xid.
 
 	dpc_endpoint_t src;      //!< Src IP address and port.
 	dpc_endpoint_t dst;      //!< Dst IP address and port.

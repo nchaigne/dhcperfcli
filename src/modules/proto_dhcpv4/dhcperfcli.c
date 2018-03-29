@@ -504,14 +504,10 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 		/* Need to assign an xid to this packet. */
 		bool rcode;
 
-		/* Get DHCP-Transaction-Id from input, if set use it. */
-		VALUE_PAIR *vp_xid;
-		if ((vp_xid = dpc_pair_find_dhcp(packet->vps, FR_DHCPV4_TRANSACTION_ID, TAG_ANY))) {
-			packet->id = vp_xid->data.vb_uint32; /* Note: packet->id will be reset if allocation fails. */
-			DPC_DEBUG_TRACE("Allocate xid (prefered value: %u)", packet->id);
-		} else {
-			DPC_DEBUG_TRACE("Allocate xid (don't care which)");
-		}
+		/*
+		 *	Set packet->id to prefered value (if any). Note: it will be reset if allocation fails.
+		 */
+		packet->id = session->input->xid;
 
 		/*
 		 *	Allocate an id, and prepare the packet (socket fd, src addr)
@@ -757,9 +753,8 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
 
-		/* Remove xid if there was one in input. Add xid from Offer reply instead. */
-		fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
-		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_xid));
+		/* Reset input xid to value obtained from the Offer reply. */
+		session->input->xid = vp_xid->vp_uint32;
 
 		/*
 		 *	New packet is ready. Free old packet and its reply. Then use the new packet.
@@ -887,10 +882,11 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	/*
 	 *	Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
 	 *	the requested id may not have been available).
+	 *	Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
 	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
 	vp = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
-	vp->data.vb_uint32 = packet->id;
+	vp->vp_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp);
 
 	r = fr_dhcpv4_packet_encode(packet); /* This always returns 0. */
@@ -923,6 +919,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	// these should probably be in a separate struct... TODO.
 	input->code = transport->code;
 	input->workflow = transport->workflow;
+	input->xid = transport->xid;
 	input->src = transport->src;
 	input->dst = transport->dst;
 	input->with_pcap = transport->with_pcap;
@@ -1338,14 +1335,14 @@ static bool dpc_parse_input(dpc_input_t *input)
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
 	 *	If so, extract (if there is one) the message type.
-	 *	All other DHCP attributes provided are ignored (with the exception of DHCP-Transaction-Id).
+	 *	All other DHCP attributes provided are ignored.
 	 */
 	if (da_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
 		input->code = dpc_message_type_extract(vp_data);
 	}
 
 	/*
-	 *	Loop over input value pairs.
+	 *	Loop over input value pairs. These take precedence over program arguments and options.
 	 */
 	for (vp = fr_pair_cursor_init(&cursor, &input->vps);
 	     vp;
@@ -1353,16 +1350,20 @@ static bool dpc_parse_input(dpc_input_t *input)
 		/*
 		 *	Allow to set packet type using DHCP-Message-Type
 		 */
-		if (!vp_data && fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR && vp->da->attr == FR_DHCPV4_MESSAGE_TYPE) {
-			input->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
+		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) {
+
+			if (!vp_data) { /* If we have pre-encoded DHCP data, ignore all other DHCP attributes */
+				switch (vp->da->attr) {
+				case FR_DHCPV4_MESSAGE_TYPE: /* DHCP Message Type. */
+					input->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
+					break;
+				case FR_DHCPV4_TRANSACTION_ID: /* Prefered xid. */
+					input->xid = vp->vp_uint32;
+					break;
+				}
+			}
+
 		} else if (fr_dict_attr_is_top_level(vp->da)) switch (vp->da->attr) {
-		/*
-		 *	Also allow to set packet type using Packet-Type
-		 *	(this takes precedence over the command argument.)
-		 */
-		case FR_PACKET_TYPE:
-			input->code = vp->vp_uint32;
-			break;
 
 		case FR_PACKET_DST_PORT:
 			input->dst.port = vp->vp_uint16;
@@ -1450,7 +1451,7 @@ static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
 {
 	input->id = input_num ++;
 
-	// for now, just trace what we've read.
+	/* Trace what we've read. */
 	if (dpc_debug_lvl > 1) {
 		DEBUG2("Input (id: %u) vps read:", input->id);
 		fr_pair_list_fprint(fr_log_fp, input->vps);
@@ -1486,6 +1487,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		if (with_template && list->size >= 2) break;
 
 		MEM(input = talloc_zero(ctx, dpc_input_t));
+		input->xid = DPC_PACKET_ID_UNASSIGNED;
 
 		if (fr_pair_list_afrom_file(input, &input->vps, file_in, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
