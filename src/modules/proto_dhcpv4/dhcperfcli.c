@@ -872,10 +872,11 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 		memcpy(packet->data, vp->vp_octets, vp->vp_length);
 
 		/* Overwrite xid in packet data with id allocated. */
-		uint32_t lvalue = htonl(packet->id);
-		uint8_t *p = packet->data + 4;
-		memcpy(p, &lvalue, 4);
-
+		if (packet->data_len >= 8) {
+			uint32_t lvalue = htonl(packet->id);
+			uint8_t *p = packet->data + 4;
+			memcpy(p, &lvalue, 4);
+		}
 		return 0;
 	}
 

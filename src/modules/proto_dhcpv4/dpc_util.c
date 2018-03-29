@@ -225,16 +225,27 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 			break;
 	}
 
-	if (is_dhcp_code(code)) {
+	/*
+	 *	Considerations on packet length:
+	 *	- BOOTP packet length is fixed (300 octets).
+	 *	- DHCP packet length is *at least* 243 octets:
+	 *	  236 (fields) + 4 (magic cookie) + 3 (just enough room for option Message Type - which is required).
+	 *
+	 *	Note: some archaic DHCP relays or servers won't even accept a DHCP packet smaller than 300 octets...
+	 */
+
+	if (packet->data && packet->data_len < 243) { /* Obviously malformed. */
+		fprintf(fp, " malformed packet");
+	} else if (is_dhcp_code(code)) {
 		fprintf(fp, " %s", dpc_message_types[code]);
 	} else {
 		fprintf(fp, " DHCP packet");
-		if (code <= 0) fprintf(fp, " (BOOTP)"); /* No DHCP Message Type: BOOTP (or malformed DHCP packet). */
+		if (code <= 0) fprintf(fp, " (BOOTP)"); /* No DHCP Message Type: maybe BOOTP (or malformed DHCP packet). */
 		else fprintf(fp, " (unknown type: %u)", code);
 	}
 
 	/* DHCP specific information. */
-	if (packet->data) { // don't crash if called before packet is encoded.
+	if (packet->data && packet->data_len >= 34) { /* Only print this if there is enough data. */
 		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
 		fprintf(fp, " (hwaddr: %s", dpc_ether_addr_print(hwaddr, buf_hwaddr) );
 
@@ -797,7 +808,7 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 	/*
 	 *	Loop over the DHCP options.
 	 */
-	p = vp->vp_octets + 240;
+	p = vp->vp_octets + 240; /* Start right after the DHCP magic cookie. */
 	end = p + (vp->vp_length - 240);
 
 	while (p < end) {
