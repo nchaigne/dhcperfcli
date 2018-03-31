@@ -10,7 +10,7 @@ https://wiki.freeradius.org/building/home
 
 To sum up you will need :
 
-- C11 support. This implies a relatively recent compiler (GCC 4.9.0). Version of GCC shipped with RHEL7 is not adequate, so an upgrade is necessary.<br>Alternatively, you can compile with clang (3.0).
+- C11 support. This implies a relatively recent compiler (GCC 4.9.0 or later). Version of GCC shipped with RHEL 7 is not adequate, so an upgrade (e.g. [GCC 7.3.0](https://gist.github.com/nchaigne/9eba78dafb011b138fa513ea5fd016a8)) is necessary.<br>Alternatively, you can compile with clang (3.0 or later).
 
 - Talloc
 
@@ -87,11 +87,10 @@ Then:
 
 ### Build from sources
 
-All you need is located in directory `src/modules/proto_dhcpv4`
+Copy *dhcpercli* files into FreeRADIUS source tree:
 
-Copy the files to the same directory in FreeRADIUS sources tree:
-
->__`cp -f src/modules/proto_dhcpv4/* <FreeRADIUS sources>/src/modules/proto_dhcpv4/`__
+>__`cp -f src/modules/proto_dhcpv4/* <FreeRADIUS sources>/src/modules/proto_dhcpv4/`__<br>
+>__`cp -f share/* <FreeRADIUS sources>/share/`__<br>
 
 Note: file `all.mk` will be overwritten. This is necessary so FreeRADIUS knows that it has to build *dhcperfcli*.
 
