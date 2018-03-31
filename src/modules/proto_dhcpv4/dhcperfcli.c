@@ -1335,11 +1335,12 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
-	 *	If so, extract (if there is one) the message type.
-	 *	All other DHCP attributes provided are ignored.
+	 *	If so, extract (if there is one) the message type and the xid.
+	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
 	if (da_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
 		input->code = dpc_message_type_extract(vp_data);
+		input->xid = dpc_xid_extract(vp_data);
 	}
 
 	/*

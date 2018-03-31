@@ -4,6 +4,7 @@
  */
 
 #include "dhcperfcli.h"
+#include "dpc_packet_list.h"
 #include "dpc_util.h"
 
 extern struct timeval tv_start;
@@ -829,6 +830,19 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 end:
 	DPC_DEBUG_TRACE("Extracted message code: %u", code);
 	return code;
+}
+
+/*
+ *	Extract the xid from the DHCP pre-encoded data provided.
+ */
+uint32_t dpc_xid_extract(VALUE_PAIR *vp)
+{
+	uint32_t value;
+
+	if (vp->vp_length < 8) return DPC_PACKET_ID_UNASSIGNED;
+
+	memcpy(&value, vp->vp_octets + 4, 4);
+	return ntohl(value);
 }
 
 /*
