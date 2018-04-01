@@ -324,12 +324,18 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 	}
 
 	if (trace_lvl >= 2) {
-		fprintf(fp, "DHCP vps fields:\n");
-		dpc_packet_fields_print(fp, packet->vps);
+		VALUE_PAIR *vp;
+		if (da_encoded_data && (vp = fr_pair_find_by_da(packet->vps, da_encoded_data, TAG_ANY))) {
+			fprintf(fp, "DHCP data:\n");
+			fr_pair_fprint(fp, vp);
+		} else {
+			fprintf(fp, "DHCP vps fields:\n");
+			dpc_packet_fields_print(fp, packet->vps);
 
-		fprintf(fp, "DHCP vps options:\n");
-		if (dpc_packet_options_print(fp, packet->vps) == 0) {
-			fprintf(fp, "\t(empty list)\n");
+			fprintf(fp, "DHCP vps options:\n");
+			if (dpc_packet_options_print(fp, packet->vps) == 0) {
+				fprintf(fp, "\t(empty list)\n");
+			}
 		}
 	}
 
@@ -826,6 +832,8 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 
 		p += p[1] + 2; /* Hop to next option. */
 	}
+	// theoretically, if overloading, message type could be encoded in 'file' or 'sname' fields.
+	// TODO?
 
 end:
 	DPC_DEBUG_TRACE("Extracted message code: %u", code);

@@ -21,11 +21,12 @@
  */
 
 
+extern int dpc_debug_lvl;
+extern fr_dict_attr_t const *da_encoded_data;
+
 /*
  *	Trace / logging.
  */
-extern int dpc_debug_lvl;
-
 #define DPC_DEBUG_ENABLED(_p) (fr_log_fp && dpc_debug_lvl >= _p)
 #define DPC_DEBUG(_p, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log(_f "\n", ## __VA_ARGS__)
 

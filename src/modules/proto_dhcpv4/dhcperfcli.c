@@ -16,6 +16,7 @@ TALLOC_CTX *autofree = NULL;
 
 struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
+fr_dict_attr_t const *da_encoded_data = NULL;
 
 static char const *progname = NULL;
 
@@ -26,7 +27,6 @@ static char const *dict_freeradius = "dictionary.freeradius.internal";
 static char const *dict_dhcp = "dictionary.dhcp";
 static char const *dict_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
-static fr_dict_attr_t const *da_encoded_data = NULL;
 
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
