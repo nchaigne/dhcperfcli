@@ -96,3 +96,29 @@ In addition to DHCP attributes, the program accepts a few control attributes (wh
 
 Finally, a specific control attribute, through which you can provided DHCP pre-encoded data (not necessarily well formed, this is entirely up to you):
 - DHCP-Encoded-Data
+
+## DHCP pre-encoded data
+
+Instead of letting the program encode your DHCP packet, you can do it yourself. This is achieved through a special control attribute: `DHCP-Encoded-Data`.<br>
+If provided, all DHCP value pairs are ignored. The command `argument` should be omitted (it is ignored). Other control attributes (such as `Packet-Src-IP-Address`) can be provided.
+
+This has several purposes:
+- You can extract the content of a real DHCP packet from a network capture, for example using Wireshark (select a packet, right click on "Bootstrap Protocol" / "Copy" / "... as a Hex Stream"), then feed it (altered or not) to *dhcperfcli*.
+
+- You can create purposely malformed data. This allows to see how the DHCP server behaves when handling such a packet.
+
+For example:
+
+>__`
+echo "DCP-Encoded-Data=0x0101060100000001000000000000000000000000000000000000000050414e444100"  |  dhcperfcli  -i eth0 -P 3  255.255.255.255
+`__
+
+This is obviously malformed data: it ends right after the first 6 octets of field `chaddr` (the client MAC address).
+You can send it, but you won't get a reply from any sane DHCP server (for that you need to provide at least option 53 *Message Type*). Actually, the program won't even wait for a reply (because it doesn't think one is expected).
+
+Another example:
+>__`
+echo "DCP-Encoded-Data=0x0101060100000001000000000000000000000000000000000000000050414e4441000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000063825363350101ff"  |  dhcperfcli  -i eth0 -P 3  255.255.255.255
+`__
+
+This one is a well-formed (if a bit hard to read, but option `-P 3` will display something more accessible) DHCP Discover packet, to which you can get a DHCP Offer reply.
