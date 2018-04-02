@@ -73,8 +73,8 @@ extern fr_dict_attr_t const *da_encoded_data;
 extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
-#define is_dhcp_reply_expected(_x) (_x == FR_DHCPV4_DISCOVER || _x == FR_DHCPV4_REQUEST || _x == FR_DHCPV4_INFORM \
-	|| _x == FR_DHCPV4_LEASE_QUERY)
+#define is_dhcp_reply_expected(_x) (_x == FR_DHCP_DISCOVER || _x == FR_DHCP_REQUEST || _x == FR_DHCP_INFORM \
+	|| _x == FR_DHCP_LEASE_QUERY)
 /*
  *	Decline, Release: these messages do not get a reply.
  *	Inform: "The servers SHOULD unicast the DHCPACK reply to the address given in the 'ciaddr' field of the DHCPINFORM
@@ -97,19 +97,19 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
  */
 #define STAT_INCR_PACKET_SENT(packet_code) \
 { \
-	int code = packet_code - FR_DHCPV4_OFFSET; \
+	int code = packet_code - FR_DHCP_OFFSET; \
 	stat_ctx.num_packet_sent[0] ++; \
 	if (is_dhcp_code(code)) stat_ctx.num_packet_sent[code] ++; \
 }
 #define STAT_INCR_PACKET_RECV(packet_code) \
 { \
-	int code = packet_code - FR_DHCPV4_OFFSET; \
+	int code = packet_code - FR_DHCP_OFFSET; \
 	stat_ctx.num_packet_recv[0] ++; \
 	if (is_dhcp_code(code)) stat_ctx.num_packet_recv[code] ++; \
 }
 #define STAT_INCR_PACKET_LOST(packet_code) \
 { \
-	int code = packet_code - FR_DHCPV4_OFFSET; \
+	int code = packet_code - FR_DHCP_OFFSET; \
 	stat_ctx.num_packet_lost[0] ++; \
 	if (is_dhcp_code(code)) stat_ctx.num_packet_lost[code] ++; \
 }

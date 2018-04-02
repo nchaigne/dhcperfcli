@@ -103,12 +103,12 @@ char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE] = {
 };
 
 static const FR_NAME_NUMBER request_types[] = {
-	{ "discover",    FR_DHCPV4_DISCOVER },
-	{ "request",     FR_DHCPV4_REQUEST },
-	{ "decline",     FR_DHCPV4_DECLINE },
-	{ "release",     FR_DHCPV4_RELEASE },
-	{ "inform",      FR_DHCPV4_INFORM },
-	{ "lease_query", FR_DHCPV4_LEASE_QUERY },
+	{ "discover",    FR_DHCP_DISCOVER },
+	{ "request",     FR_DHCP_REQUEST },
+	{ "decline",     FR_DHCP_DECLINE },
+	{ "release",     FR_DHCP_RELEASE },
+	{ "inform",      FR_DHCP_INFORM },
+	{ "lease_query", FR_DHCP_LEASE_QUERY },
 	{ "auto",        FR_CODE_UNDEFINED },
 	{ "-",           FR_CODE_UNDEFINED },
 	{ NULL, 0}
@@ -384,18 +384,18 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 	int reply_code = reply->code;
 
 	/* Identify the transaction (request / reply). */
-	if (request_code == FR_DHCPV4_DISCOVER) {
-		if (reply_code == FR_DHCPV4_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
-		else if (reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_DISCOVER_ACK;
+	if (request_code == FR_DHCP_DISCOVER) {
+		if (reply_code == FR_DHCP_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
+		else if (reply_code == FR_DHCP_ACK) tr_type = DPC_TR_DISCOVER_ACK;
 	}
-	else if (request_code == FR_DHCPV4_REQUEST) {
-		if (reply_code == FR_DHCPV4_ACK) tr_type = DPC_TR_REQUEST_ACK;
-		else if (reply_code == FR_DHCPV4_NAK) tr_type = DPC_TR_REQUEST_NAK;
+	else if (request_code == FR_DHCP_REQUEST) {
+		if (reply_code == FR_DHCP_ACK) tr_type = DPC_TR_REQUEST_ACK;
+		else if (reply_code == FR_DHCP_NAK) tr_type = DPC_TR_REQUEST_NAK;
 	}
-	else if (request_code == FR_DHCPV4_LEASE_QUERY) {
-		if (reply_code == FR_DHCPV4_LEASE_UNASSIGNED) tr_type = DPC_TR_LEASE_QUERY_UNASSIGNED;
-		else if (reply_code == FR_DHCPV4_LEASE_UNKNOWN) tr_type = DPC_TR_LEASE_QUERY_UNKNOWN;
-		else if (reply_code == FR_DHCPV4_LEASE_ACTIVE) tr_type = DPC_TR_LEASE_QUERY_ACTIVE;
+	else if (request_code == FR_DHCP_LEASE_QUERY) {
+		if (reply_code == FR_DHCP_LEASE_UNASSIGNED) tr_type = DPC_TR_LEASE_QUERY_UNASSIGNED;
+		else if (reply_code == FR_DHCP_LEASE_UNKNOWN) tr_type = DPC_TR_LEASE_QUERY_UNKNOWN;
+		else if (reply_code == FR_DHCP_LEASE_ACTIVE) tr_type = DPC_TR_LEASE_QUERY_ACTIVE;
 	}
 
 	timersub(&reply->timestamp, &request->timestamp, &rtt);
@@ -691,7 +691,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 	dpc_statistics_update(session->packet, session->reply);
 
 	/* We've completed a DORA workflow. */
-	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCPV4_ACK) {
+	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
 		struct timeval rtt;
 		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
@@ -704,19 +704,19 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		VALUE_PAIR *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
 		RADIUS_PACKET *packet;
 
-		if (session->reply->code != FR_DHCPV4_OFFER) { /* Not an Offer. */
+		if (session->reply->code != FR_DHCP_OFFER) { /* Not an Offer. */
 			DEBUG2("Session DORA: expected Offer reply, instead got: %d", session->reply->code);
 			return false;
 		}
 
 		/* Get the Offer xid. */
-		vp_xid = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
+		vp_xid = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID, TAG_ANY);
 		if (!vp_xid) { /* Should never happen (DHCP field). */
 			return false;
 		}
 
 		/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
-		vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_YOUR_IP_ADDRESS, TAG_ANY);
+		vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
 		if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 			DEBUG2("Session DORA: no yiaddr provided in Offer reply");
 			return false;
@@ -724,7 +724,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 
 		/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
-		                                   FR_DHCPV4_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+		                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
 		if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 			DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 			return false;
@@ -738,7 +738,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		packet = dpc_request_init(session, session->input);
 		if (!packet) return false;
 
-		packet->code = FR_DHCPV4_REQUEST;
+		packet->code = FR_DHCP_REQUEST;
 		session->state = DPC_STATE_DORA_EXPECT_ACK;
 
 		/*
@@ -747,7 +747,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 
 		/* Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr */
 		vp_requested_ip = radius_pair_create(packet, &packet->vps,
-		                                     FR_DHCPV4_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		                                     FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 		fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -810,16 +810,16 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
 	vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_GATEWAY_IP_ADDRESS, TAG_ANY);
 	if (!vp_giaddr) {
-		vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCPV4_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCP_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
 		vp_giaddr->vp_ip.af = AF_INET;
 		vp_giaddr->vp_ip.prefix = 32;
 	}
 
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
-	vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_HOP_COUNT, TAG_ANY);
+	vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_HOP_COUNT, TAG_ANY);
 	if (!vp_hops) {
-		vp_hops = radius_pair_create(packet, &packet->vps, FR_DHCPV4_HOP_COUNT, DHCP_MAGIC_VENDOR);
+		vp_hops = radius_pair_create(packet, &packet->vps, FR_DHCP_HOP_COUNT, DHCP_MAGIC_VENDOR);
 		vp_hops->vp_uint8 = 1;
 	}
 }
@@ -1356,8 +1356,8 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 			if (!vp_data) { /* If we have pre-encoded DHCP data, ignore all other DHCP attributes */
 				switch (vp->da->attr) {
-				case FR_DHCPV4_MESSAGE_TYPE: /* DHCP Message Type. */
-					input->code = vp->vp_uint32 + FR_DHCPV4_OFFSET;
+				case FR_DHCP_MESSAGE_TYPE: /* DHCP Message Type. */
+					input->code = vp->vp_uint32 + FR_DHCP_OFFSET;
 					break;
 				case FR_DHCPV4_TRANSACTION_ID: /* Prefered xid. */
 					input->xid = vp->vp_uint32;
@@ -1399,7 +1399,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 			/* Handling a workflow, which determines the packet type. */
 			if (workflow_code == DPC_WORKFLOW_DORA) {
 				input->workflow = workflow_code;
-				input->code = FR_DHCPV4_DISCOVER;
+				input->code = FR_DHCP_DISCOVER;
 			}
 		}
 		if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
@@ -1700,7 +1700,7 @@ static void dpc_command_parse(char const *command)
 {
 	/* If an integer, assume this is the packet type (1 = discover, ...) */
 	if (is_integer(command)) {
-		packet_code = atoi(command) + FR_DHCPV4_OFFSET;
+		packet_code = atoi(command) + FR_DHCP_OFFSET;
 		return;
 	}
 

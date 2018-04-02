@@ -210,7 +210,7 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 	if (!packet) return;
 
 	/* Internally, DHCP packet code starts with an offset of 1024 (hack), so... */
-	int code = packet->code - FR_DHCPV4_OFFSET;
+	int code = packet->code - FR_DHCP_OFFSET;
 
 	if (session) fprintf(fp, "(%u) ", session->id);
 
@@ -250,7 +250,7 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
 		fprintf(fp, " (hwaddr: %s", dpc_ether_addr_print(hwaddr, buf_hwaddr) );
 
-		if (packet->code == FR_DHCPV4_ACK || packet->code == FR_DHCPV4_OFFER) {
+		if (packet->code == FR_DHCP_ACK || packet->code == FR_DHCP_OFFER) {
 			memcpy(&yiaddr, packet->data + 16, 4);
 			fprintf(fp, ", yiaddr: %s", inet_ntop(AF_INET, &yiaddr, lease_ipaddr, sizeof(lease_ipaddr)) );
 		}
@@ -825,8 +825,8 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 		}
 		if (p[0] == 255) break; /* End Option. */
 
-		if (p[0] == FR_DHCPV4_DHCP_MESSAGE_TYPE) {
-			code = p[2] + FR_DHCPV4_OFFSET;
+		if (p[0] == FR_DHCP_MESSAGE_TYPE) {
+			code = p[2] + FR_DHCP_OFFSET;
 			break;
 		}
 
