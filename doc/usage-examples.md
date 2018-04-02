@@ -18,13 +18,13 @@ Packet destination is broadcast IP address (255.255.255.255) and MAC address (se
 The program will wait for the first suitable DHCP Offer reply sent by a DHCP server on the chosen interface (option `-i`), up to a maximum wait time (option `-t`).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0 255.255.255.255  discover
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0 -t 1.5  255.255.255.255  discover
 `__
 
 
 ## Discover (gateway)
 
-A gateway (DHCP relay or concentrator) unicasts a DHCP Discover message directly to a DHCP server.<br>
+A gateway (DHCP relay or concentrator) unicasts a DHCP Discover message to a DHCP server.<br>
 This requires the following information:
 - The client hardware (MAC) address (field `chaddr`).
 - The DHCP message type (option 53 *Message Type*, provided through argument `discover`).
@@ -66,7 +66,7 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=
 
 ## Request (SELECTING state, gateway)
 
-A gateway (DHCP relay or concentrator) unicasts a DHCP Request message directly to a DHCP server.<br>
+On behalf of a client in SELECTING state, a gateway (DHCP relay or concentrator) unicasts a DHCP Request message to a DHCP server.<br>
 This requires the following information:
 - The client hardware (MAC) address (field `chaddr`).
 - The requested IP address (option 50 *Requested IP address*), which has been obtained from the DHCP Offer reply in field `yiaddr`.
