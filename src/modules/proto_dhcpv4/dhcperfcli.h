@@ -81,13 +81,6 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
  *	message." (RFC 2131). This means we'll only get the reply if setting ciaddr to address we've used as source.
 */
 
-/* DHCP options/fields (which are not defined in protocols/dhcpv4/dhcpv4.h) */
-#define FR_DHCPV4_REQUESTED_IP_ADDRESS    50
-#define FR_DHCPV4_DHCP_MESSAGE_TYPE       53
-#define FR_DHCPV4_DHCP_SERVER_IDENTIFIER  54
-#define FR_DHCPV4_HOP_COUNT               259
-#define FR_DHCPV4_TRANSACTION_ID          260
-#define FR_DHCPV4_GATEWAY_IP_ADDRESS      266
 
 #define ipaddr_defined(_x) (_x.af != AF_UNSPEC)
 

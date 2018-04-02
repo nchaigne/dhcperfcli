@@ -808,7 +808,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	VALUE_PAIR *vp_giaddr, *vp_hops;
 
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
-	vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_GATEWAY_IP_ADDRESS, TAG_ANY);
+	vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_GATEWAY_IP_ADDRESS, TAG_ANY);
 	if (!vp_giaddr) {
 		vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCP_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
@@ -885,8 +885,8 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	 *	the requested id may not have been available).
 	 *	Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
-	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID, TAG_ANY);
-	vp = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCPV4_TRANSACTION_ID);
+	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID, TAG_ANY);
+	vp = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID);
 	vp->vp_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp);
 
@@ -1359,7 +1359,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 				case FR_DHCP_MESSAGE_TYPE: /* DHCP Message Type. */
 					input->code = vp->vp_uint32 + FR_DHCP_OFFSET;
 					break;
-				case FR_DHCPV4_TRANSACTION_ID: /* Prefered xid. */
+				case FR_DHCP_TRANSACTION_ID: /* Prefered xid. */
 					input->xid = vp->vp_uint32;
 					break;
 				}
