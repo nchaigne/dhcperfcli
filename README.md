@@ -33,6 +33,7 @@ Arguments|Description
 -|-
 `<server>:[<port>]` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
 `<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora`.<br>This can be omitted, in which case the message type must be provided through input items (`DHCP-Message-Type`).
+`-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-D <dir>` | Read dictionaries from `<dir>`.<br>Default: directory `share/freeradius` of FreeRADIUS installation.
 `-f <file>` | Read input items from `<file>`, in addition to stdin.<br>An input item is a list of *attribute/value pairs*. At least one such item is required, so one packet can be built.
 `-g <gw>[:<port>]` | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>A comma-separated list may be specified, in which case packets will be sent using all of those gateways in a round-robin fashion.<br>Alternatively, option `-g` can be provided multiple times.
@@ -88,14 +89,18 @@ The message type can also be provided through command line argument `<command>`.
 Two input items are separated by an empty line.<br>
 If the input is provided through stdin, this can be achieved with __`echo -e "\n\n"`__.
 
-In addition to DHCP attributes, the program accepts a few control attributes (whose purpose is self-explanatory) in input items:
-- Packet-Src-IP-Address
-- Packet-Dst-IP-Address
-- Packet-Src-Port
-- Packet-Dst-Port
+In addition to DHCP attributes, the program accepts a few control attributes in input items:
 
-Finally, a specific control attribute, through which you can provided DHCP pre-encoded data (not necessarily well formed, this is entirely up to you):
-- DHCP-Encoded-Data
+
+Attribute|Description
+-|-
+`Packet-Src-IP-Address` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | The packet source IP address. Automatically set if option `-g` is provided.
+`Packet-Dst-IP-Address` | The packet destination IP address. Can also be set through argument `<server>`.
+`Packet-Src-Port` | The packet source UDP port. Default is 68 for a client, 67 for a gateway.
+`Packet-Dst-Port` | The packet destination UDP port. Default is 67 for a server or a gateway.
+`DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
+`DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for a single packet.
+
 
 ## DHCP pre-encoded data
 
