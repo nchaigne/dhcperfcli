@@ -16,7 +16,8 @@ TALLOC_CTX *autofree = NULL;
 
 struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
-fr_dict_attr_t const *da_encoded_data = NULL;
+fr_dict_attr_t const *attr_encoded_data = NULL;
+fr_dict_attr_t const *attr_authorized_server = NULL;
 
 static char const *progname = NULL;
 
@@ -576,6 +577,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	fd_set set;
 	struct timeval  tv;
 	RADIUS_PACKET *reply = NULL, **packet_p;
+	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
 	int max_fd;
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
@@ -617,11 +619,10 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
 	                dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
 
-	/*
-	 *	Only allow replies from a specific server.
-	 */
 	if (ipaddr_defined(allowed_server)) {
-
+		/*
+		 *	Only allow replies from a specific server (overall policy set through option -a).
+		 */
 		if (fr_ipaddr_cmp(&reply->src_ipaddr, &allowed_server) != 0) {
 			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
 			      reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
@@ -656,6 +657,20 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	session = fr_packet2myptr(dpc_session_ctx_t, packet, packet_p);
 
 	DPC_DEBUG_TRACE("Packet belongs to session id: %d", session->id);
+
+	if (attr_authorized_server && (vp = fr_pair_find_by_da(session->packet->vps, attr_authorized_server, TAG_ANY))) {
+		/*
+		 *	Only allow replies from a specific server (per-packet policy set through attribute).
+		 */
+		if (fr_ipaddr_cmp(&reply->src_ipaddr, &vp->vp_ip) != 0) {
+			SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
+			       reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
+			fr_radius_free(&reply);
+			return -1;
+		}
+		// note: we can get "unexpected packets" with this.
+		// TODO: keep a context of broadcast packets for a little while so we can wait for all responses ?
+	}
 
 	/*
 	 *	Decode the reply packet.
@@ -880,7 +895,7 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	/*
 	 *	If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
-	if (da_encoded_data && (vp = fr_pair_find_by_da(packet->vps, da_encoded_data, TAG_ANY))) {
+	if (attr_encoded_data && (vp = fr_pair_find_by_da(packet->vps, attr_encoded_data, TAG_ANY))) {
 		packet->data_len = vp->vp_length;
 		packet->data = talloc_zero_array(packet, uint8_t, packet->data_len);
 		memcpy(packet->data, vp->vp_octets, vp->vp_length);
@@ -1352,7 +1367,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If so, extract (if there is one) the message type and the xid.
 	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
-	if (da_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, da_encoded_data, TAG_ANY))) {
+	if (attr_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, attr_encoded_data, TAG_ANY))) {
 		input->code = dpc_message_type_extract(vp_data);
 		input->xid = dpc_xid_extract(vp_data);
 	}
@@ -1652,7 +1667,9 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		WARN("Failed to read dictionary: %s", dict_dhcperfcli);
 		/* Do not exit. Maybe we can live without this. */
 	} else {
-		da_encoded_data = fr_dict_attr_by_name(dict, "DHCP-Encoded-Data");
+		attr_encoded_data = fr_dict_attr_by_name(dict, "DHCP-Encoded-Data");
+		attr_authorized_server = fr_dict_attr_by_name(dict, "DHCP-Authorized-Server");
+		// TODO: use FreeRADIUS new autoloading feature, when it's finished?
 	}
 
 	/* Load user dictionary. */

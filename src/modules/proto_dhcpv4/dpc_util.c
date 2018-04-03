@@ -325,7 +325,7 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 
 	if (trace_lvl >= 2) {
 		VALUE_PAIR *vp;
-		if (da_encoded_data && (vp = fr_pair_find_by_da(packet->vps, da_encoded_data, TAG_ANY))) {
+		if (attr_encoded_data && (vp = fr_pair_find_by_da(packet->vps, attr_encoded_data, TAG_ANY))) {
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp);
 		} else {

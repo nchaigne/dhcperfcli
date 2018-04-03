@@ -5,6 +5,7 @@
 #	is only loaded by dhcperfcli, so there's no risk of conflict.
 #
 
-FLAGS	internal
+FLAGS internal
 
-ATTRIBUTE	DHCP-Encoded-Data		3000	octets
+ATTRIBUTE DHCP-Encoded-Data            3000   octets
+ATTRIBUTE DHCP-Authorized-Server       3001   ipaddr
