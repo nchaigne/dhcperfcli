@@ -47,6 +47,7 @@ static uint16_t client_port = DHCP_PORT_CLIENT;
 static unsigned int gateway_num = 0; /* Number of gateways. */
 static unsigned int gateway_next = 0; /* Next gateway to be used. */
 static dpc_endpoint_t *gateway_list = NULL; /* List of gateways. */
+static fr_ipaddr_t allowed_server = { 0 }; /* Only allow replies from a specific server. */
 
 static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
@@ -615,6 +616,20 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
 	                dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
+
+	/*
+	 *	Only allow replies from a specific server.
+	 */
+	if (ipaddr_defined(allowed_server)) {
+
+		if (fr_ipaddr_cmp(&reply->src_ipaddr, &allowed_server) != 0) {
+			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
+			      reply->id, reply->id, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &reply->src_ipaddr));
+			fr_radius_free(&reply);
+			return -1;
+		}
+	}
 
 	/*
 	 *	Query the packet list to get the original packet to which this is a reply.
@@ -1760,13 +1775,17 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(1); \
 	}
 
-	while ((argval = getopt(argc, argv, "D:f:g:hI:L:N:p:P:r:Rs:t:TvxX"
+	while ((argval = getopt(argc, argv, "a:D:f:g:hI:L:N:p:P:r:Rs:t:TvxX"
 #ifdef HAVE_LIBPCAP
 	       "i:"
 #endif
 	      )) != EOF)
 	{
 		switch (argval) {
+		case 'a':
+			fr_inet_pton(&allowed_server, optarg, strlen(optarg), AF_INET, false, false);
+			break;
+
 		case 'D':
 			dict_dir = optarg;
 			break;
