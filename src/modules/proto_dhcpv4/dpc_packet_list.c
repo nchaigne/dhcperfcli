@@ -167,6 +167,48 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 
 #ifdef HAVE_LIBPCAP
 /*
+ *	Build the pcap filter.
+ *	Do not capture packets sent from or to an IP address to which we have an UDP socket bound.
+ */
+void dpc_pcap_filter_build(dpc_packet_list_t *pl, fr_pcap_t *pcap)
+{
+	int i;
+	dpc_packet_socket_t *ps;
+	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	char pcap_filter[4096] = ""; // TODO: size this dynamically
+	size_t len = 0;
+	char *p = &pcap_filter[0];
+
+	len = sprintf(p, "udp");
+	p += len;
+
+	if (pl->num_sockets > 0) {
+		for (i = 0; i<pl->num_sockets; i++) {
+			ps = &pl->sockets[i];
+
+			if (i == 0) {
+				len = sprintf(p, " and host not (");
+				p += len;
+			} else {
+				len = sprintf(p, " or ");
+				p += len;
+			}
+
+			len = sprintf(p, "%s", fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ps->src_ipaddr));
+			p += len;
+		}
+		len = sprintf(p, ")");
+		p += len;
+	}
+	DEBUG("Applying pcap filter: %s", pcap_filter);
+
+	if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
+		PERROR("Failing to apply pcap filter");
+		exit(EXIT_FAILURE);
+	}
+}
+
+/*
  *	Add a pcap socket.
  */
 int dpc_pcap_socket_add(dpc_packet_list_t *pl, fr_pcap_t *pcap, fr_ipaddr_t *src_ipaddr, uint16_t src_port)

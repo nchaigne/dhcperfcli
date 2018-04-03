@@ -1623,10 +1623,13 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 	}
 
 	sprintf(pcap_filter, "udp");
-	//sprintf(pcap_filter, "udp and dst host 255.255.255.255"); // or maybe this ? TODO.
+	/*
+	 *	Note: destination of a reply to a broadcast request is not necessarily 255.255.255.255.
+	 *	This is the case only if the Broadcast flag is set in the request. See section 4.1 of RFC 2131.
+	 */
 
 	if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
-		PERROR("Failing to apply pcap filter");
+		PERROR("Failed to apply pcap filter");
 		exit(EXIT_FAILURE);
 	}
 
@@ -2041,6 +2044,15 @@ int main(int argc, char **argv)
 		}
 		DPC_DEBUG_TRACE("Packet trace level set to: %d", packet_trace_lvl);
 	}
+
+#ifdef HAVE_LIBPCAP
+	if (iface) {
+		/*
+		 *	Now that we've opened all the sockets we need, build the pcap filter.
+		 */
+		dpc_pcap_filter_build(pl, pcap);
+	}
+#endif
 
 	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
 
