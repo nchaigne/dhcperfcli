@@ -623,9 +623,8 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	if (ipaddr_defined(allowed_server)) {
 
 		if (fr_ipaddr_cmp(&reply->src_ipaddr, &allowed_server) != 0) {
-			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
-			      reply->id, reply->id, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &reply->src_ipaddr));
+			      reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
 			fr_radius_free(&reply);
 			return -1;
 		}
@@ -2066,6 +2065,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   Or (workflow): dora.\n");
 	fprintf(fd, "                   If omitted, packet type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
+	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
 	fprintf(fd, "  -D <dictdir>     Set dictionaries directory (defaults to " DICTDIR ").\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
