@@ -103,6 +103,31 @@ Attribute|Description
 `DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for a single packet.
 
 
+## Template
+
+Template mode (option `-T`) is another way of providing the input necessary to build the DHCP packets. This is especially useful for (but not exclusive to) performance tests, where a lot of input is necessary.
+
+In template mode, you specify two special input items, from which packets are dynamically generated on the fly. In this order:
+1. *Invariant attributes*, whose value is fixed and common to all generated packets.
+2. *Variable attributes*, whose value change each time a packet is generated.
+
+If only one input item is provided, it is assumed to be the variable attributes (in this case, there will be no invariant).
+
+Control attributes (such as `Packet-Src-IP-Address`) are **always invariant**, even if provided through the variable attributes.
+
+The default behavior is to *increment* the value of variable attributes for each new packet. Option `-R` allows to *randomize* values instead.
+
+In template mode you should provide a limit to the number of DHCP sessions to start (option `-N`) - unless you would like the program to go on forever. Alternatively, you can opt to limit the program duration (option `-L`).
+
+Example:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
+`__
+
+This will generate and send (simulating a gateway with option `-g`) successively 10 DHCP Discover messages, using client MAC addresses `50:41:4e:44:41:00`, `50:41:4e:44:41:01` ... up to `50:41:4e:44:41:09`.
+
+
 ## DHCP pre-encoded data
 
 Instead of letting the program encode your DHCP packet, you can do it yourself. This is achieved through a special control attribute: `DHCP-Encoded-Data`.<br>
