@@ -76,6 +76,7 @@ fr_event_timer_t const *ev_progress_stats = NULL;
 static float progress_interval = 10.0; /* Periodically produce progress statistics summary. */
 struct timeval tv_progress_interval;
 
+static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
 static fr_pcap_t *pcap;
 static char *iface;
@@ -832,8 +833,7 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 	/*
 	 *	There may be more Offer replies, from other DHCP servers. Wait for them.
 	 */
-	if (session->input->with_pcap && session->reply->code == FR_DHCP_OFFER) {
-		// TODO: add an option for this.
+	if (multi_offer && session->input->with_pcap && session->reply->code == FR_DHCP_OFFER) {
 		DPC_DEBUG_TRACE("Waiting for more replies from other DHCP servers");
 		session->state = DPC_STATE_WAIT_OTHER_REPLIES;
 		/* Note: there is no need to arm a new event timeout. The initial timer is still running. */
@@ -1824,13 +1824,17 @@ static void dpc_options_parse(int argc, char **argv)
 
 	while ((argval = getopt(argc, argv, "a:D:f:g:hI:L:N:p:P:r:Rs:t:TvxX"
 #ifdef HAVE_LIBPCAP
-	       "i:"
+	       "Ai:"
 #endif
 	      )) != EOF)
 	{
 		switch (argval) {
 		case 'a':
 			fr_inet_pton(&allowed_server, optarg, strlen(optarg), AF_INET, false, false);
+			break;
+
+		case 'A':
+			multi_offer = true;
 			break;
 
 		case 'D':
@@ -2123,6 +2127,9 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "                   If omitted, packet type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
+#ifdef HAVE_LIBPCAP
+	fprintf(fd, "  -A               Wait for multiple Offer replies to broadcast Discover (requires option -i).\n");
+#endif
 	fprintf(fd, "  -D <dictdir>     Set dictionaries directory (defaults to " DICTDIR ").\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
