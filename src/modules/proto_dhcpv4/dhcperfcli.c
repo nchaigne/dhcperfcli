@@ -1830,7 +1830,8 @@ static void dpc_options_parse(int argc, char **argv)
 	{
 		switch (argval) {
 		case 'a':
-			fr_inet_pton(&allowed_server, optarg, strlen(optarg), AF_INET, false, false);
+			if (fr_inet_pton(&allowed_server, optarg, strlen(optarg), AF_INET, false, false) < 0)
+				ERROR_OPT_VALUE("ip addr");
 			break;
 
 		case 'A':
