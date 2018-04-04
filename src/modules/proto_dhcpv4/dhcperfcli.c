@@ -153,7 +153,7 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_progress_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
-static void dpc_event_add_request_timeout(dpc_session_ctx_t *session);
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
@@ -445,12 +445,20 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 {
 	dpc_session_ctx_t *session = talloc_get_type_abort(uctx, dpc_session_ctx_t);
 
-	DPC_DEBUG_TRACE("Request timed out");
+	if (session->state == DPC_STATE_WAIT_OTHER_REPLIES) {
+		/*
+		 *	We have received at least one reply. We've been waiting for more from other DHCP servers.
+		 *	So do not track this as "packet lost".
+		 */
+		DPC_DEBUG_TRACE("Stop waiting for more replies");
+	} else {
+		DPC_DEBUG_TRACE("Request timed out");
 
-	if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session, session->packet, DPC_PACKET_TIMEOUT);
+		if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session, session->packet, DPC_PACKET_TIMEOUT);
 
-	/* Statistics. */
-	STAT_INCR_PACKET_LOST(session->packet->code);
+		/* Statistics. */
+		STAT_INCR_PACKET_LOST(session->packet->code);
+	}
 
 	/* Finish the session. */
 	dpc_session_finish(session);
@@ -459,12 +467,19 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 /*
  *	Add timer event: request timeout.
  *	Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
+ *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout tv_timeout.
  */
-static void dpc_event_add_request_timeout(dpc_session_ctx_t *session)
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in)
 {
 	struct timeval tv_event;
 	gettimeofday(&tv_event, NULL);
-	timeradd(&tv_event, &tv_timeout, &tv_event);
+	timeradd(&tv_event, (timeout_in ? timeout_in : &tv_timeout), &tv_event);
+
+	/* If there is an active event timer for this session, clear it before arming a new one. */
+	if (session->event) {
+		fr_event_timer_delete(event_list, &session->event);
+		session->event = NULL;
+	}
 
 	if (fr_event_timer_insert(session, event_list, &session->event,
 	                          &tv_event, dpc_request_timeout, session) < 0) {
@@ -724,6 +739,8 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		struct timeval rtt;
 		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
+
+		return false; /* Session is done. */
 	}
 
 	/*
@@ -807,13 +824,24 @@ static bool dpc_recv_post_action(dpc_session_ctx_t *session)
 		/*
 		 *	Arm request timeout.
 		 */
-		dpc_event_add_request_timeout(session);
+		dpc_event_add_request_timeout(session, NULL);
 
-		/* All good. */
-		return true;
+		return true; /* Session is not finished. */
 	}
 
-	return false;
+	/*
+	 *	There may be more Offer replies, from other DHCP servers. Wait for them.
+	 */
+	if (session->input->with_pcap && session->reply->code == FR_DHCP_OFFER) {
+		// TODO: add an option for this.
+		DPC_DEBUG_TRACE("Waiting for more replies from other DHCP servers");
+		session->state = DPC_STATE_WAIT_OTHER_REPLIES;
+		/* Note: there is no need to arm a new event timeout. The initial timer is still running. */
+
+		return true; /* Session is not finished. */
+	}
+
+	return false; /* Session is done. */
 }
 
 /*
@@ -1242,7 +1270,7 @@ static uint32_t dpc_loop_start_sessions(void)
 			/*
 			 *	Arm request timeout.
 			 */
-			dpc_event_add_request_timeout(session);
+			dpc_event_add_request_timeout(session, NULL);
 		} else {
 			/* We've sent a packet to which no reply is expected. So this session ends right now. */
 			dpc_session_finish(session);

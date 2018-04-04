@@ -110,10 +110,11 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 /* Specific states of a session. */
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,
-	DPC_STATE_NO_REPLY,           //!< No reply is expected to the request.
-	DPC_STATE_EXPECT_REPLY,       //!< Expecting any reply to a request.
-	DPC_STATE_DORA_EXPECT_OFFER,  //!< DORA workflow expecting an Offer reply to the Discover.
-	DPC_STATE_DORA_EXPECT_ACK,    //!< DORA workflow expecting an Ack reply to the Request.
+	DPC_STATE_NO_REPLY,             //!< No reply is expected to the request.
+	DPC_STATE_EXPECT_REPLY,         //!< Expecting any reply to a request.
+	DPC_STATE_WAIT_OTHER_REPLIES,   //!< Waiting for possible other replies to a broadcast Discover.
+	DPC_STATE_DORA_EXPECT_OFFER,    //!< DORA workflow expecting an Offer reply to the Discover.
+	DPC_STATE_DORA_EXPECT_ACK,      //!< DORA workflow expecting an Ack reply to the Request.
 	DPC_STATE_MAX
 } dpc_state_t;
 
