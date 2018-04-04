@@ -21,6 +21,11 @@ The program will wait for the first suitable DHCP Offer reply sent by a DHCP ser
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0 -t 1.5  255.255.255.255  discover
 `__
 
+Note: multiple DHCP servers may provide an Offer. Option `-A` allows to wait for all replies (up to the timeout limit). The default behavior is to stop waiting as soon as a valid Offer reply is received.
+
+Alternatively, option `-a` allows to only consider a reply coming from a specific server (which you have to know beforehand).
+
+
 
 ## Discover (gateway)
 
