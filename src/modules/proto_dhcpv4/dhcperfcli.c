@@ -276,16 +276,21 @@ static void dpc_tr_stats_print(FILE *fp)
 	int i;
 	int i_start = 0;
 	int num_stat = 0;
+	unsigned int pad_len = 0;
 
 	/* Check the number of statistics types with actual data. */
 	for (i = 1; i < DPC_TR_MAX; i ++) {
-		if (stat_ctx.tr_stats[i].num > 0) num_stat ++;
+		if (stat_ctx.tr_stats[i].num > 0) {
+			num_stat ++;
+			if (strlen(transaction_types[i]) > pad_len) pad_len = strlen(transaction_types[i]);
+		}
 	}
 	if (num_stat == 0) return; /* If we got nothing, do nothing. */
 
 	fprintf(fp, "*** Statistics (per-transaction):\n");
 
 	if (num_stat == 1) i_start = 1; /* only print "All" if we have more than one (otherwise it's redundant). */
+	pad_len ++;
 
 	for (i = i_start; i < DPC_TR_MAX; i++) {
 		dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
@@ -297,7 +302,7 @@ static void dpc_tr_stats_print(FILE *fp)
 		float rtt_max = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
 
 		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
-		        LG_PAD_TR_TYPES, LG_PAD_TR_TYPES, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
+		        pad_len, pad_len, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
 
 		/* Print rate if job elapsed time is at least 1 s. */
 		if (dpc_job_elapsed_time_get() >= 1.0) {
