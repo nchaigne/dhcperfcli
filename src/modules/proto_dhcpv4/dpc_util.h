@@ -39,7 +39,7 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
                       dpc_packet_event_t pevent, int trace_lvl);
 void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet);
 void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
-                                   uint8_t *overload);
+                                   bool print_end_pad, uint8_t *overload);
 
 char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *sep,
                          char const *prefix, int line_max_len);

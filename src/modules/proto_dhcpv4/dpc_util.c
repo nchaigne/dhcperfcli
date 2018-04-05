@@ -394,7 +394,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 	/*
 	 *	Print options.
 	 */
-	dpc_packet_data_options_print(fp, cur_pos, p, data_end, &overload);
+	dpc_packet_data_options_print(fp, cur_pos, p, data_end, true, &overload);
 	if (overload) {
 		if ((overload & 1) == 1) {
 			/* The 'file' field is used to hold options. It must be interpreted before 'sname'. */
@@ -402,7 +402,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 			cur_pos = 44;
 			p = packet->data + cur_pos;
 			data_end = p + 64 - 1;
-			dpc_packet_data_options_print(fp, cur_pos, p, data_end, NULL);
+			dpc_packet_data_options_print(fp, cur_pos, p, data_end, false, NULL);
 		}
 		if ((overload & 2) == 2) {
 			/* The 'sname' field is used to hold options. */
@@ -410,7 +410,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 			cur_pos = 108;
 			p = packet->data + cur_pos;
 			data_end = p + 128 - 1;
-			dpc_packet_data_options_print(fp, cur_pos, p, data_end, NULL);
+			dpc_packet_data_options_print(fp, cur_pos, p, data_end, false, NULL);
 		}
 	}
 }
@@ -419,7 +419,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
  *	Print DHCP packet options in hex, along with their position in the packet.
  */
 void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
-                                   uint8_t *overload)
+                                   bool print_end_pad, uint8_t *overload)
 {
 	char buf[1024];
 	char header[64];
@@ -484,7 +484,7 @@ void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const
 		cur_pos += opt_size;
 	}
 
-	if (pad_p) { /* There may be more padding after End Option. */
+	if (print_end_pad && pad_p) { /* There may be more padding after End Option. */
 		sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
 		dpc_print_hex_data(buf, pad_p, pad_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
