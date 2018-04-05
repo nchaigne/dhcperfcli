@@ -689,6 +689,9 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 
 	case FR_TYPE_IPV4_ADDR:
 		vp->vp_ipv4addr = htonl(ntohl(vp->vp_ipv4addr) + 1);
+
+		/* Don't use broadcast IP address. */
+		if (dpc_ipaddr_is_broadcast(&vp->vp_ip)) vp->vp_ipv4addr = htonl(1);
 		break;
 
 	case FR_TYPE_ETHERNET:
