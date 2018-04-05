@@ -126,11 +126,15 @@ static const FR_NAME_NUMBER workflow_types[] = {
 static char const *transaction_types[DPC_TR_MAX] = {
 	"(All)",
 	"Discover:Offer",
+	"Discover:Ack",
 	"Request:Ack",
 	"Request:Nak",
+	"Lease-Query:Unassigned",
+	"Lease-Query:Unknown",
+	"Lease-Query:Active",
 	"<DORA>"
 };
-#define LG_PAD_TR_TYPES 20
+#define LG_PAD_TR_TYPES 23 /* Longest of transaction_types + 1 */
 #define LG_PAD_STATS    20
 
 char elapsed_buf[DPC_TIME_STRLEN];
