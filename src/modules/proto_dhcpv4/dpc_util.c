@@ -357,8 +357,6 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 	char buf[1024];
 	int i;
 	unsigned int cur_pos = 0;
-	int pad_size = 0;
-	uint8_t const *pad_p = NULL;
 
 	if (!packet->data) return;
 
@@ -391,6 +389,23 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 		p += dpc_dhcp_headers[i].size;
 		cur_pos += dpc_dhcp_headers[i].size;
 	}
+
+	/*
+	 *	Print options.
+	 */
+	dpc_packet_data_options_print(fp, cur_pos, p, data_end);
+}
+
+/*
+ *	Print DHCP packet options in hex, along with their position in the packet.
+ */
+void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end)
+{
+	char buf[1024];
+	char header[64];
+	int pad_size = 0;
+	uint8_t const *pad_p = NULL;
+	size_t options_len = data_end - p + 1;
 
 	/*
 	 *	Print options.
@@ -429,8 +444,8 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 		if (  ((p + 1) > data_end) /* No room for <len> */
 		   || ((p + 1 + p[1] ) > data_end) /* No room for <option data> */
 		   ) {
-			fprintf(fp, "  incomplete/malformed DHCP data (len: %zu)\n", packet->data_len);
-			int remain = packet->data_len - cur_pos;
+			fprintf(fp, "  incomplete/malformed DHCP options (len: %zu)\n", options_len);
+			int remain = data_end - p + 1;
 			if (remain > 0) {
 				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
 				dpc_print_hex_data(buf, p, remain, " ", header, 16);
@@ -803,7 +818,6 @@ bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
 	return (*value < in);
 }
 
-
 /*
  *	Try and extract the message type from the DHCP pre-encoded data provided.
  */
@@ -836,7 +850,7 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 		p += p[1] + 2; /* Hop to next option. */
 	}
 	// theoretically, if overloading, message type could be encoded in 'file' or 'sname' fields.
-	// TODO?
+	// that's a bit crazy though, and our DHCP server does not support this anyway.
 
 end:
 	DPC_DEBUG_TRACE("Extracted message code: %u", code);
