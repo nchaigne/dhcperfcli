@@ -352,11 +352,12 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
  */
 void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 {
-	uint8_t const *p, *data_end;
 	char header[64];
 	char buf[1024];
-	int i;
+	uint8_t const *p, *data_end;
 	unsigned int cur_pos = 0;
+	uint8_t overload = 0;
+	int i;
 
 	if (!packet->data) return;
 
@@ -393,13 +394,32 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 	/*
 	 *	Print options.
 	 */
-	dpc_packet_data_options_print(fp, cur_pos, p, data_end);
+	dpc_packet_data_options_print(fp, cur_pos, p, data_end, &overload);
+	if (overload) {
+		if ((overload & 1) == 1) {
+			/* The 'file' field is used to hold options. It must be interpreted before 'sname'. */
+			fprintf(fp, "  -- options overload: file --\n");
+			cur_pos = 44;
+			p = packet->data + cur_pos;
+			data_end = p + 64 - 1;
+			dpc_packet_data_options_print(fp, cur_pos, p, data_end, NULL);
+		}
+		if ((overload & 2) == 2) {
+			/* The 'sname' field is used to hold options. */
+			fprintf(fp, "  -- options overload: sname --\n");
+			cur_pos = 108;
+			p = packet->data + cur_pos;
+			data_end = p + 128 - 1;
+			dpc_packet_data_options_print(fp, cur_pos, p, data_end, NULL);
+		}
+	}
 }
 
 /*
  *	Print DHCP packet options in hex, along with their position in the packet.
  */
-void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end)
+void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
+                                   uint8_t *overload)
 {
 	char buf[1024];
 	char header[64];
@@ -456,6 +476,7 @@ void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const
 
 		/* One valid option to print. */
 		int opt_size = p[1] + 2;
+		if (overload && p[0] == FR_DHCP_OVERLOAD) *overload = p[2];
 		sprintf(header, "  %04x  %10d: ", cur_pos, p[0]);
 		dpc_print_hex_data(buf, p, opt_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
