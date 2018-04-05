@@ -651,6 +651,15 @@ VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag)
 }
 
 /*
+ *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
+ */
+VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
+{
+	if (!da) return NULL;
+	return fr_pair_find_by_da(head, da, TAG_ANY);
+}
+
+/*
  *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  */
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)

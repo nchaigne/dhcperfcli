@@ -56,7 +56,7 @@ Arguments|Description
 
 # Examples
 
-Refer to [usage-examples.md.md](https://github.com/nchaigne/dhcperfcli/blob/master/doc/usage-examples.md).
+Refer to [usage-examples.md](https://github.com/nchaigne/dhcperfcli/blob/master/doc/usage-examples.md).
 
 
 # Guide

@@ -674,7 +674,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	DPC_DEBUG_TRACE("Packet belongs to session id: %d", session->id);
 
-	if (attr_authorized_server && (vp = fr_pair_find_by_da(session->packet->vps, attr_authorized_server, TAG_ANY))) {
+	if ((vp = dpc_pair_find_by_da(session->packet->vps, attr_authorized_server))) {
 		/*
 		 *	Only allow replies from a specific server (per-packet policy set through attribute).
 		 */
@@ -923,7 +923,7 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	/*
 	 *	If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
-	if (attr_encoded_data && (vp = fr_pair_find_by_da(packet->vps, attr_encoded_data, TAG_ANY))) {
+	if ((vp = dpc_pair_find_by_da(packet->vps, attr_encoded_data))) {
 		packet->data_len = vp->vp_length;
 		packet->data = talloc_zero_array(packet, uint8_t, packet->data_len);
 		memcpy(packet->data, vp->vp_octets, vp->vp_length);
@@ -1395,7 +1395,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If so, extract (if there is one) the message type and the xid.
 	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
-	if (attr_encoded_data && (vp_data = fr_pair_find_by_da(input->vps, attr_encoded_data, TAG_ANY))) {
+	if ((vp_data = dpc_pair_find_by_da(input->vps, attr_encoded_data))) {
 		input->code = dpc_message_type_extract(vp_data);
 		input->xid = dpc_xid_extract(vp_data);
 	}
