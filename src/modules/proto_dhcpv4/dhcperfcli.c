@@ -187,7 +187,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port);
-static void dpc_command_parse(char const *command);
+static int dpc_command_parse(char const *command);
 static void dpc_gateway_add(char *addr);
 static void dpc_gateway_parse(char const *param);
 static void dpc_options_parse(int argc, char **argv);
@@ -1783,26 +1783,27 @@ static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint
 /*
  *	See what kind of request we want to send, or workflow to handle.
  */
-static void dpc_command_parse(char const *command)
+static int dpc_command_parse(char const *command)
 {
-	/* If an integer, assume this is the packet type (1 = discover, ...) */
+	/* If an integer, assume this is the packet type (1 = discover, ...). */
 	if (is_integer(command)) {
+		int message = atoi(command);
+		if (message > 255) return -1;
 		packet_code = dhcp_code_from_message(atoi(command));
-		return;
+		return 0;
 	}
 
 	/* Maybe it's a workflow. */
 	workflow_code = fr_str2int(workflow_types, command, DPC_WORKFLOW_NONE);
-	if (workflow_code != DPC_WORKFLOW_NONE) return;
+	if (workflow_code != DPC_WORKFLOW_NONE) return 0;
 	// TODO: define an internal attribute so we can specify this in input vps.
 
 	/* Or a packet type. */
 	packet_code = fr_str2int(request_types, command, -1);
-	if (packet_code != -1) return;
+	if (packet_code != -1) return 0;
 
 	/* Nothing goes. */
-	ERROR("Unrecognised command \"%s\"", command);
-	usage(1);
+	return -1;
 }
 
 /*
@@ -1965,7 +1966,10 @@ static void dpc_options_parse(int argc, char **argv)
 	 *	See what kind of request we want to send.
 	 */
 	if (argc - 1 >= 2) {
-		dpc_command_parse(argv[2]);
+		if (dpc_command_parse(argv[2]) != 0) {
+			ERROR("Unrecognised command \"%s\"", argv[2]);
+			usage(1);
+		}
 	}
 
 	dpc_float_to_timeval(&tv_timeout, timeout);
@@ -2148,9 +2152,10 @@ static void NEVER_RETURNS usage(int status)
 
 	fprintf(fd, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
 	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
-	fprintf(fd, "  <command>        One of (packet type): discover, request, decline, release, inform, lease_query.\n");
+	fprintf(fd, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
+	fprintf(fd, "                   (or the message type numeric value: 1 = Discover, 2 = Request, ...).\n");
 	fprintf(fd, "                   Or (workflow): dora.\n");
-	fprintf(fd, "                   If omitted, packet type must be specified in input items.\n");
+	fprintf(fd, "                   If omitted, message type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
 #ifdef HAVE_LIBPCAP
