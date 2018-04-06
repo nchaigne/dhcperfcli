@@ -32,6 +32,7 @@ char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when
 
 char *dpc_num_message_type_print(char *out, uint32_t num_packet[]);
 
+char *dpc_message_type_print(char *out, int code);
 void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);

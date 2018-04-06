@@ -195,6 +195,27 @@ char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
 }
 
 /*
+ *	Print the message type from internal packet code.
+ */
+char *dpc_message_type_print(char *out, int code)
+{
+	char *p = out;
+	size_t len;
+
+	int message = code - FR_DHCP_OFFSET;
+
+	if (is_dhcp_code(message)) {
+		sprintf(p, "%s", dpc_message_types[message]);
+	} else {
+		len = sprintf(out, "DHCP packet");
+		p += len;
+		if (message <= 0) sprintf(p, " (BOOTP)"); /* No DHCP Message Type: maybe BOOTP (or malformed DHCP packet). */
+		else sprintf(p, " (unknown type: %u)", message);
+	}
+	return out;
+}
+
+/*
  *	Print the packet header.
  */
 void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
@@ -237,12 +258,9 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 
 	if (packet->data && packet->data_len < 243) { /* Obviously malformed. */
 		fprintf(fp, " malformed packet");
-	} else if (is_dhcp_code(code)) {
-		fprintf(fp, " %s", dpc_message_types[code]);
 	} else {
-		fprintf(fp, " DHCP packet");
-		if (code <= 0) fprintf(fp, " (BOOTP)"); /* No DHCP Message Type: maybe BOOTP (or malformed DHCP packet). */
-		else fprintf(fp, " (unknown type: %u)", code);
+		char buf[50];
+		fprintf(fp, " %s", dpc_message_type_print(buf, packet->code));
 	}
 
 	/* DHCP specific information. */
