@@ -71,7 +71,7 @@ extern fr_dict_attr_t const *attr_encoded_data;
 #define DHCP_MAX_MESSAGE_TYPE  (16)
 // DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
 extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
-#define is_dhcp_code(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
+#define is_dhcp_message(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
 #define is_dhcp_reply_expected(_x) (_x == FR_DHCP_DISCOVER || _x == FR_DHCP_REQUEST || _x == FR_DHCP_INFORM \
 	|| _x == FR_DHCP_LEASE_QUERY)
@@ -81,6 +81,9 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
  *	message." (RFC 2131). This means we'll only get the reply if setting ciaddr to address we've used as source.
 */
 
+/* Internally, DHCP packet code starts with an offset of 1024 (hack). */
+#define dhcp_code_from_message(_m) (_m + FR_DHCP_OFFSET)
+#define dhcp_message_from_code(_c) (_c - FR_DHCP_OFFSET)
 
 #define ipaddr_defined(_x) (_x.af != AF_UNSPEC)
 
@@ -88,23 +91,23 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 /*
  *	Statistics update.
  */
-#define STAT_INCR_PACKET_SENT(packet_code) \
+#define STAT_INCR_PACKET_SENT(_packet_code) \
 { \
-	int code = packet_code - FR_DHCP_OFFSET; \
+	int message = dhcp_message_from_code(_packet_code); \
 	stat_ctx.num_packet_sent[0] ++; \
-	if (is_dhcp_code(code)) stat_ctx.num_packet_sent[code] ++; \
+	if (is_dhcp_message(message)) stat_ctx.num_packet_sent[message] ++; \
 }
-#define STAT_INCR_PACKET_RECV(packet_code) \
+#define STAT_INCR_PACKET_RECV(_packet_code) \
 { \
-	int code = packet_code - FR_DHCP_OFFSET; \
+	int message = dhcp_message_from_code(_packet_code); \
 	stat_ctx.num_packet_recv[0] ++; \
-	if (is_dhcp_code(code)) stat_ctx.num_packet_recv[code] ++; \
+	if (is_dhcp_message(message)) stat_ctx.num_packet_recv[message] ++; \
 }
-#define STAT_INCR_PACKET_LOST(packet_code) \
+#define STAT_INCR_PACKET_LOST(_packet_code) \
 { \
-	int code = packet_code - FR_DHCP_OFFSET; \
+	int message = dhcp_message_from_code(_packet_code); \
 	stat_ctx.num_packet_lost[0] ++; \
-	if (is_dhcp_code(code)) stat_ctx.num_packet_lost[code] ++; \
+	if (is_dhcp_message(message)) stat_ctx.num_packet_lost[message] ++; \
 }
 
 /* Specific states of a session. */

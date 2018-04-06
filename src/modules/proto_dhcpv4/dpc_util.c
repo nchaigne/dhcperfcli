@@ -202,9 +202,9 @@ char *dpc_message_type_print(char *out, int code)
 	char *p = out;
 	size_t len;
 
-	int message = code - FR_DHCP_OFFSET;
+	int message = dhcp_message_from_code(code);
 
-	if (is_dhcp_code(message)) {
+	if (is_dhcp_message(message)) {
 		sprintf(p, "%s", dpc_message_types[message]);
 	} else {
 		len = sprintf(out, "DHCP packet");
@@ -229,9 +229,6 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 
 	if (!fp) return;
 	if (!packet) return;
-
-	/* Internally, DHCP packet code starts with an offset of 1024 (hack), so... */
-	int code = packet->code - FR_DHCP_OFFSET;
 
 	if (session) fprintf(fp, "(%u) ", session->id);
 
@@ -894,7 +891,7 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 		if (p[0] == 255) break; /* End Option. */
 
 		if (p[0] == FR_DHCP_MESSAGE_TYPE) {
-			code = p[2] + FR_DHCP_OFFSET;
+			code = dhcp_code_from_message(p[2]);
 			break;
 		}
 
