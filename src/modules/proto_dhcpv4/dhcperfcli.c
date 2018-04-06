@@ -162,7 +162,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct tim
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
-static bool dpc_recv_post_action(dpc_session_ctx_t *session);
+static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *reply);
 static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
@@ -710,23 +710,13 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		return -1;
 	}
 
-	session->reply = reply;
-	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
-
-	/* Compute rtt. */
-	struct timeval rtt;
-	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
-	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
-
-	dpc_packet_print(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
-
 	/* Statistics. */
 	STAT_INCR_PACKET_RECV(reply->code);
 
 	/*
-	 *	Perform post reception actions, and determine if session should be finished.
+	 *	Handle the reply, and decide if the session is finished or not yet.
 	 */
-	if (!dpc_recv_post_action(session)) {
+	if (!dpc_session_handle_reply(session, reply)) {
 		dpc_session_finish(session);
 	}
 
@@ -734,19 +724,43 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 }
 
 /*
- *	Perform actions after reception of a reply.
+ *	Handle a reply which belongs to a given ongoing session.
  *	Returns true if we're not done with the session (so it should not be terminated yet), false otherwise.
  */
-static bool dpc_recv_post_action(dpc_session_ctx_t *session)
+static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *reply)
 {
-	if (!session || !session->reply) return false;
+	struct timeval rtt;
+
+	if (!session || !reply) return false;
+
+	if (   (session->state == DPC_STATE_DORA_EXPECT_OFFER && reply->code != FR_DHCP_OFFER)
+		|| (session->state == DPC_STATE_DORA_EXPECT_ACK && reply->code != FR_DHCP_ACK) ) {
+		/*
+		 *	This is *not* a reply we've been expecting.
+		 *	This can happen legitimately if, when handling a DORA, we've sent the Request and are
+		 *	now expecting an Ack, but then we receive another Offer (from another DHCP server).
+		 */
+		SDEBUG("Discarding reply code %d", reply->code);
+		fr_radius_free(&reply);
+
+		return true; /* Session is not finished. */
+	}
+
+	session->reply = reply;
+	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
+
+	/* Compute rtt. */
+	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
+	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
+
+	dpc_packet_print(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
 	/* Update statistics. */
 	dpc_statistics_update(session->packet, session->reply);
 
+
 	/* We've completed a DORA workflow. */
 	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
-		struct timeval rtt;
 		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
