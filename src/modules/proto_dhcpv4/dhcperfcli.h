@@ -143,6 +143,7 @@ typedef enum {
 typedef enum {
 	DPC_PACKET_SENT = 1,
 	DPC_PACKET_RECEIVED,
+	DPC_PACKET_RECEIVED_DISCARD,
 	DPC_PACKET_TIMEOUT
 } dpc_packet_event_t;
 

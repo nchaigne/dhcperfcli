@@ -740,8 +740,9 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 		 *	This can happen legitimately if, when handling a DORA, we've sent the Request and are
 		 *	now expecting an Ack, but then we receive another Offer (from another DHCP server).
 		 */
-		char buf[50];
-		SDEBUG("Discarding received %s", dpc_message_type_print(buf, reply->code));
+		DPC_DEBUG_TRACE("Discarding received reply code %d (session state: %d)", reply->code, session->state);
+
+		dpc_packet_header_print(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
 		fr_radius_free(&reply);
 
 		return true; /* Session is not finished. */

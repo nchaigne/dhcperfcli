@@ -242,6 +242,9 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 		case DPC_PACKET_RECEIVED:
 			fprintf(fp, "Received");
 			break;
+		case DPC_PACKET_RECEIVED_DISCARD:
+			fprintf(fp, "Discarded received");
+			break;
 		case DPC_PACKET_TIMEOUT:
 			fprintf(fp, "Timed out");
 			break;
