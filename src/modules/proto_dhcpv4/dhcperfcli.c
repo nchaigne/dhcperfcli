@@ -761,15 +761,6 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	/* Update statistics. */
 	dpc_statistics_update(session->packet, session->reply);
 
-
-	/* We've completed a DORA workflow. */
-	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
-		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
-		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
-
-		return false; /* Session is done. */
-	}
-
 	/*
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
 	 */
@@ -857,11 +848,19 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	}
 
 	/*
-	 *	We've just completed a DORA, and want to send a Release immediately.
+	 *	We've just completed a DORA transaction.
 	 */
-	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK
-	    && session->input->workflow == DPC_WORKFLOW_DORA_RELEASE) {
+	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
+		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
+		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
+		if (!(session->input->workflow == DPC_WORKFLOW_DORA_RELEASE)) {
+			return false; /* Session is done. */
+		}
+
+		/*
+		 *	Send a Release immediately after DORA.
+		 */
 		VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr;
 		RADIUS_PACKET *packet;
 
@@ -903,7 +902,8 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
 
-		/* Release xid is selected by client. TODO? */
+		/* xid is supposed to be selected by client. Let the program pick a new one. */
+		session->input->xid = DPC_PACKET_ID_UNASSIGNED;
 
 		/*
 		 *	New packet is ready. Free old packet and its reply. Then use the new packet.
