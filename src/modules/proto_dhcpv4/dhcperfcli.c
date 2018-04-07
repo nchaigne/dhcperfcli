@@ -119,6 +119,7 @@ static const FR_NAME_NUMBER request_types[] = {
 
 static const FR_NAME_NUMBER workflow_types[] = {
 	{ "dora",        DPC_WORKFLOW_DORA },
+	{ "dorarel",     DPC_WORKFLOW_DORA_RELEASE },
 	{ NULL, 0}
 };
 
@@ -856,6 +857,77 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	}
 
 	/*
+	 *	We've just completed a DORA, and want to send a Release immediately.
+	 */
+	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK
+	    && session->input->workflow == DPC_WORKFLOW_DORA_RELEASE) {
+
+		VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr;
+		RADIUS_PACKET *packet;
+
+		/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
+		vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
+		if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
+			DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
+			return false;
+		}
+
+		/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
+		                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+		if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
+			DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
+			return false;
+		}
+
+		/*
+		 *	Prepare a new DHCP Release packet.
+		 */
+		DPC_DEBUG_TRACE("DORA-Release: received valid Ack, now preparing Release");
+
+		packet = dpc_request_init(session, session->input);
+		if (!packet) return false;
+
+		packet->code = FR_DHCP_RELEASE;
+		session->state = DPC_STATE_NO_REPLY;
+
+		/*
+		 *	Use information from the Ack reply to complete the new packet.
+		 */
+
+		/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
+		vp_ciaddr = radius_pair_create(packet, &packet->vps,
+		                                     FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
+
+		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+
+		/* Release xid is selected by client. TODO? */
+
+		/*
+		 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+		 */
+		talloc_free(session->reply);
+		session->reply = NULL;
+
+		if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
+			SERROR("Failed to free from packet list, id: %u", session->packet->id);
+		}
+		talloc_free(session->packet);
+		session->packet = packet;
+
+		/*
+		 *	Encode and send packet.
+		 */
+		if (dpc_send_one_packet(session, &session->packet) < 0) {
+			return false;
+		}
+
+		return false; /* Session is done. */
+	}
+
+	/*
 	 *	There may be more Offer replies, from other DHCP servers. Wait for them.
 	 */
 	if (multi_offer && session->input->with_pcap && session->reply->code == FR_DHCP_OFFER) {
@@ -1104,7 +1176,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		 */
 		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
 
-		if (input->workflow == DPC_WORKFLOW_DORA) {
+		if (input->workflow == DPC_WORKFLOW_DORA || input->workflow == DPC_WORKFLOW_DORA_RELEASE) {
 			session->state = DPC_STATE_DORA_EXPECT_OFFER;
 		} else {
 			session->state = (session->reply_expected ? DPC_STATE_EXPECT_REPLY : DPC_STATE_NO_REPLY);
@@ -1479,7 +1551,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!vp_data) {
 		if (input->code == FR_CODE_UNDEFINED) {
 			/* Handling a workflow, which determines the packet type. */
-			if (workflow_code == DPC_WORKFLOW_DORA) {
+			if (workflow_code == DPC_WORKFLOW_DORA || workflow_code == DPC_WORKFLOW_DORA_RELEASE) {
 				input->workflow = workflow_code;
 				input->code = FR_DHCP_DISCOVER;
 			}
@@ -2159,7 +2231,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
 #ifdef HAVE_LIBPCAP
-	fprintf(fd, "  -A               Wait for multiple Offer replies to broadcast Discover (requires option -i).\n");
+	fprintf(fd, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
 	fprintf(fd, "  -D <dictdir>     Set dictionaries directory (defaults to " DICTDIR ").\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
