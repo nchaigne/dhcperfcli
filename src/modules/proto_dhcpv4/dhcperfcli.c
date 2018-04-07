@@ -2226,7 +2226,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
 	fprintf(fd, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
 	fprintf(fd, "                   (or the message type numeric value: 1 = Discover, 2 = Request, ...).\n");
-	fprintf(fd, "                   Or (workflow): dora.\n");
+	fprintf(fd, "                   Or (workflow): dora, dorarel (DORA followed by Release).\n");
 	fprintf(fd, "                   If omitted, message type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
