@@ -165,6 +165,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
 static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *reply);
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
+static bool dpc_session_dora_release(dpc_session_ctx_t *session);
 static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
@@ -773,79 +774,17 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	 *	We've just completed a DORA transaction.
 	 */
 	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
-
-		/* Update statistics for DORA workflows. */
+		/*
+		 *	Update statistics for DORA workflows.
+		 */
 		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
-
-		if (!(session->input->workflow == DPC_WORKFLOW_DORA_RELEASE)) {
-			return false; /* Session is done. */
-		}
 
 		/*
 		 *	Send a Release immediately after DORA.
 		 */
-		VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr;
-		RADIUS_PACKET *packet;
-
-		/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-		vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
-		if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
-			DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
-			return false;
-		}
-
-		/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
-		                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
-		if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
-			DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
-			return false;
-		}
-
-		/*
-		 *	Prepare a new DHCP Release packet.
-		 */
-		DPC_DEBUG_TRACE("DORA-Release: received valid Ack, now preparing Release");
-
-		packet = dpc_request_init(session, session->input);
-		if (!packet) return false;
-
-		packet->code = FR_DHCP_RELEASE;
-		session->state = DPC_STATE_NO_REPLY;
-
-		/*
-		 *	Use information from the Ack reply to complete the new packet.
-		 */
-
-		/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-		vp_ciaddr = radius_pair_create(packet, &packet->vps,
-		                                     FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
-		fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
-
-		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
-
-		/* xid is supposed to be selected by client. Let the program pick a new one. */
-		session->input->xid = DPC_PACKET_ID_UNASSIGNED;
-
-		/*
-		 *	New packet is ready. Free old packet and its reply. Then use the new packet.
-		 */
-		talloc_free(session->reply);
-		session->reply = NULL;
-
-		if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
-			SERROR("Failed to free from packet list, id: %u", session->packet->id);
-		}
-		talloc_free(session->packet);
-		session->packet = packet;
-
-		/*
-		 *	Encode and send packet.
-		 */
-		if (dpc_send_one_packet(session, &session->packet) < 0) {
-			return false;
+		if (session->input->workflow == DPC_WORKFLOW_DORA_RELEASE) {
+			return dpc_session_dora_release(session);
 		}
 
 		return false; /* Session is done. */
@@ -951,6 +890,78 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	dpc_event_add_request_timeout(session, NULL);
 
 	return true; /* Session is not finished. */
+}
+
+/*
+ *	Handling of a DORA workflow. After receiving an Ack, try and build a Release
+ *	Encode and send the packet. (no reply is expected)
+ */
+static bool dpc_session_dora_release(dpc_session_ctx_t *session)
+{
+	VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr;
+	RADIUS_PACKET *packet;
+
+	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
+	vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
+	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
+		DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
+		return false;
+	}
+
+	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+	vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
+	                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
+		DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
+		return false;
+	}
+
+	/*
+	 *	Prepare a new DHCP Release packet.
+	 */
+	DPC_DEBUG_TRACE("DORA-Release: received valid Ack, now preparing Release");
+
+	packet = dpc_request_init(session, session->input);
+	if (!packet) return false;
+
+	packet->code = FR_DHCP_RELEASE;
+	session->state = DPC_STATE_NO_REPLY;
+
+	/*
+	 *	Use information from the Ack reply to complete the new packet.
+	 */
+
+	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
+	vp_ciaddr = radius_pair_create(packet, &packet->vps,
+	                               FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
+
+	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+
+	/* xid is supposed to be selected by client. Let the program pick a new one. */
+	session->input->xid = DPC_PACKET_ID_UNASSIGNED;
+
+	/*
+	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+	 */
+	talloc_free(session->reply);
+	session->reply = NULL;
+
+	if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
+		SERROR("Failed to free from packet list, id: %u", session->packet->id);
+	}
+	talloc_free(session->packet);
+	session->packet = packet;
+
+	/*
+	 *	Encode and send packet.
+	 */
+	if (dpc_send_one_packet(session, &session->packet) < 0) {
+		return false;
+	}
+
+	return false; /* Session is done. */
 }
 
 /*
