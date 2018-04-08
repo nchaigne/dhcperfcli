@@ -86,11 +86,48 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=
 `__
 
 
+## Request (INIT-REBOOT state, client broadcast)
+
+A client, which has knowledge of an IP address previously leased to him, comes back online after a reboot or network restart. This client broadcasts a DHCP Request message on its local interface, in order to verify his previous IP address.<br>
+This requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The requested IP address (option 50 *Requested IP address*).
+- The DHCP message type (option 53 *Message Type*, provided through argument `request`).
+
+Notes:
+- Field `ciaddr` must be zero (the client does not have an assigned IP address yet).
+- Option 54 *Server Identifier* must not be set (the client is not responding to a DHCP Offer).
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
+`__
+
+
+## Request (INIT-REBOOT state, gateway)
+
+On behalf of a client in INIT-REBOOT state, a gateway (DHCP relay or concentrator) unicasts a DHCP Request message to a DHCP server.<br>
+This requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The requested IP address (option 50 *Requested IP address*).
+- The DHCP message type (option 53 *Message Type*, provided through argument `request`).
+- The gateway IP address (field `giaddr`), here provided through option `-g`.
+
+Notes:
+- Field `ciaddr` must be zero (the client does not have an assigned IP address yet).
+- Option 54 *Server Identifier* must not be set (the client is not responding to a DHCP Offer).
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -i eth0  255.255.255.255  request
+`__
+
+
 ## DORA
 
 A DORA transaction (acronym for *Discover, Offer, Request, Ack*) is the succession of two DHCP exchanges which allow a client to obtain a lease:
 - A DHCP Discover, to which the server responds with a DHCP Offer,
 - Followed by a DHCP Request, to which the server responds with a DHCP Ack.
+
+You can, of course, carry out a DORA workflow manually, by successively building and sending a DHCP Discover then a DHCP Request. Automating this sequence is merely a convenience offered by *dhcperfcli*.
 
 Performing a DORA requires the following information:
 - The client hardware (MAC) address (field `chaddr`).
@@ -114,7 +151,8 @@ Example of DORA using a gateway:
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dora
 `__
 
-Note: you can, of course, carry out a DORA workflow manually, by successively building and sending a DHCP Discover then a DHCP Request. Automating this sequence is merely a convenience offered by *dhcperfcli*.
+Note: if broadcasting, option `-A` has no effect, as the first valid Offer reply will be selected. However, option `-a` can be used to ignore all DHCP servers but one.
+
 
 ## DORA / Release
 
@@ -137,4 +175,3 @@ Example of DORA / Release using a gateway:
 >__`
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dorarel
 `__
-
