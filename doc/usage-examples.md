@@ -65,7 +65,7 @@ This requires the following information:
 Note: field `ciaddr` must be zero (the client does not have an assigned IP address yet).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1, DHCP-DHCP-Server-Identifier=10.11.12.42"  |  dhcperfcli  -i eth0 255.255.255.255  request
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1, DHCP-DHCP-Server-Identifier=10.11.12.42"  |  dhcperfcli  -i eth0  255.255.255.255  request
 `__
 
 
@@ -83,4 +83,33 @@ Note: field `ciaddr` must be zero (the client does not have an assigned IP addre
 
 >__`
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1, DHCP-DHCP-Server-Identifier=10.11.12.42"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
+`__
+
+
+## DORA
+
+A DORA transaction (acronym for *Discover, Offer, Request, Ack*) is the succession of two DHCP exchanges which allow a client to obtain a lease:
+- A Discover, to which the server responds with an Offer,
+- Followed by a Request, to which the server responds with an Ack.
+
+Performing a DORA requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The workflow type, provided through argument `dora`.
+
+In this case you do not provide the message type. It will be set automatically by the program (Discover for the first message, Request for the second).
+
+The input item can contain other attributes which will be used to build the Discover and Request messages.
+
+You should not provide options 50 (*Requested IP address*) and 54 (*Server Identifier*). These will be set automatically in the Request packet from information provided by the server in the Offer reply.
+
+Example of DORA from a broadcasting client:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  255.255.255.255  dora
+`__
+
+Example of DORA using a gateway:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dora
 `__
