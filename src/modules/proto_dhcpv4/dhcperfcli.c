@@ -164,6 +164,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct tim
 static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
 static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *reply);
+static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
@@ -764,93 +765,16 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	/*
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
 	 */
-	if (session->state == DPC_STATE_DORA_EXPECT_OFFER) {
-		VALUE_PAIR *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
-		RADIUS_PACKET *packet;
-
-		if (session->reply->code != FR_DHCP_OFFER) { /* Not an Offer. */
-			DEBUG2("Session DORA: expected Offer reply, instead got: %d", session->reply->code);
-			return false;
-		}
-
-		/* Get the Offer xid. */
-		vp_xid = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID, TAG_ANY);
-		if (!vp_xid) { /* Should never happen (DHCP field). */
-			return false;
-		}
-
-		/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
-		vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
-		if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
-			DEBUG2("Session DORA: no yiaddr provided in Offer reply");
-			return false;
-		}
-
-		/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-		vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
-		                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
-		if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
-			DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
-			return false;
-		}
-
-		/*
-		 *	Prepare a new DHCP Request packet.
-		 */
-		DPC_DEBUG_TRACE("DORA: received valid Offer, now preparing Request");
-
-		packet = dpc_request_init(session, session->input);
-		if (!packet) return false;
-
-		packet->code = FR_DHCP_REQUEST;
-		session->state = DPC_STATE_DORA_EXPECT_ACK;
-
-		/*
-		 *	Use information from the Offer reply to complete the new packet.
-		 */
-
-		/* Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr */
-		vp_requested_ip = radius_pair_create(packet, &packet->vps,
-		                                     FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
-		fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
-
-		/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-		fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
-
-		/* Reset input xid to value obtained from the Offer reply. */
-		session->input->xid = vp_xid->vp_uint32;
-
-		/*
-		 *	New packet is ready. Free old packet and its reply. Then use the new packet.
-		 */
-		talloc_free(session->reply);
-		session->reply = NULL;
-
-		if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
-			SERROR("Failed to free from packet list, id: %u", session->packet->id);
-		}
-		talloc_free(session->packet);
-		session->packet = packet;
-
-		/*
-		 *	Encode and send packet.
-		 */
-		if (dpc_send_one_packet(session, &session->packet) < 0) {
-			return false;
-		}
-
-		/*
-		 *	Arm request timeout.
-		 */
-		dpc_event_add_request_timeout(session, NULL);
-
-		return true; /* Session is not finished. */
+	if (session->state == DPC_STATE_DORA_EXPECT_OFFER && session->reply->code == FR_DHCP_OFFER) {
+		return dpc_session_dora_request(session);
 	}
 
 	/*
 	 *	We've just completed a DORA transaction.
 	 */
 	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
+
+		/* Update statistics for DORA workflows. */
 		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
@@ -939,6 +863,94 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	}
 
 	return false; /* Session is done. */
+}
+
+/*
+ *	Handling of a DORA workflow. After receiving an Offer, try and build a Request.
+ *	Encode and send the packet, then wait for the reply.
+ *	Returns: true if Request was sent, false otherwise.
+ */
+static bool dpc_session_dora_request(dpc_session_ctx_t *session)
+{
+	VALUE_PAIR *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
+	RADIUS_PACKET *packet;
+
+	/* Get the Offer xid. */
+	vp_xid = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID, TAG_ANY);
+	if (!vp_xid) { /* Should never happen (DHCP field). */
+		return false;
+	}
+
+	/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
+	vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
+	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
+		DEBUG2("Session DORA: no yiaddr provided in Offer reply");
+		return false;
+	}
+
+	/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+	vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
+	                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
+		DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
+		return false;
+	}
+
+	/*
+	 *	Prepare a new DHCP Request packet.
+	 */
+	DPC_DEBUG_TRACE("DORA: received valid Offer, now preparing Request");
+
+	packet = dpc_request_init(session, session->input);
+	if (!packet) return false;
+
+	packet->code = FR_DHCP_REQUEST;
+	session->state = DPC_STATE_DORA_EXPECT_ACK;
+
+	/*
+	 *	Use information from the Offer reply to complete the new packet.
+	 */
+
+	/*
+	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
+	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
+	 */
+	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
+	vp_requested_ip = radius_pair_create(packet, &packet->vps,
+	                                     FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
+
+	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
+	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+
+	/* Reset input xid to value obtained from the Offer reply. */
+	session->input->xid = vp_xid->vp_uint32;
+
+	/*
+	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+	 */
+	talloc_free(session->reply);
+	session->reply = NULL;
+
+	if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
+		SERROR("Failed to free from packet list, id: %u", session->packet->id);
+	}
+	talloc_free(session->packet);
+	session->packet = packet;
+
+	/*
+	 *	Encode and send packet.
+	 */
+	if (dpc_send_one_packet(session, &session->packet) < 0) {
+		return false;
+	}
+
+	/*
+	 *	Arm request timeout.
+	 */
+	dpc_event_add_request_timeout(session, NULL);
+
+	return true; /* Session is not finished. */
 }
 
 /*
