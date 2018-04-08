@@ -89,8 +89,8 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=
 ## DORA
 
 A DORA transaction (acronym for *Discover, Offer, Request, Ack*) is the succession of two DHCP exchanges which allow a client to obtain a lease:
-- A Discover, to which the server responds with an Offer,
-- Followed by a Request, to which the server responds with an Ack.
+- A DHCP Discover, to which the server responds with a DHCP Offer,
+- Followed by a DHCP Request, to which the server responds with a DHCP Ack.
 
 Performing a DORA requires the following information:
 - The client hardware (MAC) address (field `chaddr`).
@@ -100,7 +100,7 @@ In this case you do not provide the message type. It will be set automatically b
 
 The input item can contain other attributes which will be used to build the Discover and Request messages.
 
-You should not provide options 50 (*Requested IP address*) and 54 (*Server Identifier*). These will be set automatically in the Request packet from information provided by the server in the Offer reply.
+You can provide option 50 (*Requested IP address*), in which case it will be set in the Discover message. However, you may not be offered this IP address (if it was not available). In any case, the *Requested IP address* set in the Request message will be the value of field `yiaddr` from the Offer reply.
 
 Example of DORA from a broadcasting client:
 
@@ -113,3 +113,22 @@ Example of DORA using a gateway:
 >__`
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dora
 `__
+
+Note: you can, of course, carry out a DORA workflow manually, by successively building and sending a DHCP Discover then a DHCP Request. Automating this sequence is merely a convenience offered by *dhcperfcli*.
+
+## DORA / Release
+
+This is a DORA workflow, followed by an immediate DHCP Release.
+
+This is not something that would happen in real life (after acquiring an IP address, a client will want to use it before relinquishing it). However, this is useful for testing purposes. This allows to kindly inform the server that we do not need this address after all, so it can be freed and assigned to someone else if needed.
+
+Performing a DORA / Release requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The workflow type, provided through argument `dorarel`.
+
+Example of DORA / Release using a gateway:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dorarel
+`__
+
