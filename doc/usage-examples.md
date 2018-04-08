@@ -120,11 +120,17 @@ Note: you can, of course, carry out a DORA workflow manually, by successively bu
 
 This is a DORA workflow, followed by an immediate DHCP Release.
 
-This is not something that would happen in real life (after acquiring an IP address, a client will want to use it before relinquishing it). However, this is useful for testing purposes. This allows to kindly inform the server that we do not need this address after all, so it can be freed and assigned to someone else if needed.
+This is not something that would happen in real life (after acquiring an IP address, a client will want to use it before relinquishing it). However, this is useful for testing purposes. This allows to gracefully inform the server that we do not need this address after all, so it can be freed and assigned to someone else if needed.
 
 Performing a DORA / Release requires the following information:
 - The client hardware (MAC) address (field `chaddr`).
 - The workflow type, provided through argument `dorarel`.
+
+Example of DORA / Release from a broadcasting client:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  255.255.255.255  dorarel
+`__
 
 Example of DORA / Release using a gateway:
 

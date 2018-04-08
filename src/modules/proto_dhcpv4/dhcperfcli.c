@@ -960,6 +960,9 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	if (dpc_send_one_packet(session, &session->packet) < 0) {
 		return false;
 	}
+	// Note: if the DORA was broadcast, we're also broadcasting the Release. It works. But...
+	// According to RFC 2131, a Release is supposed to be unicast. For this to work we would need the
+	// IP address to be configured. Which is probably not the case. So it's better to just broadcast anyway.
 
 	return false; /* Session is done. */
 }
