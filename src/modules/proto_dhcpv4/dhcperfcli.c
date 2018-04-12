@@ -575,6 +575,12 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 		/* Send using pcap raw socket. */
 		packet->if_index = pcap->if_index; /* So we can trace it. */
 		ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
+		/*
+		 *	Note: we're sending from our real Ethernet source address (from the selected interface,
+		 *	set by fr_pcap_open / fr_pcap_mac_addr), *not* field 'chaddr' from the DHCP packet
+		 *	(which is a fake hardware address).
+		 *	This because we want replies (sent by the DHCP server to our Ethernet address) to reach us.
+		 */
 	} else
 #endif
 	{
