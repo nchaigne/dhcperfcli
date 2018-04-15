@@ -47,7 +47,7 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Transaction-Id=362"  
 Without option `-g`, the same behavior can be obtained as follows:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Transaction-Id=362, Packet-Src-IP-Address=10.11.12.1, Packet-Src-Port=67, DHCP-Gateway-IP-Address=10.11.12.1"  |  dhcperfcli  10.11.12.42  discover
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Transaction-Id=362, DHCP-Gateway-IP-Address=10.11.12.1, Packet-Src-IP-Address=10.11.12.1, Packet-Src-Port=67"  |  dhcperfcli  10.11.12.42  discover
 `__
 
 Note that field `giaddr` and the packet source IP address have the same value. The DHCP server will respond to `giaddr` if it is set, so the program must be listening on that address.
@@ -174,4 +174,27 @@ Example of DORA / Release using a gateway:
 
 >__`
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dorarel
+`__
+
+
+## Request (RENEWING)
+
+A client, which has a configured IP address, wishes to extend its lease before it expires. To do so, the client unicasts a DHCP Request message to the DHCP server.<br>
+This requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The client IP address (field `ciaddr`).
+- The DHCP message type (option 53 *Messsage Type*, provided through argument `request`).
+
+Notes:
+- Option 50 *Requested IP address* must not be set
+- Option 54 *Server Identifier* must not be set (the client is not responding to a DHCP Offer).
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  request
+`__
+
+Or, if a gateway is involved:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  request
 `__
