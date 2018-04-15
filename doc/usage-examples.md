@@ -198,3 +198,27 @@ Or, if a gateway is involved:
 >__`
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  request
 `__
+
+
+## Release
+
+A client, which has a configured IP address, is about to relinquish its lease on this address, and before doing so explicitly notifies the DHCP server.<br>
+This requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The client IP address (field `ciaddr`).
+- The DHCP message type (option 53 *Messsage Type*, provided through argument `request`).
+- The address of the DHCP server (option 54 *Server Identifier*).
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Client-IP-Address=16.128.0.1, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  release
+`__
+
+Or, if a gateway is involved:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  release
+`__
+
+Notes:
+- Sending a DHCP Release is optional. Clients are often unable to do so, which means the server is in charge of dealing with expired leases.
+- There is no response to a DHCP Release, so the program will not wait for one.
