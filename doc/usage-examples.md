@@ -173,7 +173,7 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  2
 Example of DORA / Release using a gateway:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dorarel
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  dorarel
 `__
 
 
@@ -196,7 +196,29 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.
 Or, if a gateway is involved:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  request
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
+`__
+
+
+## Decline
+
+After being assigned an IP address, a client checks that this address is not already in use. If it is, the client broadcasts a DHCP Decline message.<br>
+This requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The declined (already in use) IP address (option 50 *Requested IP address*).
+- The DHCP message type (option 53 *Messsage Type*, provided through argument `decline`).
+- The address of the DHCP server (option 54 *Server Identifier*).
+
+Note: field `ciaddr` must be zero.
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -i eth0  255.255.255.255  decline
+`__
+
+Or, if a gateway is involved:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  decline
 `__
 
 
@@ -206,7 +228,7 @@ A client, which has a configured IP address, is about to relinquish its lease on
 This requires the following information:
 - The client hardware (MAC) address (field `chaddr`).
 - The client IP address (field `ciaddr`).
-- The DHCP message type (option 53 *Messsage Type*, provided through argument `request`).
+- The DHCP message type (option 53 *Messsage Type*, provided through argument `release`).
 - The address of the DHCP server (option 54 *Server Identifier*).
 
 >__`
