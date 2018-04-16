@@ -32,7 +32,7 @@ dhcperfcli [options] [<server>[:<port>] [<command>]]
 Arguments|Description
 -|-
 `<server>:[<port>]` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
-`<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora`.<br>This can be omitted, in which case the message type must be provided through input items (`DHCP-Message-Type`).
+`<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case the message type must be provided through input items (`DHCP-Message-Type`).
 `-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
 `-D <dir>` | Read dictionaries from `<dir>`.<br>Default: directory `share/freeradius` of FreeRADIUS installation.
@@ -101,6 +101,17 @@ Attribute|Description
 `Packet-Dst-Port` | The packet destination UDP port. Default is 67 for a server or a gateway.
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
 `DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for a single packet.
+
+
+## Transaction Id
+
+The Transaction Id (field `xid`) is a number used to correlate messages and responses between a client and a server. By default xid values are generated incrementally, starting at 0 (or option `-I`).
+
+Once a reply is received to a message (or the timeout expires), the allocated xid is freed and might be used again.
+
+For a given DHCP packet, a specific xid value can be requested (through input attribute `DHCP-Transaction-Id`), which *dhcperfcli* will try to allocate. If this is not possible (which means packets are sent in parallel and this xid is already in use) then it will fall back to the automatic incremental generation.
+
+For a DORA transaction, the xid used to build the Request message is the same as from the Offer reply (which is also the same as the xid from the Discover message), as described in RFC 2131.
 
 
 ## Template
