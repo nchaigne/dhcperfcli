@@ -244,3 +244,29 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifie
 Notes:
 - Sending a DHCP Release is optional. Clients are often unable to do so, which means the server is in charge of dealing with expired leases.
 - There is no response to a DHCP Release, so the program will not wait for one.
+
+
+## Inform
+
+A client which has a configured IP address wishes to obtain parameters from the DHCP server (for example, site specific option 252 *WPAD* for handling Web Proxy Auto-Discovery).<br>
+This requires the following information:
+- The client hardware (MAC) address (field `chaddr`).
+- The client IP address (field `ciaddr`).
+- The DHCP message type (option 53 *Messsage Type*, provided through argument `inform`).
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1, DHCP-Parameter-Request-List=252, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  inform
+`__
+
+
+Or, if a gateway is involved:
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1, DHCP-Parameter-Request-List=252"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  inform
+`__
+
+Note: the DHCP server responds directly to the client IP address (field `ciaddr`) even if the DHCP Inform is relayed. This entails that the client address must be reachable by the server (otherwise the client will never receive the DHCP Ack response). The program assumes this is the case.
+
+
+
+
