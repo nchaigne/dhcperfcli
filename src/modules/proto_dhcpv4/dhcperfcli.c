@@ -942,6 +942,12 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	                               FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
+	/*
+	 *	Remove eventual option 50 Requested IP Address.
+	 *	(it may be provided for Discover, but must *not* be in Release)
+	 */
+	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
+
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
 
