@@ -193,8 +193,8 @@ This shows the following information:
 - The network interface (if it can be figured out): `via eth0`.
 - The length of the DHCP data: `length 300`.
 
-### Trace value pair attributes
 
+### Trace value pair attributes
 
 Value pair attributes are traced with option `-P 2` (or higher).<br>
 For requests, this is the input from which the packet is built. For responses, this is the decoded data.
@@ -211,3 +211,48 @@ DHCP vps options:
 
 The names of DHCP attributes are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/v4.0.x/share/dictionary.dhcpv4).<br>
 Displayed values are formatted according to the attribute type. For an option, its number is printed in brackets.
+
+
+
+### Trace encoded hex data
+
+Encoded data is traced as hex values with option `-P 3` (or higher).<br>
+This displays the actual content of the DHCP packet, broken down by fields and options for readability (similar to what you might view with a tool such as Wireshark).
+
+Example:
+```
+DHCP hex data:
+  0000          op: 01
+  0001       htype: 01
+  0002        hlen: 06
+  0003        hops: 00
+  0004         xid: 00 00 03 e9
+  0008        secs: 00 00
+  000a       flags: 00 00
+  000c      ciaddr: 00 00 00 00
+  0010      yiaddr: 00 00 00 00
+  0014      siaddr: 00 00 00 00
+  0018      giaddr: 00 00 00 00
+  001c      chaddr: 50 41 4e 44 41 00 00 00 00 00 00 00 00 00 00 00
+  002c       sname: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  006c        file: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  00ec     options: 63 82 53 63
+  00f0          53: 35 01 01
+  00f3          51: 33 04 00 01 51 80
+  00f9          12: 0c 0a 64 68 63 70 65 72 66 63 6c 69
+  0105         end: ff
+  0106         pad: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                    00 00 00 00 00 00
+
+```
