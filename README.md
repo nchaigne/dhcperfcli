@@ -193,3 +193,21 @@ This shows the following information:
 - The network interface (if it can be figured out): `via eth0`.
 - The length of the DHCP data: `length 300`.
 
+### Trace value pair attributes
+
+
+Value pair attributes are traced with option `-P 2` (or higher).<br>
+For requests, this is the input from which the packet is built. For responses, this is the decoded data.
+
+Example:
+```
+DHCP vps fields:
+        DHCP-Client-Hardware-Address = 50:41:4e:44:41:00
+        DHCP-Transaction-Id = 1001
+DHCP vps options:
+        (12) DHCP-Hostname = "dhcperfcli"
+        (51) DHCP-IP-Address-Lease-Time = 86400
+```
+
+The names of DHCP attributes are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/v4.0.x/share/dictionary.dhcpv4).<br>
+Displayed values are formatted according to the attribute type. For an option, its number is printed in brackets.
