@@ -164,3 +164,32 @@ echo "DCP-Encoded-Data=0x0101060100000001000000000000000000000000000000000000000
 `__
 
 This one is a well-formed (if a bit hard to read, but option `-P 3` will display something more accessible) DHCP Discover packet, to which you can get a DHCP Offer reply.
+
+
+## Displaying DHCP packets
+
+DHCP packets sent or received can be printed on standard output. The level of detail is controled through option `-P`. If omitted, a default is figured out according to number of packets and parallelism.
+
+### Trace packet header
+
+Packet header is a one-line summary traced with option `-P 1` (or higher).<br>
+Example:
+
+>`
+(0) Sent Discover (hwaddr: 50:41:4e:44:41:00) Id 1001 (0x000003e9) from 0.0.0.0:68 to 255.255.255.255:67 via eth0 length 300
+`
+
+>`
+(0) Received Offer (hwaddr: 50:41:4e:44:41:00, yiaddr: 16.128.0.1) Id 1001 (0x000003e9) from 10.11.12.42:67 to 16.128.0.1:68 via eth0 length 308
+`
+
+This shows the following information:
+- The session number: `(0)`. This is a unique number for the execution of *dhcperfcli*, starting at 0 and incremented for each new session started.
+- Whether the packet is `Sent` (by the program) or `Received` (from a DHCP server or relay).
+- The message type, such as `Discover` or `Offer`.
+- Key DHCP information extracted from the packet: `hwaddr`, `yiaddr`.
+- The Transaction Id (`xid`): `Id 1001 (0x000003e9)`.
+- The packet source and destination (IP address and port): `from 0.0.0.0:68 to 255.255.255.255:67`.
+- The network interface (if it can be figured out): `via eth0`.
+- The length of the DHCP data: `length 300`.
+
