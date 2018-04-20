@@ -34,6 +34,7 @@ static int packet_trace_lvl = -1; /* If unspecified, figure out something automa
 static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
 static fr_event_list_t *event_list = NULL;
 
+static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 static char const *file_vps_in = NULL;
 static dpc_input_list_t vps_list_in = { 0 };
 static bool with_template = false;
@@ -1806,6 +1807,8 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	 *	If there's something on stdin, read it.
 	 */
 	if (dpc_stdin_peek()) {
+		with_stdin_input = true;
+
 		DEBUG("Reading input from stdin");
 		dpc_input_load_from_fd(ctx, stdin, &vps_list_in, "stdin");
 	} else {
@@ -1827,14 +1830,6 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		dpc_input_load_from_fd(ctx, file_in, &vps_list_in, file_vps_in);
 
 		fclose(file_in);
-	}
-
-	/*
-	 *	Ensure we have something to work with.
-	 */
-	if (vps_list_in.size == 0) {
-		WARN("No valid input loaded, nothing to do");
-		exit(0);
 	}
 
 	DEBUG("Done reading input, list size: %d", vps_list_in.size);
@@ -2276,6 +2271,16 @@ int main(int argc, char **argv)
 
 	/* Load input data used to build the packets. */
 	dpc_input_load(autofree);
+
+	/*
+	 *	Ensure we have something to work with.
+	 */
+	if (vps_list_in.size == 0) {
+		if (!with_stdin_input && argc < 2) usage(0); /* If no input nor arguments, show usage. */
+
+		WARN("No valid input loaded, nothing to do");
+		exit(0);
+	}
 
 	/*
 	 *	If packet trace level is unspecified, figure out something automatically.
