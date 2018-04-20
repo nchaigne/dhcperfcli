@@ -1608,7 +1608,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 {
 	vp_cursor_t cursor;
 	VALUE_PAIR *vp;
-	VALUE_PAIR *vp_data = NULL;
+	VALUE_PAIR *vp_data = NULL, *vp_workflow_type = NULL;
 
 	input->code = FR_CODE_UNDEFINED;
 
@@ -1620,6 +1620,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if ((vp_data = dpc_pair_find_by_da(input->vps, attr_encoded_data))) {
 		input->code = dpc_message_type_extract(vp_data);
 		input->xid = dpc_xid_extract(vp_data);
+	} else {
+		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
+		vp_workflow_type = dpc_pair_find_by_da(input->vps, attr_workflow_type);
 	}
 
 	/*
@@ -1675,12 +1678,19 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 */
 	if (!vp_data) {
 		if (input->code == FR_CODE_UNDEFINED) {
-			/* Handling a workflow, which determines the packet type. */
-			if (workflow_code ) {
+			/*
+			 *	Handling a workflow. All workflows start with a Discover.
+			 */
+			if (vp_workflow_type) {
+				input->workflow = vp_workflow_type->vp_uint8;
+				input->code = FR_DHCP_DISCOVER;
+			} else if (workflow_code) {
 				input->workflow = workflow_code;
-				input->code = FR_DHCP_DISCOVER; /* All workflows start with a Discover. */
+				input->code = FR_DHCP_DISCOVER;
 			}
 		}
+
+		/* Fall back to message type provided through command line (if there is one). */
 		if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
 	}
 
