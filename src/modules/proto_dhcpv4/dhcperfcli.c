@@ -1299,8 +1299,8 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		 */
 		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
 
-		if (input->workflow == DPC_WORKFLOW_DORA || input->workflow == DPC_WORKFLOW_DORA_RELEASE) {
-			session->state = DPC_STATE_DORA_EXPECT_OFFER;
+		if (input->workflow) {
+			session->state = DPC_STATE_DORA_EXPECT_OFFER; /* All workflows start with a Discover. */
 		} else {
 			session->state = (session->reply_expected ? DPC_STATE_EXPECT_REPLY : DPC_STATE_NO_REPLY);
 		}
@@ -1674,9 +1674,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!vp_data) {
 		if (input->code == FR_CODE_UNDEFINED) {
 			/* Handling a workflow, which determines the packet type. */
-			if (workflow_code == DPC_WORKFLOW_DORA || workflow_code == DPC_WORKFLOW_DORA_RELEASE) {
+			if (workflow_code ) {
 				input->workflow = workflow_code;
-				input->code = FR_DHCP_DISCOVER;
+				input->code = FR_DHCP_DISCOVER; /* All workflows start with a Discover. */
 			}
 		}
 		if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
