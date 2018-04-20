@@ -789,7 +789,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
 		/*
-		 *	Send a Release immediately after DORA.
+		 *	Maybe send a Decline or Release now.
 		 */
 		if (session->input->workflow == DPC_WORKFLOW_DORA_DECLINE) {
 			return dpc_session_dora_decline(session);
@@ -2349,7 +2349,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
 	fprintf(fd, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
 	fprintf(fd, "                   (or the message type numeric value: 1 = Discover, 2 = Request, ...).\n");
-	fprintf(fd, "                   Or (workflow): dora, dorarel (DORA followed by Release).\n");
+	fprintf(fd, "                   Or (workflow): dora, doradec (DORA / Decline), dorarel (DORA / Release).\n");
 	fprintf(fd, "                   If omitted, message type must be specified in input items.\n");
 	fprintf(fd, " Options:\n");
 	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
