@@ -18,6 +18,7 @@ struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
+fr_dict_attr_t const *attr_workflow_type = NULL;
 
 static char const *progname = NULL;
 
@@ -1915,6 +1916,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	} else {
 		attr_encoded_data = fr_dict_attr_by_name(dict, "DHCP-Encoded-Data");
 		attr_authorized_server = fr_dict_attr_by_name(dict, "DHCP-Authorized-Server");
+		attr_workflow_type = fr_dict_attr_by_name(dict, "DHCP-Workflow-Type");
 		// TODO: use FreeRADIUS new autoloading feature, when it's finished?
 	}
 

@@ -9,3 +9,8 @@ FLAGS internal
 
 ATTRIBUTE DHCP-Encoded-Data            3000   octets
 ATTRIBUTE DHCP-Authorized-Server       3001   ipaddr
+ATTRIBUTE DHCP-Workflow-Type           3002   byte
+
+VALUE     DHCP-Workflow-Type           DORA           1
+VALUE     DHCP-Workflow-Type           DORA-Decline   2
+VALUE     DHCP-Workflow-Type           DORA-Release   3
