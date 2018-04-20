@@ -1681,7 +1681,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 			/*
 			 *	Handling a workflow. All workflows start with a Discover.
 			 */
-			if (vp_workflow_type) {
+			if (vp_workflow_type && vp_workflow_type->vp_uint8 && vp_workflow_type->vp_uint8 < DPC_WORKFLOW_MAX) {
 				input->workflow = vp_workflow_type->vp_uint8;
 				input->code = FR_DHCP_DISCOVER;
 			} else if (workflow_code) {
