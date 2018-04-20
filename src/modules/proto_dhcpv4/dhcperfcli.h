@@ -125,6 +125,7 @@ typedef enum {
 typedef enum {
 	DPC_WORKFLOW_NONE = 0,     //<! Any packet - reply (unless none expected).
 	DPC_WORKFLOW_DORA,         //<! Discover - Offer, Request - Ack.
+	DPC_WORKFLOW_DORA_DECLINE, //<! DORA followed by Decline.
 	DPC_WORKFLOW_DORA_RELEASE, //<! DORA followed by an immediate Release.
 	DPC_WORKFLOW_MAX
 } dpc_workflow_type_t;
