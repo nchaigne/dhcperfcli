@@ -218,6 +218,8 @@ struct dpc_input {
 
 	dpc_input_list_t *list;  //!< The list to which this entry belongs (NULL for an unchained entry).
 
+	uint32_t num_use;        //!< How many times has this input been used.
+
 	dpc_input_t *prev;
 	dpc_input_t *next;
 };

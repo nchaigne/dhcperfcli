@@ -1026,6 +1026,30 @@ void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)
 }
 
 /*
+ *	Duplicate an input item (copy initially does not belong to any list).
+ */
+dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
+{
+	dpc_input_t *out; // the duplicated input
+
+	MEM(out = talloc_zero(ctx, dpc_input_t));
+
+	/*
+	 *	First copy everything, then reset what needs to be.
+	 */
+	memcpy(out, in, sizeof(*out));
+
+	out->vps = NULL;
+	out->list = NULL;
+	out->prev = NULL;
+	out->next = NULL;
+
+	out->vps = fr_pair_list_copy(out, in->vps);
+
+	return out;
+}
+
+/*
  *	Remove an input entry from its list.
  */
 dpc_input_t *dpc_input_item_draw(dpc_input_t *entry)

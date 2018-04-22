@@ -42,6 +42,7 @@ static bool with_template = false;
 static dpc_input_t *template_invariant = NULL;
 static dpc_input_t *template_variable = NULL;
 static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
+static uint32_t input_num_use = 1;
 
 static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
 static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
@@ -1280,6 +1281,11 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 	input = dpc_get_input();
 	if (!input) { /* No input: cannot create new session. */
 		return NULL;
+	}
+
+	input->num_use ++;
+	if (input->num_use < input_num_use) {
+		// TODO.
 	}
 
 	/*
