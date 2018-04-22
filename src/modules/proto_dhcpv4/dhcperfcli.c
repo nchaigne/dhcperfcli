@@ -1288,6 +1288,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 	 */
 	input->num_use ++;
 	if (!with_template && input->num_use < input_num_use) {
+		DPC_DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)", input->id, input->num_use, input_num_use);
 		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
 		if (input_dup) {
 			/*
@@ -2084,6 +2085,7 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'c':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			input_num_use = atoi(optarg);
+			if (input_num_use == 0) input_num_use = 1;
 			break;
 
 		case 'D':
@@ -2318,7 +2320,7 @@ int main(int argc, char **argv)
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (packet_trace_lvl == -1) {
-		if (session_max_num == 1 || (!with_template && vps_list_in.size < 2)) {
+		if (session_max_num == 1 || (!with_template && vps_list_in.size == 1 && input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			packet_trace_lvl = 2;
 		} else if (session_max_active == 1) {
