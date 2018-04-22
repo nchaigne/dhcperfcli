@@ -35,6 +35,7 @@ Arguments|Description
 `<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`DHCP-Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
 `-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
+`-c <num>` | Use each input item `<num>` times. (ignored in template mode)<br>Default: 1.
 `-D <dir>` | Read dictionaries from `<dir>`.<br>Default: directory `share/freeradius` of FreeRADIUS installation.
 `-f <file>` | Read input items from `<file>`, in addition to stdin.<br>An input item is a list of *attribute/value pairs*. At least one such item is required, so one packet can be built.
 `-g <gw>[:<port>]` | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>A comma-separated list may be specified, in which case packets will be sent using all of those gateways in a round-robin fashion.<br>Alternatively, option `-g` can be provided multiple times.
@@ -46,7 +47,7 @@ Arguments|Description
 `-P <num>` | Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).<br>A default is figured out according to number of packets and parallelism.
 `-r <num>` | Rate limit (maximum packet replies /s).
 `-R` | Randomize template variable values (default is to increment).<br>Refer to *template* section for details.
-`-s <seconds>` | Periodically report progress statistics information.
+`-s <seconds>` | Periodically report progress statistics information.<br>Default: 10 s.
 `-t <timeout>` | Wait at most `<timeout>` seconds for a reply (may be a floating point number).<br>Default: 3.
 `-T` | Template mode. Sessions input is generated from invariant and variable input items.<br>Refer to *template* section for details.
 `-v` | Print program version information.
@@ -102,6 +103,8 @@ Attribute|Description
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
 `DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for a single packet.
 `DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `DHCP-Message-Type` is provided.
+
+Input items can be used more than once with option `-c`. All input items are used in the order in which they are provided. If they are reused this will also be in the same sequential order.
 
 
 ## Transaction Id

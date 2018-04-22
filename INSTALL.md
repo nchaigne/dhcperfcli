@@ -58,7 +58,7 @@ Then:
 
 ### Build from sources
 
->__`./configure --prefix=/opt/freeradius/4.0.x \`__<br>
+>__`./configure --disable-developer --prefix=/opt/freeradius/4.0.x \`__<br>
 >__`--with-kqueue-include-dir=/opt/libkqueue/2.1.0/include/kqueue \`__<br>
 >__`--with-kqueue-lib-dir=/opt/libkqueue/2.1.0/lib`__<br>
 >__`make`__<br>
