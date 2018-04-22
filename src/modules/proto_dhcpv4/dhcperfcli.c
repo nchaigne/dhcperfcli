@@ -1283,9 +1283,18 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		return NULL;
 	}
 
+	/*
+	 *	If not using a template, copy this input item if it has to be used again.
+	 */
 	input->num_use ++;
-	if (input->num_use < input_num_use) {
-		// TODO.
+	if (!with_template && input->num_use < input_num_use) {
+		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
+		if (input_dup) {
+			/*
+			 *	Add it to the list of input items.
+			 */
+			dpc_input_item_add(&vps_list_in, input);
+		}
 	}
 
 	/*
