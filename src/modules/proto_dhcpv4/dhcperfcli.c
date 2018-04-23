@@ -1670,7 +1670,6 @@ static bool dpc_parse_input(dpc_input_t *input)
 			break;
 
 		case FR_PACKET_DST_IP_ADDRESS:
-		case FR_PACKET_DST_IPV6_ADDRESS:
 			memcpy(&input->dst.ipaddr, &vp->vp_ip, sizeof(input->dst.ipaddr));
 			break;
 
@@ -1679,7 +1678,6 @@ static bool dpc_parse_input(dpc_input_t *input)
 			break;
 
 		case FR_PACKET_SRC_IP_ADDRESS:
-		case FR_PACKET_SRC_IPV6_ADDRESS:
 			memcpy(&input->src.ipaddr, &vp->vp_ip, sizeof(input->src.ipaddr));
 			break;
 
