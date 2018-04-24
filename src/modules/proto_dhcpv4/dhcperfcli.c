@@ -29,6 +29,7 @@ static char const *dict_freeradius = "dictionary.freeradius.internal";
 static char const *dict_dhcp = "dictionary.dhcp";
 static char const *dict_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
+static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
 
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
@@ -191,6 +192,7 @@ static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list);
 static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
+static int dpc_get_alt_dir(void);
 static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
@@ -1914,15 +1916,55 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 #endif
 
 /*
+ *	Get alternate (fallback) dictionaries directory, relative to the program location.
+ *	As follows: <prog dir>/../share/freeradius
+ *	<prog dir> is obtained through a "readlink" on /proc/<pid>/exe
+ *	Note: this is *not* portable. It works on Linux, but not on all Unixes.
+ */
+static int dpc_get_alt_dir(void)
+{
+	char buf[32] = "";
+	char prog_path[PATH_MAX + 1] = "";
+	char *prog_dir, *up_dir;
+
+	sprintf(buf, "/proc/%d/exe", getpid());
+	if (readlink(buf, prog_path, sizeof(prog_path) - 1) == -1) {
+		/* Doesn't work. Likely not Linux... */
+		DEBUG("Cannot get program execution path from link '%s'", buf);
+		return -1;
+	}
+
+	prog_dir = dirname(prog_path);
+	up_dir = dirname(prog_dir);
+
+	snprintf(alt_dict_dir, PATH_MAX, "%s/share/freeradius", up_dir);
+	DEBUG("Using alternate dictionaries dir: %s", alt_dict_dir);
+	return 0;
+}
+
+/*
  *	Initialize and load dictionaries.
  */
 static void dpc_dict_init(TALLOC_CTX *ctx)
 {
-	/* Initialize dictionary. Read FreeRADIUS internal dictionary first. */
+	/*
+	 *	Initialize dictionaries.
+	 *	Read FreeRADIUS internal dictionary first.
+	 */
 	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_freeradius);
 	if (fr_dict_from_file(ctx, &dict, dict_dir, dict_freeradius, progname) != 0) {
-		PERROR("Failed to initialize dictionary");
-		exit(EXIT_FAILURE);
+		/* Try again with alternate directory (if possible). */
+		if (dpc_get_alt_dir() != 0) {
+			PERROR("Failed to initialize dictionary");
+			exit(EXIT_FAILURE);
+		}
+		dict_dir = alt_dict_dir;
+
+		DEBUG("Including dictionary file: %s/%s", dict_dir, dict_freeradius);
+		if (fr_dict_from_file(ctx, &dict, dict_dir, dict_freeradius, progname) != 0) {
+			PERROR("Failed to initialize dictionary");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Read the DHCP dictionary. */

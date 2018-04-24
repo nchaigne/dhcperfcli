@@ -12,6 +12,7 @@
 #include <freeradius-devel/io/time.h>
 
 #include <assert.h>
+#include <libgen.h>
 
 
 /*
