@@ -23,7 +23,6 @@ fr_dict_attr_t const *attr_workflow_type = NULL;
 static char const *progname = NULL;
 
 /* Dictionaries. */
-static char const *radius_dir = RADDBDIR;
 static char const *dict_dir = DICTDIR;
 static char const *dict_freeradius = "dictionary.freeradius.internal";
 static char const *dict_dhcp = "dictionary.dhcp";
@@ -1986,12 +1985,6 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		// TODO: use FreeRADIUS new autoloading feature, when it's finished?
 	}
 
-	/* Load user dictionary. */
-	DEBUG("Including dictionary file: %s/%s", radius_dir, FR_DICTIONARY_FILE);
-	if (fr_dict_read(dict, radius_dir, FR_DICTIONARY_FILE) != 0) {
-		DEBUG("No user dictionary");
-		// We don't need this. Maybe later. TODO.
-	}
 	fr_strerror(); /* Clear the error buffer */
 }
 
