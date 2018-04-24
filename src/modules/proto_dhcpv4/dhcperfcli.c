@@ -2047,7 +2047,6 @@ static int dpc_command_parse(char const *command)
 	/* Maybe it's a workflow. */
 	workflow_code = fr_str2int(workflow_types, command, DPC_WORKFLOW_NONE);
 	if (workflow_code != DPC_WORKFLOW_NONE) return 0;
-	// TODO: define an internal attribute so we can specify this in input vps.
 
 	/* Or a packet type. */
 	packet_code = fr_str2int(request_types, command, -1);
