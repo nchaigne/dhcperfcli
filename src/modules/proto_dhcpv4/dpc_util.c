@@ -678,6 +678,27 @@ VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
 }
 
 /*
+ *	Create a value pair and add it to a list of value pairs.
+ *	This is a copy of FreeRADIUS function radius_pair_create (from src/main/pair.c)
+ *	We do not want to depend on libfreeradius-server.a (and now libfreeradius-unlang.a).
+ */
+VALUE_PAIR *dpc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
+			                unsigned int attribute, unsigned int vendor)
+{
+	VALUE_PAIR *vp;
+
+	vp = fr_pair_afrom_num(ctx, vendor, attribute);
+	if (!vp) {
+		ERROR("No memory!");
+		exit(EXIT_FAILURE);
+	}
+
+	if (vps) fr_pair_add(vps, vp);
+
+	return vp;
+}
+
+/*
  *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  */
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)

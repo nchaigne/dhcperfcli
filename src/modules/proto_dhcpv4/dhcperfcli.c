@@ -869,8 +869,8 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
-	vp_requested_ip = radius_pair_create(packet, &packet->vps,
-	                                     FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_requested_ip = dpc_pair_create(packet, &packet->vps,
+	                                  FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -946,8 +946,8 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = radius_pair_create(packet, &packet->vps,
-	                               FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_ciaddr = dpc_pair_create(packet, &packet->vps,
+	                            FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
@@ -1027,8 +1027,8 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = radius_pair_create(packet, &packet->vps,
-	                               FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_ciaddr = dpc_pair_create(packet, &packet->vps,
+	                            FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
@@ -1036,8 +1036,8 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
-	vp_requested_ip = radius_pair_create(packet, &packet->vps,
-	                                     FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_requested_ip = dpc_pair_create(packet, &packet->vps,
+	                                  FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1091,7 +1091,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
 	vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_GATEWAY_IP_ADDRESS, TAG_ANY);
 	if (!vp_giaddr) {
-		vp_giaddr = radius_pair_create(packet, &packet->vps, FR_DHCP_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		vp_giaddr = dpc_pair_create(packet, &packet->vps, FR_DHCP_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
 		vp_giaddr->vp_ip.af = AF_INET;
 		vp_giaddr->vp_ip.prefix = 32;
@@ -1100,7 +1100,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
 	vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_HOP_COUNT, TAG_ANY);
 	if (!vp_hops) {
-		vp_hops = radius_pair_create(packet, &packet->vps, FR_DHCP_HOP_COUNT, DHCP_MAGIC_VENDOR);
+		vp_hops = dpc_pair_create(packet, &packet->vps, FR_DHCP_HOP_COUNT, DHCP_MAGIC_VENDOR);
 		vp_hops->vp_uint8 = 1;
 	}
 }
