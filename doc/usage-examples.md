@@ -1,7 +1,6 @@
 
 # Usage examples
 
-
 ## Discover (client broadcast)
 
 A client with no configured IP address broadcasts a DHCP Discover message on its local interface.<br>
@@ -24,7 +23,6 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0 -t
 Note: multiple DHCP servers may provide an Offer. Option `-A` allows to wait for all replies (up to the timeout limit). The default behavior is to stop waiting as soon as a valid Offer reply is received.
 
 Alternatively, option `-a` allows to only consider a reply coming from a specific server (which you have to know beforehand).
-
 
 
 ## Discover (gateway)
@@ -266,7 +264,3 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.
 `__
 
 Note: the DHCP server responds directly to the client IP address (field `ciaddr`) even if the DHCP Inform is relayed. This entails that the client address must be reachable by the server (otherwise the client will never receive the DHCP Ack response). The program assumes this is the case.
-
-
-
-

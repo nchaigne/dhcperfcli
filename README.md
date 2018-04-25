@@ -60,6 +60,11 @@ Arguments|Description
 Refer to [usage-examples.md](https://github.com/nchaigne/dhcperfcli/blob/master/doc/usage-examples.md).
 
 
+# Performance testing
+
+Refer to [performance-testing.md](https://github.com/nchaigne/dhcperfcli/blob/master/doc/performance-testing.md).
+
+
 # Guide
 
 ## Input items
