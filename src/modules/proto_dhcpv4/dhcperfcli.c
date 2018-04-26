@@ -572,7 +572,8 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 	 */
 	gettimeofday(&packet->timestamp, NULL); /* Store packet send time. */
 	// shouldn't FreeRADIUS lib do that ? TODO.
-	// (on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv.)
+	// on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv
+	// - actual value is obtained from recvfromto, from a gettimeofday right before returning
 
 	packet->sockfd = my_sockfd;
 
@@ -1289,7 +1290,8 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 	 */
 	input->num_use ++;
 	if (!with_template && input->num_use < input_num_use) {
-		DPC_DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)", input->id, input->num_use, input_num_use);
+		DPC_DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)",
+		                input->id, input->num_use, input_num_use);
 		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
 		if (input_dup) {
 			/*

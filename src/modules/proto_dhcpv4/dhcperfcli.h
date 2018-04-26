@@ -55,8 +55,8 @@ extern fr_dict_attr_t const *attr_encoded_data;
 #define SPERROR(fmt, ...) if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#define DPC_DEBUG_TRACE(_x, ...)       if (DPC_DEBUG_ENABLED(4)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
-#define DPC_DEBUG_HEX_DUMP(_x, _y, _z) if (DPC_DEBUG_ENABLED(4)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
+#define DPC_DEBUG_TRACE(_x, ...)       if (DPC_DEBUG_ENABLED(3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
+//#define DPC_DEBUG_HEX_DUMP(_x, _y, _z) if (DPC_DEBUG_ENABLED(4)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
  *	With it we can do only about ~5k req/s (Discover - Offer). In non developer mode we can go up to ~10k req/s.

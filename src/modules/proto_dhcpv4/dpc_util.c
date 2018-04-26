@@ -113,7 +113,8 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
 
 	/* Print elapsed time. */
 	char time_buf[DPC_TIME_STRLEN];
-	fprintf(fr_log_fp, "t(%s) ", dpc_print_delta_time(time_buf, &tv_start, NULL, DPC_DELTA_TIME_DECIMALS));
+	fprintf(fr_log_fp, "t(%s) ",
+	        dpc_print_delta_time(time_buf, &tv_start, NULL, (dpc_debug_lvl >= 4) ? 6 : DPC_DELTA_TIME_DECIMALS));
 
 	va_start(ap, fmt);
 	vfprintf(fr_log_fp, fmt, ap);
