@@ -20,6 +20,7 @@ If you do not set a limit, the test will go on indefinitely, until you signal th
 To determine a suitable value you have to consider if your server is multi-threaded or not. Or... just set an arbitrary high value. *dhcperfcli* will be happy to comply.
 - Option `-r` tells the program to limit to a target value the rate of packets sent per second.
 If omitted, the limit will be the capabilites of the server (assuming an adequate level of parallelism is set with option `-p`).
+- Option `-a` allows to ignore Offer replies that do not originate from the server being tested (useful for broadcasting tests).
 
 
 **Warning:** you must be duly authorized to carry out performance tests on a DHCP server. Please be careful, in particular if you're broadcasting: you may reach servers that you're not aware of.

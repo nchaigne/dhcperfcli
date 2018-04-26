@@ -175,6 +175,36 @@ echo "DHCP-Encoded-Data=0x010106010000000100000000000000000000000000000000000000
 This one is a well-formed (if a bit hard to read, but option `-P 3` will display something more accessible) DHCP Discover packet, to which you can get a DHCP Offer reply.
 
 
+## Statistics
+
+During its execution, dhcperfcli collects a set of DHCP related metrics, which it will display before exiting.
+
+For example:
+```
+*** Statistics (global):
+        Elapsed time (s)    : 0.004
+        Sessions            : 1
+        Packets sent        : 3 (Discover: 1, Request: 1, Decline: 1)
+        Packets received    : 2 (Offer: 1, Ack: 1)
+        Packets lost        : 0
+        Replies unexpected  : 0
+*** Statistics (per-transaction):
+        (All)          :  num: 2, RTT (ms): [avg: 0.948, min: 0.883, max: 1.014]
+        Discover:Offer :  num: 1, RTT (ms): [avg: 1.014, min: 1.014, max: 1.014]
+        Request:Ack    :  num: 1, RTT (ms): [avg: 0.883, min: 0.883, max: 0.883]
+        <DORA>         :  num: 1, RTT (ms): [avg: 2.741, min: 2.741, max: 2.741]
+```
+
+This shows the following information:
+- Global statistics
+  - The total duration of the test.
+  - The number of sessions played out.
+  - The number of packets sent (as a whole and broken down by message type).
+  - The number of packets received (as a whole and broken down by message type).
+  - The number of requests for which no response was received (in the allowed time limit).
+  - The number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
+
+
 ## Displaying DHCP packets
 
 DHCP packets sent or received can be printed on standard output. The level of detail is controled through option `-P`. If omitted, a default is figured out according to number of packets and parallelism.
