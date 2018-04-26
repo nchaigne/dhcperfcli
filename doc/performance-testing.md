@@ -1,5 +1,7 @@
 
-# Performance testing
+# Performance testing and benchmarking
+
+## Principles
 
 Performance testing aims at monitoring how a DHCP server behaves when dealing with sustained sollicitation. This can involve the following interrogations:
 - How many requests can the server handle per second? how many leases can it serve per second?
@@ -19,7 +21,11 @@ To determine a suitable value you have to consider if your server is multi-threa
 - Option `-r` tells the program to limit to a target value the rate of packets sent per second.
 If omitted, the limit will be the capabilites of the server (assuming an adequate level of parallelism is set with option `-p`).
 
-Examples:
+
+**Warning:** you must be duly authorized to carry out performance tests on a DHCP server. Please be careful, in particular if you're broadcasting: you may reach servers that you're not aware of.
+
+
+## Examples
 
 - A test which lasts for 60 seconds, simulating a gateway sending DHCP Discover messages (and expecting Offer replies) concurrently, at a fixed rate of 1000 packets per second. Each packet originates from a distinct client (with incrementing client MAC addresses, starting from `50:41:4e:44:41:00`).
 
@@ -53,4 +59,11 @@ echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -T -L 600 
 
 >__`
 echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  dorarel
+`__
+
+
+- Or if you want to be really mean, you can acquire leases and decline them, prompting the server to mark them as unavailable. If sustained long enough, this will deplete the entire IP address pool managed by the server (a.k.a. *DHCP starvation attack*).
+
+>__`
+echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -T -p 32 -i eth0  255.255.255.255  dorarec
 `__
