@@ -182,17 +182,17 @@ During its execution, dhcperfcli collects a set of DHCP related metrics, which i
 For example:
 ```
 *** Statistics (global):
-        Elapsed time (s)    : 0.004
+        Elapsed time (s)    : 0.002
         Sessions            : 1
         Packets sent        : 3 (Discover: 1, Request: 1, Decline: 1)
         Packets received    : 2 (Offer: 1, Ack: 1)
         Packets lost        : 0
         Replies unexpected  : 0
 *** Statistics (per-transaction):
-        (All)          :  num: 2, RTT (ms): [avg: 0.948, min: 0.883, max: 1.014]
-        Discover:Offer :  num: 1, RTT (ms): [avg: 1.014, min: 1.014, max: 1.014]
-        Request:Ack    :  num: 1, RTT (ms): [avg: 0.883, min: 0.883, max: 0.883]
-        <DORA>         :  num: 1, RTT (ms): [avg: 2.741, min: 2.741, max: 2.741]
+        (All)          :  num: 2, RTT (ms): [avg: 0.410, min: 0.366, max: 0.454]
+        Discover:Offer :  num: 1, RTT (ms): [avg: 0.454, min: 0.454, max: 0.454]
+        Request:Ack    :  num: 1, RTT (ms): [avg: 0.366, min: 0.366, max: 0.366]
+        <DORA>         :  num: 1, RTT (ms): [avg: 1.480, min: 1.480, max: 1.480]
 ```
 
 This shows the following information:
@@ -203,6 +203,12 @@ This shows the following information:
   - The number of packets received (as a whole and broken down by message type).
   - The number of requests for which no response was received (in the allowed time limit).
   - The number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
+- Per-transaction statistics
+  - For each transaction type (pair of request type / reply type), the number of such transactions, the RTT (average, min and max response times).
+  - Likewise, for DORA workflows (if there are some).
+  - And `(All)` shows the aggregation of all transactions types (if there are more than one).
+
+Note: RTT (*round trip time*) is the time interval between a packet being sent and the reception of the corresponding response. This is an accurate measurement of how fast the DHCP server can handle a message. For DORA workflows, this includes the time spent decoding and encoding packets, so this is more than the sum of Discover / Offer and Request / Ack RTT.
 
 
 ## Displaying DHCP packets
