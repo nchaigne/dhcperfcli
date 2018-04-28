@@ -229,7 +229,14 @@ static void dpc_progress_stats_print(FILE *fp)
 	}
 
 	/* Ongoing (active) sessions. (== number of packets to which we're waiting for a reply) */
-	fprintf(fp, ", ongoing: %u]", session_num_active);
+	fprintf(fp, ", ongoing: %u", session_num_active);
+
+	/* Packets lost (for which a reply was expected, but we didn't get one. */
+	if (stat_ctx.num_packet_lost[0] > 0) {
+		fprintf(fp, ", lost: %u", stat_ctx.num_packet_lost[0]);
+	}
+
+	fprintf(fp, "]");
 
 	/* Print rate if job elapsed time is at least 1 s. */
 	if (dpc_job_elapsed_time_get() >= 1.0) {
