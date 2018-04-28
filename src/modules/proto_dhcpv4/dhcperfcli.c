@@ -25,7 +25,7 @@ static char const *progname = NULL;
 /* Dictionaries. */
 static char const *dict_dir = DICTDIR;
 static char const *dict_freeradius = "dictionary.freeradius.internal";
-static char const *dict_dhcp = "dictionary.dhcp";
+static char const *dict_dhcp = "dictionary.dhcpv4";
 static char const *dict_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
 static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
