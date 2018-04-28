@@ -1407,6 +1407,8 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 
 	elapsed = dpc_job_elapsed_time_get();
 
+	if (my_stats->num == 0) return false; /* No limit. */
+
 	/*
 	 *	Right at the beginning we do not have enough data to make accurate calculations.
 	 *	So it will be either all or nothing (the latter if we're already beyond the limit).
