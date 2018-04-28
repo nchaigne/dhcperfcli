@@ -236,6 +236,11 @@ static void dpc_progress_stats_print(FILE *fp)
 		fprintf(fp, ", lost: %u", stat_ctx.num_packet_lost[0]);
 	}
 
+	/* NAK replies. */
+	if (stat_ctx.num_packet_recv[6] > 0) {
+		fprintf(fp, ", %s: %u", dpc_message_types[6], stat_ctx.num_packet_recv[6]);
+	}
+
 	fprintf(fp, "]");
 
 	/* Print rate if job elapsed time is at least 1 s. */
