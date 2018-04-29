@@ -2205,6 +2205,8 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 't':
 			if (!dpc_str_to_float(&timeout, optarg)) ERROR_OPT_VALUE("floating point number");
+			if (timeout < 0.01) timeout = 0.01; /* Don't allow absurdly low values. */
+			else if (timeout > 3600) timeout = 3600;
 			break;
 
 		case 'T':
