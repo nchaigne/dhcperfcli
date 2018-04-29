@@ -2312,6 +2312,15 @@ int main(int argc, char **argv)
 
 	dpc_options_parse(argc, argv);
 
+	/*
+	 *	Mismatch between the binary and the libraries it depends on.
+	 */
+	DEBUG2("FreeRADIUS magic number: %016lx", RADIUSD_MAGIC_NUMBER);
+	if (fr_check_lib_magic(RADIUSD_MAGIC_NUMBER) < 0) {
+		PERROR("Libraries check");
+		exit(EXIT_FAILURE);
+	}
+
 	dpc_dict_init(autofree);
 
 	dpc_event_list_init(autofree);
