@@ -177,7 +177,9 @@ This one is a well-formed (if a bit hard to read, but option `-P 3` will display
 
 ## Statistics
 
-During its execution, dhcperfcli collects a set of DHCP related metrics, which it will display before exiting.
+### End report
+
+During its execution, dhcperfcli collects a set of DHCP related metrics, which it will display at the end before exiting.
 
 For example:
 ```
@@ -197,18 +199,46 @@ For example:
 
 This shows the following information:
 - Global statistics
-  - The total duration of the test.
-  - The number of sessions played out.
-  - The number of packets sent (as a whole and broken down by message type).
-  - The number of packets received (as a whole and broken down by message type).
-  - The number of requests for which no response was received (in the allowed time limit).
-  - The number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
+  - Total duration of the test, in seconds.
+  - Number of sessions played out.
+  - Number of packets sent (as a whole and broken down by message type).
+  - Number of packets received (as a whole and broken down by message type).
+  - Number of requests for which no response was received (in the allowed time limit).
+  - Number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
 - Per-transaction statistics
-  - For each transaction type (pair of request type / reply type), the number of such transactions, the RTT (average, min and max response times).
+  - For each transaction type (pair of request type / reply type): number of such transactions, RTT (average, min and max response times).
   - Likewise, for DORA workflows (if there are some).
   - And `(All)` shows the aggregation of all transactions types (if there are more than one).
 
 Note: RTT (*round trip time*) is the time interval between a packet being sent and the reception of the corresponding response. This is an accurate measurement of how fast the DHCP server can handle a message. For DORA workflows, this includes the time spent decoding and encoding packets, so this is more than the sum of Discover / Offer and Request / Ack RTT.
+
+### Ongoing statistics
+
+In addition to the end report, an ongoing statistics summary can also be displayed at regular time interval (option `-s`) during a performance test. This provides real-time information about what's going on.
+
+For example:
+
+```
+t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], rate (/s): 999.990
+```
+
+This shows the following information:
+- Current elapsed time of the test, in seconds.
+- If the test is time-limited (option `-L`), completed percentage of said limit.
+- Number of sessions started.
+- If the test is session-limited (option `-N`), completed percentage of said limit.
+- Number of ongoing sessions (requests expecting a reply).
+- Rate of replies per second (average calculated from the beginning of the test).
+
+In addition, the following information is displayed if relevant:
+- Number of lost packets (for which a reply was expected, but we didn't get one).
+- Number of NAK replies.
+
+For example (no reply is received):
+
+```
+t(5.000) (25.0%) sessions: [started: 256, ongoing: 128, lost: 128], rate (/s): 0.000
+```
 
 
 ## Displaying DHCP packets
