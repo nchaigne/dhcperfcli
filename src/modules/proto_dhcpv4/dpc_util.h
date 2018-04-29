@@ -61,7 +61,7 @@ bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high);
 unsigned int dpc_message_type_extract(VALUE_PAIR *vp);
 uint32_t dpc_xid_extract(VALUE_PAIR *vp);
 
-void dpc_float_to_timeval(struct timeval *out, float in);
+int dpc_float_to_timeval(struct timeval *out, float in);
 float dpc_timeval_to_float(struct timeval *in);
 bool dpc_str_to_float(float *out, char const *in);
 bool dpc_str_to_uint32(uint32_t *out, char const *in);

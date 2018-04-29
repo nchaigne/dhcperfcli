@@ -2199,6 +2199,8 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 's':
 			if (!dpc_str_to_float(&progress_interval, optarg)) ERROR_OPT_VALUE("floating point number");
+			if (progress_interval < 0.1) progress_interval = 0.1; /* Don't allow absurdly low values. */
+			else if (progress_interval > 864000) progress_interval = 0; /* Just don't. */
 			break;
 
 		case 't':

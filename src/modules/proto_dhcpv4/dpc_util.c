@@ -943,10 +943,17 @@ uint32_t dpc_xid_extract(VALUE_PAIR *vp)
 /*
  *	Convert a float to struct timeval.
  */
-void dpc_float_to_timeval(struct timeval *tv, float in)
+int dpc_float_to_timeval(struct timeval *tv, float in)
 {
+	/* Boundary check. */
+	if (in >= (float)LONG_MAX) {
+		ERROR("Cannot convert to timeval: float value %.0f exceeds LONG_MAX (%ld)", in, LONG_MAX);
+		return -1;
+	}
+
 	tv->tv_sec = (time_t)in;
 	tv->tv_usec = (uint64_t)(in * USEC) - (tv->tv_sec * USEC);
+	return 0;
 }
 
 /*
