@@ -78,6 +78,7 @@ static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
 fr_event_timer_t const *ev_progress_stats = NULL;
 static float progress_interval = 10.0; /* Periodically produce progress statistics summary. */
 struct timeval tv_progress_interval;
+struct timeval tv_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
 
 static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
@@ -459,12 +460,17 @@ static void dpc_event_add_progress_stats(void)
 {
 	if (!timerisset(&tv_progress_interval)) return;
 
-	struct timeval tv_event;
-	gettimeofday(&tv_event, NULL);
-	timeradd(&tv_event, &tv_progress_interval, &tv_event);
+	/*
+	 *	Generate uniformly spaced out statistics.
+	 *	To avoid drifting, schedule next event relatively to the expected trigger of previous one.
+	 */
+	if (!timerisset(&tv_progress_stat)) {
+		gettimeofday(&tv_progress_stat, NULL);
+	}
+	timeradd(&tv_progress_stat, &tv_progress_interval, &tv_progress_stat);
 
 	if (fr_event_timer_insert(autofree, event_list, &ev_progress_stats,
-	                          &tv_event, dpc_progress_stats, NULL) < 0) {
+	                          &tv_progress_stat, dpc_progress_stats, NULL) < 0) {
 		ERROR("Failed inserting progress statistics event");
 	}
 }
