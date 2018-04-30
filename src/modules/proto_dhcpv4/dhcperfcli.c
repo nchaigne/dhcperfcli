@@ -80,6 +80,8 @@ static float progress_interval = 10.0; /* Periodically produce progress statisti
 struct timeval tv_progress_interval;
 struct timeval tv_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
 
+struct timeval tv_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
+
 static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
 static fr_pcap_t *pcap;
@@ -1487,7 +1489,20 @@ static uint32_t dpc_loop_start_sessions(void)
 	uint32_t limit_new_sessions = 0;
 	bool do_limit = dpc_rate_limit_calc(&limit_new_sessions);
 
+	/* Set a max allowed loop time - don't loop forever in case of packets not expecting replies. */
+	struct timeval tv_loop_max;
+	gettimeofday(&tv_loop_max, NULL);
+	timeradd(&tv_loop_max, &tv_loop_max_time, &tv_loop_max);
+
 	while (!done) {
+		/* Max loop time limit reached. */
+		struct timeval now;
+		gettimeofday(&now, NULL);
+		if (timercmp(&now, &tv_loop_max, >)) {
+			DPC_DEBUG_TRACE("Loop time limit reached, started: %u", num_started);
+			break;
+		}
+
 		/* Max session limit reached. */
 		if (session_max_num && session_num >= session_max_num) {
 			INFO("Max number of sessions (%u) reached: will not start any new session.", session_max_num);
