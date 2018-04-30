@@ -1494,6 +1494,11 @@ static uint32_t dpc_loop_start_sessions(void)
 	gettimeofday(&tv_loop_max, NULL);
 	timeradd(&tv_loop_max, &tv_loop_max_time, &tv_loop_max);
 
+	/* Also limit time up to the next scheduled statistics event. */
+	if (timerisset(&tv_progress_stat) && timercmp(&tv_loop_max, &tv_progress_stat, >)) {
+		tv_loop_max = tv_progress_stat;
+	}
+
 	while (!done) {
 		/* Max loop time limit reached. */
 		struct timeval now;
