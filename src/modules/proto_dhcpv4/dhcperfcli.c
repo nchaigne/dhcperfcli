@@ -158,6 +158,7 @@ static void version_print(void);
 static void dpc_progress_stats_print(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
+static float dpc_get_msg_rate(uint8_t i);
 static void dpc_tr_stats_print(FILE *fp);
 static void dpc_stats_print(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
@@ -248,7 +249,19 @@ static void dpc_progress_stats_print(FILE *fp)
 
 	/* Print rate if job elapsed time is at least 1 s. */
 	if (dpc_job_elapsed_time_get() >= 1.0) {
-		fprintf(fp, ", rate (/s): %.3f", dpc_get_tr_rate(DPC_TR_ALL));
+		float reply_rate = dpc_get_tr_rate(DPC_TR_ALL);
+		if (reply_rate > 0) {
+			fprintf(fp, ", reply rate (/s): %.3f", dpc_get_tr_rate(DPC_TR_ALL));
+		} else {
+			/*
+			 *	If we do not have any transaction, it means that all packets are lost (no reply received),
+			 *	or we're not expecting any reply (e.g. sending only Release messages).
+			 *
+			 *	In such a case, display the packets send rate instead.
+			 *	Note: this will be fluctuating in case of "all packets are lost" - because of timeout.
+			 */
+			fprintf(fp, ", send rate (/s): %.3f", dpc_get_msg_rate(0));
+		}
 	}
 	fprintf(fp, "\n");
 }
@@ -290,6 +303,19 @@ static float dpc_get_tr_rate(dpc_transaction_type_t i)
 
 	if (elapsed <= 0) return 0; /* Should not happen. */
 	return (float)my_stats->num / elapsed;
+}
+
+/*
+ *	Compute the rate (packets sent per second) of a given message type (or all).
+ */
+static float dpc_get_msg_rate(uint8_t i)
+{
+	assert(i < DHCP_MAX_MESSAGE_TYPE);
+
+	float elapsed = dpc_job_elapsed_time_get();
+
+	if (elapsed <= 0) return 0; /* Should not happen. */
+	return (float)stat_ctx.num_packet_sent[i] / elapsed;
 }
 
 /*
