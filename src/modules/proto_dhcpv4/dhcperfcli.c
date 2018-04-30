@@ -1450,10 +1450,9 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 
 	float elapsed, elapsed_T2, rtt_avg, rate_T2;
 	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[DPC_TR_ALL];
+	uint32_t num_packet_sent = stat_ctx.num_packet_sent[0];
 
 	elapsed = dpc_job_elapsed_time_get();
-
-	if (my_stats->num == 0) return false; /* No limit. */
 
 	/*
 	 *	Right at the beginning we do not have enough data to make accurate calculations.
@@ -1464,9 +1463,28 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 		if (my_stats->num >= rate_limit) {
 			*max_new_sessions = 0;
 			return true;
+		} else if (my_stats->num == 0) {
+			/* If we don't have any reply, limit applies to packets sent. */
+			if (num_packet_sent >= rate_limit) {
+				*max_new_sessions = 0;
+			} else {
+				*max_new_sessions = (rate_limit - num_packet_sent);
+			}
+			return true;
 		}
+
 		/* No limit. */
 		return false;
+	}
+
+	/* If we don't have any reply, limit applies to packets sent. */
+	if (my_stats->num == 0) {
+		if (num_packet_sent >= rate_limit * elapsed) {
+			*max_new_sessions = 0;
+		} else {
+			*max_new_sessions = (rate_limit * elapsed) - num_packet_sent;
+		}
+		return true;
 	}
 
 	/*
