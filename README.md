@@ -45,7 +45,7 @@ Arguments|Description
 `-N <num>` | Start at most `<num>` sessions (in template mode: generate `<num>` sessions).
 `-p <num>` | Send up to `<num>` session packets in parallel.<br>Default: 1 (packets are sent sequentially).
 `-P <num>` | Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).<br>A default is figured out according to number of packets and parallelism.
-`-r <num>` | Rate limit (maximum packet replies /s).
+`-r <num>` | Rate limit. Maximum packet replies per second.<br>Or, if no reply is received, maximum sent packets per second.
 `-R` | Randomize template variable values (default is to increment).<br>Refer to *template* section for details.
 `-s <seconds>` | Periodically report progress statistics information.<br>Default: 10 s.
 `-t <timeout>` | Wait at most `<timeout>` seconds for a reply (may be a floating point number).<br>Default: 3.
@@ -206,7 +206,7 @@ This shows the following information:
   - Number of requests for which no response was received (in the allowed time limit).
   - Number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
 - Per-transaction statistics
-  - For each transaction type (pair of request type / reply type): number of such transactions, RTT (average, min and max response times).
+  - For each transaction type (pair of request type / reply type): number of such transactions, RTT (average, min and max response times), and (if the test lasts at least one second) average transaction rate per second.
   - Likewise, for DORA workflows (if there are some).
   - And `(All)` shows the aggregation of all transactions types (if there are more than one).
 
@@ -219,7 +219,7 @@ In addition to the end report, an ongoing statistics summary can also be display
 For example:
 
 ```
-t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], rate (/s): 999.990
+t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], reply rate (/s): 999.990
 ```
 
 This shows the following information:
@@ -228,7 +228,7 @@ This shows the following information:
 - Number of sessions started.
 - If the test is session-limited (option `-N`), completed percentage of said limit.
 - Number of ongoing sessions (requests expecting a reply).
-- Rate of replies per second (average calculated from the beginning of the test).
+- Rate of all replies per second (average calculated from the beginning of the test); or, if no reply is received, rate of packets sent per second.
 
 In addition, the following information is displayed if relevant:
 - Number of lost packets (for which a reply was expected, but we didn't get one).
@@ -237,7 +237,7 @@ In addition, the following information is displayed if relevant:
 For example (no reply is received):
 
 ```
-t(5.000) (25.0%) sessions: [started: 256, ongoing: 128, lost: 128], rate (/s): 0.000
+t(5.000) (25.0%) sessions: [started: 256, ongoing: 128, lost: 128], send rate (/s): 42.659
 ```
 
 
