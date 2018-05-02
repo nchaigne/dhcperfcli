@@ -19,16 +19,19 @@ int dpc_debug_lvl = 0;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
+fr_dict_attr_t const *attr_hop_count = NULL;
 fr_dict_attr_t const *attr_transaction_id = NULL;
+fr_dict_attr_t const *attr_client_ip_address = NULL;
 fr_dict_attr_t const *attr_your_ip_address = NULL;
+fr_dict_attr_t const *attr_gateway_ip_address = NULL;
 fr_dict_attr_t const *attr_server_identifier = NULL;
 fr_dict_attr_t const *attr_requested_ip_address = NULL;
-fr_dict_attr_t const *attr_gateway_ip_address = NULL;
-fr_dict_attr_t const *attr_hop_count = NULL;
 
 static char const *progname = NULL;
 
-/* Dictionaries. */
+/*
+ *	Dictionaries and attributes.
+ */
 static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
 static char const *dict_dir = DICTDIR;
 static char const *dict_freeradius = "dictionary.freeradius.internal";
@@ -36,16 +39,21 @@ static char const *dict_dhcp = "dictionary.dhcpv4";
 static char const *dict_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
 static fr_dict_t const *dpc_dict;
+
 static fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dpc_dict },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dpc_dict },
+
+	{ .out = &attr_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dpc_dict },
 	{ .out = &attr_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dpc_dict },
+	{ .out = &attr_client_ip_address, .name = "DHCP-Client-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
 	{ .out = &attr_your_ip_address, .name = "DHCP-Your-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+	{ .out = &attr_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+
 	{ .out = &attr_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
 	{ .out = &attr_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
-	{ .out = &attr_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
-	{ .out = &attr_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dpc_dict },
+
 	{ NULL }
 };
 
@@ -934,8 +942,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
-	vp_requested_ip = dpc_pair_create(packet, &packet->vps,
-	                                  FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1010,8 +1017,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = dpc_pair_create(packet, &packet->vps,
-	                            FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_client_ip_address);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
@@ -1090,8 +1096,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = dpc_pair_create(packet, &packet->vps,
-	                            FR_DHCP_CLIENT_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_client_ip_address);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
@@ -1099,8 +1104,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
-	vp_requested_ip = dpc_pair_create(packet, &packet->vps,
-	                                  FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1154,7 +1158,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
 	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_gateway_ip_address, TAG_ANY);
 	if (!vp_giaddr) {
-		vp_giaddr = dpc_pair_create(packet, &packet->vps, FR_DHCP_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
+		vp_giaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_gateway_ip_address);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
 		vp_giaddr->vp_ip.af = AF_INET;
 		vp_giaddr->vp_ip.prefix = 32;
@@ -1163,7 +1167,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
 	vp_hops = fr_pair_find_by_da(packet->vps, attr_hop_count, TAG_ANY);
 	if (!vp_hops) {
-		vp_hops = dpc_pair_create(packet, &packet->vps, FR_DHCP_HOP_COUNT, DHCP_MAGIC_VENDOR);
+		vp_hops = dpc_pair_create_by_da(packet, &packet->vps, attr_hop_count);
 		vp_hops->vp_uint8 = 1;
 	}
 }

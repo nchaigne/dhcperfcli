@@ -688,12 +688,20 @@ VALUE_PAIR *dpc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 {
 	VALUE_PAIR *vp;
 
-	vp = fr_pair_afrom_num(ctx, vendor, attribute);
-	if (!vp) {
-		ERROR("No memory!");
-		exit(EXIT_FAILURE);
-	}
+	MEM(vp = fr_pair_afrom_num(ctx, vendor, attribute));
+	if (vps) fr_pair_add(vps, vp);
 
+	return vp;
+}
+
+/*
+ *	Create a value pair (from a dictionary attribute) and add it to a list of value pairs.
+ */
+VALUE_PAIR *dpc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *attr)
+{
+	VALUE_PAIR *vp;
+
+	MEM(vp = fr_pair_afrom_da(ctx, attr));
 	if (vps) fr_pair_add(vps, vp);
 
 	return vp;
