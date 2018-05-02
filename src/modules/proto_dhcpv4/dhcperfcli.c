@@ -19,6 +19,12 @@ int dpc_debug_lvl = 0;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
+fr_dict_attr_t const *attr_transaction_id = NULL;
+fr_dict_attr_t const *attr_your_ip_address = NULL;
+fr_dict_attr_t const *attr_server_identifier = NULL;
+fr_dict_attr_t const *attr_requested_ip_address = NULL;
+fr_dict_attr_t const *attr_gateway_ip_address = NULL;
+fr_dict_attr_t const *attr_hop_count = NULL;
 
 static char const *progname = NULL;
 
@@ -34,6 +40,12 @@ static fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dpc_dict },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dpc_dict },
+	{ .out = &attr_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dpc_dict },
+	{ .out = &attr_your_ip_address, .name = "DHCP-Your-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+	{ .out = &attr_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+	{ .out = &attr_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+	{ .out = &attr_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+	{ .out = &attr_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dpc_dict },
 	{ NULL }
 };
 
@@ -883,21 +895,20 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	RADIUS_PACKET *packet;
 
 	/* Get the Offer xid. */
-	vp_xid = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID, TAG_ANY);
+	vp_xid = fr_pair_find_by_da(session->reply->vps, attr_transaction_id, TAG_ANY);
 	if (!vp_xid) { /* Should never happen (DHCP field). */
 		return false;
 	}
 
 	/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
+	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_your_ip_address, TAG_ANY);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no yiaddr provided in Offer reply");
 		return false;
 	}
 
 	/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
-	                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_server_identifier, TAG_ANY);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 		return false;
@@ -922,7 +933,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
 	vp_requested_ip = dpc_pair_create(packet, &packet->vps,
 	                                  FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
@@ -970,15 +981,14 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	RADIUS_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
+	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_your_ip_address, TAG_ANY);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
-	                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_server_identifier, TAG_ANY);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1008,7 +1018,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 *	Remove eventual option 50 Requested IP Address.
 	 *	(it may be provided for Discover, but must *not* be in Release)
 	 */
-	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
@@ -1051,15 +1061,14 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	RADIUS_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR, FR_DHCP_YOUR_IP_ADDRESS, TAG_ANY);
+	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_your_ip_address, TAG_ANY);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_num(session->reply->vps, DHCP_MAGIC_VENDOR,
-	                                   FR_DHCP_DHCP_SERVER_IDENTIFIER, TAG_ANY);
+	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_server_identifier, TAG_ANY);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1089,7 +1098,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_REQUESTED_IP_ADDRESS, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
 	vp_requested_ip = dpc_pair_create(packet, &packet->vps,
 	                                  FR_DHCP_REQUESTED_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
@@ -1143,7 +1152,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	VALUE_PAIR *vp_giaddr, *vp_hops;
 
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
-	vp_giaddr = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_GATEWAY_IP_ADDRESS, TAG_ANY);
+	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_gateway_ip_address, TAG_ANY);
 	if (!vp_giaddr) {
 		vp_giaddr = dpc_pair_create(packet, &packet->vps, FR_DHCP_GATEWAY_IP_ADDRESS, DHCP_MAGIC_VENDOR);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
@@ -1152,7 +1161,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	}
 
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
-	vp_hops = fr_pair_find_by_num(packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_HOP_COUNT, TAG_ANY);
+	vp_hops = fr_pair_find_by_da(packet->vps, attr_hop_count, TAG_ANY);
 	if (!vp_hops) {
 		vp_hops = dpc_pair_create(packet, &packet->vps, FR_DHCP_HOP_COUNT, DHCP_MAGIC_VENDOR);
 		vp_hops->vp_uint8 = 1;
@@ -1220,8 +1229,8 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	 *	the requested id may not have been available).
 	 *	Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
-	fr_pair_delete_by_num(&packet->vps, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID, TAG_ANY);
-	vp = fr_pair_afrom_num(packet, DHCP_MAGIC_VENDOR, FR_DHCP_TRANSACTION_ID);
+	fr_pair_delete_by_da(&packet->vps, attr_transaction_id, TAG_ANY);
+	vp = fr_pair_afrom_da(packet, attr_transaction_id);
 	vp->vp_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp);
 
