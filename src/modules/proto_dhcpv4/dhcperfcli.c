@@ -23,12 +23,19 @@ fr_dict_attr_t const *attr_workflow_type = NULL;
 static char const *progname = NULL;
 
 /* Dictionaries. */
+static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
 static char const *dict_dir = DICTDIR;
 static char const *dict_freeradius = "dictionary.freeradius.internal";
 static char const *dict_dhcp = "dictionary.dhcpv4";
 static char const *dict_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
-static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
+static fr_dict_t const *dpc_dict;
+static fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
+	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dpc_dict },
+	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict },
+	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dpc_dict },
+	{ NULL }
+};
 
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
@@ -2065,10 +2072,11 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		WARN("Failed to read dictionary: %s", dict_dhcperfcli);
 		/* Do not exit. Maybe we can live without this. */
 	} else {
-		attr_encoded_data = fr_dict_attr_by_name(dict, "DHCP-Encoded-Data");
-		attr_authorized_server = fr_dict_attr_by_name(dict, "DHCP-Authorized-Server");
-		attr_workflow_type = fr_dict_attr_by_name(dict, "DHCP-Workflow-Type");
-		// TODO: use FreeRADIUS new autoloading feature, when it's finished?
+		/* Autoload dictionary attributes. */
+		if (fr_dict_attr_autoload(dpc_dict_attr_autoload) < 0) {
+			PERROR("Failed to autoload dictionary attributes");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	fr_strerror(); /* Clear the error buffer */
