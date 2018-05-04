@@ -336,6 +336,8 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
                       dpc_packet_event_t pevent, int trace_lvl)
 {
+	VALUE_PAIR *vp_encoded_data = NULL;
+
 	if (!fp || !packet) return;
 
 	if (trace_lvl >= 1) {
@@ -343,10 +345,9 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 	}
 
 	if (trace_lvl >= 2) {
-		VALUE_PAIR *vp;
-		if (attr_encoded_data && (vp = fr_pair_find_by_da(packet->vps, attr_encoded_data, TAG_ANY))) {
+		if (attr_encoded_data && (vp_encoded_data = fr_pair_find_by_da(packet->vps, attr_encoded_data, TAG_ANY))) {
 			fprintf(fp, "DHCP data:\n");
-			fr_pair_fprint(fp, vp);
+			fr_pair_fprint(fp, vp_encoded_data);
 		} else {
 			fprintf(fp, "DHCP vps fields:\n");
 			dpc_packet_fields_print(fp, packet->vps);
@@ -361,6 +362,17 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 	if (trace_lvl >= 3) {
 		fprintf(fp, "DHCP hex data:\n");
 		dpc_packet_data_print(fp, packet);
+
+		/*
+		 *	If this is a packet we're sending, which was not built using pre-encoded data,
+		 *	build and print the equivalent DHCP-Encoded-Data so we can reuse it effortlessly.
+		 */
+		if (pevent == DPC_PACKET_SENT && !vp_encoded_data) {
+			VALUE_PAIR *vp = dpc_pair_create_by_da(packet, NULL, attr_encoded_data);
+			fr_pair_value_memcpy(vp, packet->data, packet->data_len);
+			fprintf(fp, "DHCP data:\n");
+			fr_pair_fprint(fp, vp);
+		}
 	}
 }
 
