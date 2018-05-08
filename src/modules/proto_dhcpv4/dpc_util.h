@@ -47,9 +47,6 @@ char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *s
 char *dpc_ether_addr_print(const uint8_t *addr, char *buf);
 char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra);
 
-int dpc_socket_inspect(FILE *fp, char const *log_pre, int sockfd,
-                       fr_ipaddr_t *src_ipaddr, uint16_t *src_port, fr_ipaddr_t *dst_ipaddr, uint16_t *dst_port);
-
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *dpc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps, unsigned int attribute, unsigned int vendor);
