@@ -1839,7 +1839,8 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!input->dst.port) input->dst.port = server_port;
 	if (!ipaddr_defined(input->dst.ipaddr)) input->dst.ipaddr = server_ipaddr;
 
-	if (!vp_data && input->code == FR_CODE_UNDEFINED) {
+	if (!with_template && !vp_data && input->code == FR_CODE_UNDEFINED) {
+		/* Note: in template mode, we do not require a specified message type in the two input items. */
 		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
 		return false;
 	}
@@ -1923,7 +1924,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		dpc_handle_input(input, list);
 
 		/* Stop reading if we know we won't need it. */
-		if (session_max_num && list->size >= session_max_num) break;
+		if (!with_template && session_max_num && list->size >= session_max_num) break;
 
 	} while (!file_done);
 
@@ -1971,6 +1972,12 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	if (with_template) {
 		template_invariant = vps_list_in.head;
 		template_variable = vps_list_in.tail;
+
+		/* Ensure a message type is provided. */
+		if (template_invariant->code == FR_CODE_UNDEFINED) {
+			ERROR("No packet type specified in template input vps or command line");
+			return -1;
+		}
 
 		/* If only one input item provided: this will be the variable list (no invariant). */
 		if (vps_list_in.size < 2) template_invariant = NULL;
@@ -2457,7 +2464,9 @@ int main(int argc, char **argv)
 	}
 
 	/* Load input data used to build the packets. */
-	dpc_input_load(autofree);
+	if (dpc_input_load(autofree) < 0) {
+		exit(EXIT_FAILURE);
+	}
 
 	/*
 	 *	Ensure we have something to work with.
