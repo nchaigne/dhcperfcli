@@ -598,7 +598,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 	 *	Get a socket to send this over.
 	 */
 #ifdef HAVE_LIBPCAP
-	if (session->input->with_pcap) {
+	if (session->input->ext.with_pcap) {
 		my_sockfd = pcap->fd;
 	} else
 #endif
@@ -617,7 +617,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 		/*
 		 *	Set packet->id to prefered value (if any). Note: it will be reset if allocation fails.
 		 */
-		packet->id = session->input->xid;
+		packet->id = session->input->ext.xid;
 
 		/*
 		 *	Allocate an id, and prepare the packet (socket fd, src addr)
@@ -652,7 +652,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 	packet->sockfd = my_sockfd;
 
 #ifdef HAVE_LIBPCAP
-	if (session->input->with_pcap) {
+	if (session->input->ext.with_pcap) {
 		/* Send using pcap raw socket. */
 		packet->if_index = pcap->if_index; /* So we can trace it. */
 		ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
@@ -870,9 +870,9 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 		/*
 		 *	Maybe send a Decline or Release now.
 		 */
-		if (session->input->workflow == DPC_WORKFLOW_DORA_DECLINE) {
+		if (session->input->ext.workflow == DPC_WORKFLOW_DORA_DECLINE) {
 			return dpc_session_dora_decline(session);
-		} else if (session->input->workflow == DPC_WORKFLOW_DORA_RELEASE) {
+		} else if (session->input->ext.workflow == DPC_WORKFLOW_DORA_RELEASE) {
 			return dpc_session_dora_release(session);
 		}
 
@@ -882,7 +882,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	/*
 	 *	There may be more Offer replies, from other DHCP servers. Wait for them.
 	 */
-	if (multi_offer && session->input->with_pcap && session->reply->code == FR_DHCP_OFFER) {
+	if (multi_offer && session->input->ext.with_pcap && session->reply->code == FR_DHCP_OFFER) {
 		DPC_DEBUG_TRACE("Waiting for more replies from other DHCP servers");
 		session->state = DPC_STATE_WAIT_OTHER_REPLIES;
 		/* Note: there is no need to arm a new event timeout. The initial timer is still running. */
@@ -950,7 +950,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
 
 	/* Reset input xid to value obtained from the Offer reply. */
-	session->input->xid = vp_xid->vp_uint32;
+	session->input->ext.xid = vp_xid->vp_uint32;
 
 	/*
 	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
@@ -1031,7 +1031,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
 
 	/* xid is supposed to be selected by client. Let the program pick a new one. */
-	session->input->xid = DPC_PACKET_ID_UNASSIGNED;
+	session->input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 	/*
 	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
@@ -1112,7 +1112,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
 
 	/* xid is supposed to be selected by client. Let the program pick a new one. */
-	session->input->xid = DPC_PACKET_ID_UNASSIGNED;
+	session->input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 	/*
 	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
@@ -1186,16 +1186,16 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 	dpc_pair_list_append(request, &request->vps, input->vps);
 
 	/* Prepare gateway handling. */
-	dpc_request_gateway_handle(request, input->gateway);
+	dpc_request_gateway_handle(request, input->ext.gateway);
 
 	/*
 	 *	Use values prepared earlier.
 	 */
-	request->code = input->code;
-	request->src_port = input->src.port;
-	request->dst_port = input->dst.port;
-	request->src_ipaddr = input->src.ipaddr;
-	request->dst_ipaddr = input->dst.ipaddr;
+	request->code = input->ext.code;
+	request->src_port = input->ext.src.port;
+	request->dst_port = input->ext.dst.port;
+	request->src_ipaddr = input->ext.src.ipaddr;
+	request->dst_ipaddr = input->ext.dst.ipaddr;
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
@@ -1266,22 +1266,17 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 
 	MEM(input = talloc_zero(ctx, dpc_input_t));
 
-	// these should probably be in a separate struct... TODO.
-	input->code = transport->code;
-	input->workflow = transport->workflow;
-	input->xid = transport->xid;
-	input->src = transport->src;
-	input->dst = transport->dst;
-	input->with_pcap = transport->with_pcap;
+	/* Copy pre-parsed information from template. */
+	input->ext = transport->ext;
 
 	/*
 	 *	Associate input to gateway, if one is defined (or several).
 	 */
-	if (!ipaddr_defined(input->src.ipaddr) && gateway_list) {
-		input->gateway = &gateway_list[gateway_next];
+	if (!ipaddr_defined(input->ext.src.ipaddr) && gateway_list) {
+		input->ext.gateway = &gateway_list[gateway_next];
 		gateway_next = (gateway_next + 1) % gateway_num;
 
-		input->src = *(input->gateway);
+		input->ext.src = *(input->ext.gateway);
 	}
 
 	/*
@@ -1387,7 +1382,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		 */
 		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
 
-		if (input->workflow) {
+		if (input->ext.workflow) {
 			session->state = DPC_STATE_DORA_EXPECT_OFFER; /* All workflows start with a Discover. */
 		} else {
 			session->state = (session->reply_expected ? DPC_STATE_EXPECT_REPLY : DPC_STATE_NO_REPLY);
@@ -1694,12 +1689,12 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	static bool warn_inaddr_any = true;
 
 #ifdef HAVE_LIBPCAP
-	if (iface && (fr_ipaddr_is_inaddr_any(&input->src.ipaddr) == 1)
-	    && (dpc_ipaddr_is_broadcast(&input->dst.ipaddr) == 1)
+	if (iface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
+	    && (dpc_ipaddr_is_broadcast(&input->ext.dst.ipaddr) == 1)
 	   ) {
 		DPC_DEBUG_TRACE("Input (id: %u) involves broadcast using pcap raw socket", input->id);
 
-		input->with_pcap = true;
+		input->ext.with_pcap = true;
 		return;
 	}
 #endif
@@ -1707,17 +1702,17 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	/*
 	 *	Allocate the socket now. If we can't, stop.
 	 */
-	if (dpc_socket_provide(pl, &input->src.ipaddr, input->src.port) < 0) {
+	if (dpc_socket_provide(pl, &input->ext.src.ipaddr, input->ext.src.port) < 0) {
 		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 		ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
-		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->src.ipaddr), input->src.port);
+		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->ext.src.ipaddr), input->ext.src.port);
 		exit(EXIT_FAILURE);
 	}
 
 	/*
 	 *	If we're using INADDR_ANY, make sure we know what we're doing.
 	 */
-	if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->src.ipaddr)) {
+	if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr)) {
 		WARN("You didn't specify a source IP address."
 		     " Consequently, a socket was allocated with INADDR_ANY (0.0.0.0)."
 		     " Please make sure this is really what you intended.");
@@ -1734,7 +1729,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	VALUE_PAIR *vp;
 	VALUE_PAIR *vp_data = NULL, *vp_workflow_type = NULL;
 
-	input->code = FR_CODE_UNDEFINED;
+	input->ext.code = FR_CODE_UNDEFINED;
 
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
@@ -1742,8 +1737,8 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
 	if ((vp_data = dpc_pair_find_by_da(input->vps, attr_encoded_data))) {
-		input->code = dpc_message_type_extract(vp_data);
-		input->xid = dpc_xid_extract(vp_data);
+		input->ext.code = dpc_message_type_extract(vp_data);
+		input->ext.xid = dpc_xid_extract(vp_data);
 	} else {
 		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
 		vp_workflow_type = dpc_pair_find_by_da(input->vps, attr_workflow_type);
@@ -1763,10 +1758,10 @@ static bool dpc_parse_input(dpc_input_t *input)
 			if (!vp_data) { /* If we have pre-encoded DHCP data, ignore all other DHCP attributes */
 				switch (vp->da->attr) {
 				case FR_DHCP_MESSAGE_TYPE: /* DHCP Message Type. */
-					input->code = dhcp_code_from_message(vp->vp_uint32);
+					input->ext.code = dhcp_code_from_message(vp->vp_uint32);
 					break;
 				case FR_DHCP_TRANSACTION_ID: /* Prefered xid. */
-					input->xid = vp->vp_uint32;
+					input->ext.xid = vp->vp_uint32;
 					break;
 				}
 			}
@@ -1774,19 +1769,19 @@ static bool dpc_parse_input(dpc_input_t *input)
 		} else if (fr_dict_attr_is_top_level(vp->da)) switch (vp->da->attr) {
 
 		case FR_PACKET_DST_PORT:
-			input->dst.port = vp->vp_uint16;
+			input->ext.dst.port = vp->vp_uint16;
 			break;
 
 		case FR_PACKET_DST_IP_ADDRESS:
-			memcpy(&input->dst.ipaddr, &vp->vp_ip, sizeof(input->dst.ipaddr));
+			memcpy(&input->ext.dst.ipaddr, &vp->vp_ip, sizeof(input->ext.dst.ipaddr));
 			break;
 
 		case FR_PACKET_SRC_PORT:
-			input->src.port = vp->vp_uint16;
+			input->ext.src.port = vp->vp_uint16;
 			break;
 
 		case FR_PACKET_SRC_IP_ADDRESS:
-			memcpy(&input->src.ipaddr, &vp->vp_ip, sizeof(input->src.ipaddr));
+			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
 			break;
 
 		default:
@@ -1799,47 +1794,47 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If not specified in input vps, use default values.
 	 */
 	if (!vp_data) {
-		if (input->code == FR_CODE_UNDEFINED) {
+		if (input->ext.code == FR_CODE_UNDEFINED) {
 			/*
 			 *	Handling a workflow. All workflows start with a Discover.
 			 */
 			if (vp_workflow_type && vp_workflow_type->vp_uint8 && vp_workflow_type->vp_uint8 < DPC_WORKFLOW_MAX) {
-				input->workflow = vp_workflow_type->vp_uint8;
-				input->code = FR_DHCP_DISCOVER;
+				input->ext.workflow = vp_workflow_type->vp_uint8;
+				input->ext.code = FR_DHCP_DISCOVER;
 			} else if (workflow_code) {
-				input->workflow = workflow_code;
-				input->code = FR_DHCP_DISCOVER;
+				input->ext.workflow = workflow_code;
+				input->ext.code = FR_DHCP_DISCOVER;
 			}
 		}
 
 		/* Fall back to message type provided through command line (if there is one). */
-		if (input->code == FR_CODE_UNDEFINED) input->code = packet_code;
+		if (input->ext.code == FR_CODE_UNDEFINED) input->ext.code = packet_code;
 	}
 
 	/*
 	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
 	 *	If nothing goes, fall back to default.
 	 */
-	if (   !ipaddr_defined(input->src.ipaddr)
+	if (   !ipaddr_defined(input->ext.src.ipaddr)
 	    && (!with_template && gateway_list) /* If using a template, do not assign a gateway now. */
 	) {
-		input->gateway = &gateway_list[gateway_next];
+		input->ext.gateway = &gateway_list[gateway_next];
 		gateway_next = (gateway_next + 1) % gateway_num;
 
-		input->src = *(input->gateway);
+		input->ext.src = *(input->ext.gateway);
 	}
 
-	if (!input->src.port) input->src.port = client_port;
-	if (   !ipaddr_defined(input->src.ipaddr)
+	if (!input->ext.src.port) input->ext.src.port = client_port;
+	if (   !ipaddr_defined(input->ext.src.ipaddr)
 	    && !(with_template && gateway_list) /* If using a template with gateway, let this unspecified for now. */
 	   ) {
-		input->src.ipaddr = client_ipaddr;
+		input->ext.src.ipaddr = client_ipaddr;
 	}
 
-	if (!input->dst.port) input->dst.port = server_port;
-	if (!ipaddr_defined(input->dst.ipaddr)) input->dst.ipaddr = server_ipaddr;
+	if (!input->ext.dst.port) input->ext.dst.port = server_port;
+	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ipaddr;
 
-	if (!with_template && !vp_data && input->code == FR_CODE_UNDEFINED) {
+	if (!with_template && !vp_data && input->ext.code == FR_CODE_UNDEFINED) {
 		/* Note: in template mode, we do not require a specified message type in the two input items. */
 		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
 		return false;
@@ -1901,7 +1896,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 		if (with_template && list->size >= 2) break;
 
 		MEM(input = talloc_zero(ctx, dpc_input_t));
-		input->xid = DPC_PACKET_ID_UNASSIGNED;
+		input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 		if (fr_pair_list_afrom_file(input, &input->vps, file_in, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
@@ -1974,7 +1969,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		template_variable = vps_list_in.tail;
 
 		/* Ensure a message type is provided. */
-		if (template_invariant->code == FR_CODE_UNDEFINED) {
+		if (template_invariant->ext.code == FR_CODE_UNDEFINED) {
 			ERROR("No packet type specified in template input vps or command line");
 			return -1;
 		}
