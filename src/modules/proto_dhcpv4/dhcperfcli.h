@@ -86,6 +86,12 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define dhcp_code_from_message(_m) (_m + FR_DHCP_OFFSET)
 #define dhcp_message_from_code(_c) (_c - FR_DHCP_OFFSET)
 
+#define vp_is_dhcp_field(_vp) (_vp && (fr_dict_vendor_num_by_da(_vp->da) == DHCP_MAGIC_VENDOR) \
+	&& (_vp->da->attr >= 256 && _vp->da->attr <= 269))
+
+#define vp_is_dhcp_option(_vp) (_vp && (fr_dict_vendor_num_by_da(_vp->da) == DHCP_MAGIC_VENDOR) \
+	&& (_vp->da->attr <= 255))
+
 #define ipaddr_defined(_x) (_x.af != AF_UNSPEC)
 
 

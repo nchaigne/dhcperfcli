@@ -442,14 +442,12 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 
 	/* Update 'rtt_min'. */
 	if ((0 == my_stats->num) || (timercmp(rtt, &my_stats->rtt_min, <))) {
-		my_stats->rtt_min.tv_sec = rtt->tv_sec;
-		my_stats->rtt_min.tv_usec = rtt->tv_usec;
+		my_stats->rtt_min = *rtt;
 	}
 
 	/* Update 'rtt_max'. */
 	if ((0 == my_stats->num) || (timercmp(rtt, &my_stats->rtt_max, >=))) {
-		my_stats->rtt_max.tv_sec = rtt->tv_sec;
-		my_stats->rtt_max.tv_usec = rtt->tv_usec;
+		my_stats->rtt_max = *rtt;
 	}
 
 	/* Update 'rtt_cumul' and 'num'. */
@@ -690,7 +688,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 {
 	fd_set set;
-	struct timeval  tv;
+	struct timeval tv;
 	RADIUS_PACKET *reply = NULL, **packet_p;
 	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
@@ -709,9 +707,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	if (NULL == tv_wait_time || !timerisset(tv_wait_time)) {
 		timerclear(&tv);
 	} else {
-		tv.tv_sec = tv_wait_time->tv_sec;
-		tv.tv_usec = tv_wait_time->tv_usec;
-
+		tv = *tv_wait_time;
 		DPC_DEBUG_TRACE("Max wait time: %.6f", dpc_timeval_to_float(&tv));
 	}
 
