@@ -411,14 +411,14 @@ static void dpc_stats_print(FILE *fp)
 	/* Packets sent (total, and of each message type). */
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.num_packet_sent[0]);
 	if (stat_ctx.num_packet_sent[0] > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_print(messages, stat_ctx.num_packet_sent));
+		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, stat_ctx.num_packet_sent));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.num_packet_recv[0]);
 	if (stat_ctx.num_packet_recv[0] > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_print(messages, stat_ctx.num_packet_recv));
+		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, stat_ctx.num_packet_recv));
 	}
 	fprintf(fp, "\n");
 
@@ -545,7 +545,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 	} else {
 		DPC_DEBUG_TRACE("Request timed out");
 
-		if (packet_trace_lvl >= 1) dpc_packet_header_print(fr_log_fp, session, session->packet, DPC_PACKET_TIMEOUT);
+		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->packet, DPC_PACKET_TIMEOUT);
 
 		/* Statistics. */
 		STAT_INCR_PACKET_LOST(session->packet->code);
@@ -671,7 +671,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 		return -1;
 	}
 
-	dpc_packet_print(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
+	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	/* Statistics. */
 	STAT_INCR_PACKET_SENT(packet->code);
@@ -828,7 +828,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 		 */
 		DPC_DEBUG_TRACE("Discarding received reply code %d (session state: %d)", reply->code, session->state);
 
-		dpc_packet_header_print(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
+		dpc_packet_header_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
 		fr_radius_free(&reply);
 
 		return true; /* Session is not finished. */
@@ -841,7 +841,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
 	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
 
-	dpc_packet_print(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
+	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
 	/* Update statistics. */
 	dpc_statistics_update(session->packet, session->reply);

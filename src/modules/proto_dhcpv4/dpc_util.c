@@ -165,7 +165,7 @@ char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when
 /*
  *	Print number of each type of message (sent or received).
  */
-char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
+char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[])
 {
 	int i;
 	char *p = out;
@@ -198,7 +198,7 @@ char *dpc_num_message_type_print(char *out, uint32_t num_packet[])
 /*
  *	Print the message type from internal packet code.
  */
-char *dpc_message_type_print(char *out, int code)
+char *dpc_message_type_sprint(char *out, int code)
 {
 	char *p = out;
 	size_t len;
@@ -219,7 +219,7 @@ char *dpc_message_type_print(char *out, int code)
 /*
  *	Print the packet header.
  */
-void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
+void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
 {
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
@@ -261,7 +261,7 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 		fprintf(fp, " malformed packet");
 	} else {
 		char buf[50];
-		fprintf(fp, " %s", dpc_message_type_print(buf, packet->code));
+		fprintf(fp, " %s", dpc_message_type_sprint(buf, packet->code));
 	}
 
 	/* DHCP specific information. */
@@ -283,7 +283,7 @@ void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET
 /*
  *	Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
  */
-void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp)
+void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp)
 {
 	fr_cursor_t cursor;
 
@@ -297,7 +297,7 @@ void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp)
 /*
  *	Print the "options" of a DHCP packet (from the VPs list).
  */
-int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
+int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 {
 	char buf[1024];
 	char *p = buf;
@@ -332,7 +332,7 @@ int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
                       dpc_packet_event_t pevent, int trace_lvl)
 {
 	VALUE_PAIR *vp_encoded_data = NULL;
@@ -340,7 +340,7 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 	if (!fp || !packet) return;
 
 	if (trace_lvl >= 1) {
-		dpc_packet_header_print(fp, session, packet, pevent);
+		dpc_packet_header_fprint(fp, session, packet, pevent);
 	}
 
 	if (trace_lvl >= 2) {
@@ -349,10 +349,10 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 			fr_pair_fprint(fp, vp_encoded_data);
 		} else {
 			fprintf(fp, "DHCP vps fields:\n");
-			dpc_packet_fields_print(fp, packet->vps);
+			dpc_packet_fields_fprint(fp, packet->vps);
 
 			fprintf(fp, "DHCP vps options:\n");
-			if (dpc_packet_options_print(fp, packet->vps) == 0) {
+			if (dpc_packet_options_fprint(fp, packet->vps) == 0) {
 				fprintf(fp, "\t(empty list)\n");
 			}
 		}
@@ -360,7 +360,7 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
 
 	if (trace_lvl >= 3) {
 		fprintf(fp, "DHCP hex data:\n");
-		dpc_packet_data_print(fp, packet);
+		dpc_packet_data_fprint(fp, packet);
 
 		/*
 		 *	If this is a packet we're sending, which was not built using pre-encoded data,
@@ -380,7 +380,7 @@ void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packe
  *	Fields and options are printed in hex, along with their position in the packet.
  *	This allows to see what is exactly in a packet and where.
  */
-void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
+void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet)
 {
 	char header[64];
 	char buf[1024];
@@ -424,7 +424,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 	/*
 	 *	Print options.
 	 */
-	dpc_packet_data_options_print(fp, cur_pos, p, data_end, true, &overload);
+	dpc_packet_data_options_fprint(fp, cur_pos, p, data_end, true, &overload);
 	if (overload) {
 		if ((overload & 1) == 1) {
 			/* The 'file' field is used to hold options. It must be interpreted before 'sname'. */
@@ -432,7 +432,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 			cur_pos = 44;
 			p = packet->data + cur_pos;
 			data_end = p + 64 - 1;
-			dpc_packet_data_options_print(fp, cur_pos, p, data_end, false, NULL);
+			dpc_packet_data_options_fprint(fp, cur_pos, p, data_end, false, NULL);
 		}
 		if ((overload & 2) == 2) {
 			/* The 'sname' field is used to hold options. */
@@ -440,7 +440,7 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 			cur_pos = 108;
 			p = packet->data + cur_pos;
 			data_end = p + 128 - 1;
-			dpc_packet_data_options_print(fp, cur_pos, p, data_end, false, NULL);
+			dpc_packet_data_options_fprint(fp, cur_pos, p, data_end, false, NULL);
 		}
 	}
 }
@@ -448,8 +448,8 @@ void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet)
 /*
  *	Print DHCP packet options in hex, along with their position in the packet.
  */
-void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
-                                   bool print_end_pad, uint8_t *overload)
+void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
+                                    bool print_end_pad, uint8_t *overload)
 {
 	char buf[1024];
 	char header[64];

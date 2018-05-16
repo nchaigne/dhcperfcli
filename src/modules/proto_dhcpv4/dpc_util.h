@@ -30,16 +30,16 @@ void dpc_printf_log(char const *fmt, ...);
 void dpc_dev_print(char const *file, int line, char const *fmt, ...);
 char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);
 
-char *dpc_num_message_type_print(char *out, uint32_t num_packet[]);
+char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[]);
 
-char *dpc_message_type_print(char *out, int code);
-void dpc_packet_header_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
-void dpc_packet_fields_print(FILE *fp, VALUE_PAIR *vp);
-int dpc_packet_options_print(FILE *fp, VALUE_PAIR *vp);
-void dpc_packet_print(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
-                      dpc_packet_event_t pevent, int trace_lvl);
-void dpc_packet_data_print(FILE *fp, RADIUS_PACKET *packet);
-void dpc_packet_data_options_print(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
+char *dpc_message_type_sprint(char *out, int code);
+void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
+void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);
+int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp);
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
+                       dpc_packet_event_t pevent, int trace_lvl);
+void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet);
+void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
                                    bool print_end_pad, uint8_t *overload);
 
 char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *sep,
