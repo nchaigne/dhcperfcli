@@ -114,7 +114,7 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
 	/* Print elapsed time. */
 	char time_buf[DPC_TIME_STRLEN];
 	fprintf(fr_log_fp, "t(%s) ",
-	        dpc_print_delta_time(time_buf, &tv_start, NULL, (dpc_debug_lvl >= 4) ? 6 : DPC_DELTA_TIME_DECIMALS));
+	        dpc_delta_time_sprint(time_buf, &tv_start, NULL, (dpc_debug_lvl >= 4) ? 6 : DPC_DELTA_TIME_DECIMALS));
 
 	va_start(ap, fmt);
 	vfprintf(fr_log_fp, fmt, ap);
@@ -129,7 +129,7 @@ void dpc_dev_print(char const *file, int line, char const *fmt, ...)
  *	Hour and minute printed only if relevant, decimals optional.
  *	If when is NULL, now is used instead.
  */
-char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when, uint8_t decimals)
+char *dpc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals)
 {
 	struct timeval delta, to;
 	uint32_t sec, min, hour;
@@ -267,7 +267,7 @@ void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKE
 	/* DHCP specific information. */
 	if (packet->data && packet->data_len >= 34) { /* Only print this if there is enough data. */
 		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
-		fprintf(fp, " (hwaddr: %s", dpc_ether_addr_print(hwaddr, buf_hwaddr) );
+		fprintf(fp, " (hwaddr: %s", dpc_ether_addr_sprint(buf_hwaddr, hwaddr) );
 
 		if (packet->code == FR_DHCP_ACK || packet->code == FR_DHCP_OFFER) {
 			memcpy(&yiaddr, packet->data + 16, 4);
@@ -277,7 +277,7 @@ void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKE
 	}
 
 	fprintf(fp, " Id %u (0x%08x) %s length %zu\n", packet->id, packet->id,
-	        dpc_print_packet_from_to(from_to_buf, packet, false), packet->data_len);
+	        dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->data_len);
 }
 
 /*
@@ -406,7 +406,7 @@ void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet)
 			int remain = packet->data_len - cur_pos;
 			if (remain > 0) {
 				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
-				dpc_print_hex_data(buf, p, remain, " ", header, 16);
+				dpc_hex_data_sprint(buf, p, remain, " ", header, 16);
 				fprintf(fp, "%s\n", buf);
 			}
 			return;
@@ -414,7 +414,7 @@ void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet)
 
 		/* One valid field to print. */
 		sprintf(header, "  %04x  %10s: ", cur_pos, dpc_dhcp_headers[i].name);
-		dpc_print_hex_data(buf, p, dpc_dhcp_headers[i].size, " ", header, 16);
+		dpc_hex_data_sprint(buf, p, dpc_dhcp_headers[i].size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
 
 		p += dpc_dhcp_headers[i].size;
@@ -469,7 +469,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 			continue;
 		} else if (pad_p) { /* We're done with padding octets: print them. */
 			sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
-			dpc_print_hex_data(buf, pad_p, pad_size, " ", header, 16);
+			dpc_hex_data_sprint(buf, pad_p, pad_size, " ", header, 16);
 			fprintf(fp, "%s\n", buf);
 
 			cur_pos += pad_size;
@@ -479,7 +479,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 		if (*p == 255) { /* End Option. */
 			sprintf(header, "  %04x  %10s: ", cur_pos, "end");
-			dpc_print_hex_data(buf, p, 1, " ", header, 16);
+			dpc_hex_data_sprint(buf, p, 1, " ", header, 16);
 			fprintf(fp, "%s\n", buf);
 
 			p ++;
@@ -498,7 +498,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 			int remain = data_end - p + 1;
 			if (remain > 0) {
 				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
-				dpc_print_hex_data(buf, p, remain, " ", header, 16);
+				dpc_hex_data_sprint(buf, p, remain, " ", header, 16);
 				fprintf(fp, "%s\n", buf);
 			}
 			return;
@@ -508,7 +508,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 		int opt_size = p[1] + 2;
 		if (overload && p[0] == FR_DHCP_OVERLOAD) *overload = p[2];
 		sprintf(header, "  %04x  %10d: ", cur_pos, p[0]);
-		dpc_print_hex_data(buf, p, opt_size, " ", header, 16);
+		dpc_hex_data_sprint(buf, p, opt_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
 		p += opt_size;
 		cur_pos += opt_size;
@@ -516,7 +516,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 	if (print_end_pad && pad_p) { /* There may be more padding after End Option. */
 		sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
-		dpc_print_hex_data(buf, pad_p, pad_size, " ", header, 16);
+		dpc_hex_data_sprint(buf, pad_p, pad_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
 	}
 }
@@ -524,8 +524,8 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 /*
  *	Print a data buffer in hexadecimal representation.
  */
-char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *sep,
-                         char const *prefix, int line_max_len)
+char *dpc_hex_data_sprint(char *out, const uint8_t *in, int in_len, char const *sep,
+                          char const *prefix, int line_max_len)
 {
 	int i;
 	int k = 0; /* Position in the current line. */
@@ -554,18 +554,18 @@ char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *s
 /*
  *	Print an ethernet address in a buffer.
  */
-char *dpc_ether_addr_print(const uint8_t *addr, char *buf)
+char *dpc_ether_addr_sprint(char *out, const uint8_t *addr)
 {
-	sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x",
+	sprintf(out, "%02x:%02x:%02x:%02x:%02x:%02x",
 	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-	return buf;
+	return out;
 }
 
 /*
  *	Print packet source and destination IP/port.
  *	Caller is responsible for passing an output buffer (buf) with sufficient space (DPC_FROM_TO_STRLEN).
  */
-char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
+char *dpc_packet_from_to_sprint(char *out, RADIUS_PACKET *packet, bool extra)
 {
 	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	char dst_ipaddr_buf[FR_IPADDR_STRLEN] = "";
@@ -575,11 +575,11 @@ char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
 	fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->dst_ipaddr);
 
 	if (!extra) {
-		sprintf(buf, "from %s:%u to %s:%u",
+		sprintf(out, "from %s:%u to %s:%u",
 		        src_ipaddr_buf, packet->src_port, dst_ipaddr_buf, packet->dst_port
 		);
 	} else {
-		sprintf(buf, "from %s:%u (prefix: %d) to %s:%u (prefix: %d)",
+		sprintf(out, "from %s:%u (prefix: %d) to %s:%u (prefix: %d)",
 		        src_ipaddr_buf, packet->src_port, packet->src_ipaddr.prefix,
 		        dst_ipaddr_buf, packet->dst_port, packet->dst_ipaddr.prefix
 		);
@@ -589,11 +589,11 @@ char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra)
 	if (packet->if_index) {
 		char if_name[IFNAMSIZ];
 		sprintf(via, " via %s", fr_ifname_from_ifindex(if_name, packet->if_index));
-		strcat(buf, via);
+		strcat(out, via);
 	}
 #endif
 
-	return buf;
+	return out;
 }
 
 /*

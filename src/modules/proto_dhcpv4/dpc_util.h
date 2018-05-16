@@ -28,7 +28,7 @@ int fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when);
 
 void dpc_printf_log(char const *fmt, ...);
 void dpc_dev_print(char const *file, int line, char const *fmt, ...);
-char *dpc_print_delta_time(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);
+char *dpc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);
 
 char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[]);
 
@@ -40,12 +40,12 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *pack
                        dpc_packet_event_t pevent, int trace_lvl);
 void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet);
 void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
-                                   bool print_end_pad, uint8_t *overload);
+                                    bool print_end_pad, uint8_t *overload);
 
-char *dpc_print_hex_data(char *out, const uint8_t *in, int in_len, char const *sep,
-                         char const *prefix, int line_max_len);
-char *dpc_ether_addr_print(const uint8_t *addr, char *buf);
-char *dpc_print_packet_from_to(char *buf, RADIUS_PACKET *packet, bool extra);
+char *dpc_hex_data_sprint(char *out, const uint8_t *in, int in_len, char const *sep,
+                          char const *prefix, int line_max_len);
+char *dpc_ether_addr_sprint(char *out, const uint8_t *addr);
+char *dpc_packet_from_to_sprint(char *out, RADIUS_PACKET *packet, bool extra);
 
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);

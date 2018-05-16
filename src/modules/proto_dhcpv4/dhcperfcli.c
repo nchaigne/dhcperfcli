@@ -174,7 +174,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_STATS    20
 
 char elapsed_buf[DPC_TIME_STRLEN];
-#define ELAPSED dpc_print_delta_time(elapsed_buf, &tv_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+#define ELAPSED dpc_delta_time_sprint(elapsed_buf, &tv_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
@@ -183,12 +183,12 @@ char elapsed_buf[DPC_TIME_STRLEN];
 static void usage(int);
 static void version_print(void);
 
-static void dpc_progress_stats_print(FILE *fp);
+static void dpc_progress_stats_fprint(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static float dpc_get_msg_rate(uint8_t i);
-static void dpc_tr_stats_print(FILE *fp);
-static void dpc_stats_print(FILE *fp);
+static void dpc_tr_stats_fprint(FILE *fp);
+static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
 static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
 
@@ -242,7 +242,7 @@ static void dpc_end(void);
  *	E.g.:
  *	t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
  */
-static void dpc_progress_stats_print(FILE *fp)
+static void dpc_progress_stats_fprint(FILE *fp)
 {
 	/* Elapsed time. */
 	fprintf(fp, "t(%s)", ELAPSED);
@@ -349,7 +349,7 @@ static float dpc_get_msg_rate(uint8_t i)
 /*
  *	Print per-transaction type statistics.
  */
-static void dpc_tr_stats_print(FILE *fp)
+static void dpc_tr_stats_fprint(FILE *fp)
 {
 	int i;
 	int i_start = 0;
@@ -394,7 +394,7 @@ static void dpc_tr_stats_print(FILE *fp)
 /*
  *	Print global statistics.
  */
-static void dpc_stats_print(FILE *fp)
+static void dpc_stats_fprint(FILE *fp)
 {
 	if (!fp) return;
 
@@ -404,7 +404,7 @@ static void dpc_stats_print(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-		dpc_print_delta_time(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
+		dpc_delta_time_sprint(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
@@ -501,7 +501,7 @@ static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, UNUSED void *uctx)
 {
 	/* Do statistics summary. */
-	dpc_progress_stats_print(stdout);
+	dpc_progress_stats_fprint(stdout);
 
 	/* ... and schedule next time. */
 	dpc_event_add_progress_stats();
@@ -728,7 +728,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	}
 
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
-	                dpc_print_packet_from_to(from_to_buf, reply, false), reply->id, reply->id);
+	                dpc_packet_from_to_sprint(from_to_buf, reply, false), reply->id, reply->id);
 
 	if (ipaddr_defined(allowed_server)) {
 		/*
@@ -754,7 +754,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		 *	- The transaction ID does not match (DHCP server is broken)
 		 */
 		DEBUG("Received unexpected packet Id %u (0x%08x) %s length %zu",
-		      reply->id, reply->id, dpc_print_packet_from_to(from_to_buf, reply, false), reply->data_len);
+		      reply->id, reply->id, dpc_packet_from_to_sprint(from_to_buf, reply, false), reply->data_len);
 
 		stat_ctx.num_packet_recv_unexpected ++;
 		fr_radius_free(&reply);
@@ -1195,7 +1195,7 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
-	                dpc_print_packet_from_to(from_to_buf, request, false));
+	                dpc_packet_from_to_sprint(from_to_buf, request, false));
 
 	return request;
 }
@@ -2369,11 +2369,11 @@ static void dpc_end(void)
 	gettimeofday(&tv_job_end, NULL);
 
 	/* If we're producing progress statistics, do it one last time. */
-	if (timerisset(&tv_progress_interval)) dpc_progress_stats_print(stdout);
+	if (timerisset(&tv_progress_interval)) dpc_progress_stats_fprint(stdout);
 
 	/* Statistics report. */
-	dpc_stats_print(stdout);
-	dpc_tr_stats_print(stdout);
+	dpc_stats_fprint(stdout);
+	dpc_tr_stats_fprint(stdout);
 
 	/* And we're done. */
 	exit(EXIT_SUCCESS);
