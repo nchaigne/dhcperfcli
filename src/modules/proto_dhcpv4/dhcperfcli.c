@@ -2056,23 +2056,28 @@ static int dpc_get_alt_dir(void)
 static void dpc_dict_init(TALLOC_CTX *ctx)
 {
 	/*
+	 *	Not sure why, but trying fr_dict_from_file twice results in very bad things.
+	 *	To avoid this, first check if the default directory exists before doing anything.
+	 */
+	if (access(dict_dir, R_OK) < 0) {
+		DEBUG("Cannot access dictionaries dir: %s", dict_dir);
+
+		/* Get alternate directory (if possible). */
+		if (dpc_get_alt_dir() != 0 || access(alt_dict_dir, R_OK) < 0) {
+			PERROR("Failed to initialize dictionary");
+			exit(EXIT_FAILURE);
+		}
+		dict_dir = alt_dict_dir;
+	}
+
+	/*
 	 *	Initialize dictionaries.
 	 *	Read FreeRADIUS internal dictionary first.
 	 */
 	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_freeradius);
 	if (fr_dict_from_file(ctx, &dict, dict_dir, dict_fn_freeradius, progname) != 0) {
-		/* Try again with alternate directory (if possible). */
-		if (dpc_get_alt_dir() != 0) {
-			PERROR("Failed to initialize dictionary");
-			exit(EXIT_FAILURE);
-		}
-		dict_dir = alt_dict_dir;
-
-		DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_freeradius);
-		if (fr_dict_from_file(ctx, &dict, dict_dir, dict_fn_freeradius, progname) != 0) {
-			PERROR("Failed to initialize dictionary");
-			exit(EXIT_FAILURE);
-		}
+		PERROR("Failed to initialize dictionary");
+		exit(EXIT_FAILURE);
 	}
 
 	/* Read the DHCP dictionary. */
