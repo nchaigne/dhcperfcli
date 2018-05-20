@@ -2027,14 +2027,17 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
  */
 static int dpc_get_alt_dir(void)
 {
+#ifndef __linux__ /* Don't even try if this is not Linux. */
+	DEBUG("Not Linux: won't get program real location");
+	return -1;
+#else
 	char buf[32] = "";
 	char prog_path[PATH_MAX + 1] = "";
 	char *prog_dir, *up_dir;
 
 	sprintf(buf, "/proc/%d/exe", getpid());
 	if (readlink(buf, prog_path, sizeof(prog_path) - 1) == -1) {
-		/* Doesn't work. Likely not Linux... */
-		DEBUG("Cannot get program execution path from link '%s'", buf);
+		WARN("Cannot get program execution path from link '%s'", buf);
 		return -1;
 	}
 
@@ -2044,6 +2047,7 @@ static int dpc_get_alt_dir(void)
 	snprintf(alt_dict_dir, PATH_MAX, "%s/share/freeradius", up_dir);
 	DEBUG("Using alternate dictionaries dir: %s", alt_dict_dir);
 	return 0;
+#endif
 }
 
 /*

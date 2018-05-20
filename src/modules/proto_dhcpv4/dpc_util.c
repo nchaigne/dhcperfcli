@@ -618,6 +618,7 @@ VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
  *	This is a copy of FreeRADIUS function radius_pair_create (from src/main/pair.c)
  *	We do not want to depend on libfreeradius-server.a (and now libfreeradius-unlang.a).
  */
+//TODO: remove this? (not used anymore)
 VALUE_PAIR *dpc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 			                unsigned int attribute, unsigned int vendor)
 {
@@ -1099,7 +1100,7 @@ bool dpc_stdin_peek()
 
 /*
  *	Determine if an IP address is the broadcast address.
- *	Returns: 0 if it is not, 1 if it is, 0 on error.
+ *	Returns: 0 if it is not, 1 if it is, -1 on error.
  */
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr)
 {
