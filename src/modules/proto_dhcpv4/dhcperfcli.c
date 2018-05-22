@@ -2105,6 +2105,12 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		exit(EXIT_FAILURE);
 	}
 
+	/* Also need to load attributes required by DHCP base. */
+	if (fr_dhcpv4_init() < 0) {
+		PERROR("Failed to initialize DHCP base");
+		exit(EXIT_FAILURE);
+	}
+
 	fr_strerror(); /* Clear the error buffer */
 }
 
