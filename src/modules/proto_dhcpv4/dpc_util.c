@@ -843,6 +843,14 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 
 	if (vp->vp_length <= 240) goto end; /* No options. */
 
+	uint8_t const *message_type;
+	message_type = fr_dhcpv4_packet_get_option((dhcp_packet_t const *) vp->vp_octets, vp->vp_length, FR_DHCP_MESSAGE_TYPE);
+	if (message_type) {
+		code = message_type[2];
+		goto end;
+	}
+
+//TODO: remove this (instead use fr_dhcpv4_packet_get_option).
 	/*
 	 *	Loop over the DHCP options.
 	 */
