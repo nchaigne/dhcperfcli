@@ -2,7 +2,6 @@
 #define _DPC_UTIL_H
 
 #include "dhcperfcli.h"
-#include <freeradius-devel/libradius.h>
 
 
 #define DPC_FROM_TO_STRLEN    (21 + (FR_IPADDR_STRLEN * 2) + 5 + IFNAMSIZ + 1)

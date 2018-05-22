@@ -1,7 +1,6 @@
 #ifndef _DPC_PACKET_LIST_H
 #define _DPC_PACKET_LIST_H
 
-#include <freeradius-devel/libradius.h>
 #include <freeradius-devel/conf.h>
 #include <freeradius-devel/packet.h>
 #include <freeradius-devel/dhcpv4/dhcpv4.h>

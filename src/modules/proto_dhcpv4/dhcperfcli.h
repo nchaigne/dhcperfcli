@@ -6,7 +6,6 @@
 #define _DHCPERFCLI_H
 
 #include <freeradius-devel/radiusd.h>
-#include <freeradius-devel/libradius.h>
 #include <freeradius-devel/event.h>
 #include <freeradius-devel/dhcpv4/dhcpv4.h>
 #include <freeradius-devel/io/time.h>
@@ -83,8 +82,10 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 */
 
 /* Internally, DHCP packet code starts with an offset of 1024 (hack). */
-#define dhcp_code_from_message(_m) (_m + FR_DHCP_OFFSET)
-#define dhcp_message_from_code(_c) (_c - FR_DHCP_OFFSET)
+//#define dhcp_code_from_message(_m) (_m + FR_DHCP_OFFSET)
+//#define dhcp_message_from_code(_c) (_c - FR_DHCP_OFFSET)
+#define dhcp_code_from_message(_m) (_m)
+#define dhcp_message_from_code(_c) (_c)
 
 #define vp_is_dhcp_field(_vp) (_vp && (fr_dict_vendor_num_by_da(_vp->da) == DHCP_MAGIC_VENDOR) \
 	&& (_vp->da->attr >= 256 && _vp->da->attr <= 269))

@@ -651,7 +651,7 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 	vp_cursor_t src, dst;
 
 	if (NULL == *to) { // fall back to fr_pair_list_copy for a new list.
-		*to = fr_pair_list_copy(ctx, from);
+		MEM(fr_pair_list_copy(ctx, to, from) >= 0);
 		return (*to);
 	}
 
@@ -1017,7 +1017,7 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 	out->prev = NULL;
 	out->next = NULL;
 
-	out->vps = fr_pair_list_copy(out, in->vps);
+	MEM(fr_pair_list_copy(out, &out->vps, in->vps) >= 0);
 
 	return out;
 }

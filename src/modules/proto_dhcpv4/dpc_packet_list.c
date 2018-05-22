@@ -612,7 +612,7 @@ RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 #ifdef HAVE_LIBPCAP
 		if (ps->pcap) {
 			packet = fr_dhcpv4_pcap_recv(ps->pcap);
-			packet->sockfd = ps->pcap->fd; /* fr_dhcpv4_pcap_recv does not fill this. Why!? */
+			if (packet) packet->sockfd = ps->pcap->fd; /* fr_dhcpv4_pcap_recv does not fill this. Why!? */
 		} else
 #endif
 		{

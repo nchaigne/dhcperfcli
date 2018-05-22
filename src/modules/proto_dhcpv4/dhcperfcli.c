@@ -938,7 +938,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address);
 	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
@@ -1021,7 +1021,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 *	Remove eventual option 50 Requested IP Address.
 	 *	(it may be provided for Discover, but must *not* be in Release)
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
@@ -1100,7 +1100,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address);
 	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
@@ -1230,7 +1230,7 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	 *	the requested id may not have been available).
 	 *	Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_transaction_id, TAG_ANY);
+	fr_pair_delete_by_da(&packet->vps, attr_transaction_id);
 	vp = fr_pair_afrom_da(packet, attr_transaction_id);
 	vp->vp_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp);
