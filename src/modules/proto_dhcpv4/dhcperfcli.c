@@ -2037,7 +2037,7 @@ static int dpc_get_alt_dir(void)
 
 	sprintf(buf, "/proc/%d/exe", getpid());
 	if (readlink(buf, prog_path, sizeof(prog_path) - 1) == -1) {
-		WARN("Cannot get program execution path from link '%s'", buf);
+		ERROR("Cannot get program execution path from link '%s'", buf);
 		return -1;
 	}
 
@@ -2056,15 +2056,18 @@ static int dpc_get_alt_dir(void)
 static void dpc_dict_init(TALLOC_CTX *ctx)
 {
 	/*
-	 *	Not sure why, but trying fr_dict_from_file twice results in very bad things.
-	 *	To avoid this, first check if the default directory exists before doing anything.
+	 *	fr_dict_from_file cannot be called twice (or very bad things happen).
+	 *	Probably need to free stuff for that.
+	 *	To simplify, first check if the default directory exists before doing anything.
 	 */
-	if (access(dict_dir, R_OK) < 0) {
-		DEBUG("Cannot access dictionaries dir: %s", dict_dir);
+	char dict_path_freeradius[PATH_MAX + 1] = "";
+	sprintf(dict_path_freeradius, "%s/%s", dict_dir, dict_fn_freeradius); // no "access_printf" or something!? damn.
+	if (access(dict_path_freeradius, R_OK) < 0) {
+		DEBUG("Cannot access dictionary file: %s", dict_path_freeradius);
 
 		/* Get alternate directory (if possible). */
 		if (dpc_get_alt_dir() != 0 || access(alt_dict_dir, R_OK) < 0) {
-			PERROR("Failed to initialize dictionary");
+			PERROR("Failed to initialize dictionary: unable to locate dictionary files");
 			exit(EXIT_FAILURE);
 		}
 		dict_dir = alt_dict_dir;
@@ -2105,9 +2108,9 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Also need to load attributes required by DHCP base. */
+	/* Also need to load attributes required by DHCP library. */
 	if (fr_dhcpv4_init() < 0) {
-		PERROR("Failed to initialize DHCP base");
+		PERROR("Failed to initialize DHCP library");
 		exit(EXIT_FAILURE);
 	}
 
