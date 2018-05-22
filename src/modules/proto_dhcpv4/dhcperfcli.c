@@ -2072,11 +2072,16 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 
 	/*
 	 *	Initialize dictionaries.
-	 *	Read FreeRADIUS internal dictionary first.
 	 */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_freeradius);
-	if (fr_dict_from_file(ctx, &dict, dict_dir, dict_fn_freeradius, progname) != 0) {
+	if (fr_dict_global_init(ctx, dict_dir) < 0) {
 		PERROR("Failed to initialize dictionary");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Read FreeRADIUS internal dictionary first. */
+	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_freeradius);
+	if (fr_dict_from_file(&dict, dict_fn_freeradius) < 0) {
+		PERROR("Failed to initialize dictionary: %s", dict_fn_freeradius);
 		exit(EXIT_FAILURE);
 	}
 
