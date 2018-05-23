@@ -1754,7 +1754,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 			if (!vp_data) { /* If we have pre-encoded DHCP data, ignore all other DHCP attributes */
 				switch (vp->da->attr) {
 				case FR_DHCP_MESSAGE_TYPE: /* DHCP Message Type. */
-					input->ext.code = dhcp_code_from_message(vp->vp_uint32);
+					input->ext.code = vp->vp_uint32;
 					break;
 				case FR_DHCP_TRANSACTION_ID: /* Prefered xid. */
 					input->ext.xid = vp->vp_uint32;
@@ -2169,7 +2169,7 @@ static int dpc_command_parse(char const *command)
 	if (is_integer(command)) {
 		int message = atoi(command);
 		if (message > 255) return -1;
-		packet_code = dhcp_code_from_message(atoi(command));
+		packet_code = atoi(command);
 		return 0;
 	}
 

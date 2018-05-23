@@ -196,14 +196,12 @@ char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[])
 }
 
 /*
- *	Print the message type from internal packet code.
+ *	Print the message type from packet code.
  */
-char *dpc_message_type_sprint(char *out, int code)
+char *dpc_message_type_sprint(char *out, int message)
 {
 	char *p = out;
 	size_t len;
-
-	int message = dhcp_message_from_code(code);
 
 	if (is_dhcp_message(message)) {
 		sprintf(p, "%s", dpc_message_types[message]);

@@ -81,12 +81,6 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
  *	message." (RFC 2131). This means we'll only get the reply if setting ciaddr to address we've used as source.
 */
 
-/* Internally, DHCP packet code starts with an offset of 1024 (hack). */
-//#define dhcp_code_from_message(_m) (_m + FR_DHCP_OFFSET)
-//#define dhcp_message_from_code(_c) (_c - FR_DHCP_OFFSET)
-#define dhcp_code_from_message(_m) (_m)
-#define dhcp_message_from_code(_c) (_c)
-
 #define vp_is_dhcp_field(_vp) (_vp && (fr_dict_vendor_num_by_da(_vp->da) == DHCP_MAGIC_VENDOR) \
 	&& (_vp->da->attr >= 256 && _vp->da->attr <= 269))
 
@@ -101,21 +95,18 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
  */
 #define STAT_INCR_PACKET_SENT(_packet_code) \
 { \
-	int message = dhcp_message_from_code(_packet_code); \
 	stat_ctx.num_packet_sent[0] ++; \
-	if (is_dhcp_message(message)) stat_ctx.num_packet_sent[message] ++; \
+	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_sent[_packet_code] ++; \
 }
 #define STAT_INCR_PACKET_RECV(_packet_code) \
 { \
-	int message = dhcp_message_from_code(_packet_code); \
 	stat_ctx.num_packet_recv[0] ++; \
-	if (is_dhcp_message(message)) stat_ctx.num_packet_recv[message] ++; \
+	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_recv[_packet_code] ++; \
 }
 #define STAT_INCR_PACKET_LOST(_packet_code) \
 { \
-	int message = dhcp_message_from_code(_packet_code); \
 	stat_ctx.num_packet_lost[0] ++; \
-	if (is_dhcp_message(message)) stat_ctx.num_packet_lost[message] ++; \
+	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_lost[_packet_code] ++; \
 }
 
 /* Specific states of a session. */
