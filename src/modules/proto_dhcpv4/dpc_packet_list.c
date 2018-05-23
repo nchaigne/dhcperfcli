@@ -566,7 +566,8 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 {
 	int i, maxfd;
 
-	if (!pl || !set) return 0;
+	rad_assert(pl);
+	rad_assert(set);
 
 	maxfd = -1;
 
@@ -597,7 +598,8 @@ RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 	RADIUS_PACKET *packet;
 	dpc_packet_socket_t *ps;
 
-	if (!pl || !set) return NULL;
+	rad_assert(pl);
+	rad_assert(set);
 
 	start = pl->last_recv;
 	do {
