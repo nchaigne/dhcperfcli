@@ -837,42 +837,16 @@ bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
  */
 unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 {
-	uint8_t const *p;
-	uint8_t const *end;
 	unsigned int code = FR_CODE_UNDEFINED;
+	uint8_t const *message_type;
 
 	if (vp->vp_length <= 240) goto end; /* No options. */
 
-	uint8_t const *message_type;
-	message_type = fr_dhcpv4_packet_get_option((dhcp_packet_t const *) vp->vp_octets, vp->vp_length, FR_DHCP_MESSAGE_TYPE);
+	message_type = fr_dhcpv4_packet_get_option((dhcp_packet_t const *) vp->vp_octets, vp->vp_length,
+	                                           FR_DHCP_MESSAGE_TYPE);
 	if (message_type) {
 		code = message_type[2];
-		goto end;
 	}
-
-//TODO: remove this (instead use fr_dhcpv4_packet_get_option).
-	/*
-	 *	Loop over the DHCP options.
-	 */
-	p = vp->vp_octets + 240; /* Start right after the DHCP magic cookie. */
-	end = p + (vp->vp_length - 240);
-
-	while (p < end) {
-		if (p[0] == 0) { /* Pad Option. */
-			p ++;
-			continue;
-		}
-		if (p[0] == 255) break; /* End Option. */
-
-		if (p[0] == FR_DHCP_MESSAGE_TYPE) {
-			code = dhcp_code_from_message(p[2]);
-			break;
-		}
-
-		p += p[1] + 2; /* Hop to next option. */
-	}
-	// theoretically, if overloading, message type could be encoded in 'file' or 'sname' fields.
-	// that's a bit crazy though, and our DHCP server does not support this anyway.
 
 end:
 	DPC_DEBUG_TRACE("Extracted message code: %u", code);
