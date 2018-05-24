@@ -324,7 +324,7 @@ static float dpc_job_elapsed_time_get(void)
  */
 static float dpc_get_tr_rate(dpc_transaction_type_t i)
 {
-	assert(i < DPC_TR_MAX);
+	dpc_assert(i < DPC_TR_MAX);
 
 	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
 	float elapsed = dpc_job_elapsed_time_get();
@@ -338,7 +338,7 @@ static float dpc_get_tr_rate(dpc_transaction_type_t i)
  */
 static float dpc_get_msg_rate(uint8_t i)
 {
-	assert(i < DHCP_MAX_MESSAGE_TYPE);
+	dpc_assert(i < DHCP_MAX_MESSAGE_TYPE);
 
 	float elapsed = dpc_job_elapsed_time_get();
 
@@ -627,8 +627,8 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packe
 		}
 	}
 
-	assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
-	assert(packet->data == NULL);
+	dpc_assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
+	dpc_assert(packet->data == NULL);
 
 	/*
 	 *	Encode the packet.

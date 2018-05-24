@@ -963,12 +963,12 @@ void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)
 	if (!list || !entry) return;
 
 	if (!list->head) {
-		assert(list->tail == NULL);
+		dpc_assert(list->tail == NULL);
 		list->head = entry;
 		entry->prev = NULL;
 	} else {
-		assert(list->tail != NULL);
-		assert(list->tail->next == NULL);
+		dpc_assert(list->tail != NULL);
+		dpc_assert(list->tail->next == NULL);
 		list->tail->next = entry;
 		entry->prev = list->tail;
 	}
@@ -1017,24 +1017,24 @@ dpc_input_t *dpc_input_item_draw(dpc_input_t *entry)
 
 	dpc_input_list_t *list = entry->list;
 
-	assert(list->head != NULL); // entry belongs to a list, so the list can't be empty.
-	assert(list->tail != NULL); // same.
+	dpc_assert(list->head != NULL); // entry belongs to a list, so the list can't be empty.
+	dpc_assert(list->tail != NULL); // same.
 
 	if (prev) {
-		assert(list->head != entry); // if entry has a prev, then entry can't be head.
+		dpc_assert(list->head != entry); // if entry has a prev, then entry can't be head.
 		prev->next = next;
 	}
 	else {
-		assert(list->head == entry); // if entry has no prev, then entry must be head.
+		dpc_assert(list->head == entry); // if entry has no prev, then entry must be head.
 		list->head = next;
 	}
 
 	if (next) {
-		assert(list->tail != entry); // if entry has a next, then entry can't be tail.
+		dpc_assert(list->tail != entry); // if entry has a next, then entry can't be tail.
 		next->prev = prev;
 	}
 	else {
-		assert(list->tail == entry); // if entry has no next, then entry must be tail.
+		dpc_assert(list->tail == entry); // if entry has no next, then entry must be tail.
 		list->tail = prev;
 	}
 
