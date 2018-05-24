@@ -427,17 +427,17 @@ void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet)
 		if ((overload & 1) == 1) {
 			/* The 'file' field is used to hold options. It must be interpreted before 'sname'. */
 			fprintf(fp, "  -- options overload: file --\n");
-			cur_pos = 44;
+			cur_pos = offsetof(dhcp_packet_t, file);
 			p = packet->data + cur_pos;
-			data_end = p + 64 - 1;
+			data_end = p + DHCP_FILE_LEN - 1;
 			dpc_packet_data_options_fprint(fp, cur_pos, p, data_end, false, NULL);
 		}
 		if ((overload & 2) == 2) {
 			/* The 'sname' field is used to hold options. */
 			fprintf(fp, "  -- options overload: sname --\n");
-			cur_pos = 108;
+			cur_pos = offsetof(dhcp_packet_t, sname);
 			p = packet->data + cur_pos;
-			data_end = p + 128 - 1;
+			data_end = p + DHCP_SNAME_LEN - 1;
 			dpc_packet_data_options_fprint(fp, cur_pos, p, data_end, false, NULL);
 		}
 	}
