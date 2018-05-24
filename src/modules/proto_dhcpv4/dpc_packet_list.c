@@ -335,7 +335,9 @@ dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
  */
 bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
 {
-	if (!pl || !request_p || !*request_p) return false;
+	dpc_assert(pl != NULL);
+	dpc_assert(request_p != NULL);
+	dpc_assert(*request_p != NULL);
 
 	bool r = rbtree_insert(pl->tree, request_p);
 	if (r) {
@@ -354,10 +356,11 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
  */
 RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKET *reply)
 {
-	RADIUS_PACKET my_request = { 0 }, *request;
+	RADIUS_PACKET my_request = { 0 }, *request = NULL;
 	dpc_packet_socket_t *ps;
 
-	if (!pl || !reply) return NULL;
+	dpc_assert(pl != NULL);
+	dpc_assert(reply != NULL);
 
 	ps = dpc_socket_find(pl, reply->sockfd);
 	if (!ps) {
@@ -420,7 +423,8 @@ bool dpc_packet_list_yank(dpc_packet_list_t *pl, RADIUS_PACKET *request)
 {
 	rbnode_t *node;
 
-	if (!pl || !request) return false;
+	dpc_assert(pl != NULL);
+	dpc_assert(request != NULL);
 
 	node = rbtree_find(pl->tree, &request);
 	if (!node) return false;
@@ -454,15 +458,16 @@ uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl)
  */
 bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET **request_p)
 {
-	if (!pl || !request_p || sockfd == -1) {
-		fr_strerror_printf("Invalid argument");
-		return false;
-	}
-
 	int id;
-	dpc_packet_socket_t *ps = NULL;
-	RADIUS_PACKET *request = *request_p;
+	dpc_packet_socket_t *ps;
+	RADIUS_PACKET *request;
 	int tries = 0;
+
+	dpc_assert(pl != NULL);
+	dpc_assert(request_p != NULL);
+	dpc_assert(*request_p != NULL);
+
+	request = *request_p;
 
 	/*
 	 *	Find the socket.
@@ -538,7 +543,8 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request)
 {
 	dpc_packet_socket_t *ps;
 
-	if (!pl || !request) return false;
+	dpc_assert(pl != NULL);
+	dpc_assert(request != NULL);
 
 	if (!dpc_packet_list_yank(pl, request)) return false;
 
@@ -566,8 +572,8 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 {
 	int i, maxfd;
 
-	rad_assert(pl);
-	rad_assert(set);
+	dpc_assert(pl != NULL);
+	dpc_assert(set != NULL);
 
 	maxfd = -1;
 
@@ -598,8 +604,8 @@ RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 	RADIUS_PACKET *packet;
 	dpc_packet_socket_t *ps;
 
-	rad_assert(pl);
-	rad_assert(set);
+	dpc_assert(pl != NULL);
+	dpc_assert(set != NULL);
 
 	start = pl->last_recv;
 	do {

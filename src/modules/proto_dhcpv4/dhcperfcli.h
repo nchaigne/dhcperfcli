@@ -24,6 +24,17 @@
 extern int dpc_debug_lvl;
 extern fr_dict_attr_t const *attr_encoded_data;
 
+#define dpc_assert rad_assert
+/*
+ *	Using rad_assert defined in include/rad_assert.h
+ *
+ *	assert output:
+ *	dhcperfcli: src/modules/proto_dhcpv4/dpc_packet_list.c:601: dpc_packet_list_recv: Assertion `pl != ((void *)0)' failed.
+ *
+ *	rad_assert output:
+ *	ASSERT FAILED src/modules/proto_dhcpv4/dpc_packet_list.c[601]: pl != NULL
+ */
+
 /*
  *	Trace / logging.
  */
