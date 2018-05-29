@@ -38,8 +38,8 @@ static char const *dict_fn_freeradius = "dictionary.freeradius.internal";
 static char const *dict_fn_dhcp = "dictionary.dhcpv4";
 static char const *dict_fn_dhcperfcli = "dictionary.dhcperfcli.internal";
 static fr_dict_t *dict = NULL;
-static fr_dict_t const *dict_dhcperfcli;
-static fr_dict_t const *dict_dhcp;
+static fr_dict_t *dict_dhcperfcli;
+static fr_dict_t *dict_dhcp;
 
 static fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
