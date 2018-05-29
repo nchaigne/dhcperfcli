@@ -1288,12 +1288,12 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	if (template_variable) {
 		dpc_pair_list_append(input, &input->vps, template_variable->vps);
 
-		vp_cursor_t cursor;
+		fr_cursor_t cursor;
 		VALUE_PAIR *vp;
 
-		for (vp = fr_pair_cursor_init(&cursor, &template_variable->vps);
+		for (vp = fr_cursor_init(&cursor, &template_variable->vps);
 		     vp;
-		     vp = fr_pair_cursor_next(&cursor))
+		     vp = fr_cursor_next(&cursor))
 		{
 			/* Only DHCP attributes can be variable. */
 			if (fr_dict_vendor_num_by_da(vp->da) != DHCP_MAGIC_VENDOR) continue;
@@ -1721,7 +1721,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
  */
 static bool dpc_parse_input(dpc_input_t *input)
 {
-	vp_cursor_t cursor;
+	fr_cursor_t cursor;
 	VALUE_PAIR *vp;
 	VALUE_PAIR *vp_data = NULL, *vp_workflow_type = NULL;
 
@@ -1743,9 +1743,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 	/*
 	 *	Loop over input value pairs. These take precedence over program arguments and options.
 	 */
-	for (vp = fr_pair_cursor_init(&cursor, &input->vps);
+	for (vp = fr_cursor_init(&cursor, &input->vps);
 	     vp;
-	     vp = fr_pair_cursor_next(&cursor)) {
+	     vp = fr_cursor_next(&cursor)) {
 		/*
 		 *	Allow to set packet type using DHCP-Message-Type
 		 */
