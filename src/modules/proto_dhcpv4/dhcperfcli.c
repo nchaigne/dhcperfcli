@@ -737,7 +737,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		if (fr_ipaddr_cmp(&reply->src_ipaddr, &allowed_server) != 0) {
 			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
 			      reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
-			fr_radius_free(&reply);
+			fr_radius_packet_free(&reply);
 			return -1;
 		}
 	}
@@ -757,7 +757,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		      reply->id, reply->id, dpc_packet_from_to_sprint(from_to_buf, reply, false), reply->data_len);
 
 		stat_ctx.num_packet_recv_unexpected ++;
-		fr_radius_free(&reply);
+		fr_radius_packet_free(&reply);
 		return -1;
 	}
 
@@ -776,7 +776,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		if (fr_ipaddr_cmp(&reply->src_ipaddr, &vp->vp_ip) != 0) {
 			SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
 			       reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
-			fr_radius_free(&reply);
+			fr_radius_packet_free(&reply);
 			return -1;
 		}
 		// note: we can get "unexpected packets" with this.
@@ -788,7 +788,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	 */
 	if (fr_dhcpv4_packet_decode(reply) < 0) {
 		SPERROR("Failed to decode reply packet (id: %u)", reply->id);
-		fr_radius_free(&reply);
+		fr_radius_packet_free(&reply);
 		/*
 		 *	Don't give hope and kill the session now. Maybe we'll receive something better.
 		 *	If not, well... the timeout event will do its dirty job.
@@ -829,7 +829,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 		DPC_DEBUG_TRACE("Discarding received reply code %d (session state: %d)", reply->code, session->state);
 
 		dpc_packet_header_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
-		fr_radius_free(&reply);
+		fr_radius_packet_free(&reply);
 
 		return true; /* Session is not finished. */
 	}
