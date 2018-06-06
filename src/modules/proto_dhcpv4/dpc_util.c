@@ -648,7 +648,7 @@ VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 {
 	vp_cursor_t src, dst;
 
-	if (NULL == *to) { // fall back to fr_pair_list_copy for a new list.
+	if (*to == NULL) { // fall back to fr_pair_list_copy for a new list.
 		MEM(fr_pair_list_copy(ctx, to, from) >= 0);
 		return (*to);
 	}

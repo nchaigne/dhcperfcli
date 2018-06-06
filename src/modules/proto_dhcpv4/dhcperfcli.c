@@ -716,7 +716,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		return 0;
 	}
 
-	if (NULL == tv_wait_time || !timerisset(tv_wait_time)) {
+	if (tv_wait_time == NULL || !timerisset(tv_wait_time)) {
 		timerclear(&tv);
 	} else {
 		tv = *tv_wait_time;
@@ -1911,7 +1911,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_lis
 			exit(EXIT_FAILURE); /* Be unforgiving. */
 			break;
 		}
-		if (NULL == input->vps) {
+		if (!input->vps) {
 			/* Last line might be empty, in this case we will obtain a NULL vps pointer. Silently ignore this. */
 			talloc_free(input);
 			break;
