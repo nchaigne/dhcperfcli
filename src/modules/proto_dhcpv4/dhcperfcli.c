@@ -16,6 +16,11 @@ TALLOC_CTX *autofree = NULL;
 
 struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
+
+fr_dict_attr_t const *attr_packet_dst_ip_address = NULL;
+fr_dict_attr_t const *attr_packet_dst_port = NULL;
+fr_dict_attr_t const *attr_packet_src_ip_address = NULL;
+fr_dict_attr_t const *attr_packet_src_port = NULL;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
@@ -53,6 +58,12 @@ fr_dict_autoload_t dpc_dict_autoload[] = {
 
 extern fr_dict_attr_autoload_t dpc_dict_attr_autoload[];
 fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
+
+	{ .out = &attr_packet_dst_ip_address, .name = "Packet-Dst-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_freeradius },
+	{ .out = &attr_packet_dst_port, .name = "Packet-Dst-Port", .type = FR_TYPE_UINT16, .dict = &dict_freeradius },
+	{ .out = &attr_packet_src_ip_address, .name = "Packet-Src-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_freeradius },
+	{ .out = &attr_packet_src_port, .name = "Packet-Src-Port", .type = FR_TYPE_UINT16, .dict = &dict_freeradius },
+
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
@@ -1773,27 +1784,19 @@ static bool dpc_parse_input(dpc_input_t *input)
 					break;
 				}
 			}
-
-		} else if (fr_dict_attr_is_top_level(vp->da)) switch (vp->da->attr) {
-
-		case FR_PACKET_DST_PORT:
+		}
+		else if (vp->da == attr_packet_dst_port) {
 			input->ext.dst.port = vp->vp_uint16;
-			break;
 
-		case FR_PACKET_DST_IP_ADDRESS:
+		} else if (vp->da == attr_packet_dst_ip_address) {
 			memcpy(&input->ext.dst.ipaddr, &vp->vp_ip, sizeof(input->ext.dst.ipaddr));
-			break;
 
-		case FR_PACKET_SRC_PORT:
+		} else if (vp->da == attr_packet_src_port) {
 			input->ext.src.port = vp->vp_uint16;
-			break;
 
-		case FR_PACKET_SRC_IP_ADDRESS:
+		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
-			break;
 
-		default:
-			break;
 		} /* switch over the attribute */
 
 	} /* loop over the input vps */
