@@ -24,13 +24,13 @@ fr_dict_attr_t const *attr_packet_src_port = NULL;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
-fr_dict_attr_t const *attr_hop_count = NULL;
-fr_dict_attr_t const *attr_transaction_id = NULL;
-fr_dict_attr_t const *attr_client_ip_address = NULL;
-fr_dict_attr_t const *attr_your_ip_address = NULL;
-fr_dict_attr_t const *attr_gateway_ip_address = NULL;
-fr_dict_attr_t const *attr_server_identifier = NULL;
-fr_dict_attr_t const *attr_requested_ip_address = NULL;
+fr_dict_attr_t const *attr_dhcp_hop_count = NULL;
+fr_dict_attr_t const *attr_dhcp_transaction_id = NULL;
+fr_dict_attr_t const *attr_dhcp_client_ip_address = NULL;
+fr_dict_attr_t const *attr_dhcp_your_ip_address = NULL;
+fr_dict_attr_t const *attr_dhcp_gateway_ip_address = NULL;
+fr_dict_attr_t const *attr_dhcp_server_identifier = NULL;
+fr_dict_attr_t const *attr_dhcp_requested_ip_address = NULL;
 fr_dict_attr_t const *attr_dhcp_message_type = NULL;
 
 static char const *progname = NULL;
@@ -68,14 +68,14 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
 
-	{ .out = &attr_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
-	{ .out = &attr_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcpv4 },
-	{ .out = &attr_client_ip_address, .name = "DHCP-Client-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
-	{ .out = &attr_your_ip_address, .name = "DHCP-Your-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
-	{ .out = &attr_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_client_ip_address, .name = "DHCP-Client-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_your_ip_address, .name = "DHCP-Your-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 
-	{ .out = &attr_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
-	{ .out = &attr_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_message_type, .name = "DHCP-Message-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 
 	{ NULL }
@@ -923,20 +923,20 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	RADIUS_PACKET *packet;
 
 	/* Get the Offer xid. */
-	vp_xid = fr_pair_find_by_da(session->reply->vps, attr_transaction_id, TAG_ANY);
+	vp_xid = fr_pair_find_by_da(session->reply->vps, attr_dhcp_transaction_id, TAG_ANY);
 	if (!vp_xid) { /* Should never happen (DHCP field). */
 		return false;
 	}
 
 	/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_your_ip_address, TAG_ANY);
+	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address, TAG_ANY);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no yiaddr provided in Offer reply");
 		return false;
 	}
 
 	/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_server_identifier, TAG_ANY);
+	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_dhcp_server_identifier, TAG_ANY);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 		return false;
@@ -961,8 +961,8 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address);
-	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_requested_ip_address);
+	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
+	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1008,14 +1008,14 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	RADIUS_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_your_ip_address, TAG_ANY);
+	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address, TAG_ANY);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_server_identifier, TAG_ANY);
+	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_dhcp_server_identifier, TAG_ANY);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1037,14 +1037,14 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_client_ip_address);
+	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
 	 *	Remove eventual option 50 Requested IP Address.
 	 *	(it may be provided for Discover, but must *not* be in Release)
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address);
+	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
@@ -1087,14 +1087,14 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	RADIUS_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_your_ip_address, TAG_ANY);
+	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address, TAG_ANY);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_server_identifier, TAG_ANY);
+	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_dhcp_server_identifier, TAG_ANY);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1116,15 +1116,15 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_client_ip_address);
+	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_requested_ip_address);
-	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_requested_ip_address);
+	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
+	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1176,18 +1176,18 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	VALUE_PAIR *vp_giaddr, *vp_hops;
 
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
-	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_gateway_ip_address, TAG_ANY);
+	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_dhcp_gateway_ip_address, TAG_ANY);
 	if (!vp_giaddr) {
-		vp_giaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_gateway_ip_address);
+		vp_giaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_gateway_ip_address);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
 		vp_giaddr->vp_ip.af = AF_INET;
 		vp_giaddr->vp_ip.prefix = 32;
 	}
 
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
-	vp_hops = fr_pair_find_by_da(packet->vps, attr_hop_count, TAG_ANY);
+	vp_hops = fr_pair_find_by_da(packet->vps, attr_dhcp_hop_count, TAG_ANY);
 	if (!vp_hops) {
-		vp_hops = dpc_pair_create_by_da(packet, &packet->vps, attr_hop_count);
+		vp_hops = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_hop_count);
 		vp_hops->vp_uint8 = 1;
 	}
 }
@@ -1253,8 +1253,8 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	 *	the requested id may not have been available).
 	 *	Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_transaction_id);
-	vp = fr_pair_afrom_da(packet, attr_transaction_id);
+	fr_pair_delete_by_da(&packet->vps, attr_dhcp_transaction_id);
+	vp = fr_pair_afrom_da(packet, attr_dhcp_transaction_id);
 	vp->vp_uint32 = packet->id;
 	fr_pair_add(&packet->vps, vp);
 
@@ -1769,23 +1769,22 @@ static bool dpc_parse_input(dpc_input_t *input)
 	for (vp = fr_cursor_init(&cursor, &input->vps);
 	     vp;
 	     vp = fr_cursor_next(&cursor)) {
-		/*
-		 *	Allow to set packet type using DHCP-Message-Type
-		 */
+
 		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) {
 
-			if (!vp_data) { /* If we have pre-encoded DHCP data, ignore all other DHCP attributes */
-				switch (vp->da->attr) {
-				case FR_DHCP_MESSAGE_TYPE: /* DHCP Message Type. */
+			if (!vp_data) { /* If we have pre-encoded DHCP data, all other DHCP attributes are ignored. */
+
+				if (vp->da == attr_dhcp_message_type) {
+					/* Packet type. */
 					input->ext.code = vp->vp_uint32;
-					break;
-				case FR_DHCP_TRANSACTION_ID: /* Prefered xid. */
+
+				} else if (vp->da == attr_dhcp_transaction_id) {
+					/* Prefered xid. */
 					input->ext.xid = vp->vp_uint32;
-					break;
 				}
 			}
-		}
-		else if (vp->da == attr_packet_dst_port) {
+
+		} else if (vp->da == attr_packet_dst_port) {
 			input->ext.dst.port = vp->vp_uint16;
 
 		} else if (vp->da == attr_packet_dst_ip_address) {
@@ -1797,7 +1796,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
 
-		} /* switch over the attribute */
+		}
 
 	} /* loop over the input vps */
 
@@ -1812,6 +1811,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 			if (vp_workflow_type && vp_workflow_type->vp_uint8 && vp_workflow_type->vp_uint8 < DPC_WORKFLOW_MAX) {
 				input->ext.workflow = vp_workflow_type->vp_uint8;
 				input->ext.code = FR_DHCP_DISCOVER;
+
 			} else if (workflow_code) {
 				input->ext.workflow = workflow_code;
 				input->ext.code = FR_DHCP_DISCOVER;
