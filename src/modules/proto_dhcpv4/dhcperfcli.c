@@ -36,10 +36,9 @@ static char const *progname = NULL;
 static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
 static char const *dict_dir = DICTDIR;
 static char const *dict_fn_freeradius = "dictionary.freeradius.internal";
-static char const *dict_fn_dhcp = "dictionary.dhcpv4";
+//static char const *dict_fn_dhcp = "dictionary.dhcpv4";
 static char const *dict_fn_dhcperfcli = "dictionary.dhcperfcli.internal";
 
-static fr_dict_t *dict = NULL;
 static fr_dict_t *dict_freeradius;
 static fr_dict_t *dict_dhcperfcli;
 static fr_dict_t *dict_dhcpv4;
