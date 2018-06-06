@@ -26,6 +26,7 @@ fr_dict_attr_t const *attr_your_ip_address = NULL;
 fr_dict_attr_t const *attr_gateway_ip_address = NULL;
 fr_dict_attr_t const *attr_server_identifier = NULL;
 fr_dict_attr_t const *attr_requested_ip_address = NULL;
+fr_dict_attr_t const *attr_dhcp_message_type = NULL;
 
 static char const *progname = NULL;
 
@@ -37,23 +38,35 @@ static char const *dict_dir = DICTDIR;
 static char const *dict_fn_freeradius = "dictionary.freeradius.internal";
 static char const *dict_fn_dhcp = "dictionary.dhcpv4";
 static char const *dict_fn_dhcperfcli = "dictionary.dhcperfcli.internal";
-static fr_dict_t *dict = NULL;
-static fr_dict_t *dict_dhcperfcli;
-static fr_dict_t *dict_dhcp;
 
-static fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
+static fr_dict_t *dict = NULL;
+static fr_dict_t *dict_freeradius;
+static fr_dict_t *dict_dhcperfcli;
+static fr_dict_t *dict_dhcpv4;
+
+extern fr_dict_autoload_t dpc_dict_autoload[];
+fr_dict_autoload_t dpc_dict_autoload[] = {
+	{ .out = &dict_freeradius, .proto = "freeradius" },
+	{ .out = &dict_dhcpv4, .proto = "dhcpv4" },
+	{ .out = &dict_dhcperfcli, .proto = "dhcperfcli" },
+	{ NULL }
+};
+
+extern fr_dict_attr_autoload_t dpc_dict_attr_autoload[];
+fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
 
-	{ .out = &attr_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcp },
-	{ .out = &attr_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcp },
-	{ .out = &attr_client_ip_address, .name = "DHCP-Client-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcp },
-	{ .out = &attr_your_ip_address, .name = "DHCP-Your-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcp },
-	{ .out = &attr_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcp },
+	{ .out = &attr_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
+	{ .out = &attr_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcpv4 },
+	{ .out = &attr_client_ip_address, .name = "DHCP-Client-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_your_ip_address, .name = "DHCP-Your-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 
-	{ .out = &attr_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcp },
-	{ .out = &attr_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcp },
+	{ .out = &attr_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_message_type, .name = "DHCP-Message-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 
 	{ NULL }
 };
@@ -2081,6 +2094,11 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		exit(EXIT_FAILURE);
 	}
 
+#if 0
+// this doesn't work anymore, because DHCP needs "Vendor-Specific" (why !?) which is defined in rfc2865...
+// so for now we're using FreeRADIUS default "include all" dictionary. (cf. dhcpclient)
+// TODO: fix this.
+
 	/* Read FreeRADIUS internal dictionary first. */
 	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_freeradius);
 	if (fr_dict_from_file(&dict, dict_fn_freeradius) < 0) {
@@ -2098,6 +2116,29 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	/* Read dhcperfcli internal dictionary. */
 	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_dhcperfcli);
 	if (fr_dict_read(dict, dict_dir, dict_fn_dhcperfcli) != 0) {
+		PERROR("Failed to read dictionary: %s", dict_fn_dhcperfcli);
+		exit(EXIT_FAILURE);
+	}
+
+	/* Preload dictionary attributes that we need. */
+	if (fr_dict_attr_autoload(dpc_dict_attr_autoload) < 0) {
+		PERROR("Failed to autoload dictionary attributes");
+		exit(EXIT_FAILURE);
+	}
+#endif
+
+	/* Preload dictionaries. */
+	if (fr_dict_autoload(dpc_dict_autoload) < 0) {
+		PERROR("Failed to autoload dictionaries");
+		exit(EXIT_FAILURE);
+	}
+
+	/*
+	 *	Read dhcperfcli internal dictionary.
+	 *	This must be done after fr_dict_autoload, but before fr_dict_attr_autoload.
+	 */
+	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_dhcperfcli);
+	if (fr_dict_read(dict_dhcperfcli, dict_dir, dict_fn_dhcperfcli) != 0) {
 		PERROR("Failed to read dictionary: %s", dict_fn_dhcperfcli);
 		exit(EXIT_FAILURE);
 	}

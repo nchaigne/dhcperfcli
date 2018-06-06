@@ -23,6 +23,7 @@
 
 extern int dpc_debug_lvl;
 extern fr_dict_attr_t const *attr_encoded_data;
+extern fr_dict_attr_t const *attr_dhcp_message_type;
 
 #define dpc_assert rad_assert
 /*

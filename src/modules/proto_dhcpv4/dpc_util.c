@@ -841,7 +841,7 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 	if (vp->vp_length <= 240) goto end; /* No options. */
 
 	message_type = fr_dhcpv4_packet_get_option((dhcp_packet_t const *) vp->vp_octets, vp->vp_length,
-	                                           FR_DHCP_MESSAGE_TYPE);
+	                                           attr_dhcp_message_type);
 	if (message_type) {
 		code = message_type[2];
 	}
