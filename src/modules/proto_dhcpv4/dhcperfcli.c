@@ -464,12 +464,12 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type]; /* For easier access. */
 
 	/* Update 'rtt_min'. */
-	if ((0 == my_stats->num) || (timercmp(rtt, &my_stats->rtt_min, <))) {
+	if ((my_stats->num == 0) || (timercmp(rtt, &my_stats->rtt_min, <))) {
 		my_stats->rtt_min = *rtt;
 	}
 
 	/* Update 'rtt_max'. */
-	if ((0 == my_stats->num) || (timercmp(rtt, &my_stats->rtt_max, >=))) {
+	if ((my_stats->num == 0) || (timercmp(rtt, &my_stats->rtt_max, >=))) {
 		my_stats->rtt_max = *rtt;
 	}
 
