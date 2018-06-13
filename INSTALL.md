@@ -3,7 +3,7 @@
 
 ## Prerequisites
 
-Building *dhcperfcli* requires recent sources of FreeRADIUS version 4.0.x. Note that this version is currently in development. It's alright. We're using FreeRADIUS libraries. They just work fine.
+Building *dhcperfcli* requires recent sources of FreeRADIUS version 4.0.x (`master` branch). Note that this version is currently in development. It's alright. We're using FreeRADIUS libraries. They just work fine.
 
 Instructions on how to build FreeRADIUS is available on their wiki :
 https://wiki.freeradius.org/building/home
@@ -45,7 +45,7 @@ While libpcap is not mandatory to build, it is needed by *dhcpercli* to send pac
 You can get FreeRADIUS sources using git as follows:
 >__`git clone https://github.com/FreeRADIUS/freeradius-server.git`__<br>
 >__`cd freeradius-server`__<br>
->__`git checkout v4.0.x`__
+>__`git checkout master`__
 
 Avoid cloning using GitHub Desktop on Windows. You may have issues with line endings. And... other bad things. I've been there. Windows is hell.
 
@@ -53,8 +53,8 @@ Alternatively, you can do without git. Download a zip file of the sources from G
 https://github.com/FreeRADIUS/freeradius-server
 
 Then:
->__`unzip freeradius-server-4.0.x.zip`__<br>
->__`cd freeradius-server-4.0.x`__
+>__`unzip freeradius-server-master.zip`__<br>
+>__`cd freeradius-server-master`__
 
 ### Build from sources
 

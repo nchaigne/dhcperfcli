@@ -76,7 +76,7 @@ An *value pair* is specified as follows:
 
 `<attribute name> = <value>`
 
-The name of DHCP attributes (along with their type, and enumerated values if applicable) are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/v4.0.x/share/dictionary.dhcpv4).
+The name of DHCP attributes (along with their type, and enumerated values if applicable) are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary.dhcpv4).
 
 
 For example:
@@ -284,7 +284,7 @@ DHCP vps options:
         (51) DHCP-IP-Address-Lease-Time = 86400
 ```
 
-The names of DHCP attributes are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/v4.0.x/share/dictionary.dhcpv4).<br>
+The names of DHCP attributes are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary.dhcpv4).<br>
 Displayed values are formatted according to the attribute type. For an option, its number is printed in brackets.
 
 
