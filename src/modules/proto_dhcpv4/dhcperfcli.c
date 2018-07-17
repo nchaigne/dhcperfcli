@@ -3,6 +3,7 @@
  */
 
 #include "dhcperfcli.h"
+#include "ncc_util.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 
@@ -792,7 +793,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 
 	DPC_DEBUG_TRACE("Packet belongs to session id: %d", session->id);
 
-	if ((vp = dpc_pair_find_by_da(session->packet->vps, attr_authorized_server))) {
+	if ((vp = ncc_pair_find_by_da(session->packet->vps, attr_authorized_server))) {
 		/*
 		 *	Only allow replies from a specific server (per-packet policy set through attribute).
 		 */
@@ -962,7 +963,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
-	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
+	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1037,7 +1038,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
+	vp_ciaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
@@ -1116,7 +1117,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
+	vp_ciaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
 	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
 
 	/*
@@ -1124,7 +1125,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
-	vp_requested_ip = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
+	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
 	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
@@ -1178,7 +1179,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
 	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_dhcp_gateway_ip_address, TAG_ANY);
 	if (!vp_giaddr) {
-		vp_giaddr = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_gateway_ip_address);
+		vp_giaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_gateway_ip_address);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
 		vp_giaddr->vp_ip.af = AF_INET;
 		vp_giaddr->vp_ip.prefix = 32;
@@ -1187,7 +1188,7 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *ga
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
 	vp_hops = fr_pair_find_by_da(packet->vps, attr_dhcp_hop_count, TAG_ANY);
 	if (!vp_hops) {
-		vp_hops = dpc_pair_create_by_da(packet, &packet->vps, attr_dhcp_hop_count);
+		vp_hops = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_hop_count);
 		vp_hops->vp_uint8 = 1;
 	}
 }
@@ -1234,7 +1235,7 @@ static int dpc_dhcp_encode(RADIUS_PACKET *packet)
 	/*
 	 *	If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
-	if ((vp = dpc_pair_find_by_da(packet->vps, attr_encoded_data))) {
+	if ((vp = ncc_pair_find_by_da(packet->vps, attr_encoded_data))) {
 		packet->data_len = vp->vp_length;
 		packet->data = talloc_zero_array(packet, uint8_t, packet->data_len);
 		memcpy(packet->data, vp->vp_octets, vp->vp_length);
@@ -1755,12 +1756,12 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If so, extract (if there is one) the message type and the xid.
 	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
-	if ((vp_data = dpc_pair_find_by_da(input->vps, attr_encoded_data))) {
+	if ((vp_data = ncc_pair_find_by_da(input->vps, attr_encoded_data))) {
 		input->ext.code = dpc_message_type_extract(vp_data);
 		input->ext.xid = dpc_xid_extract(vp_data);
 	} else {
 		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
-		vp_workflow_type = dpc_pair_find_by_da(input->vps, attr_workflow_type);
+		vp_workflow_type = ncc_pair_find_by_da(input->vps, attr_workflow_type);
 	}
 
 	/*

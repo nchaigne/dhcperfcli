@@ -4,6 +4,7 @@
  */
 
 #include "dhcperfcli.h"
+#include "ncc_util.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 
@@ -365,7 +366,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *pack
 		 *	build and print the equivalent DHCP-Encoded-Data so we can reuse it effortlessly.
 		 */
 		if (pevent == DPC_PACKET_SENT && !vp_encoded_data) {
-			VALUE_PAIR *vp = dpc_pair_create_by_da(packet, NULL, attr_encoded_data);
+			VALUE_PAIR *vp = ncc_pair_create_by_da(packet, NULL, attr_encoded_data);
 			fr_pair_value_memcpy(vp, packet->data, packet->data_len);
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp);
@@ -600,45 +601,6 @@ char *dpc_packet_from_to_sprint(char *out, RADIUS_PACKET *packet, bool extra)
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag)
 {
 	return fr_pair_find_by_num(head, DHCP_MAGIC_VENDOR, attr, tag);
-}
-
-/*
- *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
- */
-VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
-{
-	if (!da) return NULL;
-	return fr_pair_find_by_da(head, da, TAG_ANY);
-}
-
-/*
- *	Create a value pair and add it to a list of value pairs.
- *	This is a copy of FreeRADIUS function radius_pair_create (from src/main/pair.c)
- *	We do not want to depend on libfreeradius-server.a (and now libfreeradius-unlang.a).
- */
-//TODO: remove this? (not used anymore)
-VALUE_PAIR *dpc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
-			                unsigned int attribute, unsigned int vendor)
-{
-	VALUE_PAIR *vp;
-
-	MEM(vp = fr_pair_afrom_num(ctx, vendor, attribute));
-	if (vps) fr_pair_add(vps, vp);
-
-	return vp;
-}
-
-/*
- *	Create a value pair (from a dictionary attribute) and add it to a list of value pairs.
- */
-VALUE_PAIR *dpc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *attr)
-{
-	VALUE_PAIR *vp;
-
-	MEM(vp = fr_pair_afrom_da(ctx, attr));
-	if (vps) fr_pair_add(vps, vp);
-
-	return vp;
 }
 
 /*

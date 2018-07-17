@@ -49,9 +49,6 @@ char *dpc_ether_addr_sprint(char *out, const uint8_t *addr);
 char *dpc_packet_from_to_sprint(char *out, RADIUS_PACKET *packet, bool extra);
 
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
-VALUE_PAIR *dpc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
-VALUE_PAIR *dpc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps, unsigned int attribute, unsigned int vendor);
-VALUE_PAIR *dpc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *attr);
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp);
 VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp);
