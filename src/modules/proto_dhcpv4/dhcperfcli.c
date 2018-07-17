@@ -110,7 +110,6 @@ static unsigned int gateway_next = 0; /* Next gateway to be used. */
 static ncc_endpoint_t *gateway_list = NULL; /* List of gateways. */
 static fr_ipaddr_t allowed_server = { 0 }; /* Only allow replies from a specific server. */
 
-static int force_af = AF_INET; // we only do DHCPv4.
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
 
