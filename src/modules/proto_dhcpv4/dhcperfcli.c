@@ -96,13 +96,18 @@ static dpc_input_t *template_variable = NULL;
 static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
 static uint32_t input_num_use = 1;
 
-static fr_ipaddr_t server_ipaddr = { .af = AF_INET, .prefix = 32 };
-static fr_ipaddr_t client_ipaddr = { .af = AF_INET, .prefix = 32 };
-static uint16_t server_port = DHCP_PORT_SERVER;
-static uint16_t client_port = DHCP_PORT_CLIENT;
+static ncc_endpoint_t server_ep = {
+	.ipaddr = { .af = AF_INET, .prefix = 32 },
+	.port = DHCP_PORT_SERVER
+};
+static ncc_endpoint_t client_ep = {
+	.ipaddr = { .af = AF_INET, .prefix = 32 },
+	.port = DHCP_PORT_CLIENT
+};
+
 static unsigned int gateway_num = 0; /* Number of gateways. */
 static unsigned int gateway_next = 0; /* Next gateway to be used. */
-static dpc_endpoint_t *gateway_list = NULL; /* List of gateways. */
+static ncc_endpoint_t *gateway_list = NULL; /* List of gateways. */
 static fr_ipaddr_t allowed_server = { 0 }; /* Only allow replies from a specific server. */
 
 static int force_af = AF_INET; // we only do DHCPv4.
@@ -227,7 +232,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session);
-static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway);
+static void dpc_request_gateway_handle(RADIUS_PACKET *packet, ncc_endpoint_t *gateway);
 static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(RADIUS_PACKET *packet);
 
@@ -251,7 +256,6 @@ static int dpc_get_alt_dir(void);
 static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
-static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port);
 static int dpc_command_parse(char const *command);
 static void dpc_gateway_add(char *addr);
 static void dpc_gateway_parse(char const *param);
@@ -1159,7 +1163,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 /*
  *	Prepare a request to be sent as if relayed through a gateway.
  */
-static void dpc_request_gateway_handle(RADIUS_PACKET *packet, dpc_endpoint_t *gateway)
+static void dpc_request_gateway_handle(RADIUS_PACKET *packet, ncc_endpoint_t *gateway)
 {
 	if (!gateway) return;
 
@@ -1836,15 +1840,15 @@ static bool dpc_parse_input(dpc_input_t *input)
 		input->ext.src = *(input->ext.gateway);
 	}
 
-	if (!input->ext.src.port) input->ext.src.port = client_port;
+	if (!input->ext.src.port) input->ext.src.port = client_ep.port;
 	if (   !ipaddr_defined(input->ext.src.ipaddr)
 	    && !(with_template && gateway_list) /* If using a template with gateway, let this unspecified for now. */
 	   ) {
-		input->ext.src.ipaddr = client_ipaddr;
+		input->ext.src.ipaddr = client_ep.ipaddr;
 	}
 
-	if (!input->ext.dst.port) input->ext.dst.port = server_port;
-	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ipaddr;
+	if (!input->ext.dst.port) input->ext.dst.port = server_ep.port;
+	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
 
 	if (!with_template && !vp_data && input->ext.code == FR_CODE_UNDEFINED) {
 		/* Note: in template mode, we do not require a specified message type in the two input items. */
@@ -2029,7 +2033,7 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 	 *	send using any source port with it (it's a raw socket) if we want to. The DHCP server probably
 	 *	won't care, but will send the response using destination port 68.
 	 */
-	if (dpc_pcap_socket_add(pl, pcap, &client_ipaddr, 68) < 0) {
+	if (dpc_pcap_socket_add(pl, pcap, &client_ep.ipaddr, 68) < 0) {
 		exit(EXIT_FAILURE);
 	}
 }
@@ -2186,25 +2190,6 @@ static void dpc_packet_list_init(TALLOC_CTX *ctx)
 }
 
 /*
- *	Resolve host address and port.
- */
-static void dpc_host_addr_resolve(char *host_arg, fr_ipaddr_t *host_ipaddr, uint16_t *host_port)
-{
-	if (!host_arg || !host_ipaddr || !host_port) return;
-
-	uint16_t port;
-
-	if (fr_inet_pton_port(host_ipaddr, &port, host_arg, -1, force_af, true, true) < 0) {
-		PERROR("Failed to parse host address");
-		exit(EXIT_FAILURE);
-	}
-
-	if (port != 0) { /* If a port is specified, use it. Otherwise, keep default. */
-		*host_port = port;
-	}
-}
-
-/*
  *	See what kind of request we want to send, or workflow to handle.
  */
 static int dpc_command_parse(char const *command)
@@ -2234,12 +2219,15 @@ static int dpc_command_parse(char const *command)
  */
 static void dpc_gateway_add(char *addr)
 {
-	dpc_endpoint_t this = { .port = DHCP_PORT_RELAY };
+	ncc_endpoint_t this = { .port = DHCP_PORT_RELAY };
 
-	dpc_host_addr_resolve(addr, &this.ipaddr, &this.port);
+	if (ncc_host_addr_resolve(addr, &this) != 0) {
+		PERROR("Failed to parse gateway address");
+		exit(EXIT_FAILURE);
+	}
 
 	gateway_num ++;
-	gateway_list = talloc_realloc(autofree, gateway_list, dpc_endpoint_t, gateway_num);
+	gateway_list = talloc_realloc(autofree, gateway_list, ncc_endpoint_t, gateway_num);
 	memcpy(&gateway_list[gateway_num - 1], &this, sizeof(this));
 }
 
@@ -2390,9 +2378,7 @@ static void dpc_options_parse(int argc, char **argv)
 	 *	Resolve server host address and port.
 	 */
 	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
-		dpc_host_addr_resolve(argv[1], &server_ipaddr, &server_port);
-		client_ipaddr.af = server_ipaddr.af;
-		client_ipaddr.prefix = server_ipaddr.prefix;
+		ncc_host_addr_resolve(argv[1], &server_ep);
 	}
 
 	/*
@@ -2491,7 +2477,7 @@ int main(int argc, char **argv)
 	 *	Allocate sockets for gateways.
 	 */
 	for (i = 0; i < gateway_num; i++) {
-		dpc_endpoint_t *this = &gateway_list[i];
+		ncc_endpoint_t *this = &gateway_list[i];
 
 		if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
 			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";

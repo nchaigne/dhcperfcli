@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <libgen.h>
 
+#include "ncc_util.h"
+
 
 /*
  *	Assuming an upper rate of 20 000 packets sent per second, constant over a period of time.
@@ -196,12 +198,6 @@ typedef struct dpc_statistics {
 } dpc_statistics_t;
 
 
-/* Endpoint: IP address and port. */
-typedef struct dpc_endpoint {
-	fr_ipaddr_t ipaddr;
-	uint16_t port;
-} dpc_endpoint_t;
-
 typedef struct dpc_input dpc_input_t;
 typedef struct dpc_input_list dpc_input_list_t;
 typedef struct dpc_session_ctx dpc_session_ctx_t;
@@ -214,9 +210,9 @@ typedef struct dpc_input_ext {
 	unsigned int workflow;   //!< Workflow (if handling one).
 	uint32_t xid;            //!< Prefered value for xid.
 
-	dpc_endpoint_t src;      //!< Src IP address and port.
-	dpc_endpoint_t dst;      //!< Dst IP address and port.
-	dpc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
+	ncc_endpoint_t src;      //!< Src IP address and port.
+	ncc_endpoint_t dst;      //!< Dst IP address and port.
+	ncc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
 	bool with_pcap;          //!< If using a pcap socket (no src IP, dst = broadcast, and pcap is available).
 } dpc_input_ext_t;
 
