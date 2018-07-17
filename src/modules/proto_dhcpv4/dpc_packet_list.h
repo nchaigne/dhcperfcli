@@ -1,10 +1,7 @@
-#ifndef _DPC_PACKET_LIST_H
-#define _DPC_PACKET_LIST_H
-
-#include <freeradius-devel/conf.h>
-#include <freeradius-devel/packet.h>
-#include <freeradius-devel/dhcpv4/dhcpv4.h>
-
+#pragma once
+/*
+ * dpc_packet_list.h
+ */
 
 #define DPC_PACKET_ID_UNASSIGNED (-1)
 
@@ -31,5 +28,3 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request);
 
 int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set);
 RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set);
-
-#endif

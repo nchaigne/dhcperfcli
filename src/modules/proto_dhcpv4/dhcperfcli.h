@@ -1,14 +1,10 @@
+#pragma once
 /*
  * dhcperfcli.h
  */
 
-#ifndef _DHCPERFCLI_H
-#define _DHCPERFCLI_H
-
-#include <freeradius-devel/radiusd.h>
-#include <freeradius-devel/event.h>
+#include <freeradius-devel/server/base.h>
 #include <freeradius-devel/dhcpv4/dhcpv4.h>
-#include <freeradius-devel/io/time.h>
 
 #include <assert.h>
 #include <libgen.h>
@@ -266,5 +262,3 @@ struct dpc_session_ctx {
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
-
-#endif

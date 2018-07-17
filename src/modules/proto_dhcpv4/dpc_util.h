@@ -1,5 +1,7 @@
-#ifndef _DPC_UTIL_H
-#define _DPC_UTIL_H
+#pragma once
+/*
+ * dpc_util.h
+ */
 
 #include "dhcperfcli.h"
 
@@ -71,5 +73,3 @@ dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
 
 bool dpc_stdin_peek(void);
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
-
-#endif
