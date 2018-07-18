@@ -11,6 +11,20 @@ typedef struct ncc_endpoint {
 	uint16_t port;
 } ncc_endpoint_t;
 
+/* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
+typedef struct ncc_fr_event_timer {
+	struct timeval		when;			//!< When this timer should fire.
+	/* We don't need anything beyond that. */
+} ncc_fr_event_timer_t;
+
+/* Get visibility on fr_event_list_t opaque struct (fr_event_list is defined in lib/util/event.c) */
+typedef struct ncc_fr_event_list {
+	fr_heap_t		*times;			//!< of timer events to be executed.
+	/* We don't need anything beyond that. */
+} ncc_fr_event_list_t;
+
+int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when);
+
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 			                unsigned int attribute, unsigned int vendor);

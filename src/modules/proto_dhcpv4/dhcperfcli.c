@@ -1467,7 +1467,7 @@ static void dpc_loop_recv(void)
 		 */
 		struct timeval now, when, wait_max = { 0 };
 
-		if (session_num_active >= session_max_active && fr_event_timer_peek(event_list, &when)) {
+		if (session_num_active >= session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
 			gettimeofday(&now, NULL);
 			if (timercmp(&when, &now, >)) timersub(&when, &now, &wait_max); /* No negative. */
 		}

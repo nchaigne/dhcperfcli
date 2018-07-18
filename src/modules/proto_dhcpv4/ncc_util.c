@@ -4,6 +4,39 @@
 
 #include "ncc_util.h"
 
+
+/*
+ *	Peek into an event list to retrieve the timestamp of next event.
+ *
+ *	Note: structures fr_event_list_t and fr_event_timer_t are opaque, so we have to partially redefine them
+ *	so we can access what we need.
+ *	(I know, this is dangerous. We'll be fine as long as they do not change.)
+ *	Ideally, this should be provided by FreeRADIUS lib. TODO: ask them ?
+ */
+int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when)
+{
+	ncc_fr_event_list_t *el = (ncc_fr_event_list_t *)fr_el;
+	ncc_fr_event_timer_t *ev;
+
+	if (unlikely(!el)) return 0;
+
+	if (fr_heap_num_elements(el->times) == 0) {
+		when->tv_sec = 0;
+		when->tv_usec = 0;
+		return 0;
+	}
+
+	ev = fr_heap_peek(el->times);
+	if (!ev) {
+		when->tv_sec = 0;
+		when->tv_usec = 0;
+		return 0;
+	}
+
+	*when = ev->when;
+	return 1;
+}
+
 /*
  *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
