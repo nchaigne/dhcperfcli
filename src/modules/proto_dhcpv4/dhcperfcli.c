@@ -340,7 +340,7 @@ static float dpc_job_elapsed_time_get(void)
 		gettimeofday(&tv_now, NULL);
 		timersub(&tv_now, &tv_job_start, &tv_elapsed);
 	}
-	elapsed = dpc_timeval_to_float(&tv_elapsed);
+	elapsed = ncc_timeval_to_float(&tv_elapsed);
 
 	return elapsed;
 }
@@ -402,9 +402,9 @@ static void dpc_tr_stats_fprint(FILE *fp)
 
 		if (my_stats->num == 0) continue;
 
-		float rtt_avg = 1000 * dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
-		float rtt_min = 1000 * dpc_timeval_to_float(&my_stats->rtt_min);
-		float rtt_max = 1000 * dpc_timeval_to_float(&my_stats->rtt_max);
+		float rtt_avg = 1000 * ncc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
+		float rtt_min = 1000 * ncc_timeval_to_float(&my_stats->rtt_min);
+		float rtt_max = 1000 * ncc_timeval_to_float(&my_stats->rtt_max);
 
 		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 		        pad_len, pad_len, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
@@ -482,8 +482,8 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	my_stats->num ++;
 
 	DPC_DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
-	                tr_type, my_stats->num, dpc_timeval_to_float(rtt),
-	                dpc_timeval_to_float(&my_stats->rtt_min), dpc_timeval_to_float(&my_stats->rtt_max));
+	                tr_type, my_stats->num, ncc_timeval_to_float(rtt),
+	                ncc_timeval_to_float(&my_stats->rtt_min), ncc_timeval_to_float(&my_stats->rtt_max));
 }
 
 /*
@@ -735,7 +735,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		timerclear(&tv);
 	} else {
 		tv = *tv_wait_time;
-		DPC_DEBUG_TRACE("Max wait time: %.6f", dpc_timeval_to_float(&tv));
+		DPC_DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tv));
 	}
 
 	/*
@@ -866,7 +866,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 
 	/* Compute rtt. */
 	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
-	DPC_DEBUG_TRACE("Packet response time: %.6f", dpc_timeval_to_float(&rtt));
+	DPC_DEBUG_TRACE("Packet response time: %.6f", ncc_timeval_to_float(&rtt));
 
 	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
@@ -1533,7 +1533,7 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 	 *	If the projected rate/s is higher than the rate limit, do not allow new sessions to be started.
 	 *	Otherwise, compute what we would need to attain this rate limit.
 	 */
-	rtt_avg = dpc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
+	rtt_avg = ncc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
 	/*
 	 *	Note: we might lose a few milliseconds of precision with a float.
 	 *	But we use that to compute an average, so it will be completely invisible.

@@ -811,15 +811,6 @@ int dpc_float_to_timeval(struct timeval *tv, float in)
 }
 
 /*
- *	Convert a struct timeval to float.
- */
-float dpc_timeval_to_float(struct timeval *in)
-{
-	float value = (in->tv_sec + (float)in->tv_usec / USEC);
-	return value;
-}
-
-/*
  *	Check that a string represents a valid positive floating point number (e.g. 3, 2.5, .542).
  *	If so convert it to float.
  *	Note: not using strtof because we want to be more restrictive.

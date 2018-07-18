@@ -44,7 +44,6 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp);
 uint32_t dpc_xid_extract(VALUE_PAIR *vp);
 
 int dpc_float_to_timeval(struct timeval *out, float in);
-float dpc_timeval_to_float(struct timeval *in);
 bool dpc_str_to_float(float *out, char const *in);
 bool dpc_str_to_uint32(uint32_t *out, char const *in);
 char *dpc_str_trim(char *str);

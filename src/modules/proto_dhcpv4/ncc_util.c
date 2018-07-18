@@ -117,3 +117,12 @@ int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep)
 
 	return 0;
 }
+
+/*
+ *	Convert a struct timeval to float.
+ */
+float ncc_timeval_to_float(struct timeval *in)
+{
+	float value = (in->tv_sec + (float)in->tv_usec / USEC);
+	return value;
+}
