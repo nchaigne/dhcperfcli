@@ -33,3 +33,4 @@ VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_att
 int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep);
 
 float ncc_timeval_to_float(struct timeval *in);
+int ncc_float_to_timeval(struct timeval *out, float in);

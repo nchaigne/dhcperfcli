@@ -2390,8 +2390,8 @@ static void dpc_options_parse(int argc, char **argv)
 		}
 	}
 
-	dpc_float_to_timeval(&tv_timeout, timeout);
-	dpc_float_to_timeval(&tv_progress_interval, progress_interval);
+	ncc_float_to_timeval(&tv_timeout, timeout);
+	ncc_float_to_timeval(&tv_progress_interval, progress_interval);
 }
 
 /*
