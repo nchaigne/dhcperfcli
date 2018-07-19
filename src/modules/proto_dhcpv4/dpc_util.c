@@ -861,29 +861,6 @@ char *dpc_str_trim(char *str)
 }
 
 /*
- *	Add an allocated input entry to the tail of the list.
- */
-void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry)
-{
-	if (!list || !entry) return;
-
-	if (!list->head) {
-		dpc_assert(list->tail == NULL);
-		list->head = entry;
-		entry->prev = NULL;
-	} else {
-		dpc_assert(list->tail != NULL);
-		dpc_assert(list->tail->next == NULL);
-		list->tail->next = entry;
-		entry->prev = list->tail;
-	}
-	list->tail = entry;
-	entry->next = NULL;
-	entry->list = list;
-	list->size ++;
-}
-
-/*
  *	Duplicate an input item (copy initially does not belong to any list).
  */
 dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
@@ -908,59 +885,28 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 }
 
 /*
- *	Remove an input entry from its list.
+ *	Print the contents of a list of dpc_input_t items.
  */
-dpc_input_t *dpc_input_item_draw(dpc_input_t *entry)
+void dpc_input_list_fprint(FILE *fp, ncc_list_t *list)
 {
-	if (!entry) return NULL; // should not happen.
-	if (!entry->list) return entry; // not in a list: just return the entry.
+	dpc_input_t *item = (dpc_input_t *)list->head;
 
-	dpc_input_t *prev, *next;
+	fprintf(fp, "List contains %u element(s)\n", list->size);
+	int i = 0;
+	while (item) {
+		fprintf(fp, " - Element #%u:\n", i);
+		fprintf(fp, "   - id: %u\n", item->id);
+		fprintf(fp, "   - vps: %s\n", item->vps ? "" : "NULL");
 
-	prev = entry->prev;
-	next = entry->next;
+		fr_cursor_t cursor;
+		VALUE_PAIR *vp;
+		for (vp = fr_cursor_init(&cursor, &item->vps); vp; vp = fr_cursor_next(&cursor)) {
+			fr_pair_fprint(fp, vp);
+		}
 
-	dpc_input_list_t *list = entry->list;
-
-	dpc_assert(list->head != NULL); // entry belongs to a list, so the list can't be empty.
-	dpc_assert(list->tail != NULL); // same.
-
-	if (prev) {
-		dpc_assert(list->head != entry); // if entry has a prev, then entry can't be head.
-		prev->next = next;
+		item = (dpc_input_t *)item->next;
+		i++;
 	}
-	else {
-		dpc_assert(list->head == entry); // if entry has no prev, then entry must be head.
-		list->head = next;
-	}
-
-	if (next) {
-		dpc_assert(list->tail != entry); // if entry has a next, then entry can't be tail.
-		next->prev = prev;
-	}
-	else {
-		dpc_assert(list->tail == entry); // if entry has no next, then entry must be tail.
-		list->tail = prev;
-	}
-
-	entry->list = NULL;
-	entry->prev = NULL;
-	entry->next = NULL;
-	list->size --;
-	return entry;
-}
-
-/*
- *	Get the head input entry from a list.
- */
-dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list)
-{
-	if (!list) return NULL;
-	if (!list->head || list->size == 0) { // list is empty.
-		return NULL;
-	}
-	// list is valid and has at least one element.
-	return dpc_input_item_draw(list->head);
 }
 
 /*

@@ -205,7 +205,6 @@ typedef struct dpc_statistics {
 
 
 typedef struct dpc_input dpc_input_t;
-typedef struct dpc_input_list dpc_input_list_t;
 typedef struct dpc_session_ctx dpc_session_ctx_t;
 
 /*
@@ -226,25 +225,18 @@ typedef struct dpc_input_ext {
  *	Holds input data (vps read from file or stdin).
  */
 struct dpc_input {
+	/* Generic chaining */
+	ncc_list_t *list;       //!< The list to which this entry belongs (NULL for an unchained entry).
+	ncc_list_item_t *prev;
+	ncc_list_item_t *next;
+
+	/* Specific item data */
 	uint32_t id;             //!< Id of input (0 for the first one).
 	uint32_t num_use;        //!< How many times has this input been used.
 
 	VALUE_PAIR *vps;         //!< List of input value pairs read.
 
 	dpc_input_ext_t ext;     //!< Input pre-parsed information.
-
-	dpc_input_list_t *list;  //!< The list to which this entry belongs (NULL for an unchained entry).
-	dpc_input_t *prev;
-	dpc_input_t *next;
-};
-
-/*
- *	Chained list of input data elements.
- */
-struct dpc_input_list {
-	dpc_input_t *head;
-	dpc_input_t *tail;
-	uint32_t size;
 };
 
 /*

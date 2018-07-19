@@ -89,7 +89,7 @@ static fr_event_list_t *event_list = NULL;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 static char const *file_vps_in = NULL;
-static dpc_input_list_t vps_list_in = { 0 };
+static ncc_list_t vps_list_in = { 0 };
 static bool with_template = false;
 static dpc_input_t *template_invariant = NULL;
 static dpc_input_t *template_variable = NULL;
@@ -247,8 +247,8 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_parse_input(dpc_input_t *input);
-static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list);
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list, char const *filename);
+static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list);
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
 static int dpc_get_alt_dir(void);
@@ -1348,7 +1348,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 static dpc_input_t *dpc_get_input()
 {
 	if (!with_template) {
-		return dpc_get_input_list_head(&vps_list_in);
+		return NCC_LIST_DEQUEUE(&vps_list_in);
 	} else {
 		return dpc_gen_input_from_template(autofree);
 	}
@@ -1382,7 +1382,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 			/*
 			 *	Add it to the list of input items.
 			 */
-			dpc_input_item_add(&vps_list_in, input_dup);
+			NCC_LIST_ENQUEUE(&vps_list_in, input_dup);
 		}
 	}
 
@@ -1871,7 +1871,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
+static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list)
 {
 	input->id = input_num ++;
 
@@ -1892,13 +1892,14 @@ static void dpc_handle_input(dpc_input_t *input, dpc_input_list_t *list)
 	/*
 	 *	Add it to the list of input items.
 	 */
-	dpc_input_item_add(list, input);
+	//dpc_input_item_add(list, input);
+	NCC_LIST_ENQUEUE(list, input);
 }
 
 /*
  *	Load input vps.
  */
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, dpc_input_list_t *list, char const *filename)
+static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -1980,8 +1981,8 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 
 	/* Template: keep track of the two input items we'll need. */
 	if (with_template) {
-		template_invariant = vps_list_in.head;
-		template_variable = vps_list_in.tail;
+		template_invariant = (dpc_input_t *)vps_list_in.head;
+		template_variable = (dpc_input_t *)vps_list_in.tail;
 
 		/* Ensure a message type is provided. */
 		if (template_invariant->ext.code == FR_CODE_UNDEFINED) {

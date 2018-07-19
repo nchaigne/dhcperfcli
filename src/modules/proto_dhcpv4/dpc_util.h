@@ -47,10 +47,8 @@ bool dpc_str_to_float(float *out, char const *in);
 bool dpc_str_to_uint32(uint32_t *out, char const *in);
 char *dpc_str_trim(char *str);
 
-void dpc_input_item_add(dpc_input_list_t *list, dpc_input_t *entry);
 dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in);
-dpc_input_t *dpc_input_item_draw(dpc_input_t *entry);
-dpc_input_t *dpc_get_input_list_head(dpc_input_list_t *list);
+void dpc_input_list_fprint(FILE *fp, ncc_list_t *list);
 
 bool dpc_stdin_peek(void);
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
