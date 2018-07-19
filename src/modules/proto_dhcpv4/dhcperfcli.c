@@ -218,22 +218,22 @@ static float dpc_get_msg_rate(uint8_t i);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
-static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply);
+static void dpc_statistics_update(DHCP_PACKET *request, DHCP_PACKET *reply);
 
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_progress_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in);
 
-static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p);
+static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
 static int dpc_recv_one_packet(struct timeval *tv_wait_time);
-static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *reply);
+static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply);
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session);
-static void dpc_request_gateway_handle(RADIUS_PACKET *packet, ncc_endpoint_t *gateway);
-static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
-static int dpc_dhcp_encode(RADIUS_PACKET *packet);
+static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gateway);
+static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
+static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
 static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
@@ -489,7 +489,7 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 /*
  *	Update statistics.
  */
-static void dpc_statistics_update(RADIUS_PACKET *request, RADIUS_PACKET *reply)
+static void dpc_statistics_update(DHCP_PACKET *request, DHCP_PACKET *reply)
 {
 	if (!request || !reply) return;
 
@@ -610,10 +610,10 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct tim
  *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
  *	Returns: 0 = success, -1 = error.
  */
-static int dpc_send_one_packet(dpc_session_ctx_t *session, RADIUS_PACKET **packet_p)
-// note: we need a 'RADIUS_PACKET **' for dpc_packet_list_id_alloc.
+static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p)
+// note: we need a 'DHCP_PACKET **' for dpc_packet_list_id_alloc.
 {
-	RADIUS_PACKET *packet = *packet_p;
+	DHCP_PACKET *packet = *packet_p;
 	int my_sockfd;
 	int ret;
 
@@ -716,7 +716,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 {
 	fd_set set;
 	struct timeval tv;
-	RADIUS_PACKET *reply = NULL, **packet_p;
+	DHCP_PACKET *reply = NULL, **packet_p;
 	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
 	int max_fd;
@@ -840,7 +840,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
  *	Handle a reply which belongs to a given ongoing session.
  *	Returns true if we're not done with the session (so it should not be terminated yet), false otherwise.
  */
-static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *reply)
+static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply)
 {
 	struct timeval rtt;
 
@@ -924,7 +924,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, RADIUS_PACKET *
 static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 {
 	VALUE_PAIR *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
-	RADIUS_PACKET *packet;
+	DHCP_PACKET *packet;
 
 	/* Get the Offer xid. */
 	vp_xid = fr_pair_find_by_da(session->reply->vps, attr_dhcp_transaction_id, TAG_ANY);
@@ -1009,7 +1009,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 {
 	VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr;
-	RADIUS_PACKET *packet;
+	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
 	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address, TAG_ANY);
@@ -1088,7 +1088,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 {
 	VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr, *vp_requested_ip;
-	RADIUS_PACKET *packet;
+	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
 	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address, TAG_ANY);
@@ -1162,7 +1162,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 /*
  *	Prepare a request to be sent as if relayed through a gateway.
  */
-static void dpc_request_gateway_handle(RADIUS_PACKET *packet, ncc_endpoint_t *gateway)
+static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gateway)
 {
 	if (!gateway) return;
 
@@ -1199,9 +1199,9 @@ static void dpc_request_gateway_handle(RADIUS_PACKET *packet, ncc_endpoint_t *ga
 /*
  *	Initialize a DHCP packet from an input item.
  */
-static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
+static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 {
-	RADIUS_PACKET *request;
+	DHCP_PACKET *request;
 
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
@@ -1230,7 +1230,7 @@ static RADIUS_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 /*
  *	Encode a DHCP packet.
  */
-static int dpc_dhcp_encode(RADIUS_PACKET *packet)
+static int dpc_dhcp_encode(DHCP_PACKET *packet)
 {
 	int r;
 	VALUE_PAIR *vp;
@@ -1361,7 +1361,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 {
 	dpc_input_t *input = NULL;
 	dpc_session_ctx_t *session = NULL;
-	RADIUS_PACKET *packet = NULL;
+	DHCP_PACKET *packet = NULL;
 
 	DPC_DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
 

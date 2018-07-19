@@ -186,7 +186,7 @@ char *dpc_message_type_sprint(char *out, int message)
 /*
  *	Print the packet header.
  */
-void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent)
+void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
 {
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
@@ -299,7 +299,7 @@ int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet,
                       dpc_packet_event_t pevent, int trace_lvl)
 {
 	VALUE_PAIR *vp_encoded_data = NULL;
@@ -347,7 +347,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *pack
  *	Fields and options are printed in hex, along with their position in the packet.
  *	This allows to see what is exactly in a packet and where.
  */
-void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet)
+void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 {
 	char header[64];
 	char buf[1024];
@@ -532,7 +532,7 @@ char *dpc_ether_addr_sprint(char *out, const uint8_t *addr)
  *	Print packet source and destination IP/port.
  *	Caller is responsible for passing an output buffer (buf) with sufficient space (DPC_FROM_TO_STRLEN).
  */
-char *dpc_packet_from_to_sprint(char *out, RADIUS_PACKET *packet, bool extra)
+char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
 {
 	char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	char dst_ipaddr_buf[FR_IPADDR_STRLEN] = "";

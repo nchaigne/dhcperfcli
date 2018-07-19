@@ -20,19 +20,19 @@ char *dpc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[]);
 
 char *dpc_message_type_sprint(char *out, int code);
-void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet, dpc_packet_event_t pevent);
+void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp);
-void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, RADIUS_PACKET *packet,
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet,
                        dpc_packet_event_t pevent, int trace_lvl);
-void dpc_packet_data_fprint(FILE *fp, RADIUS_PACKET *packet);
+void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet);
 void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
                                     bool print_end_pad, uint8_t *overload);
 
 char *dpc_hex_data_sprint(char *out, const uint8_t *in, int in_len, char const *sep,
                           char const *prefix, int line_max_len);
 char *dpc_ether_addr_sprint(char *out, const uint8_t *addr);
-char *dpc_packet_from_to_sprint(char *out, RADIUS_PACKET *packet, bool extra);
+char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra);
 
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);

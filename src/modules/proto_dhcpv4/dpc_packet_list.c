@@ -73,7 +73,7 @@ typedef struct dpc_packet_list {
  *	Check if two packets are identical from the packet list perspective.
  *	(ref: function fr_packet_cmp from protocols/radius/list.c)
  */
-static int dpc_packet_cmp(RADIUS_PACKET const *a, RADIUS_PACKET const *b)
+static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 {
 	int rcode = 0;
 
@@ -280,8 +280,8 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
  */
 static int dpc_packet_entry_cmp(void const *one, void const *two)
 {
-	RADIUS_PACKET const * const *a = one;
-	RADIUS_PACKET const * const *b = two;
+	DHCP_PACKET const * const *a = one;
+	DHCP_PACKET const * const *b = two;
 
 	return dpc_packet_cmp(*a, *b);
 }
@@ -333,7 +333,7 @@ dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
  *	Or at least trying to: if the provided ID is already allocated, this will return false.
  *	(ref: function fr_packet_list_insert from protocols/radius/list.c)
  */
-bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
+bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 {
 	dpc_assert(pl != NULL);
 	dpc_assert(request_p != NULL);
@@ -354,9 +354,9 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, RADIUS_PACKET **request_p)
  *	from the packet list.
  *	(ref: function fr_packet_list_find_byreply from protocols/radius/list.c)
  */
-RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKET *reply)
+DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *reply)
 {
-	RADIUS_PACKET my_request = { 0 }, *request = NULL;
+	DHCP_PACKET my_request = { 0 }, *request = NULL;
 	dpc_packet_socket_t *ps;
 
 	dpc_assert(pl != NULL);
@@ -419,7 +419,7 @@ RADIUS_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, RADIUS_PACKE
  *	Caller is responsible to ensure he won't use again the ID previously allocated.
  *	(ref: function fr_packet_list_yank from protocols/radius/list.c)
  */
-bool dpc_packet_list_yank(dpc_packet_list_t *pl, RADIUS_PACKET *request)
+bool dpc_packet_list_yank(dpc_packet_list_t *pl, DHCP_PACKET *request)
 {
 	rbnode_t *node;
 
@@ -456,11 +456,11 @@ uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl)
  *	If caller wants a specific ID, we try to comply, and if it's not available we fall back to
  *	the linear allocation mechanism.
  */
-bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET **request_p)
+bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **request_p)
 {
 	int id;
 	dpc_packet_socket_t *ps;
-	RADIUS_PACKET *request;
+	DHCP_PACKET *request;
 	int tries = 0;
 
 	dpc_assert(pl != NULL);
@@ -539,7 +539,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, RADIUS_PACKET *
  *	the packet list.
  *	(ref: function fr_packet_list_id_free from protocols/radius/list.c)
  */
-bool dpc_packet_list_id_free(dpc_packet_list_t *pl, RADIUS_PACKET *request)
+bool dpc_packet_list_id_free(dpc_packet_list_t *pl, DHCP_PACKET *request)
 {
 	dpc_packet_socket_t *ps;
 
@@ -598,10 +598,10 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
  *	Receive the first incoming packet found.
  *	(ref: function fr_packet_list_recv from protocols/radius/list.c)
  */
-RADIUS_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
+DHCP_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 {
 	int start;
-	RADIUS_PACKET *packet;
+	DHCP_PACKET *packet;
 	dpc_packet_socket_t *ps;
 
 	dpc_assert(pl != NULL);

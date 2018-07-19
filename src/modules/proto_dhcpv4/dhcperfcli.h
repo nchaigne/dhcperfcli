@@ -12,6 +12,12 @@
 #include "ncc_util.h"
 
 
+/*	We don't do RADIUS, but reuse the same structure for DHCP.
+ *	(cf. lib/util/packet.h)
+ */
+#define DHCP_PACKET RADIUS_PACKET
+
+
 /*
  *	Assuming an upper rate of 20 000 packets sent per second, constant over a period of time.
  *	With a uint32_t we can store up to (2^32-1) / 20 000 = ~ 60H of traffic.
@@ -250,8 +256,8 @@ struct dpc_session_ctx {
 	dpc_input_t *input;      //!< Input data.
 	struct timeval tv_start; //<! Session start timestamp.
 
-	RADIUS_PACKET *packet;
-	RADIUS_PACKET *reply;
+	DHCP_PACKET *packet;
+	DHCP_PACKET *reply;
 
 	dpc_state_t state;
 	bool reply_expected;     //!< Whether a reply is expected or not.
