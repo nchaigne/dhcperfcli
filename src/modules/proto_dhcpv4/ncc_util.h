@@ -67,6 +67,8 @@ int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep);
 
 float ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *out, float in);
+bool ncc_str_to_float(float *out, char const *in);
+bool ncc_str_to_uint32(uint32_t *out, char const *in);
 
 void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry);
 ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry);

@@ -146,6 +146,59 @@ int ncc_float_to_timeval(struct timeval *tv, float in)
 	return 0;
 }
 
+/*
+ *	Check that a string represents a valid positive floating point number (e.g. 3, 2.5, .542).
+ *	If so convert it to float.
+ *	Note: not using strtof because we want to be more restrictive.
+ */
+bool ncc_str_to_float(float *out, char const *in)
+{
+	if (!in || strlen(in) == 0) return false;
+
+	char const *p = in;
+	while (*p != '\0') {
+		if (isdigit(*p)) {
+			p ++;
+			continue;
+		}
+		if (*p == '.') {
+			p ++;
+			if (*p == '\0') return false; /* Do not allow a dot without any following digit. */
+			break;
+		}
+		return false; /* Not a digit or dot. */
+	}
+
+	while (*p != '\0') { /* Everything after the dot must be a digit. */
+		if (!isdigit(*p)) return false;
+		p ++;
+	}
+
+	/* Format is correct. */
+	if (out) {
+		*out = atof(in);
+	}
+	return true;
+}
+
+/*
+ *	Check that a string represents either an integer or a valid hex string.
+ *	If so convert it to uint32.
+ */
+bool ncc_str_to_uint32(uint32_t *out, char const *in)
+{
+	uint64_t uinteger = 0;
+	char *p = NULL;
+
+	if (!in || in[0] == '\0') return false;
+
+	uinteger = fr_strtoull(in, &p); /* Allows integer or hex string. */
+	if (*p != '\0' || uinteger > UINT32_MAX) return false;
+
+	*out = (uint32_t) uinteger;
+	return true;
+}
+
 
 /*
  *	Add an item entry to the tail of the list.
