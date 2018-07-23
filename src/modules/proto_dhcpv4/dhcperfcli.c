@@ -572,10 +572,10 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 	} else {
 		DPC_DEBUG_TRACE("Request timed out");
 
-		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->packet, DPC_PACKET_TIMEOUT);
+		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
 
 		/* Statistics. */
-		STAT_INCR_PACKET_LOST(session->packet->code);
+		STAT_INCR_PACKET_LOST(session->request->code);
 	}
 
 	/* Finish the session. */
@@ -716,13 +716,13 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 {
 	fd_set set;
 	struct timeval tv;
-	DHCP_PACKET *reply = NULL, **packet_p;
+	DHCP_PACKET *packet = NULL, **packet_p;
 	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
 	int max_fd;
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
-	/* Wait for reply, timing out as necessary */
+	/* Wait for packet, timing out as necessary */
 	FD_ZERO(&set);
 
 	max_fd = dpc_packet_list_fd_set(pl, &set);
@@ -748,23 +748,23 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	/*
 	 *	Fetch one incoming packet.
 	 */
-	reply = dpc_packet_list_recv(pl, &set); // warning: reply is allocated on NULL context.
-	if (!reply) {
+	packet = dpc_packet_list_recv(pl, &set); // warning: packet is allocated on NULL context.
+	if (!packet) {
 		PERROR("Received bad packet");
 		return -1;
 	}
 
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
-	                dpc_packet_from_to_sprint(from_to_buf, reply, false), reply->id, reply->id);
+	                dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
 
 	if (ipaddr_defined(allowed_server)) {
 		/*
 		 *	Only allow replies from a specific server (overall policy set through option -a).
 		 */
-		if (fr_ipaddr_cmp(&reply->src_ipaddr, &allowed_server) != 0) {
+		if (fr_ipaddr_cmp(&packet->src_ipaddr, &allowed_server) != 0) {
 			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
-			      reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
-			fr_radius_packet_free(&reply);
+			      packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+			fr_radius_packet_free(&packet);
 			return -1;
 		}
 	}
@@ -772,7 +772,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	/*
 	 *	Query the packet list to get the original packet to which this is a reply.
 	 */
-	packet_p = dpc_packet_list_find_byreply(pl, reply);
+	packet_p = dpc_packet_list_find_byreply(pl, packet);
 	if (!packet_p) {
 		/*
 		 *	We did not find the packet in the packet list. This can happen in several situations:
@@ -781,10 +781,10 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		 *	- The transaction ID does not match (DHCP server is broken)
 		 */
 		DEBUG("Received unexpected packet Id %u (0x%08x) %s length %zu",
-		      reply->id, reply->id, dpc_packet_from_to_sprint(from_to_buf, reply, false), reply->data_len);
+		      packet->id, packet->id, dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->data_len);
 
 		stat_ctx.num_packet_recv_unexpected ++;
-		fr_radius_packet_free(&reply);
+		fr_radius_packet_free(&packet);
 		return -1;
 	}
 
@@ -792,18 +792,18 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	 *	Retrieve the session to which belongs the original packet.
 	 *	To do so we use fr_packet2myptr, this is a magical macro defined in include/packet.h
 	 */
-	session = fr_packet2myptr(dpc_session_ctx_t, packet, packet_p);
+	session = fr_packet2myptr(dpc_session_ctx_t, request, packet_p);
 
 	DPC_DEBUG_TRACE("Packet belongs to session id: %d", session->id);
 
-	if ((vp = ncc_pair_find_by_da(session->packet->vps, attr_authorized_server))) {
+	if ((vp = ncc_pair_find_by_da(session->request->vps, attr_authorized_server))) {
 		/*
 		 *	Only allow replies from a specific server (per-packet policy set through attribute).
 		 */
-		if (fr_ipaddr_cmp(&reply->src_ipaddr, &vp->vp_ip) != 0) {
+		if (fr_ipaddr_cmp(&packet->src_ipaddr, &vp->vp_ip) != 0) {
 			SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
-			       reply->id, reply->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &reply->src_ipaddr));
-			fr_radius_packet_free(&reply);
+			       packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+			fr_radius_packet_free(&packet);
 			return -1;
 		}
 		// note: we can get "unexpected packets" with this.
@@ -813,9 +813,9 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	/*
 	 *	Decode the reply packet.
 	 */
-	if (fr_dhcpv4_packet_decode(reply) < 0) {
-		SPERROR("Failed to decode reply packet (id: %u)", reply->id);
-		fr_radius_packet_free(&reply);
+	if (fr_dhcpv4_packet_decode(packet) < 0) {
+		SPERROR("Failed to decode reply packet (id: %u)", packet->id);
+		fr_radius_packet_free(&packet);
 		/*
 		 *	Don't give hope and kill the session now. Maybe we'll receive something better.
 		 *	If not, well... the timeout event will do its dirty job.
@@ -824,12 +824,12 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	}
 
 	/* Statistics. */
-	STAT_INCR_PACKET_RECV(reply->code);
+	STAT_INCR_PACKET_RECV(packet->code);
 
 	/*
 	 *	Handle the reply, and decide if the session is finished or not yet.
 	 */
-	if (!dpc_session_handle_reply(session, reply)) {
+	if (!dpc_session_handle_reply(session, packet)) {
 		dpc_session_finish(session);
 	}
 
@@ -865,13 +865,13 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
 
 	/* Compute rtt. */
-	timersub(&session->reply->timestamp, &session->packet->timestamp, &rtt);
+	timersub(&session->reply->timestamp, &session->request->timestamp, &rtt);
 	DPC_DEBUG_TRACE("Packet response time: %.6f", ncc_timeval_to_float(&rtt));
 
 	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
 	/* Update statistics. */
-	dpc_statistics_update(session->packet, session->reply);
+	dpc_statistics_update(session->request, session->reply);
 
 	/*
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
@@ -981,16 +981,16 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	talloc_free(session->reply);
 	session->reply = NULL;
 
-	if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
-		SERROR("Failed to free from packet list, id: %u", session->packet->id);
+	if (!dpc_packet_list_id_free(pl, session->request)) { /* Should never fail. */
+		SERROR("Failed to free from packet list, id: %u", session->request->id);
 	}
-	talloc_free(session->packet);
-	session->packet = packet;
+	talloc_free(session->request);
+	session->request = packet;
 
 	/*
 	 *	Encode and send packet.
 	 */
-	if (dpc_send_one_packet(session, &session->packet) < 0) {
+	if (dpc_send_one_packet(session, &session->request) < 0) {
 		return false;
 	}
 
@@ -1062,16 +1062,16 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	talloc_free(session->reply);
 	session->reply = NULL;
 
-	if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
-		SERROR("Failed to free from packet list, id: %u", session->packet->id);
+	if (!dpc_packet_list_id_free(pl, session->request)) { /* Should never fail. */
+		SERROR("Failed to free from packet list, id: %u", session->request->id);
 	}
-	talloc_free(session->packet);
-	session->packet = packet;
+	talloc_free(session->request);
+	session->request = packet;
 
 	/*
 	 *	Encode and send packet.
 	 */
-	if (dpc_send_one_packet(session, &session->packet) < 0) {
+	if (dpc_send_one_packet(session, &session->request) < 0) {
 		return false;
 	}
 	// Note: if the DORA was broadcast, we're also broadcasting the Release. It works. But...
@@ -1143,16 +1143,16 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	talloc_free(session->reply);
 	session->reply = NULL;
 
-	if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
-		SERROR("Failed to free from packet list, id: %u", session->packet->id);
+	if (!dpc_packet_list_id_free(pl, session->request)) { /* Should never fail. */
+		SERROR("Failed to free from packet list, id: %u", session->request->id);
 	}
-	talloc_free(session->packet);
-	session->packet = packet;
+	talloc_free(session->request);
+	session->request = packet;
 
 	/*
 	 *	Encode and send packet.
 	 */
-	if (dpc_send_one_packet(session, &session->packet) < 0) {
+	if (dpc_send_one_packet(session, &session->request) < 0) {
 		return false;
 	}
 
@@ -1394,7 +1394,7 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 		MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 		session->id = session_num ++;
 
-		session->packet = packet;
+		session->request = packet;
 		talloc_steal(session, packet);
 
 		session->input = input;
@@ -1436,9 +1436,9 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	DPC_DEBUG_TRACE("Terminating session (id: %u)", session->id);
 
 	/* Remove the packet from the list, and free the id we've been using. */
-	if (session->packet && session->packet->id != DPC_PACKET_ID_UNASSIGNED) {
-		if (!dpc_packet_list_id_free(pl, session->packet)) { /* Should never fail. */
-			SERROR("Failed to free from packet list, id: %u", session->packet->id);
+	if (session->request && session->request->id != DPC_PACKET_ID_UNASSIGNED) {
+		if (!dpc_packet_list_id_free(pl, session->request)) { /* Should never fail. */
+			SERROR("Failed to free from packet list, id: %u", session->request->id);
 		}
 	}
 
@@ -1625,7 +1625,7 @@ static uint32_t dpc_loop_start_sessions(void)
 
 		num_started ++;
 
-		if (dpc_send_one_packet(session, &session->packet) < 0) {
+		if (dpc_send_one_packet(session, &session->request) < 0) {
 			dpc_session_finish(session);
 			continue;
 		}

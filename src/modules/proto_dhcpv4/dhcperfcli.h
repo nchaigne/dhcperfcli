@@ -248,7 +248,7 @@ struct dpc_session_ctx {
 	dpc_input_t *input;      //!< Input data.
 	struct timeval tv_start; //<! Session start timestamp.
 
-	DHCP_PACKET *packet;
+	DHCP_PACKET *request;
 	DHCP_PACKET *reply;
 
 	dpc_state_t state;
