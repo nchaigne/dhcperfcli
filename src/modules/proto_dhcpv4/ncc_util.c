@@ -75,6 +75,36 @@ VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_att
 	return vp;
 }
 
+/*
+ *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
+ */
+VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
+{
+	vp_cursor_t src, dst;
+
+	if (*to == NULL) { /* fall back to fr_pair_list_copy for a new list. */
+		MEM(fr_pair_list_copy(ctx, to, from) >= 0);
+		return (*to);
+	}
+
+	VALUE_PAIR *out = *to, *vp;
+
+	fr_pair_cursor_init(&dst, &out);
+	for (vp = fr_pair_cursor_init(&src, &from);
+	     vp;
+	     vp = fr_pair_cursor_next(&src)) {
+		VP_VERIFY(vp);
+		vp = fr_pair_copy(ctx, vp);
+		if (!vp) {
+			fr_pair_list_free(&out);
+			return NULL;
+		}
+		fr_pair_cursor_append(&dst, vp); /* fr_pair_list_copy sets next pointer to NULL */
+	}
+
+	return *to;
+}
+
 
 /*
  *	Resolve host address and port.

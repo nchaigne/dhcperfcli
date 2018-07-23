@@ -1206,7 +1206,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
 	/* Fill in the packet value pairs. */
-	dpc_pair_list_append(request, &request->vps, input->vps);
+	ncc_pair_list_append(request, &request->vps, input->vps);
 
 	/* Prepare gateway handling. */
 	dpc_request_gateway_handle(request, input->ext.gateway);
@@ -1306,14 +1306,14 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	 *	Fill input with template invariant attributes.
 	 */
 	if (template_invariant) {
-		dpc_pair_list_append(input, &input->vps, template_invariant->vps);
+		ncc_pair_list_append(input, &input->vps, template_invariant->vps);
 	}
 
 	/*
 	 *	Append input with template variable attributes, then update them for next generation.
 	 */
 	if (template_variable) {
-		dpc_pair_list_append(input, &input->vps, template_variable->vps);
+		ncc_pair_list_append(input, &input->vps, template_variable->vps);
 
 		fr_cursor_t cursor;
 		VALUE_PAIR *vp;
@@ -1851,10 +1851,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 	if (!with_template && !vp_data && input->ext.code == FR_CODE_UNDEFINED) {
 		/* Note: in template mode, we do not require a specified message type in the two input items. */
-		WARN("No packet type specified in inputs vps or command line, discarding input (id: %u)", input->id);
+		WARN("No packet type specified in input vps or command line, discarding input (id: %u)", input->id);
 		return false;
 	}
-	// TODO: allow to send without a type (BOOTP) ? for that we would need our own encoding function.
 
 	/*
 	 *	Pre-allocate the socket for this input item.
