@@ -177,22 +177,28 @@ int ncc_float_to_timeval(struct timeval *tv, float in)
 }
 
 /*
- *	Check that a string represents a valid positive floating point number (e.g. 3, 2.5, .542).
+ *	Check that a string represents a valid floating point number (e.g. 3, 2.5, .542).
  *	If so convert it to float.
  *	Note: not using strtof because we want to be more restrictive.
  */
-bool ncc_str_to_float(float *out, char const *in)
+bool ncc_str_to_float(float *out, char const *in, bool allow_negative)
 {
-	if (!in || strlen(in) == 0) return false;
+	if (!in || in[0] == '\0') return false;
 
 	char const *p = in;
+
+	if (*p == '-') {
+		if (!allow_negative) return false; /* Negative numbers not allowed. */
+		p++;
+	}
+
 	while (*p != '\0') {
 		if (isdigit(*p)) {
-			p ++;
+			p++;
 			continue;
 		}
 		if (*p == '.') {
-			p ++;
+			p++;
 			if (*p == '\0') return false; /* Do not allow a dot without any following digit. */
 			break;
 		}
@@ -201,7 +207,7 @@ bool ncc_str_to_float(float *out, char const *in)
 
 	while (*p != '\0') { /* Everything after the dot must be a digit. */
 		if (!isdigit(*p)) return false;
-		p ++;
+		p++;
 	}
 
 	/* Format is correct. */

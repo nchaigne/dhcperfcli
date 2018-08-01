@@ -2307,7 +2307,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'L':
-			if (!ncc_str_to_float(&duration_max, optarg)) ERROR_OPT_VALUE("floating point number");
+			if (!ncc_str_to_float(&duration_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			break;
 
 		case 'N':
@@ -2336,13 +2336,13 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 's':
-			if (!ncc_str_to_float(&progress_interval, optarg)) ERROR_OPT_VALUE("floating point number");
+			if (!ncc_str_to_float(&progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			if (progress_interval < 0.1) progress_interval = 0.1; /* Don't allow absurdly low values. */
 			else if (progress_interval > 864000) progress_interval = 0; /* Just don't. */
 			break;
 
 		case 't':
-			if (!ncc_str_to_float(&timeout, optarg)) ERROR_OPT_VALUE("floating point number");
+			if (!ncc_str_to_float(&timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			if (timeout < 0.01) timeout = 0.01; /* Don't allow absurdly low values. */
 			else if (timeout > 3600) timeout = 3600;
 			break;
