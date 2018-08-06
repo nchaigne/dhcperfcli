@@ -107,6 +107,17 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 
 
 /*
+ *	Print endpoint: <IP>:<port>.
+ */
+char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
+{
+	char ipaddr_buf[NCC_ENDPOINT_STRLEN] = "";
+	sprintf(out, "%s:%u", fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr), ep->port);
+	return out;
+}
+
+
+/*
  *	Resolve host address and port.
  */
 int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep)
@@ -233,6 +244,38 @@ bool ncc_str_to_uint32(uint32_t *out, char const *in)
 
 	*out = (uint32_t) uinteger;
 	return true;
+}
+
+/*
+ *	Trim a string from spaces (left and right), while complying with an input length limit.
+ *	Output buffer must be large enough to store the resulting string.
+ *	Returns the number of characters printed, excluding the terminating '\0'.
+ */
+size_t ncc_str_trim(char *out, char const *in, size_t inlen)
+{
+	if (inlen == 0) {
+		*out = '\0';
+		return 0;
+	}
+
+	char const *p = in;
+	char const *end = in + inlen - 1; /* Last character. */
+	size_t outsize;
+
+	/* Look for the first non-space character. */
+	while (p <= end && isspace(*p)) p++;
+	if (p > end || *p == '\0') { /* Only spaces. */
+		*out = '\0';
+		return 0;
+	}
+
+	/* And the last non-space character. */
+	while (end > p && isspace(*end)) end--;
+
+	outsize = end - p + 1;
+	memcpy(out, p, outsize);
+	out[outsize] = '\0';
+	return outsize;
 }
 
 

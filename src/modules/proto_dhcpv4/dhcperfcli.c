@@ -2231,18 +2231,26 @@ static void dpc_gateway_add(char *addr)
 }
 
 /*
- *	Parse the gateway parameter.
+ *	Parse the "gateways" parameter.
  */
-static void dpc_gateway_parse(char const *param)
+static void dpc_gateway_parse(char const *in)
 {
-	if (!param) return;
+	if (!in) return;
 
-	char *param_dup = talloc_strdup(autofree, param);
-	char *p = strsep(&param_dup, ",");
+	char *in_dup = talloc_strdup(autofree, in); /* Working copy (strsep alters the string it's dealing with). */
+	char *str = in_dup;
+
+	char *p = strsep(&str, ",");
 	while (p) {
-		dpc_gateway_add(dpc_str_trim(p)); /* Trim spaces before trying to add this. */
-		p = strsep(&param_dup, ",");
+		/* First trim string of eventual spaces. */
+		ncc_str_trim(p, p, strlen(p));
+
+		/* And then add the server to our list. */
+		dpc_gateway_add(p);
+
+		p = strsep(&str, ",");
 	}
+	talloc_free(in_dup);
 }
 
 /*

@@ -6,6 +6,9 @@
 #include <freeradius-devel/server/base.h>
 
 
+#define NCC_ENDPOINT_STRLEN       (FR_IPADDR_STRLEN + 5)
+
+
 /*
  *	Using rad_assert defined in include/rad_assert.h
  */
@@ -64,12 +67,15 @@ VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 
+char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
+
 int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep);
 
 float ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *out, float in);
 bool ncc_str_to_float(float *out, char const *in, bool allow_negative);
 bool ncc_str_to_uint32(uint32_t *out, char const *in);
+size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 
 void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry);
 ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry);
