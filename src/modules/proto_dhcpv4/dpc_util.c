@@ -765,19 +765,6 @@ uint32_t dpc_xid_extract(VALUE_PAIR *vp)
 }
 
 /*
- *	Trim a string from spaces (left and right).
- *	(Note: this alters the original string in case of right triming.)
- */
-char *dpc_str_trim(char *str)
-{
-	char *p = str;
-	char *end = str + strlen(p) - 1;
-	while (isspace(*p)) p ++;
-	while (end > p && isspace(*end)) *end-- = '\0';
-	return p;
-}
-
-/*
  *	Duplicate an input item (copy initially does not belong to any list).
  */
 dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
