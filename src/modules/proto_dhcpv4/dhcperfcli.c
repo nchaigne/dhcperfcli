@@ -256,6 +256,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
+static ncc_endpoint_t *dpc_gateway_get_next(void);
 static void dpc_gateway_add(char *addr);
 static void dpc_gateway_parse(char const *param);
 static void dpc_options_parse(int argc, char **argv);
@@ -1296,9 +1297,7 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	 *	Associate input to gateway, if one is defined (or several).
 	 */
 	if (!ipaddr_defined(input->ext.src.ipaddr) && gateway_list) {
-		input->ext.gateway = &gateway_list[gateway_next];
-		gateway_next = (gateway_next + 1) % gateway_num;
-
+		input->ext.gateway = dpc_gateway_get_next();
 		input->ext.src = *(input->ext.gateway);
 	}
 
@@ -1833,9 +1832,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (   !ipaddr_defined(input->ext.src.ipaddr)
 	    && (!with_template && gateway_list) /* If using a template, do not assign a gateway now. */
 	) {
-		input->ext.gateway = &gateway_list[gateway_next];
-		gateway_next = (gateway_next + 1) % gateway_num;
-
+		input->ext.gateway = dpc_gateway_get_next();
 		input->ext.src = *(input->ext.gateway);
 	}
 
@@ -2211,6 +2208,18 @@ static int dpc_command_parse(char const *command)
 
 	/* Nothing goes. */
 	return -1;
+}
+
+/*
+ *	Return next gateway endpoint to use.
+ */
+static ncc_endpoint_t *dpc_gateway_get_next(void)
+{
+	if (!gateway_list) return NULL;
+
+	ncc_endpoint_t *ep = &gateway_list[gateway_next];
+	gateway_next = (gateway_next + 1) % gateway_num;
+	return ep;
 }
 
 /*
