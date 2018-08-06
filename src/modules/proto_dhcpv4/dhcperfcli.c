@@ -1727,8 +1727,8 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	 */
 	if (dpc_socket_provide(pl, &input->ext.src.ipaddr, input->ext.src.port) < 0) {
 		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-		ERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
-		      fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->ext.src.ipaddr), input->ext.src.port);
+		PERROR("Failed to provide a suitable socket (input id: %u, requested socket src: %s:%u)", input->id,
+		       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &input->ext.src.ipaddr), input->ext.src.port);
 		exit(EXIT_FAILURE);
 	}
 
@@ -2480,8 +2480,8 @@ int main(int argc, char **argv)
 
 		if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
 			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-			ERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
-					fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr), this->port);
+			PERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
+			       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr), this->port);
 			exit(EXIT_FAILURE);
 		}
 	}

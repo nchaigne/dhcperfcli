@@ -251,19 +251,19 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 	/* Open a connectionless UDP socket for sending and receiving. */
 	int my_sockfd = fr_socket_server_udp(src_ipaddr, &src_port, NULL, false);
 	if (my_sockfd < 0) {
-		ERROR("Error opening socket: %s", fr_strerror());
+		fr_strerror_printf("Error opening socket: %s", fr_strerror());
 		return -1;
 	}
 
 	if (fr_socket_bind(my_sockfd, src_ipaddr, &src_port, NULL) < 0) {
-		ERROR("Error binding socket: %s", fr_strerror());
+		fr_strerror_printf("Error binding socket: %s", fr_strerror());
 		return -1;
 	}
 
 	/* Allow to use this socket to broadcast. */
 	int on = 1;
 	if (setsockopt(my_sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
-		ERROR("Can't set broadcast option: %s", fr_syserror(errno));
+		fr_strerror_printf("Can't set broadcast option: %s", fr_syserror(errno));
 		return -1;
 	}
 
