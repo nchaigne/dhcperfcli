@@ -1773,6 +1773,15 @@ static bool dpc_parse_input(dpc_input_t *input)
 	     vp;
 	     vp = fr_cursor_next(&cursor)) {
 
+		/*
+		 *	Xlat expansions are not supported. Provide a string value instead.
+		 */
+		if (vp->type == VT_XLAT) {
+			vp->type = VT_DATA;
+			vp->vp_strvalue = vp->xlat;
+			vp->vp_length = talloc_array_length(vp->vp_strvalue) - 1;
+		}
+
 		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) {
 
 			if (!vp_data) { /* If we have pre-encoded DHCP data, all other DHCP attributes are ignored. */
