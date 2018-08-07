@@ -83,3 +83,6 @@ ncc_list_item_t *ncc_get_input_list_head(ncc_list_t *list);
 
 #define NCC_LIST_ENQUEUE(_l, _e) ncc_list_add(_l, (ncc_list_item_t *)_e);
 #define NCC_LIST_DEQUEUE(_l) (void *)ncc_get_input_list_head(_l);
+
+/* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
+# define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))
