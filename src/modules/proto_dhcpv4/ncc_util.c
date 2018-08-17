@@ -348,7 +348,7 @@ ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry)
 /*
  *	Get the head input entry from a list.
  */
-ncc_list_item_t *ncc_get_input_list_head(ncc_list_t *list)
+ncc_list_item_t *ncc_list_get_head(ncc_list_t *list)
 {
 	if (!list) return NULL;
 	if (!list->head || list->size == 0) { // list is empty.
@@ -356,4 +356,20 @@ ncc_list_item_t *ncc_get_input_list_head(ncc_list_t *list)
 	}
 	// list is valid and has at least one element.
 	return ncc_list_item_draw(list->head);
+}
+
+/*
+ *	Get reference on a list item from its index (position in the list, starting at 0).
+ *	Item is not removed from the list.
+ */
+ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index)
+{
+	if (index >= list->size) return NULL; /* Item doesn't exist. */
+
+	ncc_list_item_t *item = list->head;
+	uint32_t i;
+	for (i = 0; i < index; i++) {
+		item = item->next;
+	}
+	return item;
 }

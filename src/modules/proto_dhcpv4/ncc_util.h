@@ -79,10 +79,12 @@ size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 
 void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry);
 ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry);
-ncc_list_item_t *ncc_get_input_list_head(ncc_list_t *list);
+ncc_list_item_t *ncc_list_get_head(ncc_list_t *list);
+ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index);
 
 #define NCC_LIST_ENQUEUE(_l, _e) ncc_list_add(_l, (ncc_list_item_t *)_e);
-#define NCC_LIST_DEQUEUE(_l) (void *)ncc_get_input_list_head(_l);
+#define NCC_LIST_DEQUEUE(_l) (void *)ncc_list_get_head(_l);
+#define NCC_LIST_INDEX(_l, _i) (void *)ncc_list_index(_l, _i);
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
 # define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))
