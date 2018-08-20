@@ -111,7 +111,7 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
  */
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
-	char ipaddr_buf[NCC_ENDPOINT_STRLEN] = "";
+	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	sprintf(out, "%s:%u", fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr), ep->port);
 	return out;
 }
