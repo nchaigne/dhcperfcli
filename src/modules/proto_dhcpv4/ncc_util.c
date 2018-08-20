@@ -120,7 +120,7 @@ char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 /*
  *	Resolve host address and port.
  */
-int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep)
+int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
 {
 	if (!host_arg || !host_ep) return -1;
 

@@ -69,7 +69,7 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 
-int ncc_host_addr_resolve(char *host_arg, ncc_endpoint_t *host_ep);
+int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 
 float ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *out, float in);

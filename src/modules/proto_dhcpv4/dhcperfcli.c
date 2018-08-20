@@ -2238,7 +2238,7 @@ static void dpc_gateway_add(char *addr)
 {
 	ncc_endpoint_t this = { .port = DHCP_PORT_RELAY };
 
-	if (ncc_host_addr_resolve(addr, &this) != 0) {
+	if (ncc_host_addr_resolve(&this, addr) != 0) {
 		PERROR("Failed to parse gateway address");
 		exit(EXIT_FAILURE);
 	}
@@ -2403,7 +2403,7 @@ static void dpc_options_parse(int argc, char **argv)
 	 *	Resolve server host address and port.
 	 */
 	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
-		ncc_host_addr_resolve(argv[1], &server_ep);
+		ncc_host_addr_resolve(&server_ep, argv[1]);
 	}
 
 	/*
