@@ -85,6 +85,18 @@ int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
 }
 
 /*
+ *	Set value of a pair (of any data type) from a string.
+ *	If the conversion is not possible, an error will be returned.
+ */
+int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
+{
+	fr_type_t type = vp->da->type;
+
+	vp->type = VT_DATA;
+	return fr_value_box_from_str(vp, &vp->data, &type, NULL, value, strlen(value), '\0', false);
+}
+
+/*
  *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  */
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
