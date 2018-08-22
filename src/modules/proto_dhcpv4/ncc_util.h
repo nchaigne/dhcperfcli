@@ -65,6 +65,7 @@ VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 			                unsigned int attribute, unsigned int vendor);
 VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da);
+int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);

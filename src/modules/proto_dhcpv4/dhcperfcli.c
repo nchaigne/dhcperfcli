@@ -968,7 +968,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
 	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
-	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
+	ncc_pair_copy_value(vp_requested_ip, vp_yiaddr);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
@@ -1043,7 +1043,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
 	vp_ciaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
-	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
+	ncc_pair_copy_value(vp_ciaddr, vp_yiaddr);
 
 	/*
 	 *	Remove eventual option 50 Requested IP Address.
@@ -1122,7 +1122,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
 	vp_ciaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
-	fr_value_box_copy(vp_ciaddr, &vp_ciaddr->data, &vp_yiaddr->data);
+	ncc_pair_copy_value(vp_ciaddr, vp_yiaddr);
 
 	/*
 	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
@@ -1130,7 +1130,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
 	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
-	fr_value_box_copy(vp_requested_ip, &vp_requested_ip->data, &vp_yiaddr->data);
+	ncc_pair_copy_value(vp_requested_ip, vp_yiaddr);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
 	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));

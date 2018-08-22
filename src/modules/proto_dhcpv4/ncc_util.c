@@ -76,6 +76,15 @@ VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_att
 }
 
 /*
+ *	Copy the value from a pair to another, and the type also (e.g. VT_DATA).
+ */
+int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
+{
+	to->type = from->type;
+	return fr_value_box_copy(to, &to->data, &from->data);
+}
+
+/*
  *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  */
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
