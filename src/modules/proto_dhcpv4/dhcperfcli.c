@@ -1772,14 +1772,16 @@ static bool dpc_parse_input(dpc_input_t *input)
 	for (vp = fr_cursor_init(&cursor, &input->vps);
 	     vp;
 	     vp = fr_cursor_next(&cursor)) {
-
 		/*
-		 *	Xlat expansions are not supported. Provide a string value instead.
+		 *	Xlat expansions are not supported. Convert xlat to value box (if possible).
 		 */
 		if (vp->type == VT_XLAT) {
+			fr_type_t type = vp->da->type;
+			if (fr_value_box_from_str(vp, &vp->data, &type, NULL, vp->xlat, -1, '\0', false) < 0) {
+				PWARN("Failed to convert from xlat, discarding input (id: %u)", input->id);
+				return false;
+			}
 			vp->type = VT_DATA;
-			vp->vp_strvalue = vp->xlat;
-			vp->vp_length = talloc_array_length(vp->vp_strvalue) - 1;
 		}
 
 		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) {
