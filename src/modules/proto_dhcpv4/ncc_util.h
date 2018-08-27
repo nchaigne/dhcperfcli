@@ -1,6 +1,6 @@
 #pragma once
 /*
- * ncc_util.h
+ *	ncc_util.h
  */
 
 #include <freeradius-devel/server/base.h>
@@ -70,6 +70,7 @@ int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
+char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 

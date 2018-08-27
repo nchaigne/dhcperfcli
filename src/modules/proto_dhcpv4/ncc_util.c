@@ -1,5 +1,5 @@
 /*
- * ncc_util.c
+ *	ncc_util.c
  */
 
 #include "ncc_util.h"
@@ -134,6 +134,16 @@ char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	sprintf(out, "%s:%u", fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr), ep->port);
+	return out;
+}
+
+/*
+ *	Print an ethernet address in a buffer.
+ */
+char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
+{
+	sprintf(out, "%02x:%02x:%02x:%02x:%02x:%02x",
+	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return out;
 }
 

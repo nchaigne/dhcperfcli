@@ -31,7 +31,6 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 char *dpc_hex_data_sprint(char *out, const uint8_t *in, int in_len, char const *sep,
                           char const *prefix, int line_max_len);
-char *dpc_ether_addr_sprint(char *out, const uint8_t *addr);
 char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra);
 
 VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);

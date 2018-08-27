@@ -234,7 +234,7 @@ void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	/* DHCP specific information. */
 	if (packet->data && packet->data_len >= 34) { /* Only print this if there is enough data. */
 		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
-		fprintf(fp, " (hwaddr: %s", dpc_ether_addr_sprint(buf_hwaddr, hwaddr) );
+		fprintf(fp, " (hwaddr: %s", ncc_ether_addr_sprint(buf_hwaddr, hwaddr) );
 
 		if (packet->code == FR_DHCP_ACK || packet->code == FR_DHCP_OFFER) {
 			memcpy(&yiaddr, packet->data + 16, 4);
@@ -515,16 +515,6 @@ char *dpc_hex_data_sprint(char *out, const uint8_t *in, int in_len, char const *
 		k ++;
 	}
 	*out = '\0';
-	return out;
-}
-
-/*
- *	Print an ethernet address in a buffer.
- */
-char *dpc_ether_addr_sprint(char *out, const uint8_t *addr)
-{
-	sprintf(out, "%02x:%02x:%02x:%02x:%02x:%02x",
-	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return out;
 }
 
