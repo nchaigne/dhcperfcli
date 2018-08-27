@@ -193,7 +193,7 @@ void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	uint32_t yiaddr;
 	char lease_ipaddr[128] = "";
 	uint8_t hwaddr[6] = "";
-	char buf_hwaddr[128] = "";
+	char buf_hwaddr[NCC_ETHADDR_STRLEN] = "";
 
 	if (!fp) return;
 	if (!packet) return;
