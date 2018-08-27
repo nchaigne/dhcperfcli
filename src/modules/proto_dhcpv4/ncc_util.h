@@ -7,6 +7,7 @@
 
 
 #define NCC_ENDPOINT_STRLEN       (FR_IPADDR_STRLEN + 5)
+#define NCC_ETHADDR_STRLEN        (17 + 1)
 
 
 /*
