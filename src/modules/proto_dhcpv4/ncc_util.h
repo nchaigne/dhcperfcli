@@ -8,6 +8,8 @@
 
 #define NCC_ENDPOINT_STRLEN       (FR_IPADDR_STRLEN + 5)
 #define NCC_ETHADDR_STRLEN        (17 + 1)
+#define NCC_UINT32_STRLEN         (10 + 1)
+#define NCC_UINT64_STRLEN         (20 + 1)
 
 
 /*
@@ -49,6 +51,7 @@ typedef struct ncc_endpoint {
 
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
 typedef struct ncc_fr_event_timer {
+	fr_event_list_t		*el;			//!< because talloc_parent() is O(N) in number of objects
 	struct timeval		when;			//!< When this timer should fire.
 	/* We don't need anything beyond that. */
 } ncc_fr_event_timer_t;
