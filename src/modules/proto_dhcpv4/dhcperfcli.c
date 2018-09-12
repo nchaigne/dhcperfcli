@@ -7,6 +7,8 @@
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 
+#include <getopt.h>
+
 static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 
 
@@ -2298,19 +2300,25 @@ static struct option long_options[] = {
 static void dpc_options_parse(int argc, char **argv)
 {
 	int argval;
-	bool debug_fr =  false;
+	int opt_index = -1; /* Stores the option index for long options. */
+	bool debug_fr = false;
 
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
 		usage(1); \
 	}
 
-	while ((argval = getopt(argc, argv, "a:D:c:f:g:hI:L:N:p:P:r:Rs:t:TvxX"
-#ifdef HAVE_LIBPCAP
-	       "Ai:"
-#endif
-	      )) != EOF)
+	while (1)
 	{
+		opt_index = -1;
+		argval = getopt_long(argc, argv,
+#ifdef HAVE_LIBPCAP
+		                    "Ai:"
+#endif
+		                    "a:D:c:f:g:hI:L:N:p:P:r:Rs:t:TvxX",
+		                    long_options, &opt_index);
+		if (argval == -1) break;
+
 		switch (argval) {
 		case 'a':
 			if (fr_inet_pton(&allowed_server, optarg, strlen(optarg), AF_INET, false, false) < 0)
