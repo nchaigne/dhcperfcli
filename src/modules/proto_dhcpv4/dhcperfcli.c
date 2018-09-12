@@ -90,7 +90,7 @@ static fr_event_list_t *event_list = NULL;
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 static char const *file_vps_in = NULL;
 static ncc_list_t vps_list_in = { 0 };
-static bool with_template = false;
+static int with_template = 0;
 static dpc_input_t *template_invariant = NULL;
 static dpc_input_t *template_variable = NULL;
 static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
@@ -2273,6 +2273,25 @@ static void dpc_gateway_parse(char const *in)
 	talloc_free(in_dup);
 }
 
+static struct option long_options[] = {
+	/* Long options with no short option equivalent. */
+
+	/* Long options with short option equivalent. */
+	{ "dict-dir",               required_argument, NULL, 'D' },
+	{ "input-file",             required_argument, NULL, 'f' },
+	{ "duration-start-max",     required_argument, NULL, 'L' },
+	{ "session-max",            required_argument, NULL, 'N' },
+	{ "parallel",               required_argument, NULL, 'p' },
+	{ "rate",                   required_argument, NULL, 'r' },
+	{ "timeout",                required_argument, NULL, 't' },
+	{ "packet-trace",           required_argument, NULL, 'P' },
+
+	/* Long options flags are handled automaticaly. */
+	{ "template",               no_argument, &with_template, 1 },
+
+	{ 0, 0, 0, 0 }
+};
+
 /*
  *	Process command line options and arguments.
  */
@@ -2376,7 +2395,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'T':
-			with_template = true;
+			with_template = 1;
 			break;
 
 		case 'v':
