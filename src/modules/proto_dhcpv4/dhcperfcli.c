@@ -2418,6 +2418,23 @@ static void dpc_options_parse(int argc, char **argv)
 			debug_fr = true;
 			break;
 
+
+		case 0: /* Long option flag set, nothing to do. */
+			break;
+
+		case 1:
+			/*	Long options with no short option equivalent.
+			 *	Option is identified by its index in the option[] array.
+			 */
+			switch (opt_index) {
+
+			default:
+				printf("Error: Unexpected 'option index': %d\n", opt_index);
+				usage(1);
+				break;
+			}
+			break;
+
 		default:
 			usage(1);
 			break;
