@@ -2157,6 +2157,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	 */
 	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_dhcperfcli);
 	if (fr_dict_read(dict_dhcperfcli, dict_dir, dict_fn_dhcperfcli) != 0) {
+// we don't need this anymore ? TODO.
 		PERROR("Failed to read dictionary: %s", dict_fn_dhcperfcli);
 		exit(EXIT_FAILURE);
 	}
