@@ -270,7 +270,8 @@ bool ncc_str_to_uint32(uint32_t *out, char const *in)
 
 	if (!in || in[0] == '\0') return false;
 
-	uinteger = fr_strtoull(in, &p); /* Allows integer or hex string. */
+	/* Allows integer or hex string. */
+	if (fr_strtoull(&uinteger, &p, in) < 0) return false;
 	if (*p != '\0' || uinteger > UINT32_MAX) return false;
 
 	*out = (uint32_t) uinteger;
