@@ -2166,7 +2166,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	}
 
 	/* Also need to load attributes required by DHCP library. */
-	if (fr_dhcpv4_init() < 0) {
+	if (fr_dhcpv4_global_init() < 0) {
 		PERROR("Failed to initialize DHCP library");
 		exit(EXIT_FAILURE);
 	}
