@@ -49,7 +49,7 @@ static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.intern
 
 static fr_dict_t *dict_freeradius;
 static fr_dict_t *dict_dhcperfcli;
-static fr_dict_t *dict_dhcpv4;
+fr_dict_t *dict_dhcpv4;
 
 extern fr_dict_autoload_t dpc_dict_autoload[];
 fr_dict_autoload_t dpc_dict_autoload[] = {
@@ -1324,7 +1324,8 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 		     vp = fr_cursor_next(&cursor))
 		{
 			/* Only DHCP attributes can be variable. */
-			if (fr_dict_vendor_num_by_da(vp->da) != DHCP_MAGIC_VENDOR) continue;
+			//if (fr_dict_vendor_num_by_da(vp->da) != DHCP_MAGIC_VENDOR) continue;
+			if (fr_dict_by_da(vp->da) != dict_dhcpv4) continue;
 
 			/* Update value according to template variable mode. */
 			switch (templ_var) {

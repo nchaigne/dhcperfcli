@@ -29,6 +29,9 @@ extern int dpc_debug_lvl;
 extern fr_dict_attr_t const *attr_encoded_data;
 extern fr_dict_attr_t const *attr_dhcp_message_type;
 
+extern fr_dict_t *dict_dhcpv4;
+
+
 #define dpc_assert rad_assert
 /*
  *	Using rad_assert defined in include/rad_assert.h
@@ -97,11 +100,12 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
  *	message." (RFC 2131). This means we'll only get the reply if setting ciaddr to address we've used as source.
 */
 
-#define vp_is_dhcp_field(_vp) (_vp && (fr_dict_vendor_num_by_da(_vp->da) == DHCP_MAGIC_VENDOR) \
-	&& (_vp->da->attr >= 256 && _vp->da->attr <= 269))
 
-#define vp_is_dhcp_option(_vp) (_vp && (fr_dict_vendor_num_by_da(_vp->da) == DHCP_MAGIC_VENDOR) \
-	&& (_vp->da->attr <= 255))
+#define vp_is_dhcp_attr(_vp) (_vp && (fr_dict_by_da(_vp->da) == dict_dhcpv4))
+
+#define vp_is_dhcp_field(_vp) vp_is_dhcp_attr(_vp) && (_vp->da->attr >= 256 && _vp->da->attr <= 269)
+
+#define vp_is_dhcp_option(_vp) vp_is_dhcp_attr(_vp) && (_vp->da->attr <= 255)
 
 #define ipaddr_defined(_x) (_x.af != AF_UNSPEC)
 
