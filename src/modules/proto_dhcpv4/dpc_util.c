@@ -278,8 +278,10 @@ int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 			p = buf;
 			*p++ = '\t';
 
-			if (vp->da->parent && vp->da->parent->type == FR_TYPE_TLV) {
-				/* If attribute has a parent which is of type "tlv", print <option.sub-attr> (eg. "82.1"). */
+			if (vp->da->parent && vp->da->parent->type == FR_TYPE_TLV && vp->da->parent->parent) {
+				/* If attribute has a parent of type "tlv", which has also a parent (the protocol itself):
+				 * Print <option.sub-attr> (eg. "82.1").
+				 */
 				p += sprintf(p, "(%d.%d) ", vp->da->parent->attr, vp->da->attr);
 			} else {
 				/* Otherwise this is a simple option. */
