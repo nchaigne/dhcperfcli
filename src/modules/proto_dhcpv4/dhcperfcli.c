@@ -1786,20 +1786,21 @@ static bool dpc_parse_input(dpc_input_t *input)
 			vp->type = VT_DATA;
 		}
 
-		if (fr_dict_vendor_num_by_da(vp->da) == DHCP_MAGIC_VENDOR) {
+		/*
+		 * DHCP attributes.
+		 * Note: if we have pre-encoded DHCP data (vp_data), all other DHCP attributes are silently ignored.
+		 */
+		if (vp->da == attr_dhcp_message_type) {
+			/* Packet type. */
+			if (!vp_data) input->ext.code = vp->vp_uint32;
 
-			if (!vp_data) { /* If we have pre-encoded DHCP data, all other DHCP attributes are ignored. */
+		} else if (vp->da == attr_dhcp_transaction_id) {
+			/* Prefered xid. */
+			if (!vp_data) input->ext.xid = vp->vp_uint32;
 
-				if (vp->da == attr_dhcp_message_type) {
-					/* Packet type. */
-					input->ext.code = vp->vp_uint32;
-
-				} else if (vp->da == attr_dhcp_transaction_id) {
-					/* Prefered xid. */
-					input->ext.xid = vp->vp_uint32;
-				}
-			}
-
+		/*
+		 * Control attributes
+		 */
 		} else if (vp->da == attr_packet_dst_port) {
 			input->ext.dst.port = vp->vp_uint16;
 
