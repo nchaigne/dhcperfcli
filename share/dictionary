@@ -1,0 +1,12 @@
+# -*- text -*-
+#
+#	dhcperfcli dictionary file
+#
+
+# can we do this without a "protocol" ? TODO.
+PROTOCOL	dhcperfcli		501
+BEGIN-PROTOCOL	dhcperfcli
+
+$INCLUDE dictionary.dhcperfcli.internal
+
+END-PROTOCOL	dhcperfcli
