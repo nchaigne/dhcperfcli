@@ -2052,7 +2052,7 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 
 /*
  *	Get alternate (fallback) dictionaries directory, relative to the program location.
- *	As follows: <prog dir>/../share/freeradius
+ *	As follows: <prog dir>/../share/freeradius/dictionary
  *	<prog dir> is obtained through a "readlink" on /proc/<pid>/exe
  *	Note: this is *not* portable. It works on Linux, but not on all Unixes.
  */
@@ -2075,7 +2075,7 @@ static int dpc_get_alt_dir(void)
 	prog_dir = dirname(prog_path);
 	up_dir = dirname(prog_dir);
 
-	snprintf(alt_dict_dir, PATH_MAX, "%s/share/freeradius", up_dir);
+	snprintf(alt_dict_dir, PATH_MAX, "%s/share/freeradius/dictionary", up_dir);
 	DEBUG("Using alternate dictionaries dir: %s", alt_dict_dir);
 	return 0;
 #endif
