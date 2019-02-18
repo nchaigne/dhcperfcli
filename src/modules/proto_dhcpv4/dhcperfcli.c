@@ -1923,7 +1923,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 		input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
-		if (fr_pair_list_afrom_file(input, &input->vps, file_in, &file_done) < 0) {
+		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, file_in, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
 			exit(EXIT_FAILURE); /* Be unforgiving. */
 			break;
