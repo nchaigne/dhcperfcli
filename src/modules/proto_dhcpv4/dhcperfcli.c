@@ -44,7 +44,6 @@ static char const *progname = NULL;
 static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
 static char const *dict_dir = DICTDIR;
 static char const *dict_fn_freeradius = "freeradius/dictionary.freeradius.internal";
-//static char const *dict_fn_dhcp = "dictionary.dhcpv4";
 //static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.internal";
 
 static fr_dict_t *dict_freeradius;
@@ -53,7 +52,7 @@ fr_dict_t *dict_dhcpv4;
 
 extern fr_dict_autoload_t dpc_dict_autoload[];
 fr_dict_autoload_t dpc_dict_autoload[] = {
-	{ .out = &dict_freeradius, .proto = "freeradius" },
+	{ .out = &dict_freeradius, .proto = "freeradius" }, /* "freeradius" identifies internal dictionary - otherwise it's protocol. */
 	{ .out = &dict_dhcpv4, .proto = "dhcpv4" },
 	{ .out = &dict_dhcperfcli, .proto = "dhcperfcli" },
 	{ NULL }
