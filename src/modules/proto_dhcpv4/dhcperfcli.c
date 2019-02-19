@@ -45,7 +45,7 @@ static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictiona
 static char const *dict_dir = DICTDIR;
 static char const *dict_fn_freeradius = "freeradius/dictionary.freeradius.internal";
 //static char const *dict_fn_dhcp = "dictionary.dhcpv4";
-static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.internal";
+//static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.internal";
 
 static fr_dict_t *dict_freeradius;
 static fr_dict_t *dict_dhcperfcli;
@@ -2112,53 +2112,9 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 		exit(EXIT_FAILURE);
 	}
 
-#if 0
-// this doesn't work anymore, because DHCP needs "Vendor-Specific" (why !?) which is defined in rfc2865...
-// so for now we're using FreeRADIUS default "include all" dictionary. (cf. dhcpclient)
-// TODO: fix this.
-
-	/* Read FreeRADIUS internal dictionary first. */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_freeradius);
-	if (fr_dict_from_file(&dict, dict_fn_freeradius) < 0) {
-		PERROR("Failed to initialize dictionary: %s", dict_fn_freeradius);
-		exit(EXIT_FAILURE);
-	}
-
-	/* Read the DHCP dictionary. */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_dhcp);
-	if (fr_dict_read(dict, dict_dir, dict_fn_dhcp) != 0) {
-		PERROR("Failed to read dictionary: %s", dict_fn_dhcp);
-		exit(EXIT_FAILURE);
-	}
-
-	/* Read dhcperfcli internal dictionary. */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_dhcperfcli);
-	if (fr_dict_read(dict, dict_dir, dict_fn_dhcperfcli) != 0) {
-		PERROR("Failed to read dictionary: %s", dict_fn_dhcperfcli);
-		exit(EXIT_FAILURE);
-	}
-
-	/* Preload dictionary attributes that we need. */
-	if (fr_dict_attr_autoload(dpc_dict_attr_autoload) < 0) {
-		PERROR("Failed to autoload dictionary attributes");
-		exit(EXIT_FAILURE);
-	}
-#endif
-
 	/* Preload dictionaries. */
 	if (fr_dict_autoload(dpc_dict_autoload) < 0) {
 		PERROR("Failed to autoload dictionaries");
-		exit(EXIT_FAILURE);
-	}
-
-	/*
-	 *	Read dhcperfcli internal dictionary.
-	 *	This must be done after fr_dict_autoload, but before fr_dict_attr_autoload.
-	 */
-	DEBUG("Including dictionary file: %s/%s", dict_dir, dict_fn_dhcperfcli);
-	if (fr_dict_read(dict_dhcperfcli, dict_dir, dict_fn_dhcperfcli) != 0) {
-// we don't need this anymore ? TODO.
-		PERROR("Failed to read dictionary: %s", dict_fn_dhcperfcli);
 		exit(EXIT_FAILURE);
 	}
 
