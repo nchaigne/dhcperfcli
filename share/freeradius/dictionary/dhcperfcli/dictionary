@@ -3,7 +3,7 @@
 #	dhcperfcli dictionary file
 #
 
-# can we do this without a "protocol" ? TODO.
+# we need a "virtual protocol" because only "freeradius" dictionary is loaded as internal
 PROTOCOL	dhcperfcli		501
 BEGIN-PROTOCOL	dhcperfcli
 
