@@ -90,7 +90,7 @@ Then:
 Copy *dhcpercli* files into FreeRADIUS source tree:
 
 >__`cp -f src/modules/proto_dhcpv4/* <FreeRADIUS sources>/src/modules/proto_dhcpv4/`__<br>
->__`cp -Rf share/freeradius/dictionary/dhcperfcli <FreeRADIUS sources>/share/freeradius/dictionary/`__<br>
+>__`cp -Rf share/dictionary/dhcperfcli <FreeRADIUS sources>/share/dictionary/`__<br>
 
 Note: file `all.mk` will be overwritten. This is necessary so FreeRADIUS knows that it has to build *dhcperfcli*.
 
