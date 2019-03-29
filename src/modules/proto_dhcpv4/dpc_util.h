@@ -33,7 +33,6 @@ char *dpc_hex_data_sprint(char *out, const uint8_t *in, int in_len, char const *
                           char const *prefix, int line_max_len);
 char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra);
 
-VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag);
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp);
 VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp);
 void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t high);

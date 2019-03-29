@@ -556,14 +556,6 @@ char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
 }
 
 /*
- *	Find the matching DHCP attribute.
- */
-VALUE_PAIR *dpc_pair_find_dhcp(VALUE_PAIR *head, unsigned int attr, int8_t tag)
-{
-	return fr_pair_find_by_num(head, DHCP_MAGIC_VENDOR, attr, tag);
-}
-
-/*
  *	Increment the value of a value pair.
  */
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
