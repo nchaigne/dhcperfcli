@@ -2318,6 +2318,7 @@ static struct option long_options[] = {
 
 	/* Long options flags are handled automaticaly. */
 	{ "template",               no_argument, &with_template, 1 },
+	{ "xlat",                   no_argument, &with_xlat, 1 },
 
 	{ 0, 0, 0, 0 }
 };
@@ -2492,6 +2493,9 @@ static void dpc_options_parse(int argc, char **argv)
 
 	ncc_float_to_timeval(&tv_timeout, timeout);
 	ncc_float_to_timeval(&tv_progress_interval, progress_interval);
+
+	/* Xlat is automatically enabled in template mode. */
+	if (with_template) with_xlat = 1;
 }
 
 /*
