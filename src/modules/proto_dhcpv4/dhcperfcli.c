@@ -92,6 +92,7 @@ static bool with_stdin_input = false; /* Whether we have something from stdin or
 static char const *file_vps_in = NULL;
 static ncc_list_t vps_list_in = { 0 };
 static int with_template = 0;
+static int with_xlat = 0;
 static dpc_input_t *template_invariant = NULL;
 static dpc_input_t *template_variable = NULL;
 static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
@@ -1766,6 +1767,75 @@ static bool dpc_parse_input(dpc_input_t *input)
 	} else {
 		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
 		vp_workflow_type = ncc_pair_find_by_da(input->vps, attr_workflow_type);
+	}
+
+	/*
+	 *	Pre-process attributes (1: xlat).
+	 */
+	for (vp = fr_cursor_init(&cursor, &input->vps);
+	     vp;
+	     vp = fr_cursor_next(&cursor)) {
+
+		/*
+		 *	A value is identified as an xlat expression if it is a double quoted string which contains some %{...}
+		 *	e.g. "foo %{tolower:Bar}"
+		 *
+		 *	In this case, the vp has no value, and keeps its original type (vp->vp_type and vp->da->type), which can be anything.
+		 *	This entails that the result of xlat expansion would not necessarily be suitable for that vp.
+		 */
+		if (vp->type == VT_XLAT) {
+
+			if (with_xlat) {
+				input->do_xlat = true;
+
+				xlat_exp_t *xlat = NULL;
+				ssize_t slen;
+				char *value;
+
+				value = talloc_typed_strdup(input, vp->xlat); /* modified by xlat_tokenize */
+
+				slen = xlat_tokenize(NULL, &xlat, value, NULL);
+				/* Notes:
+				 * - First parameter is talloc context.
+				 *   We cannot use "input" as talloc context, because we may free the input and still need the parsed xlat expression.
+				 *   This happens in non template mode, with "num use > 1".
+				 * - Last parameter is "vp_tmpl_rules_t const *rules". (cf. vp_tmpl_rules_s in src/lib/server/tmpl.h)
+				 *   NULL means default rules are used, which is fine.
+				 */
+
+				if (slen < 0) {
+					char *spaces, *text;
+					fr_canonicalize_error(input, &spaces, &text, slen, vp->xlat);
+
+					WARN("Failed parsing '%s' expansion string. Discarding input (id: %u)", vp->da->name, input->id);
+					INFO("%s", text);
+					INFO("%s^ %s", spaces, fr_strerror());
+
+					talloc_free(spaces);
+					talloc_free(text);
+					talloc_free(value);
+					talloc_free(xlat);
+
+					return false;
+				}
+				talloc_free(value);
+
+				/*
+				 *	Store the compiled xlat (xlat_exp_t).
+				 *	For this we use the "generic pointer" vp_ptr (data.datum.ptr)
+				 */
+				vp->vp_ptr = xlat;
+
+			} else {
+				/*
+				 *	Xlat expansions are not supported. Convert xlat to value box (if possible).
+				 */
+				if (ncc_pair_value_from_str(vp, vp->xlat) < 0) {
+					WARN("Unsupported xlat expression for attribute '%s'. Discarding input (id: %u)", vp->da->name, input->id);
+					return false;
+				}
+			}
+		}
 	}
 
 	/*

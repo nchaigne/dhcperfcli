@@ -243,6 +243,8 @@ struct dpc_input {
 
 	VALUE_PAIR *vps;         //!< List of input value pairs read.
 
+	bool do_xlat;            //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
+
 	dpc_input_ext_t ext;     //!< Input pre-parsed information.
 };
 
