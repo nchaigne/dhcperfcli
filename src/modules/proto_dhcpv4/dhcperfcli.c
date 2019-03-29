@@ -254,6 +254,7 @@ static bool dpc_parse_input(dpc_input_t *input);
 static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list);
 static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
+static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
 static int dpc_get_alt_dir(void);
 static void dpc_dict_init(TALLOC_CTX *ctx);
@@ -1212,6 +1213,18 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 
 	/* Fill in the packet value pairs. */
 	ncc_pair_list_append(request, &request->vps, input->vps);
+
+	if (input->do_xlat) {
+		/*
+		 *	Perform xlat expansions as required.
+		 */
+		dpc_xlat_set_num(input->id); /* Initialize xlat context for processing this input. */
+
+		if (dpc_pair_list_xlat(request, request->vps) < 0) {
+			talloc_free(request);
+			return NULL;
+		}
+	}
 
 	/* Prepare gateway handling. */
 	dpc_request_gateway_handle(request, input->ext.gateway);

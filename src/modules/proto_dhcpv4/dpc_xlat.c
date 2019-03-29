@@ -46,6 +46,16 @@ static void dpc_xlat_init_request(VALUE_PAIR *vps)
 }
 
 /*
+ *	Initialize xlat context in our fake request for processing a list of input vps.
+ */
+void dpc_xlat_set_num(uint64_t num)
+{
+	dpc_xlat_init_request(NULL);
+	request->number = num; /* Our input id. */
+	request->child_number = 0; /* The index of the xlat context for this input. */
+}
+
+/*
  *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided.
  */
 ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet)
