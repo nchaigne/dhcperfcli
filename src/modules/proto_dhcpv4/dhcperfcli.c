@@ -1437,6 +1437,8 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 
 	/* Free this input now if we could not initialize a session from it. */
 	if (!session) {
+		PERROR("Failed to initialize session from input (id: %u)", input->id);
+
 		talloc_free(input);
 	}
 
