@@ -16,7 +16,7 @@
 #include <freeradius-devel/server/base.h>
 #include <freeradius-devel/server/xlat_priv.h>
 
-#include "ncc_xlat_core.h"
+#include "ncc_xlat.h"
 
 /*
  *	The following is copied verbatim from src/lib/server/xlat_func.c

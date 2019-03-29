@@ -4,6 +4,7 @@
 
 #include "dhcperfcli.h"
 #include "ncc_util.h"
+#include "ncc_xlat.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 
@@ -2598,6 +2599,8 @@ int main(int argc, char **argv)
 		dpc_pcap_init(autofree);
 	}
 #endif
+
+	ncc_xlat_register();
 
 	/*
 	 *	Set signal handler.
