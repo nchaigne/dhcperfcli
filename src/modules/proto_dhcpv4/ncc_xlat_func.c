@@ -20,6 +20,7 @@ extern REQUEST *FX_request;
 /*
  *	Xlat names.
  */
+#define NCC_XLAT_ETHADDR_RANGE "ethaddr.range"
 #define NCC_XLAT_ETHADDR_RAND  "ethaddr.rand"
 
 
@@ -269,5 +270,6 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
  */
 void ncc_xlat_register(void)
 {
+	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RANGE, _ncc_xlat_ethaddr_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RAND, _ncc_xlat_ethaddr_rand, NULL, NULL, 0, 0, true);
 }
