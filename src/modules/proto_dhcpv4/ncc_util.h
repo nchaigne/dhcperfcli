@@ -18,6 +18,20 @@
 #define ncc_assert rad_assert
 
 
+/* Push error about insufficient buffer size. */
+#define ERR_BUFFER_SIZE(_need, _size, _info) \
+	fr_strerror_printf("%s buffer too small (needed: %zu bytes, have: %zu)", _info, (size_t)(_need), (size_t)(_size))
+
+/* Check buffer size, if insufficient: push error and return.
+ * _size is the buffer size, _need what we need (including the terminating '\0' if relevant)
+ */
+#define CHECK_BUFFER_SIZE(_ret, _need, _size, _info) \
+	if (_size < _need) { \
+		ERR_BUFFER_SIZE(_need, _size, _info); \
+		return _ret; \
+	}
+
+
 typedef struct ncc_list_item ncc_list_item_t;
 
 /*
