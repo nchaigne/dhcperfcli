@@ -26,7 +26,7 @@
 int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const *in)
 {
 	fr_type_t type = FR_TYPE_ETHERNET;
-	fr_value_box_t vb;
+	fr_value_box_t vb = { 0 };
 
 	char const *p = strchr(in, '-');
 	if (!p) { /* Mandatory range delimiter. */
@@ -74,6 +74,18 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	if (fmt) {
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) return -1;
+
+		/* fr_value_box_from_str behaves strangely if we feed it partial ethaddr:
+		"01" (or anything with only digits) => "00:00:00:00:00:00" but no complaining.
+		"01:02", "0a" => these are ok.
+		Probably a bug... TODO: check it.
+		*/
+		char buf_ethaddr[NCC_ETHADDR_STRLEN] = "";
+		ncc_ether_addr_sprint(buf_ethaddr, ethaddr1);
+		printf("parsed ethaddr1: %s\n", ncc_ether_addr_sprint(buf_ethaddr, ethaddr1));
+		ncc_ether_addr_sprint(buf_ethaddr, ethaddr2);
+		printf("parsed ethaddr2: %s\n", ncc_ether_addr_sprint(buf_ethaddr, ethaddr2));
+		// temporary trace. TODO: remove this.
 
 		memcpy(&num1, ethaddr1, 6);
 		num1 = (ntohll(num1) >> 16);
