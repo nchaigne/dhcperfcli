@@ -1840,22 +1840,16 @@ static bool dpc_parse_input(dpc_input_t *input)
 	}
 
 	/*
-	 *	Loop over input value pairs. These take precedence over program arguments and options.
+	 *	Pre-process attributes (2: control attributes).
 	 */
 	for (vp = fr_cursor_init(&cursor, &input->vps);
 	     vp;
 	     vp = fr_cursor_next(&cursor)) {
+
 		/*
-		 *	Xlat expansions are not supported. Convert xlat to value box (if possible).
+		 *	Process special attributes. They take precedence over command line arguments.
+		 *	Note: xlat is not supported for these.
 		 */
-		if (vp->type == VT_XLAT) {
-			fr_type_t type = vp->da->type;
-			if (fr_value_box_from_str(vp, &vp->data, &type, NULL, vp->xlat, -1, '\0', false) < 0) {
-				PWARN("Failed to convert from xlat, discarding input (id: %u)", input->id);
-				return false;
-			}
-			vp->type = VT_DATA;
-		}
 
 		/*
 		 * DHCP attributes.
