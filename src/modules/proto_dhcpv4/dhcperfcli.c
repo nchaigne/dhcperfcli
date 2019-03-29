@@ -1439,6 +1439,8 @@ static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
 	if (!session) {
 		PERROR("Failed to initialize session from input (id: %u)", input->id);
 
+		/* Remove item from list before freeing. */
+		NCC_LIST_DRAW(input);
 		talloc_free(input);
 	}
 
