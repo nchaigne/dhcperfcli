@@ -11,7 +11,7 @@
  *	To use FreeRADIUS xlat engine, we need a REQUEST (which is a "typedef struct rad_request").
  *	This is defined in src/lib/server/base.h
  */
-static REQUEST *request = NULL;
+REQUEST *FX_request = NULL;
 
 /* WARNING:
  * FreeRADIUS xlat functions can used this as Talloc context for allocating memory.
@@ -30,19 +30,19 @@ static uint32_t request_max_use = 10000;
  */
 static void dpc_xlat_init_request(VALUE_PAIR *vps)
 {
-	if (request && request_num_use >= request_max_use) {
-		TALLOC_FREE(request);
+	if (FX_request && request_num_use >= request_max_use) {
+		TALLOC_FREE(FX_request);
 		request_num_use = 0;
 	}
 	request_num_use++;
 
-	if (!request) {
-		request = request_alloc(NULL);
-		request->packet = fr_radius_alloc(request, false);
+	if (!FX_request) {
+		FX_request = request_alloc(NULL);
+		FX_request->packet = fr_radius_alloc(FX_request, false);
 	}
 
-	request->control = vps; /* Allow to use %{control:Attr} */
-	request->packet->vps = vps; /* Allow to use %{packet:Attr} or directly %{Attr} */
+	FX_request->control = vps; /* Allow to use %{control:Attr} */
+	FX_request->packet->vps = vps; /* Allow to use %{packet:Attr} or directly %{Attr} */
 }
 
 /*
@@ -51,8 +51,8 @@ static void dpc_xlat_init_request(VALUE_PAIR *vps)
 void dpc_xlat_set_num(uint64_t num)
 {
 	dpc_xlat_init_request(NULL);
-	request->number = num; /* Our input id. */
-	request->child_number = 0; /* The index of the xlat context for this input. */
+	FX_request->number = num; /* Our input id. */
+	FX_request->child_number = 0; /* The index of the xlat context for this input. */
 }
 
 /*
@@ -64,7 +64,7 @@ ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *pa
 	if (packet) vps = packet->vps;
 	dpc_xlat_init_request(vps);
 
-	size_t len = xlat_eval(out, outlen, request, fmt, NULL, NULL);
+	size_t len = xlat_eval(out, outlen, FX_request, fmt, NULL, NULL);
 	CHECK_BUFFER_SIZE(-1, len + 1, outlen, "xlat"); /* push error and return -1. */
 	return len;
 }
@@ -75,7 +75,7 @@ ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat,
 	if (packet) vps = packet->vps;
 	dpc_xlat_init_request(vps);
 
-	size_t len = xlat_eval_compiled(out, outlen, request, xlat, NULL, NULL);
+	size_t len = xlat_eval_compiled(out, outlen, FX_request, xlat, NULL, NULL);
 	CHECK_BUFFER_SIZE(-1, len + 1, outlen, "xlat"); /* push error and return -1. */
 	return len;
 }
