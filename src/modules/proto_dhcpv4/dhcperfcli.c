@@ -7,6 +7,7 @@
 #include "ncc_xlat.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
+#include "dpc_xlat.h"
 
 #include <getopt.h>
 
@@ -2069,6 +2070,51 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		if (vps_list_in.size < 2) template_invariant = NULL;
 	}
 
+	return 0;
+}
+
+/*
+ *	Handle xlat expansion on a list of value pairs (within a packet context).
+ *
+ *	Note: if one of the registered xlat complains (returns -1) the main xlat will consider it's fine.
+ *	However, if the main xlat is unhappy, it will return -1 (and an empty string).
+ */
+static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
+{
+	fr_cursor_t cursor;
+	VALUE_PAIR *vp;
+	ssize_t len;
+	char buffer[DPC_XLAT_MAX_LEN];
+
+	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
+		/*
+		 *	Handle xlat expansion for this attribute.
+		 *	Allow any data type. Value will be cast by FreeRADIUS (if possible).
+		 */
+		if (vp->type == VT_XLAT) {
+			/* Retrieve pre-compiled xlat, and use it to perform expansion. */
+			xlat_exp_t *xlat = vp->vp_ptr;
+			if (!xlat) {
+				fr_strerror_printf("Cannot xlat %s = [%s]: expression was not compiled", vp->da->name, vp->xlat);
+				return -1;
+			}
+
+			len = dpc_xlat_eval_compiled(buffer, sizeof(buffer), xlat, packet);
+			if (len <= 0) { /* Consider empty string as failed expansion. */
+				fr_strerror_printf("Failed to expand xlat '%s': %s", vp->da->name, fr_strerror());
+				return -1;
+			}
+
+			vp->vp_ptr = NULL; /* Otherwise fr_pair_value_strcpy would free our compiled xlat! */
+
+			DPC_DEBUG_TRACE("xlat %s = [%s] => (len: %u) [%s]", vp->da->name, vp->xlat, len, buffer);
+
+			/* Convert the xlat'ed string to the appropriate type. */
+			if (ncc_pair_value_from_str(vp, buffer) < 0) {
+				return -1;
+			}
+		}
+	}
 	return 0;
 }
 
