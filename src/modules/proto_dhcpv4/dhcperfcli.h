@@ -233,19 +233,24 @@ typedef struct dpc_input_ext {
  */
 struct dpc_input {
 	/* Generic chaining */
-	ncc_list_t *list;       //!< The list to which this entry belongs (NULL for an unchained entry).
+	ncc_list_t *list;        //!< The list to which this entry belongs (NULL for an unchained entry).
 	ncc_list_item_t *prev;
 	ncc_list_item_t *next;
 
 	/* Specific item data */
-	uint32_t id;             //!< Id of input (0 for the first one).
-	uint32_t num_use;        //!< How many times has this input been used.
+	uint32_t id;              //!< Id of input (0 for the first one).
 
-	VALUE_PAIR *vps;         //!< List of input value pairs read.
+	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
-	bool do_xlat;            //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
+	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
+	uint32_t num_use;         //!< How many times has this input been used.
+	uint32_t max_use;         //<! Maximum number of times this input can be used.
+	struct timeval tve_start; //!< Timestamp of first use.
+	struct timeval tve_end;   //!< Timestamp of last use once input is done.
 
-	dpc_input_ext_t ext;     //!< Input pre-parsed information.
+	bool done;                //!< Is this input done ? (i.e. no session can be started from it)
+
+	dpc_input_ext_t ext;      //!< Input pre-parsed information.
 };
 
 /*

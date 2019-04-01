@@ -95,6 +95,7 @@ static char const *file_vps_in = NULL;
 static ncc_list_t vps_list_in = { 0 };
 static int with_template = 0;
 static int with_xlat = 0;
+static ncc_list_item_t *template_input_prev = NULL; /* In template mode, previous used input item. */
 static dpc_input_t *template_invariant = NULL;
 static dpc_input_t *template_variable = NULL;
 static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
@@ -239,9 +240,9 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
 static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
-static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx);
+//static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
-static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx);
+static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
@@ -1298,6 +1299,8 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 /*
  *	Dynamically generate an input item from template.
  */
+// TODO: remove this, use xlat instead.
+#if 0
 static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 {
 	if (!template_invariant && !template_variable) return NULL;
@@ -1358,6 +1361,66 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 
 	return input;
 }
+#endif
+// temporary - migration to xlat
+static void dpc_input_set_transport(dpc_input_t *input)
+{
+	dpc_input_t *transport = template_invariant ? template_invariant : template_variable;
+
+	/* Copy pre-parsed information from template. */
+	input->ext = transport->ext;
+
+	/*
+	 *	Associate input to gateway, if one is defined (or several).
+	 */
+	if (!ipaddr_defined(input->ext.src.ipaddr) && gateway_list) {
+		input->ext.gateway = dpc_gateway_get_next();
+		input->ext.src = *(input->ext.gateway);
+	}
+}
+
+/*
+ *	Get an input item from template (round robin on all template inputs).
+ */
+static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
+{
+	uint32_t checked = 0, not_done = 0;
+	struct timeval now;
+	gettimeofday(&now, NULL);
+
+	while (checked < vps_list_in.size) {
+		if (!template_input_prev) template_input_prev = vps_list_in.head;
+
+		dpc_input_t *input = (dpc_input_t *)template_input_prev; /* No need for a copy (read-only). This is faster. */
+		template_input_prev = template_input_prev->next;
+
+		checked++;
+
+		if (input->done) continue;
+
+		/* Check if input cannot be used anymore, if so tag it and store current timestamp.
+		 */
+		if (input->max_use && input->num_use >= input->max_use) {
+			/* Max number of uses reached for this input. */
+			DPC_DEBUG_TRACE("Max number of uses (%u) reached for input (id: %u)", input->num_use, input->id);
+			input->done = true;
+			input->tve_end = now;
+			continue;
+		}
+
+		not_done++;
+
+		dpc_input_set_transport(input);
+		return input;
+	}
+#if 0
+	if (not_done == 0) {
+		INFO("No remaining active input: will not start any new session.");
+		dpc_end_start_sessions();
+	}
+#endif
+	return NULL;
+}
 
 /*
  *	Get an input item. If using a template, dynamically generate a new item.
@@ -1367,14 +1430,14 @@ static dpc_input_t *dpc_get_input()
 	if (!with_template) {
 		return NCC_LIST_DEQUEUE(&vps_list_in);
 	} else {
-		return dpc_gen_input_from_template(autofree);
+		return dpc_get_input_from_template(autofree);
 	}
 }
 
 /*
  *	Initialize a new session.
  */
-static dpc_session_ctx_t *dpc_session_init(TALLOC_CTX *ctx)
+static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 {
 	dpc_input_t *input = NULL;
 	dpc_session_ctx_t *session = NULL;
@@ -1639,13 +1702,18 @@ static uint32_t dpc_loop_start_sessions(void)
 		if (do_limit && num_started >= limit_new_sessions) break;
 
 		/*
-		 *	Initialize a new session and send the packet.
+		 *	Initialize a new session, if possible.
 		 */
-		dpc_session_ctx_t *session = dpc_session_init(autofree);
-		if (!session) continue;
+		dpc_session_ctx_t *session = dpc_session_init_from_input(autofree);
+		if (!session) {
+			/* There is no input available at this point. */
+
+			break; /* Cannot initialize new sessions for now. */
+		}
 
 		num_started ++;
 
+		/* Send the packet. */
 		if (dpc_send_one_packet(session, &session->request) < 0) {
 			dpc_session_finish(session);
 			continue;
