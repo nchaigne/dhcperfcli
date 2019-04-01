@@ -110,3 +110,19 @@ ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index);
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
 # define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))
+
+/* Same as in_integer, but allow to work on a given length. */
+static inline bool is_integer_n(char const *value, ssize_t len)
+{
+	if (*value == '\0' || len == 0) return false;
+
+	char const *p = value;
+	while (*p) {
+		if (!isdigit(*p)) return false;
+
+		if (len > 0 && (p - value + 1 >= len)) break;
+		p++;
+	}
+
+	return true;
+}

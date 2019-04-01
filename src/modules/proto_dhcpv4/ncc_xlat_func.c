@@ -171,11 +171,18 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
 	}
 
+	/* FreeRADIUS seems buggy when handling just an int, cf. fr_value_box_from_str (src\lib\util\value.c):
+	 * "We assume the number is the bigendian representation of the ethernet address."
+	 * But it doesn't work (?)...
+	 *
+	 * Better check and complain ourselves so we know what's going on.
+	 */
 	if ((inlen > 0) && (!p || p > in)) {
 		len = (p ? p - in : -1);
 
 		/* Convert the first Ethernet address. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		if (is_integer_n(in, len)
+		    || fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
 			fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
 			return -1;
 		}
@@ -189,7 +196,8 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 
 	if (p && p < in + inlen - 1) {
 		/* Convert the second Ethernet address. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		if (is_integer_n(p + 1, -1)
+		    || fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
 			fr_strerror_printf("Invalid second ethaddr, in: [%s]", in);
 			return -1;
 		}
@@ -201,7 +209,18 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 		memcpy(ethaddr2, &ethaddr_max, 6);
 	}
 
-	// TODO: check: ! e2 > e1
+	/* Ensure this is a valid range. */
+	uint64_t num1, num2;
+	memcpy(&num1, ethaddr1, 6);
+	num1 = (ntohll(num1) >> 16);
+
+	memcpy(&num2, ethaddr2, 6);
+	num2 = (ntohll(num2) >> 16);
+
+	if (num1 > num2) { /* Not a valid range. */
+		fr_strerror_printf("Not a valid ipaddr range, in: [%s]", in);
+		return -1;
+	}
 
 	return 0;
 }
@@ -282,18 +301,6 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	if (fmt) {
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) return -1;
-
-		/* fr_value_box_from_str behaves strangely if we feed it partial ethaddr:
-		"01" (or anything with only digits) => "00:00:00:00:00:00" but no complaining.
-		"01:02", "0a" => these are ok.
-		Probably a bug... TODO: check it.
-		*/
-		char buf_ethaddr[NCC_ETHADDR_STRLEN] = "";
-		ncc_ether_addr_sprint(buf_ethaddr, ethaddr1);
-		printf("parsed ethaddr1: %s\n", ncc_ether_addr_sprint(buf_ethaddr, ethaddr1));
-		ncc_ether_addr_sprint(buf_ethaddr, ethaddr2);
-		printf("parsed ethaddr2: %s\n", ncc_ether_addr_sprint(buf_ethaddr, ethaddr2));
-		// temporary trace. TODO: remove this.
 
 		memcpy(&num1, ethaddr1, 6);
 		num1 = (ntohll(num1) >> 16);
