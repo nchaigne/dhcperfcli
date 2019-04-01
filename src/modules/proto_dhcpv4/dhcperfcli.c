@@ -1218,7 +1218,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 		/*
 		 *	Perform xlat expansions as required.
 		 */
-		dpc_xlat_set_num(input->id); /* Initialize xlat context for processing this input. */
+		ncc_xlat_set_num(input->id); /* Initialize xlat context for processing this input. */
 
 		if (dpc_pair_list_xlat(request, request->vps) < 0) {
 			talloc_free(request);

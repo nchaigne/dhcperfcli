@@ -3,6 +3,9 @@
  * ncc_xlat.h
  */
 
+extern REQUEST *FX_request;
+
+
 /*
  *	Functions in ncc_xlat_core.c
  */
@@ -17,4 +20,6 @@ int ncc_xlat_core_init(void);
 /*
  *	Functions in ncc_xlat_func.c
  */
+void ncc_xlat_init_request(VALUE_PAIR *vps);
+void ncc_xlat_set_num(uint64_t num);
 void ncc_xlat_register(void);
