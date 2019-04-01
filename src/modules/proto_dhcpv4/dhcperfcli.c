@@ -1972,7 +1972,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
 
 	if (!vp_data && input->ext.code == FR_CODE_UNDEFINED) {
-		WARN("No packet type specified in input vps or command line, discarding input (id: %u)", input->id);
+		WARN("No packet type specified in input vps or command line. Discarding input (id: %u)", input->id);
 		return false;
 	}
 
