@@ -239,7 +239,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session);
 static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gateway);
-static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input);
+static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input);
 static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
 //static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx);
@@ -961,7 +961,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 */
 	DPC_DEBUG_TRACE("DORA: received valid Offer, now preparing Request");
 
-	packet = dpc_request_init(session, session->input);
+	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
 
 	packet->code = FR_DHCP_REQUEST;
@@ -1040,7 +1040,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 	DPC_DEBUG_TRACE("DORA-Release: received valid Ack, now preparing Release");
 
-	packet = dpc_request_init(session, session->input);
+	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
 
 	packet->code = FR_DHCP_RELEASE;
@@ -1119,7 +1119,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 	DPC_DEBUG_TRACE("DORA-Decline: received valid Ack, now preparing Decline");
 
-	packet = dpc_request_init(session, session->input);
+	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
 
 	packet->code = FR_DHCP_DECLINE;
@@ -1176,7 +1176,8 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 {
 	if (!gateway) return;
 
-	DPC_DEBUG_TRACE("Assigning packet to gateway");
+	char ep_buf[NCC_ENDPOINT_STRLEN] = "";
+	DPC_DEBUG_TRACE("Assigning packet to gateway: %s", ncc_endpoint_sprint(ep_buf, gateway));
 
 	/*
 	 *	We've been told to handle sent packets as if relayed through a gateway.
@@ -1209,7 +1210,7 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 /*
  *	Initialize a DHCP packet from an input item.
  */
-static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
+static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input)
 {
 	DHCP_PACKET *request;
 
@@ -1231,16 +1232,16 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_input_t *input)
 	}
 
 	/* Prepare gateway handling. */
-	dpc_request_gateway_handle(request, input->ext.gateway);
+	dpc_request_gateway_handle(request, session->gateway);
 
 	/*
 	 *	Use values prepared earlier.
 	 */
 	request->code = input->ext.code;
-	request->src_port = input->ext.src.port;
-	request->dst_port = input->ext.dst.port;
-	request->src_ipaddr = input->ext.src.ipaddr;
-	request->dst_ipaddr = input->ext.dst.ipaddr;
+	request->src_port = session->src.port;
+	request->dst_port = session->dst.port;
+	request->src_ipaddr = session->src.ipaddr;
+	request->dst_ipaddr = session->dst.ipaddr;
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
@@ -1365,20 +1366,24 @@ static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
 	return input;
 }
 #endif
-// temporary - migration to xlat
-static void dpc_input_set_transport(dpc_input_t *input)
-{
-	dpc_input_t *transport = template_invariant ? template_invariant : template_variable;
 
-	/* Copy pre-parsed information from template. */
-	input->ext = transport->ext;
+/*
+ *	Store transport information in session context.
+ */
+static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input)
+{
+	/*
+	 *	Default: use source / destination from input, if provided.
+	 */
+	session->src = input->ext.src;
+	session->dst = input->ext.dst;
 
 	/*
-	 *	Associate input to gateway, if one is defined (or several).
+	 *	Associate session to gateway, if one is defined (or several).
 	 */
-	if (!ipaddr_defined(input->ext.src.ipaddr) && gateway_list) {
-		input->ext.gateway = dpc_gateway_get_next();
-		input->ext.src = *(input->ext.gateway);
+	if (!ipaddr_defined(session->src.ipaddr) && gateway_list) {
+		session->gateway = dpc_gateway_get_next();
+		session->src = *(session->gateway);
 	}
 }
 
@@ -1413,7 +1418,6 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 
 		not_done++;
 
-		dpc_input_set_transport(input);
 		return input;
 	}
 
@@ -1470,44 +1474,49 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	}
 
 	/*
+	 *	Initialize the new session.
+	 */
+	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
+	dpc_session_set_transport(session, input);
+
+	/*
 	 *	Prepare a DHCP packet to send for this session.
 	 */
-	packet = dpc_request_init(ctx, input);
-	if (packet) {
-		MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
-		session->id = session_num ++;
-
-		session->request = packet;
-		talloc_steal(session, packet);
-
-		session->input = input; /* Reference to the input (note: it doesn't belong to us). */
-
-		/*
-		 *	Prepare dealing with reply and workflow sequence.
-		 */
-		session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
-
-		if (input->ext.workflow) {
-			session->state = DPC_STATE_DORA_EXPECT_OFFER; /* All workflows start with a Discover. */
-		} else {
-			session->state = (session->reply_expected ? DPC_STATE_EXPECT_REPLY : DPC_STATE_NO_REPLY);
-		}
-
-		/* Store session start time. */
-		gettimeofday(&session->tv_start, NULL);
-
-		session_num_active ++;
-		SDEBUG2("New session initialized - active sessions: %u", session_num_active);
-	}
-
-	/* Free this input now if we could not initialize a session from it. */
-	if (!session) {
+	packet = dpc_request_init(ctx, session, input);
+	if (!packet) {
+		/* Free this input now if we could not initialize a session from it. */
 		PERROR("Failed to initialize session from input (id: %u)", input->id);
+
+		talloc_free(session);
 
 		/* Remove item from list before freeing. */
 		NCC_LIST_DRAW(input);
 		talloc_free(input);
 	}
+
+	session->id = session_num ++;
+
+	session->request = packet;
+	talloc_steal(session, packet);
+
+	session->input = input; /* Reference to the input (note: it doesn't belong to us). */
+
+	/*
+	 *	Prepare dealing with reply and workflow sequence.
+	 */
+	session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
+
+	if (input->ext.workflow) {
+		session->state = DPC_STATE_DORA_EXPECT_OFFER; /* All workflows start with a Discover. */
+	} else {
+		session->state = (session->reply_expected ? DPC_STATE_EXPECT_REPLY : DPC_STATE_NO_REPLY);
+	}
+
+	/* Store session start time. */
+	gettimeofday(&session->tv_start, NULL);
+
+	session_num_active ++;
+	SDEBUG2("New session initialized - active sessions: %u", session_num_active);
 
 	return session;
 }

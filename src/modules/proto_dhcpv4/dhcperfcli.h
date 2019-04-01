@@ -262,6 +262,10 @@ struct dpc_session_ctx {
 	dpc_input_t *input;      //!< Input data.
 	struct timeval tv_start; //<! Session start timestamp.
 
+	ncc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
+	ncc_endpoint_t src;      //!< Src IP address and port.
+	ncc_endpoint_t dst;      //!< Dst IP address and port.
+
 	DHCP_PACKET *request;
 	DHCP_PACKET *reply;
 
