@@ -162,26 +162,32 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 {
 	fr_type_t type = FR_TYPE_ETHERNET;
 	fr_value_box_t vb = { 0 };
+	ssize_t inlen;
 
+	/* Range delimiter can be omitted (only lower bound is provided). */
 	char const *p = strchr(in, '-');
-	if (!p) { /* Mandatory range delimiter. */
-		fr_strerror_printf("No range delimiter, in: [%s]", in);
-		return -1;
-	}
+	inlen = (p ? p - in : -1);
 
 	/* Convert the first Ethernet address. */
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, (p - in), '\0', false) < 0) {
+	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, inlen, '\0', false) < 0) {
 		fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
 		return -1;
 	}
 	memcpy(ethaddr1, &vb.vb_ether, 6);
 
-	/* Convert the second Ethernet address. */
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
-		fr_strerror_printf("Invalid second ethaddr, in: [%s]", in);
-		return -1;
+	if (p) {
+		/* Convert the second Ethernet address. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+			fr_strerror_printf("Invalid second ethaddr, in: [%s]", in);
+			return -1;
+		}
+		memcpy(ethaddr2, &vb.vb_ether, 6);
+
+	} else {
+		/* No second Ethernet address: use ff:ff:ff:ff:ff:fe as upper bound. */
+		uint8_t ethaddr_max[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
+		memcpy(ethaddr2, &ethaddr_max, 6);
 	}
-	memcpy(ethaddr2, &vb.vb_ether, 6);
 
 	// TODO: check: ! e2 > e1
 
