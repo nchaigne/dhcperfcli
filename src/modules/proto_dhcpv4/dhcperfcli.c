@@ -1422,6 +1422,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		/* Remove item from list before freeing. */
 		NCC_LIST_DRAW(input);
 		talloc_free(input);
+		return NULL;
 	}
 
 	session->id = session_num ++;
