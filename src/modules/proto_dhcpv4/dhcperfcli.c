@@ -1477,8 +1477,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		session->request = packet;
 		talloc_steal(session, packet);
 
-		session->input = input;
-		talloc_steal(session, input);
+		session->input = input; /* Reference to the input (note: it doesn't belong to us). */
 
 		/*
 		 *	Prepare dealing with reply and workflow sequence.
