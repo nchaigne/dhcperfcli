@@ -96,8 +96,6 @@ static ncc_list_t vps_list_in = { 0 };
 static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev = NULL; /* In template mode, previous used input item. */
-static dpc_input_t *template_invariant = NULL;
-static dpc_input_t *template_variable = NULL;
 static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
 static uint32_t input_num_use = 1;
 
@@ -1301,73 +1299,6 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 }
 
 /*
- *	Dynamically generate an input item from template.
- */
-// TODO: remove this, use xlat instead.
-#if 0
-static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx)
-{
-	if (!template_invariant && !template_variable) return NULL;
-
-	dpc_input_t *input = NULL;
-	dpc_input_t *transport = template_invariant ? template_invariant : template_variable;
-
-	MEM(input = talloc_zero(ctx, dpc_input_t));
-
-	/* Copy pre-parsed information from template. */
-	input->ext = transport->ext;
-
-	/*
-	 *	Associate input to gateway, if one is defined (or several).
-	 */
-	if (!ipaddr_defined(input->ext.src.ipaddr) && gateway_list) {
-		input->ext.gateway = dpc_gateway_get_next();
-		input->ext.src = *(input->ext.gateway);
-	}
-
-	/*
-	 *	Fill input with template invariant attributes.
-	 */
-	if (template_invariant) {
-		ncc_pair_list_append(input, &input->vps, template_invariant->vps);
-	}
-
-	/*
-	 *	Append input with template variable attributes, then update them for next generation.
-	 */
-	if (template_variable) {
-		ncc_pair_list_append(input, &input->vps, template_variable->vps);
-
-		fr_cursor_t cursor;
-		VALUE_PAIR *vp;
-
-		for (vp = fr_cursor_init(&cursor, &template_variable->vps);
-		     vp;
-		     vp = fr_cursor_next(&cursor))
-		{
-			/* Only DHCP attributes can be variable. */
-			//if (fr_dict_vendor_num_by_da(vp->da) != DHCP_MAGIC_VENDOR) continue;
-			if (fr_dict_by_da(vp->da) != dict_dhcpv4) continue;
-
-			/* Update value according to template variable mode. */
-			switch (templ_var) {
-			case DPC_TEMPL_VAR_INCREMENT:
-				dpc_pair_value_increment(vp);
-				break;
-			case DPC_TEMPL_VAR_RANDOM:
-				dpc_pair_value_randomize(vp);
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	return input;
-}
-#endif
-
-/*
  *	Store transport information in session context.
  */
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input)
@@ -2044,8 +1975,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!input->ext.dst.port) input->ext.dst.port = server_ep.port;
 	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
 
-	if (!with_template && !vp_data && input->ext.code == FR_CODE_UNDEFINED) {
-		/* Note: in template mode, we do not require a specified message type in the two input items. */
+	if (!vp_data && input->ext.code == FR_CODE_UNDEFINED) {
 		WARN("No packet type specified in input vps or command line, discarding input (id: %u)", input->id);
 		return false;
 	}
@@ -2172,21 +2102,6 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	}
 
 	DEBUG("Done reading input, list size: %d", vps_list_in.size);
-
-	/* Template: keep track of the two input items we'll need. */
-	if (with_template) {
-		template_invariant = (dpc_input_t *)vps_list_in.head;
-		template_variable = (dpc_input_t *)vps_list_in.tail;
-
-		/* Ensure a message type is provided. */
-		if (template_invariant->ext.code == FR_CODE_UNDEFINED) {
-			ERROR("No packet type specified in template input vps or command line");
-			return -1;
-		}
-
-		/* If only one input item provided: this will be the variable list (no invariant). */
-		if (vps_list_in.size < 2) template_invariant = NULL;
-	}
 
 	return 0;
 }
