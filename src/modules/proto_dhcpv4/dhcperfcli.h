@@ -55,6 +55,12 @@ extern fr_dict_t *dict_dhcpv4;
 #undef DEBUG2
 #define DEBUG2(fmt, ...) DPC_DEBUG(2, fmt, ## __VA_ARGS__)
 
+#undef DEBUG3
+#define DEBUG3(fmt, ...) DPC_DEBUG(3, fmt, ## __VA_ARGS__)
+
+#undef DEBUG4
+#define DEBUG4(fmt, ...) DPC_DEBUG(4, fmt, ## __VA_ARGS__)
+
 // INFO, WARN, ERROR and PERROR defined in log.h should be sufficient (for now at least)
 /*
 #undef WARN

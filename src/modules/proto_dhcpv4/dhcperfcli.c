@@ -240,7 +240,6 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input);
 static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
-//static dpc_input_t *dpc_gen_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
@@ -1993,17 +1992,48 @@ static bool dpc_parse_input(dpc_input_t *input)
 }
 
 /*
+ *	Debug an input item.
+ */
+static void dpc_input_debug(dpc_input_t *input)
+{
+	char ep_buf[NCC_ENDPOINT_STRLEN] = "";
+
+	if (!input || dpc_debug_lvl < 2) return;
+
+	DEBUG2("Input (id: %u) vps read:", input->id);
+	fr_pair_list_fprint(fr_log_fp, input->vps);
+
+	if (dpc_debug_lvl < 3) return;
+
+	if (input->max_use) {
+		DEBUG3("  Max use: %u", input->max_use);
+	}
+
+	if (input->ext.code) {
+		DEBUG3("  Packet code: %u", input->ext.code);
+	}
+	if (input->ext.workflow) {
+		DEBUG3("  Workflow: %u", input->ext.workflow);
+	}
+	if (input->ext.xid != DPC_PACKET_ID_UNASSIGNED) {
+		DEBUG3("  Xid: %u", input->ext.xid);
+	}
+
+	if (ipaddr_defined(input->ext.src.ipaddr)) {
+		DEBUG3("  Src: %s", ncc_endpoint_sprint(ep_buf, &input->ext.src));
+	}
+	if (ipaddr_defined(input->ext.dst.ipaddr)) {
+		DEBUG3("  Dst: %s", ncc_endpoint_sprint(ep_buf, &input->ext.dst));
+	}
+	DEBUG3("  Gateway: %s", input->ext.gateway ? "yes" : "no");
+}
+
+/*
  *	Handle a list of input vps we've just read.
  */
 static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list)
 {
 	input->id = input_num ++;
-
-	/* Trace what we've read. */
-	if (dpc_debug_lvl > 1) {
-		DEBUG2("Input (id: %u) vps read:", input->id);
-		fr_pair_list_fprint(fr_log_fp, input->vps);
-	}
 
 	if (!dpc_parse_input(input)) {
 		/*
@@ -2013,10 +2043,12 @@ static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list)
 		return;
 	}
 
+	/* Trace what we've read. */
+	dpc_input_debug(input);
+
 	/*
 	 *	Add it to the list of input items.
 	 */
-	//dpc_input_item_add(list, input);
 	NCC_LIST_ENQUEUE(list, input);
 }
 
@@ -2032,9 +2064,6 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 	 *	Loop until the file is done.
 	 */
 	do {
- 		/* Template needs two input items only, ignore if there are more. */
-		if (with_template && list->size >= 2) break;
-
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 		input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
