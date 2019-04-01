@@ -163,10 +163,13 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 	fr_type_t type = FR_TYPE_ETHERNET;
 	fr_value_box_t vb = { 0 };
 	ssize_t len;
-	size_t inlen = strlen(in);
+	size_t inlen = 0;
+	char const *p = NULL;
 
-	/* Range delimiter can be omitted (only lower bound is provided). */
-	char const *p = strchr(in, '-');
+	if (in) {
+		inlen = strlen(in);
+		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
+	}
 
 	if ((inlen > 0) && (!p || p > in)) {
 		len = (p ? p - in : -1);
