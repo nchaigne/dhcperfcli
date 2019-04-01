@@ -166,14 +166,22 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 
 	/* Range delimiter can be omitted (only lower bound is provided). */
 	char const *p = strchr(in, '-');
-	inlen = (p ? p - in : -1);
 
-	/* Convert the first Ethernet address. */
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, inlen, '\0', false) < 0) {
-		fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
-		return -1;
+	if (!p || p > in) {
+		inlen = (p ? p - in : -1);
+
+		/* Convert the first Ethernet address. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, inlen, '\0', false) < 0) {
+			fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
+			return -1;
+		}
+		memcpy(ethaddr1, &vb.vb_ether, 6);
+
+	} else {
+		/* No first Ethernet address: use 00:00:00:00:00:01 as lower bound. */
+		uint8_t ethaddr_min[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+		memcpy(ethaddr1, &ethaddr_min, 6);
 	}
-	memcpy(ethaddr1, &vb.vb_ether, 6);
 
 	if (p) {
 		/* Convert the second Ethernet address. */
