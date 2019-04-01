@@ -123,11 +123,13 @@ static struct timeval tv_timeout;
 static uint32_t base_xid = 0;
 static uint32_t session_max_active = 1;
 static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
+static float duration_max = 0; /* Default: unlimited. */
+static float rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
+
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 static struct timeval tv_job_start; /* Job start timestamp. */
 static struct timeval tv_job_end; /* Job end timestamp. */
-static float duration_max = 0; /* Default: unlimited. */
-static float rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
+static struct timeval tve_sessions_ini_end; /* End timestamp of starting new sessions. */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -247,6 +249,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
+static void dpc_end_start_sessions(void);
 static uint32_t dpc_loop_start_sessions(void);
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
@@ -1413,12 +1416,12 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 		dpc_input_set_transport(input);
 		return input;
 	}
-#if 0
+
 	if (not_done == 0) {
 		INFO("No remaining active input: will not start any new session.");
 		dpc_end_start_sessions();
 	}
-#endif
+
 	return NULL;
 }
 
@@ -1638,6 +1641,28 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 	 */
 	*max_new_sessions = (rate_limit * elapsed_T2) - (my_stats->num + session_num_active);
 	return true;
+}
+
+
+/*
+ *	Stop starting new sessions.
+ */
+static void dpc_end_start_sessions(void)
+{
+	if (start_sessions_flag) {
+		start_sessions_flag = false;
+		gettimeofday(&tve_sessions_ini_end, NULL);
+
+		/* Also mark all input as done. */
+		ncc_list_item_t *list_item = vps_list_in.head;
+		while (list_item) {
+			dpc_input_t *input = (dpc_input_t *)list_item;
+			input->done = true;
+			input->tve_end = tve_sessions_ini_end;
+
+			list_item = list_item->next;
+		}
+	}
 }
 
 /*
