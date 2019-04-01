@@ -1763,6 +1763,9 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 {
 	static bool warn_inaddr_any = true;
 
+	/* We need a source IP address to pre-allocate the socket. */
+	if (!ipaddr_defined(input->ext.src.ipaddr)) return;
+
 #ifdef HAVE_LIBPCAP
 	if (iface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
 	    && (dpc_ipaddr_is_broadcast(&input->ext.dst.ipaddr) == 1)
@@ -1957,16 +1960,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
 	 *	If nothing goes, fall back to default.
 	 */
-	if (   !ipaddr_defined(input->ext.src.ipaddr)
-	    && (!with_template && gateway_list) /* If using a template, do not assign a gateway now. */
-	) {
-		input->ext.gateway = dpc_gateway_get_next();
-		input->ext.src = *(input->ext.gateway);
-	}
-
 	if (!input->ext.src.port) input->ext.src.port = client_ep.port;
 	if (   !ipaddr_defined(input->ext.src.ipaddr)
-	    && !(with_template && gateway_list) /* If using a template with gateway, let this unspecified for now. */
+	    && !gateway_list /* If using a gateway, let this unspecified for now. */
 	   ) {
 		input->ext.src.ipaddr = client_ep.ipaddr;
 	}
@@ -2025,7 +2021,6 @@ static void dpc_input_debug(dpc_input_t *input)
 	if (ipaddr_defined(input->ext.dst.ipaddr)) {
 		DEBUG3("  Dst: %s", ncc_endpoint_sprint(ep_buf, &input->ext.dst));
 	}
-	DEBUG3("  Gateway: %s", input->ext.gateway ? "yes" : "no");
 }
 
 /*

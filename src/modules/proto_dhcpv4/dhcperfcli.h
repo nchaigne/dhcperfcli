@@ -230,7 +230,6 @@ typedef struct dpc_input_ext {
 
 	ncc_endpoint_t src;      //!< Src IP address and port.
 	ncc_endpoint_t dst;      //!< Dst IP address and port.
-	ncc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
 	bool with_pcap;          //!< If using a pcap socket (no src IP, dst = broadcast, and pcap is available).
 } dpc_input_ext_t;
 
