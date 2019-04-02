@@ -254,6 +254,11 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 	return strlen(*out);
 }
 
+ssize_t ncc_xlat_num_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_num_range(ctx, out, outlen, NULL, NULL, NULL, fmt);
+}
+
 /** Generate random numeric values from a range.
  *
  *  %{num.rand:1000-2000} -> 1594, ...
@@ -475,7 +480,7 @@ ssize_t ncc_xlat_ipaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, 
 /*
  *	Parse an Ethernet address range "<Ether1>-<Ether2>" and extract <Ether1> / <Ether2> as uint8_t[6].
  */
-static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const *in)
+int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const *in)
 {
 	fr_type_t type = FR_TYPE_ETHERNET;
 	fr_value_box_t vb = { 0 };
