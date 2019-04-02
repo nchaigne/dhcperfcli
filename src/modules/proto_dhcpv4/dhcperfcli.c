@@ -651,6 +651,12 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		 */
 		packet->id = session->input->ext.xid;
 
+		/* An xlat expression may have been provided. Go look in packet vps. */
+		if (packet->id == DPC_PACKET_ID_UNASSIGNED && with_xlat) {
+			VALUE_PAIR *vp_xid = ncc_pair_find_by_da(packet->vps, attr_dhcp_transaction_id);
+			if (vp_xid) packet->id = vp_xid->vp_uint32;
+		}
+
 		/*
 		 *	Allocate an id, and prepare the packet (socket fd, src addr)
 		 */
