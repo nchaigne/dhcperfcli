@@ -1806,7 +1806,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 {
 	fr_cursor_t cursor;
 	VALUE_PAIR *vp;
-	VALUE_PAIR *vp_data = NULL, *vp_workflow_type = NULL;
+	VALUE_PAIR *vp_encoded_data = NULL, *vp_workflow_type = NULL;
 
 	input->ext.code = FR_CODE_UNDEFINED;
 
@@ -1815,9 +1815,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If so, extract (if there is one) the message type and the xid.
 	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
-	if ((vp_data = ncc_pair_find_by_da(input->vps, attr_encoded_data))) {
-		input->ext.code = dpc_message_type_extract(vp_data);
-		input->ext.xid = dpc_xid_extract(vp_data);
+	if ((vp_encoded_data = ncc_pair_find_by_da(input->vps, attr_encoded_data))) {
+		input->ext.code = dpc_message_type_extract(vp_encoded_data);
+		input->ext.xid = dpc_xid_extract(vp_encoded_data);
 	} else {
 		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
 		vp_workflow_type = ncc_pair_find_by_da(input->vps, attr_workflow_type);
@@ -1906,15 +1906,15 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 		/*
 		 * DHCP attributes.
-		 * Note: if we have pre-encoded DHCP data (vp_data), all other DHCP attributes are silently ignored.
+		 * Note: if we have pre-encoded DHCP data (vp_encoded_data), all other DHCP attributes are silently ignored.
 		 */
 		if (vp->da == attr_dhcp_message_type) {
 			/* Packet type. */
-			if (!vp_data) input->ext.code = vp->vp_uint32;
+			if (!vp_encoded_data) input->ext.code = vp->vp_uint32;
 
 		} else if (vp->da == attr_dhcp_transaction_id) {
 			/* Prefered xid. */
-			if (!vp_data) input->ext.xid = vp->vp_uint32;
+			if (!vp_encoded_data) input->ext.xid = vp->vp_uint32;
 
 		/*
 		 * Control attributes
@@ -1938,7 +1938,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	/*
 	 *	If not specified in input vps, use default values.
 	 */
-	if (!vp_data) {
+	if (!vp_encoded_data) {
 		if (input->ext.code == FR_CODE_UNDEFINED) {
 			/*
 			 *	Handling a workflow. All workflows start with a Discover.
@@ -1971,7 +1971,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	if (!input->ext.dst.port) input->ext.dst.port = server_ep.port;
 	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
 
-	if (!vp_data && input->ext.code == FR_CODE_UNDEFINED) {
+	if (!vp_encoded_data && input->ext.code == FR_CODE_UNDEFINED) {
 		WARN("No packet type specified in input vps or command line. Discarding input (id: %u)", input->id);
 		return false;
 	}
