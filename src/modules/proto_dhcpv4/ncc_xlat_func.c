@@ -17,6 +17,7 @@
 /*
  *	Xlat names.
  */
+#define NCC_XLAT_NUM_RANGE     "num.range"
 #define NCC_XLAT_IPADDR_RANGE  "ipaddr.range"
 #define NCC_XLAT_IPADDR_RAND   "ipaddr.rand"
 #define NCC_XLAT_ETHADDR_RANGE "ethaddr.range"
@@ -160,6 +161,101 @@ static ncc_xlat_ctx_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 
 
 /*
+ *	Parse a num range "<num1>-<num2>" and extract <num1> / <num2> as uint64_t.
+ */
+#define NUM_MAX_DIGITS 20 // for uint64_t (2^64 - 1)
+
+int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
+{
+	fr_type_t type = FR_TYPE_UINT64;
+	fr_value_box_t vb = { 0 };
+	ssize_t len;
+	size_t inlen = 0;
+	char const *p = NULL;
+
+	if (in) {
+		inlen = strlen(in);
+		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
+	}
+
+	if ((inlen > 0) && (!p || p > in)) {
+		len = (p ? p - in : -1);
+
+		/* Convert the first number. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+			fr_strerror_printf("Invalid first number, in: [%s]", in);
+			return -1;
+		}
+		*num1 = vb.vb_uint64;
+
+	} else {
+		/* No first number: use 0 as lower bound. */
+		*num1 = 0;
+	}
+
+	if (p && p < in + inlen - 1) {
+		/* Convert the second number. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+			fr_strerror_printf("Invalid second number, in: [%s]", in);
+			return -1;
+		}
+		*num2 = vb.vb_uint64;
+
+	} else {
+		/* No first number: use 0 as lower bound. */
+		*num2 = UINT64_MAX;
+	}
+
+	if (*num1 > *num2) { /* Not a valid range. */
+		fr_strerror_printf("Not a valid num range (%"PRIu64" > %"PRIu64")", *num1, *num2);
+		return -1;
+	}
+	return 0;
+}
+
+/** Generate increasing numeric values from a range.
+ *
+ *  %{num.range:1000-2000} -> 1000, 1001, etc.
+ */
+static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	*out = NULL;
+
+	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
+	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
+	if (!xlat_ctx) return -1; /* Cannot happen. */
+
+	if (!xlat_ctx->type) {
+		/* Not yet parsed. */
+		uint64_t num1, num2;
+		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat num range: %s", fr_strerror());
+			return -1;
+		}
+
+		xlat_ctx->type = NCC_CTX_TYPE_NUM_RANGE;
+		xlat_ctx->num_range.min = num1;
+		xlat_ctx->num_range.max = num2;
+		xlat_ctx->num_range.next = num1;
+	}
+
+	*out = talloc_typed_asprintf(ctx, "%lu", xlat_ctx->num_range.next);
+	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+	/* Prepare next value. */
+	if (xlat_ctx->num_range.next == xlat_ctx->num_range.max) {
+		xlat_ctx->num_range.next = xlat_ctx->num_range.min;
+	} else {
+		xlat_ctx->num_range.next ++;
+	}
+
+	return strlen(*out);
+}
+
+
+/*
  *	Parse an IPv4 range "<IP1>-<IP2>" and extract <IP1> / <IP2> as fr_ipaddr_t.
  */
 int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char const *in)
@@ -253,9 +349,11 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 		fr_strerror_printf("%s", fr_syserror(errno));
 		return -1;
 	}
+
 	*out = talloc_typed_asprintf(ctx, "%s", ipaddr_buf);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
 
+	/* Prepare next value. */
 	if (xlat_ctx->ipaddr_range.next == xlat_ctx->ipaddr_range.max) {
 		xlat_ctx->ipaddr_range.next = xlat_ctx->ipaddr_range.min;
 	} else {
@@ -433,6 +531,7 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 	*out = talloc_typed_asprintf(ctx, "%s", ethaddr_buf);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
 
+	/* Prepare next value. */
 	if (memcmp(xlat_ctx->ethaddr_range.next, xlat_ctx->ethaddr_range.max, 6) == 0) {
 		memcpy(xlat_ctx->ethaddr_range.next, xlat_ctx->ethaddr_range.min, 6);
 	} else {
@@ -520,6 +619,8 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
  */
 void ncc_xlat_register(void)
 {
+	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
+
 	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RANGE, _ncc_xlat_ipaddr_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RAND, _ncc_xlat_ipaddr_rand, NULL, NULL, 0, 0, true);
 
