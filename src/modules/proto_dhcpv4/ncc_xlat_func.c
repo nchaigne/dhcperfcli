@@ -18,6 +18,7 @@
  *	Xlat names.
  */
 #define NCC_XLAT_NUM_RANGE     "num.range"
+#define NCC_XLAT_NUM_RAND      "num.rand"
 #define NCC_XLAT_IPADDR_RANGE  "ipaddr.range"
 #define NCC_XLAT_IPADDR_RAND   "ipaddr.rand"
 #define NCC_XLAT_ETHADDR_RANGE "ethaddr.range"
@@ -29,6 +30,7 @@
  */
 typedef enum {
 	NCC_CTX_TYPE_NUM_RANGE = 1,
+	NCC_CTX_TYPE_NUM_RAND,
 	NCC_CTX_TYPE_IPADDR_RANGE,
 	NCC_CTX_TYPE_IPADDR_RAND,
 	NCC_CTX_TYPE_ETHADDR_RANGE,
@@ -252,6 +254,51 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 	}
 
 	return strlen(*out);
+}
+
+/** Generate random numeric values from a range.
+ *
+ *  %{num.rand:1000-2000} -> 1594, ...
+ */
+static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	uint64_t delta, value;
+
+	*out = NULL;
+
+	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
+	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
+	if (!xlat_ctx) return -1; /* Cannot happen. */
+
+	if (!xlat_ctx->type) {
+		/* Not yet parsed. */
+		uint64_t num1, num2;
+		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat num range: %s", fr_strerror());
+			return -1;
+		}
+
+		xlat_ctx->type = NCC_CTX_TYPE_NUM_RAND;
+		xlat_ctx->num_range.min = num1;
+		xlat_ctx->num_range.max = num2;
+	}
+
+	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
+
+	delta = xlat_ctx->num_range.max - xlat_ctx->num_range.min + 1;
+	value = (uint64_t)(rnd * delta) + xlat_ctx->num_range.min;
+
+	*out = talloc_typed_asprintf(ctx, "%lu", value);
+	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+	return strlen(*out);
+}
+
+ssize_t ncc_xlat_num_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_num_rand(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
 
@@ -620,6 +667,7 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
 void ncc_xlat_register(void)
 {
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
+	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RAND, _ncc_xlat_num_rand, NULL, NULL, 0, 0, true);
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RANGE, _ncc_xlat_ipaddr_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RAND, _ncc_xlat_ipaddr_rand, NULL, NULL, 0, 0, true);
