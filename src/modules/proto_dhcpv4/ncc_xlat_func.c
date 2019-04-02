@@ -490,7 +490,8 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 
 	/* FreeRADIUS seems buggy when handling just an int, cf. fr_value_box_from_str (src\lib\util\value.c):
 	 * "We assume the number is the bigendian representation of the ethernet address."
-	 * But it doesn't work (?)...
+	 * But it doesn't work:
+	 * https://github.com/FreeRADIUS/freeradius-server/issues/2596
 	 *
 	 * Better check and complain ourselves so we know what's going on.
 	 */
