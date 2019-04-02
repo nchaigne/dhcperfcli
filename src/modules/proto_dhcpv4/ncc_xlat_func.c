@@ -29,6 +29,7 @@
 typedef enum {
 	NCC_CTX_TYPE_NUM_RANGE = 1,
 	NCC_CTX_TYPE_IPADDR_RANGE,
+	NCC_CTX_TYPE_IPADDR_RAND,
 	NCC_CTX_TYPE_ETHADDR_RANGE,
 	NCC_CTX_TYPE_ETHADDR_RAND,
 } ncc_xlat_ctx_type_t;
@@ -269,6 +270,64 @@ ssize_t ncc_xlat_ipaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
 	return _ncc_xlat_ipaddr_range(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
+/** Generate random IP addr values from a range.
+ *
+ *  %{ipaddr.rand:10.0.0.1-10.0.0.255} -> 10.0.0.120, ...
+ *
+ *  %{ipaddr.rand}
+ */
+static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	uint32_t num1, num2, delta;
+	uint32_t value;
+
+	*out = NULL;
+
+	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
+	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
+	if (!xlat_ctx) return -1; /* Cannot happen. */
+
+	if (!xlat_ctx->type) {
+		/* Not yet parsed. */
+		fr_ipaddr_t ipaddr1, ipaddr2;
+		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat ipaddr range: %s", fr_strerror());
+			return -1;
+		}
+
+		xlat_ctx->type = NCC_CTX_TYPE_IPADDR_RAND;
+		xlat_ctx->ipaddr_range.min = ipaddr1.addr.v4.s_addr;
+		xlat_ctx->ipaddr_range.max = ipaddr2.addr.v4.s_addr;
+	}
+
+	num1 = ntohl(xlat_ctx->ipaddr_range.min);
+	num2 = ntohl(xlat_ctx->ipaddr_range.max);
+
+	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
+
+	delta = num2 - num1 + 1;
+	value = (uint32_t)(rnd * delta) + num1;
+
+	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	struct in_addr addr;
+	addr.s_addr = htonl(value);;
+	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) {
+		fr_strerror_printf("%s", fr_syserror(errno));
+		return -1;
+	}
+	*out = talloc_typed_asprintf(ctx, "%s", ipaddr_buf);
+	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+	return strlen(*out);
+}
+
+ssize_t ncc_xlat_ipaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_ipaddr_rand(ctx, out, outlen, NULL, NULL, NULL, fmt);
+}
+
 
 /*
  *	Parse an Ethernet address range "<Ether1>-<Ether2>" and extract <Ether1> / <Ether2> as uint8_t[6].
@@ -462,6 +521,7 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
 void ncc_xlat_register(void)
 {
 	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RANGE, _ncc_xlat_ipaddr_range, NULL, NULL, 0, 0, true);
+	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RAND, _ncc_xlat_ipaddr_rand, NULL, NULL, 0, 0, true);
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RANGE, _ncc_xlat_ethaddr_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RAND, _ncc_xlat_ethaddr_rand, NULL, NULL, 0, 0, true);
