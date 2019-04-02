@@ -32,6 +32,10 @@
 	}
 
 
+/* Verify that a VP is "data" (i.e. not "xlat"). */
+#define IS_VP_DATA(_vp) (_vp && _vp->type == VT_DATA)
+
+
 typedef struct ncc_list_item ncc_list_item_t;
 
 /*

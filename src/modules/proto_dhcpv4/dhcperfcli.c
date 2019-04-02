@@ -1815,7 +1815,8 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If so, extract (if there is one) the message type and the xid.
 	 *	All other DHCP attributes provided through value pairs are ignored.
 	 */
-	if ((vp_encoded_data = ncc_pair_find_by_da(input->vps, attr_encoded_data))) {
+	vp_encoded_data = ncc_pair_find_by_da(input->vps, attr_encoded_data);
+	if (IS_VP_DATA(vp_encoded_data)) {
 		input->ext.code = dpc_message_type_extract(vp_encoded_data);
 		input->ext.xid = dpc_xid_extract(vp_encoded_data);
 	} else {
@@ -1903,6 +1904,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 		 *	Process special attributes. They take precedence over command line arguments.
 		 *	Note: xlat is not supported for these.
 		 */
+		if (!IS_VP_DATA(vp)) continue;
 
 		/*
 		 * DHCP attributes.
