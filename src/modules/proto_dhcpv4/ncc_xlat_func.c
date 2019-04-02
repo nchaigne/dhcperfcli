@@ -493,19 +493,17 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
 		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
 	}
 
-	/* FreeRADIUS seems buggy when handling just an int, cf. fr_value_box_from_str (src\lib\util\value.c):
-	 * "We assume the number is the bigendian representation of the ethernet address."
-	 * But it doesn't work:
+	/* FreeRADIUS bug when handling just an int, cf. fr_value_box_from_str (src\lib\util\value.c)
 	 * https://github.com/FreeRADIUS/freeradius-server/issues/2596
-	 *
-	 * Better check and complain ourselves so we know what's going on.
+	 * => Now fixed, so we can allow int values once again.
 	 */
 	if ((inlen > 0) && (!p || p > in)) {
 		len = (p ? p - in : -1);
 
 		/* Convert the first Ethernet address. */
-		if (is_integer_n(in, len)
-		    || fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		//if (is_integer_n(in, len)
+		//    || fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
 			fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
 			return -1;
 		}
@@ -519,8 +517,9 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
 
 	if (p && p < in + inlen - 1) {
 		/* Convert the second Ethernet address. */
-		if (is_integer_n(p + 1, -1)
-		    || fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		//if (is_integer_n(p + 1, -1)
+		//    || fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
 			fr_strerror_printf("Invalid second ethaddr, in: [%s]", in);
 			return -1;
 		}
