@@ -2,15 +2,12 @@
 #
 #	Internal attributes defined for dhcperfcli.
 #
-#	Using range 3000-3999 (Site-local attributes), this is alright because this dictionary
-#	is only loaded by dhcperfcli, so there's no risk of conflict.
-#
 
 FLAGS internal
 
-ATTRIBUTE DHCP-Encoded-Data            3000   octets
-ATTRIBUTE DHCP-Authorized-Server       3001   ipaddr
-ATTRIBUTE DHCP-Workflow-Type           3002   byte
+ATTRIBUTE DHCP-Encoded-Data            3000   octets virtual
+ATTRIBUTE DHCP-Authorized-Server       3001   ipaddr virtual
+ATTRIBUTE DHCP-Workflow-Type           3002   byte virtual
 
 VALUE     DHCP-Workflow-Type           DORA           1
 VALUE     DHCP-Workflow-Type           DORA-Decline   2
