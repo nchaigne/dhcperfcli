@@ -165,8 +165,6 @@ static ncc_xlat_ctx_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 /*
  *	Parse a num range "<num1>-<num2>" and extract <num1> / <num2> as uint64_t.
  */
-#define NUM_MAX_DIGITS 20 // for uint64_t (2^64 - 1)
-
 int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 {
 	fr_type_t type = FR_TYPE_UINT64;
