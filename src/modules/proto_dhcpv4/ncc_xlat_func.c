@@ -28,6 +28,7 @@ typedef enum {
 	NCC_CTX_TYPE_NUM_RANGE = 1,
 	NCC_CTX_TYPE_IPADDR_RANGE,
 	NCC_CTX_TYPE_ETHADDR_RANGE,
+	NCC_CTX_TYPE_ETHADDR_RAND,
 } ncc_xlat_ctx_type_t;
 
 typedef struct sic_xlat_ctx {
@@ -296,23 +297,27 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 
 	*out = NULL;
 
-	//TODO: parse once, save as context?
+	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
+	if (!xlat_ctx) return -1; /* Cannot happen. */
 
-	if (fmt) {
+	if (!xlat_ctx->type) {
+		/* Not yet parsed. */
 		uint8_t ethaddr1[6], ethaddr2[6];
-		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) return -1;
+		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat ethaddr range: %s", fr_strerror());
+			return -1;
+		}
 
-		memcpy(&num1, ethaddr1, 6);
-		num1 = (ntohll(num1) >> 16);
-
-		memcpy(&num2, ethaddr2, 6);
-		num2 = (ntohll(num2) >> 16);
-
-	} else {
-		/* Get a random value from 00:00:00:00:00:01 to ff:ff:ff:ff:ff:ff:fe. (excluding zero and broadcast) */
-		num1 = 1;
-		num2 = 0xffffffffffff - 1;
+		xlat_ctx->type = NCC_CTX_TYPE_ETHADDR_RAND;
+		memcpy(xlat_ctx->ethaddr_range.min, ethaddr1, 6);
+		memcpy(xlat_ctx->ethaddr_range.max, ethaddr2, 6);
 	}
+
+	memcpy(&num1, xlat_ctx->ethaddr_range.min, 6);
+	num1 = (ntohll(num1) >> 16);
+
+	memcpy(&num2, xlat_ctx->ethaddr_range.max, 6);
+	num2 = (ntohll(num2) >> 16);
 
 	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
 
