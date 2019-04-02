@@ -17,6 +17,8 @@
 /*
  *	Xlat names.
  */
+#define NCC_XLAT_IPADDR_RANGE  "ipaddr.range"
+#define NCC_XLAT_IPADDR_RAND   "ipaddr.rand"
 #define NCC_XLAT_ETHADDR_RANGE "ethaddr.range"
 #define NCC_XLAT_ETHADDR_RAND  "ethaddr.rand"
 
@@ -31,7 +33,7 @@ typedef enum {
 	NCC_CTX_TYPE_ETHADDR_RAND,
 } ncc_xlat_ctx_type_t;
 
-typedef struct sic_xlat_ctx {
+typedef struct ncc_xlat_ctx {
 	/* Generic chaining */
 	ncc_list_t *list;       //!< The list to which this entry belongs (NULL for an unchained entry).
 	ncc_list_item_t *prev;
@@ -153,6 +155,100 @@ static ncc_xlat_ctx_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 	FX_request->child_number ++; /* Prepare next xlat context. */
 
 	return xlat_ctx;
+}
+
+
+/*
+ *	Parse an IPv4 range "<IP1>-<IP2>" and extract <IP1> / <IP2> as fr_ipaddr_t.
+ */
+int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char const *in)
+{
+	fr_type_t type = FR_TYPE_IPV4_ADDR;
+	fr_value_box_t vb;
+
+	char const *p = strchr(in, '-');
+	if (!p) { /* Mandatory range delimiter. */
+		fr_strerror_printf("No range delimiter, in: [%s]", in);
+		return -1;
+	}
+
+	/* Convert the first IPv4 address. */
+	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, (p - in), '\0', false) < 0) {
+		fr_strerror_printf("Invalid first ipaddr, in: [%s]", in);
+		return -1;
+	}
+	*ipaddr1 = vb.vb_ip;
+
+	/* Convert the second IPv4 address. */
+	if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		fr_strerror_printf("Invalid second ipaddr, in: [%s]", in);
+		return -1;
+	}
+	*ipaddr2 = vb.vb_ip;
+
+	if (ipaddr1->af != AF_INET || ipaddr2->af  != AF_INET) { /* Not IPv4. */
+		fr_strerror_printf("Only IPv4 addresses are supported, in: [%s]", in);
+		return -1;
+	}
+
+	if (ntohl(ipaddr1->addr.v4.s_addr) > ntohl(ipaddr2->addr.v4.s_addr)) { /* Not a valid range. */
+		fr_strerror_printf("Not a valid ipaddr range, in: [%s]", in);
+		return -1;
+	}
+
+	return 0;
+}
+
+/** Generate increasing IP addr values from a range.
+ *
+ *  %{ipaddr.range:10.0.0.1-10.0.0.255} -> 10.0.0.1, 10.0.0.2, etc.
+ */
+static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	*out = NULL;
+
+	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
+	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
+	if (!xlat_ctx) return -1; /* Cannot happen. */
+
+	if (!xlat_ctx->type) {
+		/* Not yet parsed. */
+		fr_ipaddr_t ipaddr1, ipaddr2;
+		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat ipaddr range: %s", fr_strerror());
+			return -1;
+		}
+
+		xlat_ctx->type = NCC_CTX_TYPE_IPADDR_RANGE;
+		xlat_ctx->ipaddr_range.min = ipaddr1.addr.v4.s_addr;
+		xlat_ctx->ipaddr_range.max = ipaddr2.addr.v4.s_addr;
+		xlat_ctx->ipaddr_range.next = ipaddr1.addr.v4.s_addr;
+	}
+
+	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	struct in_addr addr;
+	addr.s_addr = xlat_ctx->ipaddr_range.next;
+	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) {
+		fr_strerror_printf("%s", fr_syserror(errno));
+		return -1;
+	}
+	*out = talloc_typed_asprintf(ctx, "%s", ipaddr_buf);
+	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+	if (xlat_ctx->ipaddr_range.next == xlat_ctx->ipaddr_range.max) {
+		xlat_ctx->ipaddr_range.next = xlat_ctx->ipaddr_range.min;
+	} else {
+		xlat_ctx->ipaddr_range.next = htonl(ntohl(xlat_ctx->ipaddr_range.next) + 1);
+	}
+
+	return strlen(*out);
+}
+
+ssize_t ncc_xlat_ipaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_ipaddr_range(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
 
@@ -347,6 +443,8 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
  */
 void ncc_xlat_register(void)
 {
+	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RANGE, _ncc_xlat_ipaddr_range, NULL, NULL, 0, 0, true);
+
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RANGE, _ncc_xlat_ethaddr_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RAND, _ncc_xlat_ethaddr_rand, NULL, NULL, 0, 0, true);
 }
