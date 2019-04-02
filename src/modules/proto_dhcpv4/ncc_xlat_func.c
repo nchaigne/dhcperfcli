@@ -164,27 +164,45 @@ static ncc_xlat_ctx_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char const *in)
 {
 	fr_type_t type = FR_TYPE_IPV4_ADDR;
-	fr_value_box_t vb;
+	fr_value_box_t vb = { 0 };
+	ssize_t len;
+	size_t inlen = 0;
+	char const *p = NULL;
 
-	char const *p = strchr(in, '-');
-	if (!p) { /* Mandatory range delimiter. */
-		fr_strerror_printf("No range delimiter, in: [%s]", in);
-		return -1;
+	if (in) {
+		inlen = strlen(in);
+		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
 	}
 
-	/* Convert the first IPv4 address. */
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, (p - in), '\0', false) < 0) {
-		fr_strerror_printf("Invalid first ipaddr, in: [%s]", in);
-		return -1;
-	}
-	*ipaddr1 = vb.vb_ip;
+	if ((inlen > 0) && (!p || p > in)) {
+		len = (p ? p - in : -1);
 
-	/* Convert the second IPv4 address. */
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
-		fr_strerror_printf("Invalid second ipaddr, in: [%s]", in);
-		return -1;
+		/* Convert the first IPv4 address. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+			fr_strerror_printf("Invalid first ipaddr, in: [%s]", in);
+			return -1;
+		}
+		*ipaddr1 = vb.vb_ip;
+
+	} else {
+		/* No first IPv4 address: use 0.0.0.1 as lower bound. */
+		fr_ipaddr_t ipaddr_min = { .af = AF_INET, .prefix = 32, .addr.v4.s_addr = htonl(0x00000001) };
+		*ipaddr1 = ipaddr_min;
 	}
-	*ipaddr2 = vb.vb_ip;
+
+	if (p && p < in + inlen - 1) {
+		/* Convert the second IPv4 address. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+			fr_strerror_printf("Invalid second ipaddr, in: [%s]", in);
+			return -1;
+		}
+		*ipaddr2 = vb.vb_ip;
+
+	} else {
+		/* No second IPv4 address: use 255.255.255.254 as upper bound. */
+		fr_ipaddr_t ipaddr_max = { .af = AF_INET, .prefix = 32, .addr.v4.s_addr = htonl(0xfffffffe) };
+		*ipaddr2 = ipaddr_max;
+	}
 
 	if (ipaddr1->af != AF_INET || ipaddr2->af  != AF_INET) { /* Not IPv4. */
 		fr_strerror_printf("Only IPv4 addresses are supported, in: [%s]", in);
@@ -315,7 +333,7 @@ static int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], cha
 	num2 = (ntohll(num2) >> 16);
 
 	if (num1 > num2) { /* Not a valid range. */
-		fr_strerror_printf("Not a valid ipaddr range, in: [%s]", in);
+		fr_strerror_printf("Not a valid ethaddr range, in: [%s]", in);
 		return -1;
 	}
 
