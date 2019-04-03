@@ -108,6 +108,7 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 
 	FX_request->control = vps; /* Allow to use %{control:Attr} */
 	FX_request->packet->vps = vps; /* Allow to use %{packet:Attr} or directly %{Attr} */
+	FX_request->rcode = 0;
 }
 
 /*
@@ -128,7 +129,6 @@ int ncc_xlat_get_rcode()
 {
 	return FX_request->rcode;
 }
-
 
 #define XLAT_ERR_RETURN \
 	request->rcode = -1; \
@@ -247,7 +247,7 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 		uint64_t num1, num2;
 		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat num range: %s", fr_strerror());
-			return -1;
+			XLAT_ERR_RETURN;
 		}
 
 		xlat_ctx->type = NCC_CTX_TYPE_NUM_RANGE;
@@ -295,7 +295,7 @@ static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 		uint64_t num1, num2;
 		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat num range: %s", fr_strerror());
-			return -1;
+			XLAT_ERR_RETURN;
 		}
 
 		xlat_ctx->type = NCC_CTX_TYPE_NUM_RAND;
@@ -398,7 +398,7 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 		fr_ipaddr_t ipaddr1, ipaddr2;
 		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat ipaddr range: %s", fr_strerror());
-			return -1;
+			XLAT_ERR_RETURN;
 		}
 
 		xlat_ctx->type = NCC_CTX_TYPE_IPADDR_RANGE;
@@ -410,9 +410,9 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	struct in_addr addr;
 	addr.s_addr = xlat_ctx->ipaddr_range.next;
-	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) {
+	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) { /* Cannot happen. */
 		fr_strerror_printf("%s", fr_syserror(errno));
-		return -1;
+		XLAT_ERR_RETURN;
 	}
 
 	*out = talloc_typed_asprintf(ctx, "%s", ipaddr_buf);
@@ -457,7 +457,7 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 		fr_ipaddr_t ipaddr1, ipaddr2;
 		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat ipaddr range: %s", fr_strerror());
-			return -1;
+			XLAT_ERR_RETURN;
 		}
 
 		xlat_ctx->type = NCC_CTX_TYPE_IPADDR_RAND;
@@ -476,9 +476,9 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	struct in_addr addr;
 	addr.s_addr = htonl(value);;
-	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) {
+	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) { /* Cannot happen. */
 		fr_strerror_printf("%s", fr_syserror(errno));
-		return -1;
+		XLAT_ERR_RETURN;
 	}
 	*out = talloc_typed_asprintf(ctx, "%s", ipaddr_buf);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
@@ -581,7 +581,7 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat ethaddr range: %s", fr_strerror());
-			return -1;
+			XLAT_ERR_RETURN;
 		}
 
 		xlat_ctx->type = NCC_CTX_TYPE_ETHADDR_RANGE;
@@ -642,7 +642,7 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat ethaddr range: %s", fr_strerror());
-			return -1;
+			XLAT_ERR_RETURN;
 		}
 
 		xlat_ctx->type = NCC_CTX_TYPE_ETHADDR_RAND;
