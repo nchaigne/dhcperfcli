@@ -76,8 +76,7 @@ An *value pair* is specified as follows:
 
 `<attribute name> = <value>`
 
-The name of DHCP attributes (along with their type, and enumerated values if applicable) are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary.dhcpv4).
-
+The name of DHCP attributes (along with their type, and enumerated values if applicable) are defined in FreeRADIUS DHCP dictionary files: [dhcpv4/dictionary.rfc2131](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/dhcpv4/dictionary.rfc2131) and [dhcpv4/dictionary.freeradius.internal](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/dhcpv4/dictionary.freeradius.internal).
 
 For example:
 
