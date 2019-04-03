@@ -284,7 +284,7 @@ DHCP vps options:
         (51) DHCP-IP-Address-Lease-Time = 86400
 ```
 
-The names of DHCP attributes are defined in [FreeRADIUS DHCP dictionary](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary.dhcpv4).<br>
+The names of DHCP attributes are defined in FreeRADIUS DHCP dictionary files: [dhcpv4/dictionary.rfc2131](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/dhcpv4/dictionary.rfc2131) and [dhcpv4/dictionary.freeradius.internal](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/dhcpv4/dictionary.freeradius.internal).<br>
 Displayed values are formatted according to the attribute type. For an option, its number is printed in brackets.
 
 
