@@ -838,6 +838,10 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 			}
 				break;
 
+			case ' ': // allow to have spaces within format
+				*buff_p++ = ' ';
+				break;
+
 			default:
 				fr_strerror_printf("Invalid character class '%c'", *p);
 				talloc_free(buff);
