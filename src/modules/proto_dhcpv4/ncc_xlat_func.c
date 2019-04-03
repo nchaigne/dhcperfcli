@@ -445,8 +445,8 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
 				UNUSED REQUEST *request, char const *fmt)
 {
-	uint32_t num1, num2, delta;
-	uint32_t value;
+	uint32_t num1, num2, value;
+	uint64_t delta; /* Allow UINT32_MAX + 1. */
 
 	*out = NULL;
 
@@ -472,7 +472,7 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 
 	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
 
-	delta = num2 - num1 + 1;
+	delta = (uint64_t)num2 - num1 + 1;
 	value = (uint32_t)(rnd * delta) + num1;
 
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
