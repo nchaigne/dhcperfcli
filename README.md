@@ -124,27 +124,28 @@ For a DORA transaction, the xid used to build the Request message is the same as
 
 ## Template
 
-Template mode (option `-T`) is another way of providing the input necessary to build the DHCP packets. This is especially useful for (but not exclusive to) performance tests, where a lot of input is necessary.
+Template mode is enabled through option `-T`.
 
-In template mode, you specify two special input items, from which packets are dynamically generated on the fly. In this order:
-1. *Invariant attributes*, whose value is fixed and common to all generated packets.
-2. *Variable attributes*, whose value change each time a packet is generated.
+If not in template mode, each input item is used to build and send exactly one request. The program can only start as many sessions as there are input items.
 
-If only one input item is provided, it is assumed to be the variable attributes (in this case, there will be no invariant).
+Conversely, in template mode, each input item can be used to build any number of requests. After reaching the last input item, the program loops back to the first one. Template mode is essential to running performance tests.
 
-Control attributes (such as `Packet-Src-IP-Address`) are **always invariant**, even if provided through the variable attributes.
-
-The default behavior is to *increment* the value of variable attributes for each new packet. Option `-R` allows to *randomize* values instead.
+A single input item may actually be all you need. Variability between requests can be achieved through xlat expansion (see related section).
 
 In template mode you should provide a limit to the number of DHCP sessions to start (option `-N`) - unless you would like the program to go on forever. Alternatively, you can opt to limit the program duration (option `-L`).
 
 Example:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
+echo "DHCP-Client-Hardware-Address=%{ethaddr.range:50:41:4e:44:41:00-50:41:4e:44:41:09}"  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
 `__
 
 This will generate and send (simulating a gateway with option `-g`) successively 10 DHCP Discover messages, using client MAC addresses `50:41:4e:44:41:00`, `50:41:4e:44:41:01` ... up to `50:41:4e:44:41:09`.
+
+
+## Xlat expansion
+
+TODO
 
 
 ## DHCP pre-encoded data
