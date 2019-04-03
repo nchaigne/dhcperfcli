@@ -305,7 +305,9 @@ static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 
 	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
 
-	delta = xlat_ctx->num_range.max - xlat_ctx->num_range.min + 1;
+	//delta = xlat_ctx->num_range.max - xlat_ctx->num_range.min + 1;
+	delta = xlat_ctx->num_range.max - xlat_ctx->num_range.min;
+	if (delta < UINT64_MAX) delta++; /* Don't overthrow. */
 	value = (uint64_t)(rnd * delta) + xlat_ctx->num_range.min;
 
 	*out = talloc_typed_asprintf(ctx, "%lu", value);
