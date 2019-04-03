@@ -23,6 +23,7 @@
 #define NCC_XLAT_IPADDR_RAND   "ipaddr.rand"
 #define NCC_XLAT_ETHADDR_RANGE "ethaddr.range"
 #define NCC_XLAT_ETHADDR_RAND  "ethaddr.rand"
+#define NCC_XLAT_RANDSTR       "randstr"
 
 
 /*
@@ -664,6 +665,179 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
 }
 
 
+/** Generate a string of random chars
+ *
+ *  Reuse from FreeRADIUS xlat_func_randstr (src/lib/server/xlat_func.c)
+ *  converted to non async - because we can't use that.
+ */
+static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	/*
+ 	 *	Lookup tables for randstr char classes
+ 	 */
+	static char	randstr_punc[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+	static char	randstr_salt[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmopqrstuvwxyz/.";
+
+ 	/*
+ 	 *	Characters humans rarely confuse. Reduces char set considerably
+ 	 *	should only be used for things such as one time passwords.
+ 	 */
+	static char	randstr_otp[] = "469ACGHJKLMNPQRUVWXYabdfhijkprstuvwxyz";
+
+	char const 	*p, *start, *end;
+	char		*endptr;
+	char		*buff, *buff_p;
+	unsigned int	result;
+	unsigned int	reps;
+	//size_t		outlen = 0;
+
+	/** Max repetitions of a single character class
+	 *
+	 */
+#define REPETITION_MAX 1024
+
+	/*
+	 *	Nothing to do if input is empty
+	 */
+	if (!fmt) return -1;
+
+	start = p = fmt;
+	end = p + strlen(fmt);
+
+	/*
+	 *	Calculate size of output
+	 */
+	while (p < end) {
+		/*
+		 *	Repetition modifiers.
+		 *
+		 *	We limit it to REPETITION_MAX, because we don't want
+		 *	utter stupidity.
+		 */
+		if (isdigit((int) *p)) {
+			reps = strtol(p, &endptr, 10);
+			if (reps > REPETITION_MAX) reps = REPETITION_MAX;
+			/* hexits take up 2 characters */
+			outlen += reps;
+			p = endptr;
+		} else {
+			outlen++;
+		}
+		p++;
+	}
+
+	buff = buff_p = talloc_array(NULL, char, outlen + 1);
+
+	/* Reset p to start position */
+	p = start;
+
+	while (*p) {
+		size_t i;
+
+		if (isdigit((int) *p)) {
+			reps = strtol(p, &endptr, 10);
+			if (reps > REPETITION_MAX) {
+				/* Limit repetition to REPETITION_MAX */
+				reps = REPETITION_MAX;
+			}
+			p = endptr;
+		} else {
+			reps = 1;
+		}
+
+		for (i = 0; i < reps; i++) {
+			result = fr_rand();
+			switch (*p) {
+			/*
+			 *  Lowercase letters
+			 */
+			case 'c':
+				*buff_p++ = 'a' + (result % 26);
+				break;
+
+			/*
+			 *  Uppercase letters
+			 */
+			case 'C':
+				*buff_p++ = 'A' + (result % 26);
+				break;
+
+			/*
+			 *  Numbers
+			 */
+			case 'n':
+				*buff_p++ = '0' + (result % 10);
+				break;
+
+			/*
+			 *  Alpha numeric
+			 */
+			case 'a':
+				*buff_p++ = randstr_salt[result % (sizeof(randstr_salt) - 3)];
+				break;
+
+			/*
+			 *  Punctuation
+			 */
+			case '!':
+			case ',': // added alternative because "!" is complicated to use from command line + xlat.
+				*buff_p++ = randstr_punc[result % (sizeof(randstr_punc) - 1)];
+				break;
+
+			/*
+			 *  Alpha numeric + punctuation
+			 */
+			case '.':
+				*buff_p++ = '!' + (result % 95);
+				break;
+
+			/*
+			 *  Alpha numeric + salt chars './'
+			 */
+			case 's':
+				*buff_p++ = randstr_salt[result % (sizeof(randstr_salt) - 1)];
+				break;
+
+			/*
+			 *  Chars suitable for One Time Password tokens.
+			 *  Alpha numeric with easily confused char pairs removed.
+			 */
+			case 'o':
+				*buff_p++ = randstr_otp[result % (sizeof(randstr_otp) - 1)];
+				break;
+
+			/*
+			 *	Binary data - Copy between 1-4 bytes at a time
+			 */
+			case 'b':
+			{
+				size_t copy = (reps - i) > sizeof(result) ? sizeof(result) : reps - i;
+
+				memcpy(buff_p, (uint8_t *)&result, copy);
+				buff_p += copy;
+				i += (copy - 1);	/* Loop +1 */
+			}
+				break;
+
+			default:
+				fr_strerror_printf("Invalid character class '%c'", *p);
+				talloc_free(buff);
+				return -1;
+			}
+		}
+
+		p++;
+	}
+
+	*buff_p++ = '\0';
+
+	*out = buff;
+	return strlen(*out);
+}
+
+
 /*
  *	Register our own xlat functions (and implicitly initialize the xlat framework).
  */
@@ -677,4 +851,6 @@ void ncc_xlat_register(void)
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RANGE, _ncc_xlat_ethaddr_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RAND, _ncc_xlat_ethaddr_rand, NULL, NULL, 0, 0, true);
+
+	ncc_xlat_core_register(NULL, NCC_XLAT_RANDSTR, _ncc_xlat_randstr, NULL, NULL, 0, 0, true);
 }
