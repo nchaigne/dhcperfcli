@@ -22,6 +22,7 @@ int ncc_xlat_core_init(void);
  */
 void ncc_xlat_init_request(VALUE_PAIR *vps);
 void ncc_xlat_set_num(uint64_t num);
+int ncc_xlat_get_rcode();
 
 int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in);
 ssize_t ncc_xlat_num_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);

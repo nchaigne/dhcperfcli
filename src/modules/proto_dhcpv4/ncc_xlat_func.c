@@ -74,7 +74,7 @@ static uint32_t num_xlat_ctx_list = 0;
 
 /*
  *	To use FreeRADIUS xlat engine, we need a REQUEST (which is a "typedef struct rad_request").
- *	This is defined in src/lib/server/base.h
+ *	This is defined in src/lib/server/request.h
  */
 REQUEST *FX_request = NULL;
 
@@ -118,7 +118,21 @@ void ncc_xlat_set_num(uint64_t num)
 	ncc_xlat_init_request(NULL);
 	FX_request->number = num; /* Our input id. */
 	FX_request->child_number = 0; /* The index of the xlat context for this input. */
+	FX_request->rcode = 0; /* Stores xlat error code. */
 }
+
+/*
+ *	Retrieve xlat error code stored in our fake request.
+ */
+int ncc_xlat_get_rcode()
+{
+	return FX_request->rcode;
+}
+
+
+#define XLAT_ERR_RETURN \
+	request->rcode = -1; \
+	return -1;
 
 
 /*
@@ -701,7 +715,10 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 	/*
 	 *	Nothing to do if input is empty
 	 */
-	if (!fmt) return -1;
+	if (!fmt) {
+		fr_strerror_printf("No format provided");
+		return -1;
+	}
 
 	start = p = fmt;
 	end = p + strlen(fmt);
@@ -824,7 +841,7 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 			default:
 				fr_strerror_printf("Invalid character class '%c'", *p);
 				talloc_free(buff);
-				return -1;
+				XLAT_ERR_RETURN;
 			}
 		}
 
