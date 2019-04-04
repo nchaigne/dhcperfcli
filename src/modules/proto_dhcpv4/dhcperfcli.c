@@ -108,9 +108,7 @@ static ncc_endpoint_t client_ep = {
 	.port = DHCP_PORT_CLIENT
 };
 
-static unsigned int gateway_num = 0; /* Number of gateways. */
-static unsigned int gateway_next = 0; /* Next gateway to be used. */
-static ncc_endpoint_t *gateway_list = NULL; /* List of gateways. */
+static ncc_endpoint_list_t *gateway_list = NULL; /* List of gateways. */
 static fr_ipaddr_t allowed_server = { 0 }; /* Only allow replies from a specific server. */
 
 static int packet_code = FR_CODE_UNDEFINED;
@@ -262,9 +260,8 @@ static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
-static ncc_endpoint_t *dpc_gateway_get_next(void);
-static void dpc_gateway_add(char *addr);
-static void dpc_gateway_parse(char const *param);
+static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
+                                                ncc_endpoint_t *default_ep, bool require_full);
 static void dpc_options_parse(int argc, char **argv);
 
 static void dpc_signal(int sig);
@@ -770,7 +767,7 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 	DPC_DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
 	                dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
 
-	if (ipaddr_defined(allowed_server)) {
+	if (is_ipaddr_defined(allowed_server)) {
 		/*
 		 *	Only allow replies from a specific server (overall policy set through option -a).
 		 */
@@ -1317,8 +1314,8 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 	/*
 	 *	Associate session to gateway, if one is defined (or several).
 	 */
-	if (!ipaddr_defined(session->src.ipaddr) && gateway_list) {
-		session->gateway = dpc_gateway_get_next();
+	if (!is_ipaddr_defined(session->src.ipaddr) && gateway_list) {
+		session->gateway = ncc_ep_list_get_next(gateway_list);
 		session->src = *(session->gateway);
 	}
 }
@@ -1771,7 +1768,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	static bool warn_inaddr_any = true;
 
 	/* We need a source IP address to pre-allocate the socket. */
-	if (!ipaddr_defined(input->ext.src.ipaddr)) return;
+	if (!is_ipaddr_defined(input->ext.src.ipaddr)) return;
 
 #ifdef HAVE_LIBPCAP
 	if (iface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
@@ -1970,14 +1967,14 @@ static bool dpc_parse_input(dpc_input_t *input)
 	 *	If nothing goes, fall back to default.
 	 */
 	if (!input->ext.src.port) input->ext.src.port = client_ep.port;
-	if (   !ipaddr_defined(input->ext.src.ipaddr)
+	if (   !is_ipaddr_defined(input->ext.src.ipaddr)
 	    && !gateway_list /* If using a gateway, let this unspecified for now. */
 	   ) {
 		input->ext.src.ipaddr = client_ep.ipaddr;
 	}
 
 	if (!input->ext.dst.port) input->ext.dst.port = server_ep.port;
-	if (!ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
+	if (!is_ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
 
 	if (!vp_encoded_data && input->ext.code == FR_CODE_UNDEFINED) {
 		WARN("No packet type specified in input vps or command line. Discarding input (id: %u)", input->id);
@@ -2024,10 +2021,10 @@ static void dpc_input_debug(dpc_input_t *input)
 		DEBUG3("  Xid: %u", input->ext.xid);
 	}
 
-	if (ipaddr_defined(input->ext.src.ipaddr)) {
+	if (is_ipaddr_defined(input->ext.src.ipaddr)) {
 		DEBUG3("  Src: %s", ncc_endpoint_sprint(ep_buf, &input->ext.src));
 	}
-	if (ipaddr_defined(input->ext.dst.ipaddr)) {
+	if (is_ipaddr_defined(input->ext.dst.ipaddr)) {
 		DEBUG3("  Dst: %s", ncc_endpoint_sprint(ep_buf, &input->ext.dst));
 	}
 }
@@ -2359,42 +2356,19 @@ static int dpc_command_parse(char const *command)
 }
 
 /*
- *	Return next gateway endpoint to use.
+ *	Parse a list of endpoint addresses (gateways, option -g).
+ *	Create and populate an endpoint list (sic_endpoint_list_t) with the results.
  */
-static ncc_endpoint_t *dpc_gateway_get_next(void)
+static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
+                                                ncc_endpoint_t *default_ep, bool require_full)
 {
-	if (!gateway_list) return NULL;
+	if (!ep_list || !in) return NULL;
 
-	ncc_endpoint_t *ep = &gateway_list[gateway_next];
-	gateway_next = (gateway_next + 1) % gateway_num;
-	return ep;
-}
-
-/*
- *	Add a gateway endpoint to the list.
- */
-static void dpc_gateway_add(char *addr)
-{
-	ncc_endpoint_t this = { .port = DHCP_PORT_RELAY };
-
-	if (ncc_host_addr_resolve(&this, addr) != 0) {
-		PERROR("Failed to parse gateway address");
-		exit(EXIT_FAILURE);
+	if (!*ep_list) {
+		MEM(*ep_list = talloc_zero(ctx, ncc_endpoint_list_t));
 	}
 
-	gateway_num ++;
-	gateway_list = talloc_realloc(autofree, gateway_list, ncc_endpoint_t, gateway_num);
-	memcpy(&gateway_list[gateway_num - 1], &this, sizeof(this));
-}
-
-/*
- *	Parse the "gateways" parameter.
- */
-static void dpc_gateway_parse(char const *in)
-{
-	if (!in) return;
-
-	char *in_dup = talloc_strdup(autofree, in); /* Working copy (strsep alters the string it's dealing with). */
+	char *in_dup = talloc_strdup(ctx, in); /* Working copy (strsep alters the string it's dealing with). */
 	char *str = in_dup;
 
 	char *p = strsep(&str, ",");
@@ -2402,12 +2376,19 @@ static void dpc_gateway_parse(char const *in)
 		/* First trim string of eventual spaces. */
 		ncc_str_trim(p, p, strlen(p));
 
-		/* And then add the server to our list. */
-		dpc_gateway_add(p);
+		/* Add this to our list of endpoints. */
+		ncc_endpoint_t *ep = ncc_ep_list_add(ctx, *ep_list, p, default_ep, require_full);
+		if (!ep) {
+			PERROR("Failed to create endpoint \"%s\"", p);
+			exit(EXIT_FAILURE);
+		}
+		char ep_buf[NCC_ENDPOINT_STRLEN] = "";
+		DPC_DEBUG_TRACE("Added endpoint list item #%u: [%s]", (*ep_list)->num - 1, ncc_endpoint_sprint(ep_buf, ep));
 
 		p = strsep(&str, ",");
 	}
 	talloc_free(in_dup);
+	return *ep_list;
 }
 
 static struct option long_options[] = {
@@ -2480,7 +2461,8 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			dpc_gateway_parse(optarg);
+			DPC_DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", optarg);
+			dpc_addr_list_parse(autofree, &gateway_list, optarg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY }, false);
 			break;
 
 		case 'h':
@@ -2686,14 +2668,16 @@ int main(int argc, char **argv)
 	/*
 	 *	Allocate sockets for gateways.
 	 */
-	for (i = 0; i < gateway_num; i++) {
-		ncc_endpoint_t *this = &gateway_list[i];
+	if (gateway_list) {
+		for (i = 0; i < gateway_list->num; i++) {
+			ncc_endpoint_t *this = &gateway_list->eps[i];
 
-		if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
-			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-			PERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
-			       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr), this->port);
-			exit(EXIT_FAILURE);
+			if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
+				char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+				PERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
+					fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr), this->port);
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
