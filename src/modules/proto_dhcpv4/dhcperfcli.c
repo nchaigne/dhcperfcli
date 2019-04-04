@@ -85,6 +85,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ NULL }
 };
 
+static int with_debug_dev = 0;
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
 static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
@@ -2406,6 +2407,7 @@ static struct option long_options[] = {
 	{ "packet-trace",           required_argument, NULL, 'P' },
 
 	/* Long options flags are handled automaticaly. */
+	{ "debug",                  no_argument, &with_debug_dev, 1 },
 	{ "template",               no_argument, &with_template, 1 },
 	{ "xlat",                   no_argument, &with_xlat, 1 },
 
@@ -2655,6 +2657,8 @@ int main(int argc, char **argv)
 	}
 
 	dpc_options_parse(argc, argv);
+
+	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev);
 
 	/*
 	 *	Mismatch between the binary and the libraries it depends on.
