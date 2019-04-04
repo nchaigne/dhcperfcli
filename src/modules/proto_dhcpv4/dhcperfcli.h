@@ -46,9 +46,6 @@ extern fr_dict_t *dict_dhcpv4;
 /*
  *	Trace / logging.
  */
-#define DPC_DEBUG_ENABLED(_p) (fr_log_fp && dpc_debug_lvl >= _p)
-#define DPC_DEBUG(_p, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log(_f "\n", ## __VA_ARGS__)
-
 #undef DEBUG
 #define DEBUG(fmt, ...)  NCC_DEBUG(1, fmt, ## __VA_ARGS__)
 
@@ -71,16 +68,16 @@ extern fr_dict_t *dict_dhcpv4;
 */
 
 /* Trace macros with prefixed session id. */
-#define DPC_SDEBUG(_p, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log("(%u) " _f "\n", session->id, ## __VA_ARGS__)
+#define DPC_SDEBUG(_p, _f, ...) if (NCC_DEBUG_ENABLED(_p)) ncc_printf_log("(%u) " _f "\n", session->id, ## __VA_ARGS__)
 
 #define SDEBUG(fmt, ...)  DPC_SDEBUG(1, fmt, ## __VA_ARGS__)
 #define SDEBUG2(fmt, ...) DPC_SDEBUG(2, fmt, ## __VA_ARGS__)
-#define SERROR(fmt, ...)  if (fr_log_fp) dpc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
+#define SERROR(fmt, ...)  if (NCC_LOG_ENABLED) ncc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
 #define SPERROR(fmt, ...) if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
 #define DPC_DEBUG_TRACE(_f, ...)         NCC_DEBUG(3, _f, ## __VA_ARGS__)
-//#define DPC_DEBUG_HEX_DUMP(_x, _y, _z) if (DPC_DEBUG_ENABLED(4)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
+
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
  *	With it we can do only about ~5k req/s (Discover - Offer). In non developer mode we can go up to ~10k req/s.

@@ -21,8 +21,10 @@
 /*
  *	Trace / logging.
  */
+extern FILE *ncc_log_fp;
 extern int ncc_debug_lvl;
-#define NCC_DEBUG_ENABLED(_p)    (ncc_debug_lvl >= _p)
+#define NCC_LOG_ENABLED          (ncc_log_fp)
+#define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
 #define NCC_DEBUG(_p, _f, ...)   if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(__FILE__, __LINE__, _f, ## __VA_ARGS__)
 
 
