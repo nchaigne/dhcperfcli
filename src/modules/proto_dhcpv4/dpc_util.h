@@ -7,18 +7,12 @@
 
 
 #define DPC_FROM_TO_STRLEN    (21 + (FR_IPADDR_STRLEN * 2) + 5 + IFNAMSIZ + 1)
-#define DPC_TIME_STRLEN       (15 + 1)
 #define DPC_MSG_NUM_STRLEN    ((16 + 2) * (DHCP_MAX_MESSAGE_TYPE - 2) + 1)
 
 #define DPC_DELTA_TIME_DECIMALS  3
 
 
-void dpc_printf_log(char const *fmt, ...);
-void dpc_dev_print(char const *file, int line, char const *fmt, ...);
-char *dpc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);
-
 char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[]);
-
 char *dpc_message_type_sprint(char *out, int code);
 void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);

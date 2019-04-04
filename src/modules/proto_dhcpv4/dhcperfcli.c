@@ -206,8 +206,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_TR_TYPES 23 /* Longest of transaction_types + 1 */
 #define LG_PAD_STATS    20
 
-char elapsed_buf[DPC_TIME_STRLEN];
-#define ELAPSED dpc_delta_time_sprint(elapsed_buf, &tv_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+char elapsed_buf[NCC_TIME_STRLEN];
+#define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tv_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
@@ -437,7 +437,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-		dpc_delta_time_sprint(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
+		ncc_delta_time_sprint(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
