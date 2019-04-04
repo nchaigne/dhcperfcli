@@ -114,6 +114,12 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 		fprintf(ncc_log_fp, "%s%.*s: ", prefix, (int)(dev_log_indent - len), spaces);
 	}
 
+	/* Print elapsed time. */
+	char time_buf[NCC_TIME_STRLEN];
+	fprintf(ncc_log_fp, "t(%s) ",
+	        ncc_delta_time_sprint(time_buf, &tve_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
+
+	/* And then the actual log message. */
 	vfprintf(ncc_log_fp, fmt, ap);
 	va_end(ap);
 
@@ -229,6 +235,44 @@ char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
 {
 	sprintf(out, "%02x:%02x:%02x:%02x:%02x:%02x",
 	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	return out;
+}
+
+/*
+ *	Print a time difference, in format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
+ *	Hour and minute printed only if relevant, decimals optional.
+ *	If when is NULL, now is used instead.
+ */
+char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals)
+{
+	struct timeval delta, to;
+	uint32_t sec, min, hour;
+
+	if (!when) {
+		gettimeofday(&to, NULL);
+		when = &to;
+	}
+
+	timersub(when, from, &delta); /* delta = when - from */
+
+	hour = (uint32_t)(delta.tv_sec / 3600);
+	min = (uint32_t)(delta.tv_sec % 3600) / 60;
+	sec = (uint32_t)(delta.tv_sec % 3600) % 60;
+
+	if (hour > 0) {
+		sprintf(out, "%d:%.02d:%.02d", hour, min, sec);
+	} else if (min > 0) {
+		sprintf(out, "%d:%.02d", min, sec);
+	} else {
+		sprintf(out, "%d", sec);
+	}
+
+	if (decimals) {
+		char buffer[32] = "";
+		sprintf(buffer, ".%06ld", delta.tv_usec);
+		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
+	}
+
 	return out;
 }
 
