@@ -2814,7 +2814,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
 	fprintf(fd, "  -c <num>         Use each input item <num> times (has no effect in template mode).\n");
-	fprintf(fd, "  -D <dictdir>     Set dictionaries directory (defaults to " DICTDIR ").\n");
+	fprintf(fd, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
@@ -2832,10 +2832,13 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -R               Randomize template variable values (instead of increment).\n");
 	fprintf(fd, "  -s <seconds>     Periodically report progress statistics information.\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
-	fprintf(fd, "  -T               Template mode. Sessions input is generated from invariant and variable input items.\n");
+	fprintf(fd, "  -T               Template mode.\n");
 	fprintf(fd, "  -v               Print version information.\n");
 	fprintf(fd, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
 	fprintf(fd, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
+	fprintf(fd, "\n");
+	fprintf(fd, "Refer to manual for the full usage (with long options).\n");
+	fprintf(fd, "\n");
 
 	exit(status);
 }

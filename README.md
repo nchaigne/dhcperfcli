@@ -36,7 +36,7 @@ Arguments|Description
 `-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
 `-c <num>` | Use each input item `<num>` times. (ignored in template mode)<br>Default: 1.
-`-D <dir>` | Read dictionaries from `<dir>`.<br>Default: directory `share/freeradius` of FreeRADIUS installation.
+`-D <dir>` | Dictionaries main directory.<br>Default: directory `share/freeradius/dictionary` of FreeRADIUS installation.
 `-f <file>` | Read input items from `<file>`, in addition to stdin.<br>An input item is a list of *attribute/value pairs*. At least one such item is required, so one packet can be built.
 `-g <gw>[:<port>]` | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>A comma-separated list may be specified, in which case packets will be sent using all of those gateways in a round-robin fashion.<br>Alternatively, option `-g` can be provided multiple times.
 `-i <interface>` | Use this interface for unconfigured clients to broadcast through a raw socket. (This requires libpcap.)
@@ -49,7 +49,7 @@ Arguments|Description
 `-R` | Randomize template variable values (default is to increment).<br>Refer to *template* section for details.
 `-s <seconds>` | Periodically report progress statistics information.<br>Default: 10 s.
 `-t <timeout>` | Wait at most `<timeout>` seconds for a reply (may be a floating point number).<br>Default: 3.
-`-T` | Template mode. Sessions input is generated from invariant and variable input items.<br>Refer to *template* section for details.
+`-T` | Template mode.
 `-v` | Print program version information.
 `-x` | Turn on additional debugging. (`-xx` gives more debugging, up to `-xxxx`).
 `-X` | Turn on FreeRADIUS libraries debugging (use this in conjunction with `-x`).
