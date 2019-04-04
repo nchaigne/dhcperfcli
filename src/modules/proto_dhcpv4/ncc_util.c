@@ -133,7 +133,8 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
-	sprintf(out, "%s:%u", fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr), ep->port);
+	sprintf(out, "%s:%u",
+	        fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr) ? ipaddr_buf : "(undef)", ep->port);
 	return out;
 }
 
@@ -411,7 +412,7 @@ ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index)
  *	Add a new endpoint to a list.
  */
 ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
-                                char *addr, ncc_endpoint_t *default_ep, bool require_full)
+                                char *addr, ncc_endpoint_t *default_ep)
 {
 	ncc_endpoint_t this = { .ipaddr = { .af = AF_UNSPEC, .prefix = 32 } };
 	ncc_endpoint_t *ep_new;
@@ -420,7 +421,7 @@ ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
 
 	if (ncc_host_addr_resolve(&this, addr) != 0) return NULL; /* already have an error. */
 
-	if (require_full && !is_endpoint_defined_full(this)) {
+	if (!is_endpoint_defined(this)) {
 		fr_strerror_printf("IP address and port must be provided");
 		return NULL;
 	}

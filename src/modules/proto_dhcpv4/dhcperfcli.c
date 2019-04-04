@@ -262,7 +262,7 @@ static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
 static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
-                                                ncc_endpoint_t *default_ep, bool require_full);
+                                                ncc_endpoint_t *default_ep);
 static void dpc_options_parse(int argc, char **argv);
 
 static void dpc_signal(int sig);
@@ -2361,7 +2361,7 @@ static int dpc_command_parse(char const *command)
  *	Create and populate an endpoint list (sic_endpoint_list_t) with the results.
  */
 static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
-                                                ncc_endpoint_t *default_ep, bool require_full)
+                                                ncc_endpoint_t *default_ep)
 {
 	if (!ep_list || !in) return NULL;
 
@@ -2378,7 +2378,7 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 		ncc_str_trim(p, p, strlen(p));
 
 		/* Add this to our list of endpoints. */
-		ncc_endpoint_t *ep = ncc_ep_list_add(ctx, *ep_list, p, default_ep, require_full);
+		ncc_endpoint_t *ep = ncc_ep_list_add(ctx, *ep_list, p, default_ep);
 		if (!ep) {
 			PERROR("Failed to create endpoint \"%s\"", p);
 			exit(EXIT_FAILURE);
@@ -2572,7 +2572,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 	if (gateway_arg) {
 		DPC_DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", gateway_arg);
-		dpc_addr_list_parse(autofree, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY }, false);
+		dpc_addr_list_parse(autofree, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 	}
 
 	/*
@@ -2679,8 +2679,9 @@ int main(int argc, char **argv)
 
 			if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
 				char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-				PERROR("Failed to provide a suitable socket for gateway (requested socket src: %s:%u)",
-					fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr), this->port);
+				PERROR("Failed to provide a suitable socket for gateway \"%s:%u\"",
+				       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr) ? src_ipaddr_buf : "(undef)",
+				       this->port);
 				exit(EXIT_FAILURE);
 			}
 		}

@@ -54,8 +54,7 @@ do { \
 
 /* Check that endpoint is not undefined. */
 #define is_ipaddr_defined(_x) (_x.af != AF_UNSPEC)
-#define is_endpoint_defined(_e) (_e.port || is_ipaddr_defined(_e.ipaddr))
-#define is_endpoint_defined_full(_e) (_e.port && is_ipaddr_defined(_e.ipaddr))
+#define is_endpoint_defined(_e) (is_ipaddr_defined(_e.ipaddr) && _e.port)
 
 
 /* Verify that a VP is "data" (i.e. not "xlat"). */
@@ -147,7 +146,7 @@ ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index);
 #define NCC_LIST_INDEX(_l, _i) (void *)ncc_list_index(_l, _i);
 #define NCC_LIST_DRAW(_e) (void *)ncc_list_item_draw((ncc_list_item_t *)_e);
 
-ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list, char *addr, ncc_endpoint_t *default_ep, bool require_full);
+ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list, char *addr, ncc_endpoint_t *default_ep);
 ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list);
 char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list);
 
