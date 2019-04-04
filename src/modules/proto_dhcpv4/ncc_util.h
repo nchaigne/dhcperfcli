@@ -18,6 +18,14 @@
 #define ncc_assert rad_assert
 
 
+/*
+ *	Trace / logging.
+ */
+extern int ncc_debug_lvl;
+#define NCC_DEBUG_ENABLED(_p)    (ncc_debug_lvl >= _p)
+#define NCC_DEBUG(_p, _f, ...)   if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(__FILE__, __LINE__, _f, ## __VA_ARGS__)
+
+
 /*	After a call to snprintf and similar functions, check if we have enough remaining buffer space.
  *
  *	These functions return the number of characters printed (excluding the null byte used to end output to strings).
@@ -116,6 +124,9 @@ typedef struct ncc_fr_event_list {
 
 
 int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when);
+
+void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev);
+void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...);
 
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,

@@ -39,6 +39,66 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when)
 
 
 /*
+ *	Trace / logging.
+ */
+FILE *ncc_log_fp = NULL;
+struct timeval tve_ncc_start; /* Program execution start timestamp. */
+int ncc_debug_lvl = 0;
+int ncc_debug_dev = 0; /* 0 = basic debug, 1 = developper. */
+int ncc_debug_basename = 1;
+
+/*
+ *	Initialize debug logging.
+ */
+void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev)
+{
+	gettimeofday(&tve_ncc_start, NULL);
+	ncc_log_fp = log_fp;
+	ncc_debug_lvl = debug_lvl;
+	ncc_debug_dev = debug_dev;
+}
+
+/*
+ *	Print a debug log message.
+ *	Add extra information (file, line) if developper print is enabled.
+ *
+ *	(ref: function fr_proto_print from lib/util/proto.c)
+ */
+static unsigned int dev_log_indent = 30;
+static char spaces[] = "                                                 ";
+void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
+{
+	va_list ap;
+	size_t len;
+	char prefix[256];
+	char const *filename = file;
+
+	if (ncc_debug_dev) {
+		if (ncc_debug_basename) {
+			/* file is __FILE__ which is set at build time by gcc.
+			 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
+			 * Extract the file base name to have leaner traces.
+			 */
+			char *p = strrchr(file, FR_DIR_SEP);
+			if (p) filename = p + 1;
+		}
+
+		len = snprintf(prefix, sizeof(prefix), " )%s:%i", filename, line);
+		if (len > dev_log_indent) dev_log_indent = len;
+
+		fprintf(ncc_log_fp, "%s%.*s: ", prefix, (int)(dev_log_indent - len), spaces);
+	}
+
+	va_start(ap, fmt);
+	vfprintf(ncc_log_fp, fmt, ap);
+	va_end(ap);
+
+	fprintf(ncc_log_fp, "\n");
+	fflush(ncc_log_fp);
+}
+
+
+/*
  *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
