@@ -11,6 +11,7 @@
 #define NCC_UINT32_STRLEN         (10 + 1)
 #define NCC_UINT64_STRLEN         (20 + 1)
 #define NCC_TIME_STRLEN           (15 + 1)
+#define NCC_DATETIME_STRLEN       (19 + 1)
 
 
 /*
@@ -143,6 +144,7 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
 char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);
+char *ncc_absolute_time_sprint(char *out);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 

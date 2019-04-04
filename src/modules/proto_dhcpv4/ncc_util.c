@@ -46,6 +46,8 @@ struct timeval tve_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
 int ncc_debug_dev = 0; /* 0 = basic debug, 1 = developper. */
 int ncc_debug_basename = 1;
+int ncc_debug_datetime = 1; /* Absolute date/time. */
+// TODO: make this configurable.
 
 /*
  *	Initialize debug logging.
@@ -69,6 +71,12 @@ void ncc_printf_log(char const *fmt, ...)
 	if (!ncc_log_fp) {
 		va_end(ap);
 		return;
+	}
+
+	/* Print absolute date/time. */
+	if (ncc_debug_datetime) {
+		char datetime_buf[NCC_DATETIME_STRLEN];
+		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf));
 	}
 
 	vfprintf(ncc_log_fp, fmt, ap);
@@ -112,12 +120,19 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 		if (len > dev_log_indent) dev_log_indent = len;
 
 		fprintf(ncc_log_fp, "%s%.*s: ", prefix, (int)(dev_log_indent - len), spaces);
-	}
 
-	/* Print elapsed time. */
-	char time_buf[NCC_TIME_STRLEN];
-	fprintf(ncc_log_fp, "t(%s) ",
-	        ncc_delta_time_sprint(time_buf, &tve_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
+		/* Print elapsed time. */
+		char time_buf[NCC_TIME_STRLEN];
+		fprintf(ncc_log_fp, "t(%s) ",
+		        ncc_delta_time_sprint(time_buf, &tve_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
+
+	} else {
+		/* Print absolute date/time. */
+		if (ncc_debug_datetime) {
+			char datetime_buf[NCC_DATETIME_STRLEN];
+			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf));
+		}
+	}
 
 	/* And then the actual log message. */
 	vfprintf(ncc_log_fp, fmt, ap);
@@ -272,6 +287,20 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 		sprintf(buffer, ".%06ld", delta.tv_usec);
 		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
 	}
+
+	return out;
+}
+
+/*
+ *	Print absolute date/time, in format: YYYY/MM/DD HH:MI:SS
+ */
+char *ncc_absolute_time_sprint(char *out)
+{
+	time_t t;
+	struct tm s_tm;
+
+	time(&t);
+	strftime(out, 20, "%Y/%m/%d %H:%M:%S", localtime_r(&t, &s_tm));
 
 	return out;
 }
