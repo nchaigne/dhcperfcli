@@ -18,6 +18,14 @@
 #define ncc_assert rad_assert
 
 
+/*	After a call to snprintf and similar functions, check if we have enough remaining buffer space.
+ *
+ *	These functions return the number of characters printed (excluding the null byte used to end output to strings).
+ *	If the output was truncated due to this limit then the return value is the number of characters (excluding the
+ *	terminating null byte) which would have been written to the final string if enough space had been available.
+ *	Thus, a return value of size or more means that the output was truncated.
+ */
+
 /* Push error about insufficient buffer size. */
 #define ERR_BUFFER_SIZE(_need, _size, _info) \
 	fr_strerror_printf("%s buffer too small (needed: %zu bytes, have: %zu)", _info, (size_t)(_need), (size_t)(_size))
@@ -30,6 +38,24 @@
 		ERR_BUFFER_SIZE(_need, _size, _info); \
 		return _ret; \
 	}
+
+/* Check if we have enough remaining buffer space. If not push an error and return NULL.
+ * Otherwise, update the current char pointer.
+ */
+#define ERR_IF_TRUNCATED(_p, _ret, _max) \
+do { \
+	if (is_truncated(_ret, _max)) { \
+		ERR_BUFFER_SIZE(_ret, _max, ""); \
+		return NULL; \
+	} \
+	_p += _ret; \
+} while (0)
+
+
+/* Check that endpoint is not undefined. */
+#define is_ipaddr_defined(_x) (_x.af != AF_UNSPEC)
+#define is_endpoint_defined(_e) (_e.port || is_ipaddr_defined(_e.ipaddr))
+#define is_endpoint_defined_full(_e) (_e.port && is_ipaddr_defined(_e.ipaddr))
 
 
 /* Verify that a VP is "data" (i.e. not "xlat"). */
@@ -65,6 +91,15 @@ typedef struct ncc_endpoint {
 	fr_ipaddr_t ipaddr;
 	uint16_t port;
 } ncc_endpoint_t;
+
+/*
+ *	List of endpoints (used in round-robin fashion).
+ */
+typedef struct ncc_endpoint_list {
+	ncc_endpoint_t *eps;   //<! List of endpoints.
+	uint32_t num;          //<! Number of endpoints in the list.
+	uint32_t next;         //<! Number of next endpoint to be used.
+} ncc_endpoint_list_t;
 
 
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
@@ -111,6 +146,11 @@ ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index);
 #define NCC_LIST_DEQUEUE(_l) (void *)ncc_list_get_head(_l);
 #define NCC_LIST_INDEX(_l, _i) (void *)ncc_list_index(_l, _i);
 #define NCC_LIST_DRAW(_e) (void *)ncc_list_item_draw((ncc_list_item_t *)_e);
+
+ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list, char *addr, ncc_endpoint_t *default_ep, bool require_full);
+ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list);
+char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list);
+
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
 # define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))

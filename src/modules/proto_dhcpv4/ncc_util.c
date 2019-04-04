@@ -405,3 +405,71 @@ ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index)
 	}
 	return item;
 }
+
+
+/*
+ *	Add a new endpoint to a list.
+ */
+ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
+                                char *addr, ncc_endpoint_t *default_ep, bool require_full)
+{
+	ncc_endpoint_t this = { .ipaddr = { .af = AF_UNSPEC, .prefix = 32 } };
+	ncc_endpoint_t *ep_new;
+
+	if (default_ep) this = *default_ep;
+
+	if (ncc_host_addr_resolve(&this, addr) != 0) return NULL; /* already have an error. */
+
+	if (require_full && !is_endpoint_defined_full(this)) {
+		fr_strerror_printf("IP address and port must be provided");
+		return NULL;
+	}
+
+	ep_list->num ++;
+	ep_list->eps = talloc_realloc(ctx, ep_list->eps, ncc_endpoint_t, ep_list->num);
+	/* Note: ctx is used only on first allocation. */
+
+	ep_new = &ep_list->eps[ep_list->num - 1];
+	memcpy(ep_new, &this, sizeof(this));
+
+	return ep_new; /* Valid only until list is expanded. */
+}
+
+/*
+ *	Get next endpoint from the list (use in round robin fashion).
+ */
+ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list)
+{
+	if (!ep_list || !ep_list->eps) return NULL;
+
+	ncc_endpoint_t *ep = &ep_list->eps[ep_list->next];
+	ep_list->next = (ep_list->next + 1) % ep_list->num;
+	return ep;
+}
+
+/*
+ *	Print the endpoints in list.
+ */
+char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list)
+{
+	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	int i;
+	size_t len;
+	char *p = out;
+	char *end = out + outlen - 1;
+
+	if (!ep_list) {
+		fr_strerror_printf("Invalid argument");
+		return NULL;
+	}
+
+	for (i = 0; i < ep_list->num; i++) {
+		len = snprintf(p, end - p, "%s%s:%u", (i > 0 ? ", " : ""),
+		               fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf),
+		               &ep_list->eps[ep_list->next].ipaddr), ep_list->eps[ep_list->next].port);
+
+		ERR_IF_TRUNCATED(p, len, end - p);
+	}
+
+	return out;
+}
