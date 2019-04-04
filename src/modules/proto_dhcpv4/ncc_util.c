@@ -59,6 +59,25 @@ void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev)
 }
 
 /*
+ *	Print a log message.
+ */
+void ncc_printf_log(char const *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	if (!ncc_log_fp) {
+		va_end(ap);
+		return;
+	}
+
+	vfprintf(ncc_log_fp, fmt, ap);
+	va_end(ap);
+
+	return;
+}
+
+/*
  *	Print a debug log message.
  *	Add extra information (file, line) if developper print is enabled.
  *
@@ -72,6 +91,12 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 	size_t len;
 	char prefix[256];
 	char const *filename = file;
+
+	va_start(ap, fmt);
+	if (!ncc_log_fp) {
+		va_end(ap);
+		return;
+	}
 
 	if (ncc_debug_dev) {
 		if (ncc_debug_basename) {
@@ -89,7 +114,6 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 		fprintf(ncc_log_fp, "%s%.*s: ", prefix, (int)(dev_log_indent - len), spaces);
 	}
 
-	va_start(ap, fmt);
 	vfprintf(ncc_log_fp, fmt, ap);
 	va_end(ap);
 

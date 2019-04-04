@@ -50,16 +50,16 @@ extern fr_dict_t *dict_dhcpv4;
 #define DPC_DEBUG(_p, _f, ...) if (DPC_DEBUG_ENABLED(_p)) dpc_printf_log(_f "\n", ## __VA_ARGS__)
 
 #undef DEBUG
-#define DEBUG(fmt, ...)  DPC_DEBUG(1, fmt, ## __VA_ARGS__)
+#define DEBUG(fmt, ...)  NCC_DEBUG(1, fmt, ## __VA_ARGS__)
 
 #undef DEBUG2
-#define DEBUG2(fmt, ...) DPC_DEBUG(2, fmt, ## __VA_ARGS__)
+#define DEBUG2(fmt, ...)  NCC_DEBUG(2, fmt, ## __VA_ARGS__)
 
 #undef DEBUG3
-#define DEBUG3(fmt, ...) DPC_DEBUG(3, fmt, ## __VA_ARGS__)
+#define DEBUG3(fmt, ...) NCC_DEBUG(3, fmt, ## __VA_ARGS__)
 
 #undef DEBUG4
-#define DEBUG4(fmt, ...) DPC_DEBUG(4, fmt, ## __VA_ARGS__)
+#define DEBUG4(fmt, ...) NCC_DEBUG(4, fmt, ## __VA_ARGS__)
 
 // INFO, WARN, ERROR and PERROR defined in log.h should be sufficient (for now at least)
 /*
@@ -79,7 +79,7 @@ extern fr_dict_t *dict_dhcpv4;
 #define SPERROR(fmt, ...) if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#define DPC_DEBUG_TRACE(_x, ...)       if (DPC_DEBUG_ENABLED(3)) dpc_dev_print(__FILE__, __LINE__, _x, ## __VA_ARGS__)
+#define DPC_DEBUG_TRACE(_f, ...)         NCC_DEBUG(3, _f, ## __VA_ARGS__)
 //#define DPC_DEBUG_HEX_DUMP(_x, _y, _z) if (DPC_DEBUG_ENABLED(4)) fr_proto_print_hex_data(__FILE__, __LINE__, _x, _y, _z)
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
