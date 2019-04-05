@@ -83,10 +83,11 @@ For example:
 ```text
 DHCP-Transaction-Id = 42
 DHCP-Client-Hardware-Address = 50:41:4e:44:41:00
+DHCP-Hostname = "myhost.whimsical.org"
 DHCP-Message-Type = DHCP-Discover
 ```
 
-In this example, DHCP fields `xid` and `chaddr` are provided, as well as DHCP option 53 (DHCP Message Type).
+In this example, DHCP fields `xid` and `chaddr` are provided, as well as DHCP options 12 (Host Name) and 53 (DHCP Message Type).
 
 You do not need to provide attributes for DHCP fields `op`, `htype`, `hlen`. These are set automatically.<br>
 Field `xid` can be omitted, in which case the program will provide a value.<br>
@@ -137,7 +138,7 @@ In template mode you should provide a limit to the number of DHCP sessions to st
 Example:
 
 >__`
-echo "DHCP-Client-Hardware-Address=%{ethaddr.range:50:41:4e:44:41:00-50:41:4e:44:41:09}"  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
+echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00-50:41:4e:44:41:09}\""  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
 `__
 
 This will generate and send (simulating a gateway with option `-g`) successively 10 DHCP Discover messages, using client MAC addresses `50:41:4e:44:41:00`, `50:41:4e:44:41:01` ... up to `50:41:4e:44:41:09`.
