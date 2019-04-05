@@ -20,7 +20,7 @@ And more!
 
 # Installation
 
-To install _dhcperfcli_, refer to [INSTALL.md](https://github.com/nchaigne/dhcperfcli/blob/master/INSTALL.md).
+To install *dhcperfcli*, refer to [INSTALL.md](https://github.com/nchaigne/dhcperfcli/blob/master/INSTALL.md).
 
 
 # Usage
@@ -146,8 +146,32 @@ This will generate and send (simulating a gateway with option `-g`) successively
 
 ## Xlat expansion
 
-TODO
+Xlat expansion is a powerful mechanism through which variable input items attributes are dynamically expanded to a value, each time a new session is initialized from that item.
+Xlat expansion is enabled:
+- Automatically in template mode (option `-T`)
+- Otherwise, explicitly through option `--xlat`
 
+Xlat expansion, if enabled, is applied on a given attribute:
+- If its value is enclosed within double quotes (`"..."`) - *single quotes will not work!*
+- And contains the special xlat character `%` (at least once).
+
+An xlat expression is specified through the construct `%{ ... }`. Several xlat expressions can be included in a single attribute.
+
+The xlat character `%` can be escaped through a `%%`.
+
+There are two categories of xlat expansion:
+- Xlat attribute reference - through which an attribute can reference another (preceding) attribute.
+- Xlat function - which allows to generate a value (which depends on the function used, and its parameters).
+
+### Xlat attribute reference
+
+__TODO__
+
+### Xlat functions
+
+The following xlat functions are available:
+
+__TODO__
 
 ## DHCP pre-encoded data
 
@@ -180,7 +204,7 @@ This one is a well-formed (if a bit hard to read, but option `-P 3` will display
 
 ### End report
 
-During its execution, dhcperfcli collects a set of DHCP related metrics, which it will display at the end before exiting.
+During its execution, *dhcperfcli* collects a set of DHCP related metrics, which it will display at the end before exiting.
 
 For example:
 ```
