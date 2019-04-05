@@ -2423,6 +2423,8 @@ static void dpc_options_parse(int argc, char **argv)
 	int opt_index = -1; /* Stores the option index for long options. */
 	bool debug_fr = false;
 
+	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* So we can log while parsing options. */
+
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
 		usage(1); \
@@ -2464,6 +2466,8 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
+			/* Allow to have multiple -g options, the last is handled after we've parsed all options. */
+			dpc_addr_list_parse(autofree, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 			gateway_arg = optarg;
 			break;
 
@@ -2565,7 +2569,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
-	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev);
+	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Update with actual options. */
 
 	/*
 	 *	Resolve server host address and port.
