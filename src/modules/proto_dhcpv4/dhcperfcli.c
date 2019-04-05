@@ -1233,6 +1233,22 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 		}
 	}
 
+	/* Check what we've prepared so we don't call encoder with options it cannot handle.
+	 * Probably temporary fix for a FreeRADIUS issue:
+	 * https://github.com/FreeRADIUS/freeradius-server/issues/2601
+	 */
+	fr_cursor_t cursor;
+	VALUE_PAIR *vp;
+	for (vp = fr_cursor_init(&cursor, &request->vps); vp; vp = fr_cursor_next(&cursor)) {
+		if (vp_is_dhcp_option(vp)) {
+			if (vp->vp_length > 255) {
+				fr_strerror_printf("Attribute '%s' value is too large (len: %zu) for a DHCP option", vp->da->name, vp->vp_length);
+				talloc_free(request);
+				return NULL;
+			}
+		}
+	}
+
 	/* Prepare gateway handling. */
 	dpc_request_gateway_handle(request, session->gateway);
 
