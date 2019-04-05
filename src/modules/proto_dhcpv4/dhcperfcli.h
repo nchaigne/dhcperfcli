@@ -43,37 +43,65 @@ extern fr_dict_t *dict_dhcpv4;
  *	ASSERT FAILED src/modules/proto_dhcpv4/dpc_packet_list.c[601]: pl != NULL
  */
 
+
 /*
  *	Trace / logging.
  */
+
+/*
+	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
+
+	Sample output:
+
+	Fri Apr  5 10:00:44 2019 : Debug : DEBUG test
+	Fri Apr  5 10:00:44 2019 : Info  : INFO test
+	Fri Apr  5 10:00:44 2019 : Warn  : WARN test
+	Fri Apr  5 10:00:44 2019 : Error : ERROR test
+	Fri Apr  5 10:01:59 2019 : Warn  : PWARN test: fr_strerror_printf
+	Fri Apr  5 10:01:59 2019 : Error : PERROR test: fr_strerror_printf
+
+	We'll redefine our own, so we get exactly what we want.
+
+	We don't support the push/pop mechanism of FreeRADIUS which allows to have multiple error messages
+	logged in a single call of PERROR (cf. fr_strerror_printf_push / fr_log_perror).
+*/
 #undef DEBUG
-#define DEBUG(fmt, ...)  NCC_DEBUG(1, fmt, ## __VA_ARGS__)
+#define DEBUG(_f, ...)  NCC_DEBUG(1, _f, ## __VA_ARGS__)
 
 #undef DEBUG2
-#define DEBUG2(fmt, ...)  NCC_DEBUG(2, fmt, ## __VA_ARGS__)
+#define DEBUG2(_f, ...)  NCC_DEBUG(2, _f, ## __VA_ARGS__)
 
 #undef DEBUG3
-#define DEBUG3(fmt, ...) NCC_DEBUG(3, fmt, ## __VA_ARGS__)
+#define DEBUG3(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 #undef DEBUG4
-#define DEBUG4(fmt, ...) NCC_DEBUG(4, fmt, ## __VA_ARGS__)
+#define DEBUG4(_f, ...) NCC_DEBUG(4, _f, ## __VA_ARGS__)
 
-// INFO, WARN, ERROR and PERROR defined in log.h should be sufficient (for now at least)
-/*
+#undef INFO
+#define INFO(_f, ...) NCC_LOG("Info : " _f, ## __VA_ARGS__)
+
 #undef WARN
-#define WARN(fmt, ...)		fr_perror("Warning: " fmt, ## __VA_ARGS__)
+#define WARN(_f, ...) NCC_LOG("Warn : " _f, ## __VA_ARGS__)
 
 #undef ERROR
-#define ERROR(fmt, ...)		fr_perror("ERROR: " fmt, ## __VA_ARGS__)
-*/
+#define ERROR(_f, ...) NCC_LOG("Error : " _f, ## __VA_ARGS__)
+
+#undef PWARN
+#define PWARN(_f, ...) NCC_LOG("Warn : " _f ": %s", ## __VA_ARGS__, fr_strerror())
+
+#undef PERROR
+#define PERROR(_f, ...) NCC_LOG("Error : " _f ": %s", ## __VA_ARGS__, fr_strerror())
 
 /* Trace macros with prefixed session id. */
-#define DPC_SDEBUG(_p, _f, ...) if (NCC_DEBUG_ENABLED(_p)) ncc_printf_log("(%u) " _f "\n", session->id, ## __VA_ARGS__)
+#define DPC_SDEBUG(_p, _f, ...) if (NCC_DEBUG_ENABLED(_p)) NCC_LOG("(%u) " _f, session->id, ## __VA_ARGS__)
 
-#define SDEBUG(fmt, ...)  DPC_SDEBUG(1, fmt, ## __VA_ARGS__)
-#define SDEBUG2(fmt, ...) DPC_SDEBUG(2, fmt, ## __VA_ARGS__)
-#define SERROR(fmt, ...)  if (NCC_LOG_ENABLED) ncc_printf_log("(%u) Error : " fmt "\n", session->id, ## __VA_ARGS__)
-#define SPERROR(fmt, ...) if (fr_log_fp) fr_perror("(%u) Error : " fmt, session->id, ## __VA_ARGS__)
+#define SDEBUG(_f, ...)  DPC_SDEBUG(1, _f, ## __VA_ARGS__)
+#define SDEBUG2(_f, ...) DPC_SDEBUG(2, _f, ## __VA_ARGS__)
+#define SERROR(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG("(%u) Error : " _f, session->id, ## __VA_ARGS__)
+#define SPERROR(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Error : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
+
+#define SWARN(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f, session->id, ## __VA_ARGS__)
+#define SPWARN(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
 #define DPC_DEBUG_TRACE(_f, ...)         NCC_DEBUG(3, _f, ## __VA_ARGS__)

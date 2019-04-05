@@ -28,6 +28,7 @@ extern int ncc_debug_lvl;
 #define NCC_LOG_ENABLED          (ncc_log_fp)
 #define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
 #define NCC_DEBUG(_p, _f, ...)   if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(__FILE__, __LINE__, _f, ## __VA_ARGS__)
+#define NCC_LOG(_f, ...)         if (NCC_LOG_ENABLED) ncc_printf_log(_f "\n", ## __VA_ARGS__)
 
 
 /*	After a call to snprintf and similar functions, check if we have enough remaining buffer space.
