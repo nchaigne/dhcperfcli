@@ -97,7 +97,6 @@ static ncc_list_t vps_list_in = { 0 };
 static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev = NULL; /* In template mode, previous used input item. */
-static dpc_templ_var_t templ_var = DPC_TEMPL_VAR_INCREMENT;
 static uint32_t input_num_use = 1;
 
 static ncc_endpoint_t server_ep = {
@@ -2453,7 +2452,7 @@ static void dpc_options_parse(int argc, char **argv)
 #ifdef HAVE_LIBPCAP
 		                    "Ai:"
 #endif
-		                    "a:D:c:f:g:hI:L:N:p:P:r:Rs:t:TvxX",
+		                    "a:D:c:f:g:hI:L:N:p:P:r:s:t:TvxX",
 		                    long_options, &opt_index);
 		if (argval == -1) break;
 
@@ -2524,10 +2523,6 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'r':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			rate_limit = atoi(optarg);
-			break;
-
-		case 'R':
-			templ_var = DPC_TEMPL_VAR_RANDOM;
 			break;
 
 		case 's':
@@ -2843,7 +2838,6 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
 	fprintf(fd, "  -r <num>         Rate limit (transaction replies /s)\n");
-	fprintf(fd, "  -R               Randomize template variable values (instead of increment).\n");
 	fprintf(fd, "  -s <seconds>     Periodically report progress statistics information.\n");
 	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
 	fprintf(fd, "  -T               Template mode.\n");
