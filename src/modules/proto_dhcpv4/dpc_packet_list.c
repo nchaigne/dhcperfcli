@@ -156,8 +156,8 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 
 	if (dpc_debug_lvl > 0) {
 		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-		fprintf(fr_log_fp, "Adding new managed socket to packet list: fd: %d, src: %s:%i\n",
-		        sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
+		DEBUG2("Adding new managed socket to packet list: fd: %d, src: %s:%i",
+		       sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
 	}
 
 	DPC_DEBUG_TRACE("Now managing %d socket(s)", pl->num_sockets);

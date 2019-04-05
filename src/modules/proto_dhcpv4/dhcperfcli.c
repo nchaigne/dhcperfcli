@@ -2565,6 +2565,8 @@ static void dpc_options_parse(int argc, char **argv)
 
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
+	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev);
+
 	/*
 	 *	Resolve server host address and port.
 	 */
@@ -2657,8 +2659,6 @@ int main(int argc, char **argv)
 	}
 
 	dpc_options_parse(argc, argv);
-
-	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev);
 
 	/*
 	 *	Mismatch between the binary and the libraries it depends on.
