@@ -33,7 +33,7 @@ Xlat expansion (automatically enabled in template mode) allows to dynamically ex
 - A test which lasts for 60 seconds, simulating a gateway sending DHCP Discover messages (and expecting Offer replies) concurrently, at a fixed rate of 1000 packets per second. Each packet originates from a distinct client (with incrementing client MAC addresses, starting from `50:41:4e:44:41:00`).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 60 -p 32 -r 1000 -g 10.11.12.1  10.11.12.42  discover
+echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\", DHCP-Hostname=\"%{randstr:12c3n}.whimsical.org\""  |  dhcperfcli  -T -L 60 -p 32 -r 1000 -g 10.11.12.1  10.11.12.42  discover
 `__
 
 
