@@ -69,9 +69,21 @@ typedef struct ncc_xlat_frame {
 } ncc_xlat_frame_t;
 
 static TALLOC_CTX *xlat_ctx = NULL;
+
 static ncc_list_t *ncc_xlat_frame_list = NULL; /* This is an array of lists. */
 static uint32_t num_xlat_frame_list = 0;
 
+
+void ncc_xlat_init()
+{
+	if (!xlat_ctx) xlat_ctx = talloc_new(talloc_autofree_context());
+}
+
+void ncc_xlat_free()
+{
+	if (FX_request) TALLOC_FREE(FX_request);
+	TALLOC_FREE(xlat_ctx);
+}
 
 /*
  *	To use FreeRADIUS xlat engine, we need a REQUEST (which is a "typedef struct rad_request").
@@ -103,18 +115,13 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 	request_num_use++;
 
 	if (!FX_request) {
-		FX_request = request_alloc(NULL);
+		FX_request = request_alloc(xlat_ctx);
 		FX_request->packet = fr_radius_alloc(FX_request, false);
 	}
 
 	FX_request->control = vps; /* Allow to use %{control:Attr} */
 	FX_request->packet->vps = vps; /* Allow to use %{packet:Attr} or directly %{Attr} */
 	FX_request->rcode = 0;
-}
-
-void ncc_xlat_free()
-{
-	if (FX_request) TALLOC_FREE(FX_request);
 }
 
 /*
@@ -245,7 +252,7 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
 	if (!xlat_frame) return -1; /* Cannot happen. */
 
 	if (!xlat_frame->type) {
@@ -293,7 +300,7 @@ static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
 	if (!xlat_frame) return -1; /* Cannot happen. */
 
 	if (!xlat_frame->type) {
@@ -398,7 +405,7 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
 	if (!xlat_frame) return -1; /* Cannot happen. */
 
 	if (!xlat_frame->type) {
@@ -457,7 +464,7 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
 	if (!xlat_frame) return -1; /* Cannot happen. */
 
 	if (!xlat_frame->type) {
@@ -581,7 +588,7 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
 	if (!xlat_frame) return -1; /* Cannot happen. */
 
 	if (!xlat_frame->type) {
@@ -642,7 +649,7 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 
 	*out = NULL;
 
-	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
 	if (!xlat_frame) return -1; /* Cannot happen. */
 
 	if (!xlat_frame->type) {
@@ -872,6 +879,8 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
  */
 void ncc_xlat_register(void)
 {
+	ncc_xlat_init();
+
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RAND, _ncc_xlat_num_rand, NULL, NULL, 0, 0, true);
 

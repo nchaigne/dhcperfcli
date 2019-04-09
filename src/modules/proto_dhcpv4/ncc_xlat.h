@@ -21,8 +21,9 @@ void ncc_xlat_core_free(void);
 /*
  *	Functions in ncc_xlat_func.c
  */
-void ncc_xlat_init_request(VALUE_PAIR *vps);
+void ncc_xlat_init(void);
 void ncc_xlat_free(void);
+void ncc_xlat_init_request(VALUE_PAIR *vps);
 void ncc_xlat_set_num(uint64_t num);
 int ncc_xlat_get_rcode(void);
 
