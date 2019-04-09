@@ -2641,9 +2641,12 @@ static void dpc_end(void)
 
 	/* Free memory. */
 	fr_dhcpv4_global_free();
+	// not working !? stuff allocated when calling fr_dhcpv4_global_init is not freed.
 	fr_dict_autofree(dpc_dict_autoload);
+
 	fr_dict_free(&fr_dict_internal); /* Loaded by fr_dict_autoload, but not freed by fr_dict_autofree. */
 	// (maybe temporary - FreeRADIUS might fix this in the future)
+	//fr_dict_free(&dict_dhcpv4); // <- nope. :'(
 
 	ncc_xlat_free();
 	ncc_xlat_core_free();
@@ -2653,8 +2656,8 @@ static void dpc_end(void)
 	TALLOC_FREE(global_ctx);
 
 	/*
-	 *  Anything not cleaned up by the above is allocated in
-	 *  the NULL top level context, and is likely leaked memory.
+	 * Anything not cleaned up by the above is allocated in
+	 * the NULL top level context, and is likely leaked memory.
 	 */
 	if (talloc_memory_report) {
 		fprintf(stdout, "--> EXIT talloc memory report:\n");

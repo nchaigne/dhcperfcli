@@ -29,7 +29,7 @@ extern int dpc_debug_lvl;
 extern fr_dict_attr_t const *attr_encoded_data;
 extern fr_dict_attr_t const *attr_dhcp_message_type;
 
-extern fr_dict_t *dict_dhcpv4;
+extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 
 
 #define dpc_assert rad_assert
