@@ -17,7 +17,7 @@ static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 /*
  *	Global variables.
  */
-TALLOC_CTX *autofree = NULL;
+TALLOC_CTX *global_ctx = NULL;
 
 struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
@@ -555,7 +555,7 @@ static void dpc_event_add_progress_stats(void)
 	}
 	timeradd(&tv_progress_stat, &tv_progress_interval, &tv_progress_stat);
 
-	if (fr_event_timer_insert(autofree, event_list, &ev_progress_stats,
+	if (fr_event_timer_insert(global_ctx, event_list, &ev_progress_stats,
 	                          &tv_progress_stat, dpc_progress_stats, NULL) < 0) {
 		ERROR("Failed inserting progress statistics event");
 	}
@@ -1371,7 +1371,7 @@ static dpc_input_t *dpc_get_input()
 	if (!with_template) {
 		return NCC_LIST_DEQUEUE(&vps_list_in);
 	} else {
-		return dpc_get_input_from_template(autofree);
+		return dpc_get_input_from_template(global_ctx);
 	}
 }
 
@@ -1672,7 +1672,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		/*
 		 *	Initialize a new session, if possible.
 		 */
-		dpc_session_ctx_t *session = dpc_session_init_from_input(autofree);
+		dpc_session_ctx_t *session = dpc_session_init_from_input(global_ctx);
 		if (!session) {
 			/* There is no input available at this point. */
 
@@ -1853,7 +1853,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 				value = talloc_typed_strdup(input, vp->xlat); /* modified by xlat_tokenize */
 
-				slen = xlat_tokenize(NULL, &xlat, value, NULL);
+				slen = xlat_tokenize(global_ctx, &xlat, value, NULL);
 				/* Notes:
 				 * - First parameter is talloc context.
 				 *   We cannot use "input" as talloc context, because we may free the input and still need the parsed xlat expression.
@@ -2466,7 +2466,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'g':
 			/* Allow to have multiple -g options, the last is handled after we've parsed all options. */
-			dpc_addr_list_parse(autofree, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
+			dpc_addr_list_parse(global_ctx, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 			gateway_arg = optarg;
 			break;
 
@@ -2575,7 +2575,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 	if (gateway_arg) {
 		DPC_DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", gateway_arg);
-		dpc_addr_list_parse(autofree, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
+		dpc_addr_list_parse(global_ctx, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 	}
 
 	/*
@@ -2635,7 +2635,7 @@ static void dpc_end(void)
 	fr_strerror_free();
 	TALLOC_FREE(pl);
 	TALLOC_FREE(event_list);
-	TALLOC_FREE(autofree);
+	TALLOC_FREE(global_ctx);
 
 	/* And we're done. */
 	exit(EXIT_SUCCESS);
@@ -2654,7 +2654,7 @@ int main(int argc, char **argv)
 	dpc_debug_lvl = 0; /* Our own debug. */
 	fr_log_fp = stdout; /* Both will go there. */
 
-	autofree = talloc_autofree_context();
+	global_ctx = talloc_autofree_context();
 
 	gettimeofday(&tv_start, NULL); /* Program start timestamp. */
 
@@ -2677,10 +2677,10 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	dpc_dict_init(autofree);
+	dpc_dict_init(global_ctx);
 
-	dpc_event_list_init(autofree);
-	dpc_packet_list_init(autofree);
+	dpc_event_list_init(global_ctx);
+	dpc_packet_list_init(global_ctx);
 
 	/*
 	 *	Allocate sockets for gateways.
@@ -2704,7 +2704,7 @@ int main(int argc, char **argv)
 	 */
 #ifdef HAVE_LIBPCAP
 	if (iface) {
-		dpc_pcap_init(autofree);
+		dpc_pcap_init(global_ctx);
 	}
 #endif
 
@@ -2722,7 +2722,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Load input data used to build the packets. */
-	if (dpc_input_load(autofree) < 0) {
+	if (dpc_input_load(global_ctx) < 0) {
 		exit(EXIT_FAILURE);
 	}
 
