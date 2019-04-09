@@ -2631,6 +2631,10 @@ static void dpc_end(void)
 	/* Free memory. */
 	fr_dhcpv4_global_free();
 	fr_dict_autofree(dpc_dict_autoload);
+	fr_dict_free(&fr_dict_internal); /* Loaded by fr_dict_autoload, but not freed by fr_dict_autofree. */
+	// (maybe temporary - FreeRADIUS might fix this in the future)
+
+	ncc_xlat_free();
 	ncc_xlat_core_free();
 	fr_strerror_free();
 	TALLOC_FREE(pl);
