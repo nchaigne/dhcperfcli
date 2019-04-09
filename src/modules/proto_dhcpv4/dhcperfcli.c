@@ -85,6 +85,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ NULL }
 };
 
+static bool talloc_memory_report; //!< On exit, print a memory report on what's left unfreed.
 static int with_debug_dev = 0;
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
@@ -2436,7 +2437,7 @@ static void dpc_options_parse(int argc, char **argv)
 #ifdef HAVE_LIBPCAP
 		                    "Ai:"
 #endif
-		                    "a:D:c:f:g:hI:L:N:p:P:r:s:t:TvxX",
+		                    "a:D:c:f:g:hI:L:MN:p:P:r:s:t:TvxX",
 		                    long_options, &opt_index);
 		if (argval == -1) break;
 
@@ -2488,6 +2489,10 @@ static void dpc_options_parse(int argc, char **argv)
 			if (!ncc_str_to_float(&duration_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			break;
 
+		case 'M':
+			talloc_memory_report = true;
+			break;
+
 		case 'N':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			session_max_num = atoi(optarg);
@@ -2537,7 +2542,6 @@ static void dpc_options_parse(int argc, char **argv)
 			debug_fr = true;
 			break;
 
-
 		case 0: /* Long option flag set, nothing to do. */
 			break;
 
@@ -2563,6 +2567,13 @@ static void dpc_options_parse(int argc, char **argv)
 	argv += (optind - 1);
 
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
+
+	/* Configure talloc debugging features. */
+	if (talloc_memory_report) {
+		talloc_enable_null_tracking();
+	} else {
+		talloc_disable_null_tracking();
+	}
 
 	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Update with actual options. */
 
@@ -2640,6 +2651,16 @@ static void dpc_end(void)
 	TALLOC_FREE(pl);
 	TALLOC_FREE(event_list);
 	TALLOC_FREE(global_ctx);
+
+	/*
+	 *  Anything not cleaned up by the above is allocated in
+	 *  the NULL top level context, and is likely leaked memory.
+	 */
+	if (talloc_memory_report) {
+		fprintf(stdout, "--> EXIT talloc memory report:\n");
+		fr_log_talloc_report(NULL);
+		fprintf(stdout, "<-- EXIT talloc memory report END.\n");
+	}
 
 	/* And we're done. */
 	exit(EXIT_SUCCESS);
