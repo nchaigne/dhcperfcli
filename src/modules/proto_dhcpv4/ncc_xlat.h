@@ -15,6 +15,7 @@ int ncc_xlat_core_register(void *mod_inst, char const *name,
 		  size_t buf_len, bool async_safe);
 
 int ncc_xlat_core_init(void);
+void ncc_xlat_core_free(void);
 
 
 /*

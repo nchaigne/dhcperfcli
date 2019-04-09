@@ -29,6 +29,7 @@
  *	In addition, the following functions are copied, but altered:
  *
  *	xlat_init (ncc_xlat_core_init) - it does not register any of FreeRADIUS unlang / server xlat functions.
+ *	xlat_free (ncc_xlat_core_free).
  *	xlat_register (ncc_xlat_core_register) - calls ncc_xlat_core_init.
  */
 
@@ -189,4 +190,19 @@ int ncc_xlat_core_init(void)
 	}
 
 	return 0;
+}
+
+/** De-register all xlat functions we created
+ *
+ */
+void ncc_xlat_core_free(void)
+{
+	rbtree_t *xr = xlat_root;		/* Make sure the tree can't be freed multiple times */
+
+	if (!xr) return;
+
+	xlat_root = NULL;
+	talloc_free(xr);
+
+	xlat_eval_free();
 }
