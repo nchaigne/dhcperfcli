@@ -20,7 +20,7 @@ And more!
 
 # Installation
 
-To install *dhcperfcli*, refer to [INSTALL.md](https://github.com/nchaigne/dhcperfcli/blob/master/INSTALL.md).
+To build and install *dhcperfcli*, refer to [INSTALL.md](https://github.com/nchaigne/dhcperfcli/blob/master/INSTALL.md).
 
 
 # Usage
