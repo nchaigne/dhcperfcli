@@ -36,9 +36,9 @@ typedef enum {
 	NCC_CTX_TYPE_IPADDR_RAND,
 	NCC_CTX_TYPE_ETHADDR_RANGE,
 	NCC_CTX_TYPE_ETHADDR_RAND,
-} ncc_xlat_ctx_type_t;
+} ncc_xlat_frame_type_t;
 
-typedef struct ncc_xlat_ctx {
+typedef struct ncc_xlat_frame {
 	/* Generic chaining */
 	ncc_list_t *list;       //!< The list to which this entry belongs (NULL for an unchained entry).
 	ncc_list_item_t *prev;
@@ -46,7 +46,7 @@ typedef struct ncc_xlat_ctx {
 
 	/* Specific item data */
 	uint32_t num;
-	ncc_xlat_ctx_type_t type;
+	ncc_xlat_frame_type_t type;
 
 	union {
 		struct {
@@ -66,10 +66,11 @@ typedef struct ncc_xlat_ctx {
 		} ethaddr_range;
 	};
 
-} ncc_xlat_ctx_t;
+} ncc_xlat_frame_t;
 
-static ncc_list_t *ncc_xlat_ctx_list = NULL; /* This is an array of lists. */
-static uint32_t num_xlat_ctx_list = 0;
+static TALLOC_CTX *xlat_ctx = NULL;
+static ncc_list_t *ncc_xlat_frame_list = NULL; /* This is an array of lists. */
+static uint32_t num_xlat_frame_list = 0;
 
 
 /*
@@ -111,6 +112,11 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 	FX_request->rcode = 0;
 }
 
+void ncc_xlat_free()
+{
+	if (FX_request) TALLOC_FREE(FX_request);
+}
+
 /*
  *	Initialize xlat context in our fake request for processing a list of input vps.
  */
@@ -138,42 +144,42 @@ int ncc_xlat_get_rcode()
 /*
  *	Retrieve a specific xlat context, using information from our fake request.
  */
-static ncc_xlat_ctx_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
+static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 {
-	ncc_xlat_ctx_t *xlat_ctx;
+	ncc_xlat_frame_t *xlat_frame;
 
 	uint32_t id_list = FX_request->number;
 	uint32_t id_item = FX_request->child_number;
 
 	/* Get the list for this input item. If it doesn't exist yet, allocate a new one. */
 	ncc_list_t *list;
-	if (id_list >= num_xlat_ctx_list) {
-		uint32_t num_xlat_ctx_list_pre = num_xlat_ctx_list;
-		num_xlat_ctx_list = id_list + 1;
+	if (id_list >= num_xlat_frame_list) {
+		uint32_t num_xlat_frame_list_pre = num_xlat_frame_list;
+		num_xlat_frame_list = id_list + 1;
 
 		/* Allocate lists to all input items, even if they don't need xlat'ing. This is simpler. */
-		ncc_xlat_ctx_list = talloc_realloc(ctx, ncc_xlat_ctx_list, ncc_list_t, num_xlat_ctx_list);
+		ncc_xlat_frame_list = talloc_realloc(ctx, ncc_xlat_frame_list, ncc_list_t, num_xlat_frame_list);
 
 		/* talloc_realloc doesn't zero out the new elements. */
-		memset(&ncc_xlat_ctx_list[num_xlat_ctx_list_pre], 0,
-		       sizeof(ncc_list_t) * (num_xlat_ctx_list - num_xlat_ctx_list_pre));
+		memset(&ncc_xlat_frame_list[num_xlat_frame_list_pre], 0,
+		       sizeof(ncc_list_t) * (num_xlat_frame_list - num_xlat_frame_list_pre));
 	}
-	list = &ncc_xlat_ctx_list[id_list];
+	list = &ncc_xlat_frame_list[id_list];
 
 	/* Now get the xlat context. If it doesn't exist yet, allocate a new one and add it to the list. */
-	xlat_ctx = NCC_LIST_INDEX(list, id_item);
-	if (!xlat_ctx) {
+	xlat_frame = NCC_LIST_INDEX(list, id_item);
+	if (!xlat_frame) {
 		/* We don't have a context element yet, need to add a new one. */
-		MEM(xlat_ctx = talloc_zero(ctx, ncc_xlat_ctx_t));
+		MEM(xlat_frame = talloc_zero(ctx, ncc_xlat_frame_t));
 
-		xlat_ctx->num = id_item;
+		xlat_frame->num = id_item;
 
-		NCC_LIST_ENQUEUE(list, xlat_ctx);
+		NCC_LIST_ENQUEUE(list, xlat_frame);
 	}
 
 	FX_request->child_number ++; /* Prepare next xlat context. */
 
-	return xlat_ctx;
+	return xlat_frame;
 }
 
 
@@ -239,10 +245,10 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
-	if (!xlat_ctx) return -1; /* Cannot happen. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	if (!xlat_frame) return -1; /* Cannot happen. */
 
-	if (!xlat_ctx->type) {
+	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		uint64_t num1, num2;
 		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
@@ -250,20 +256,20 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 			XLAT_ERR_RETURN;
 		}
 
-		xlat_ctx->type = NCC_CTX_TYPE_NUM_RANGE;
-		xlat_ctx->num_range.min = num1;
-		xlat_ctx->num_range.max = num2;
-		xlat_ctx->num_range.next = num1;
+		xlat_frame->type = NCC_CTX_TYPE_NUM_RANGE;
+		xlat_frame->num_range.min = num1;
+		xlat_frame->num_range.max = num2;
+		xlat_frame->num_range.next = num1;
 	}
 
-	*out = talloc_typed_asprintf(ctx, "%lu", xlat_ctx->num_range.next);
+	*out = talloc_typed_asprintf(ctx, "%lu", xlat_frame->num_range.next);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
 
 	/* Prepare next value. */
-	if (xlat_ctx->num_range.next == xlat_ctx->num_range.max) {
-		xlat_ctx->num_range.next = xlat_ctx->num_range.min;
+	if (xlat_frame->num_range.next == xlat_frame->num_range.max) {
+		xlat_frame->num_range.next = xlat_frame->num_range.min;
 	} else {
-		xlat_ctx->num_range.next ++;
+		xlat_frame->num_range.next ++;
 	}
 
 	return strlen(*out);
@@ -287,10 +293,10 @@ static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
-	if (!xlat_ctx) return -1; /* Cannot happen. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	if (!xlat_frame) return -1; /* Cannot happen. */
 
-	if (!xlat_ctx->type) {
+	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		uint64_t num1, num2;
 		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
@@ -298,17 +304,17 @@ static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 			XLAT_ERR_RETURN;
 		}
 
-		xlat_ctx->type = NCC_CTX_TYPE_NUM_RAND;
-		xlat_ctx->num_range.min = num1;
-		xlat_ctx->num_range.max = num2;
+		xlat_frame->type = NCC_CTX_TYPE_NUM_RAND;
+		xlat_frame->num_range.min = num1;
+		xlat_frame->num_range.max = num2;
 	}
 
 	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
 
-	//delta = xlat_ctx->num_range.max - xlat_ctx->num_range.min + 1;
-	delta = xlat_ctx->num_range.max - xlat_ctx->num_range.min;
+	//delta = xlat_frame->num_range.max - xlat_frame->num_range.min + 1;
+	delta = xlat_frame->num_range.max - xlat_frame->num_range.min;
 	if (delta < UINT64_MAX) delta++; /* Don't overthrow. */
-	value = (uint64_t)(rnd * delta) + xlat_ctx->num_range.min;
+	value = (uint64_t)(rnd * delta) + xlat_frame->num_range.min;
 
 	*out = talloc_typed_asprintf(ctx, "%lu", value);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
@@ -392,10 +398,10 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
-	if (!xlat_ctx) return -1; /* Cannot happen. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	if (!xlat_frame) return -1; /* Cannot happen. */
 
-	if (!xlat_ctx->type) {
+	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		fr_ipaddr_t ipaddr1, ipaddr2;
 		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
@@ -403,15 +409,15 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 			XLAT_ERR_RETURN;
 		}
 
-		xlat_ctx->type = NCC_CTX_TYPE_IPADDR_RANGE;
-		xlat_ctx->ipaddr_range.min = ipaddr1.addr.v4.s_addr;
-		xlat_ctx->ipaddr_range.max = ipaddr2.addr.v4.s_addr;
-		xlat_ctx->ipaddr_range.next = ipaddr1.addr.v4.s_addr;
+		xlat_frame->type = NCC_CTX_TYPE_IPADDR_RANGE;
+		xlat_frame->ipaddr_range.min = ipaddr1.addr.v4.s_addr;
+		xlat_frame->ipaddr_range.max = ipaddr2.addr.v4.s_addr;
+		xlat_frame->ipaddr_range.next = ipaddr1.addr.v4.s_addr;
 	}
 
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	struct in_addr addr;
-	addr.s_addr = xlat_ctx->ipaddr_range.next;
+	addr.s_addr = xlat_frame->ipaddr_range.next;
 	if (inet_ntop(AF_INET, &addr, ipaddr_buf, sizeof(ipaddr_buf)) == NULL) { /* Cannot happen. */
 		fr_strerror_printf("%s", fr_syserror(errno));
 		XLAT_ERR_RETURN;
@@ -421,10 +427,10 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
 
 	/* Prepare next value. */
-	if (xlat_ctx->ipaddr_range.next == xlat_ctx->ipaddr_range.max) {
-		xlat_ctx->ipaddr_range.next = xlat_ctx->ipaddr_range.min;
+	if (xlat_frame->ipaddr_range.next == xlat_frame->ipaddr_range.max) {
+		xlat_frame->ipaddr_range.next = xlat_frame->ipaddr_range.min;
 	} else {
-		xlat_ctx->ipaddr_range.next = htonl(ntohl(xlat_ctx->ipaddr_range.next) + 1);
+		xlat_frame->ipaddr_range.next = htonl(ntohl(xlat_frame->ipaddr_range.next) + 1);
 	}
 
 	return strlen(*out);
@@ -451,10 +457,10 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
-	if (!xlat_ctx) return -1; /* Cannot happen. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	if (!xlat_frame) return -1; /* Cannot happen. */
 
-	if (!xlat_ctx->type) {
+	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		fr_ipaddr_t ipaddr1, ipaddr2;
 		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
@@ -462,13 +468,13 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 			XLAT_ERR_RETURN;
 		}
 
-		xlat_ctx->type = NCC_CTX_TYPE_IPADDR_RAND;
-		xlat_ctx->ipaddr_range.min = ipaddr1.addr.v4.s_addr;
-		xlat_ctx->ipaddr_range.max = ipaddr2.addr.v4.s_addr;
+		xlat_frame->type = NCC_CTX_TYPE_IPADDR_RAND;
+		xlat_frame->ipaddr_range.min = ipaddr1.addr.v4.s_addr;
+		xlat_frame->ipaddr_range.max = ipaddr2.addr.v4.s_addr;
 	}
 
-	num1 = ntohl(xlat_ctx->ipaddr_range.min);
-	num2 = ntohl(xlat_ctx->ipaddr_range.max);
+	num1 = ntohl(xlat_frame->ipaddr_range.min);
+	num2 = ntohl(xlat_frame->ipaddr_range.max);
 
 	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
 
@@ -575,10 +581,10 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 	*out = NULL;
 
 	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
-	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
-	if (!xlat_ctx) return -1; /* Cannot happen. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	if (!xlat_frame) return -1; /* Cannot happen. */
 
-	if (!xlat_ctx->type) {
+	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
@@ -586,30 +592,30 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 			XLAT_ERR_RETURN;
 		}
 
-		xlat_ctx->type = NCC_CTX_TYPE_ETHADDR_RANGE;
-		memcpy(xlat_ctx->ethaddr_range.min, ethaddr1, 6);
-		memcpy(xlat_ctx->ethaddr_range.max, ethaddr2, 6);
-		memcpy(xlat_ctx->ethaddr_range.next, ethaddr1, 6);
+		xlat_frame->type = NCC_CTX_TYPE_ETHADDR_RANGE;
+		memcpy(xlat_frame->ethaddr_range.min, ethaddr1, 6);
+		memcpy(xlat_frame->ethaddr_range.max, ethaddr2, 6);
+		memcpy(xlat_frame->ethaddr_range.next, ethaddr1, 6);
 	}
 
 	char ethaddr_buf[NCC_ETHADDR_STRLEN] = "";
-	ncc_ether_addr_sprint(ethaddr_buf, xlat_ctx->ethaddr_range.next);
+	ncc_ether_addr_sprint(ethaddr_buf, xlat_frame->ethaddr_range.next);
 
 	*out = talloc_typed_asprintf(ctx, "%s", ethaddr_buf);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
 
 	/* Prepare next value. */
-	if (memcmp(xlat_ctx->ethaddr_range.next, xlat_ctx->ethaddr_range.max, 6) == 0) {
-		memcpy(xlat_ctx->ethaddr_range.next, xlat_ctx->ethaddr_range.min, 6);
+	if (memcmp(xlat_frame->ethaddr_range.next, xlat_frame->ethaddr_range.max, 6) == 0) {
+		memcpy(xlat_frame->ethaddr_range.next, xlat_frame->ethaddr_range.min, 6);
 	} else {
 		/* Store the 6 octets of Ethernet addr in a uint64_t to perform an integer increment.
 		 */
 		uint64_t ethaddr = 0;
-		memcpy(&ethaddr, xlat_ctx->ethaddr_range.next, 6);
+		memcpy(&ethaddr, xlat_frame->ethaddr_range.next, 6);
 
 		ethaddr = (ntohll(ethaddr) >> 16) + 1;
 		ethaddr = htonll(ethaddr << 16);
-		memcpy(xlat_ctx->ethaddr_range.next, &ethaddr, 6);
+		memcpy(xlat_frame->ethaddr_range.next, &ethaddr, 6);
 	}
 
 	return strlen(*out);
@@ -636,10 +642,10 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 
 	*out = NULL;
 
-	ncc_xlat_ctx_t *xlat_ctx = ncc_xlat_get_ctx(NULL);
-	if (!xlat_ctx) return -1; /* Cannot happen. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(NULL);
+	if (!xlat_frame) return -1; /* Cannot happen. */
 
-	if (!xlat_ctx->type) {
+	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
@@ -647,15 +653,15 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 			XLAT_ERR_RETURN;
 		}
 
-		xlat_ctx->type = NCC_CTX_TYPE_ETHADDR_RAND;
-		memcpy(xlat_ctx->ethaddr_range.min, ethaddr1, 6);
-		memcpy(xlat_ctx->ethaddr_range.max, ethaddr2, 6);
+		xlat_frame->type = NCC_CTX_TYPE_ETHADDR_RAND;
+		memcpy(xlat_frame->ethaddr_range.min, ethaddr1, 6);
+		memcpy(xlat_frame->ethaddr_range.max, ethaddr2, 6);
 	}
 
-	memcpy(&num1, xlat_ctx->ethaddr_range.min, 6);
+	memcpy(&num1, xlat_frame->ethaddr_range.min, 6);
 	num1 = (ntohll(num1) >> 16);
 
-	memcpy(&num2, xlat_ctx->ethaddr_range.max, 6);
+	memcpy(&num2, xlat_frame->ethaddr_range.max, 6);
 	num2 = (ntohll(num2) >> 16);
 
 	double rnd = (double)fr_rand() / UINT32_MAX; /* Random value between 0..1 */
