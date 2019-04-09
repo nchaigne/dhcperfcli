@@ -2628,6 +2628,15 @@ static void dpc_end(void)
 	dpc_stats_fprint(stdout);
 	dpc_tr_stats_fprint(stdout);
 
+	/* Free memory. */
+	fr_dhcpv4_global_free();
+	fr_dict_autofree(dpc_dict_autoload);
+	ncc_xlat_core_free();
+	fr_strerror_free();
+	TALLOC_FREE(pl);
+	TALLOC_FREE(event_list);
+	TALLOC_FREE(autofree);
+
 	/* And we're done. */
 	exit(EXIT_SUCCESS);
 }
