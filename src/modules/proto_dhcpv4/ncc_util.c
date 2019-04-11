@@ -76,7 +76,7 @@ void ncc_printf_log(char const *fmt, ...)
 	/* Print absolute date/time. */
 	if (ncc_debug_datetime) {
 		char datetime_buf[NCC_DATETIME_STRLEN];
-		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf));
+		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, true));
 	}
 
 	vfprintf(ncc_log_fp, fmt, ap);
@@ -130,7 +130,7 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 		/* Print absolute date/time. */
 		if (ncc_debug_datetime) {
 			char datetime_buf[NCC_DATETIME_STRLEN];
-			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf));
+			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, true));
 		}
 	}
 
@@ -292,15 +292,16 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 }
 
 /*
- *	Print absolute date/time, in format: YYYY/MM/DD HH:MI:SS
+ *	Print absolute date/time, in format: [YYYY/MM/DD] HH:MI:SS
  */
-char *ncc_absolute_time_sprint(char *out)
+char *ncc_absolute_time_sprint(char *out, bool with_date)
 {
 	time_t t;
 	struct tm s_tm;
 
 	time(&t);
-	strftime(out, 20, "%Y/%m/%d %H:%M:%S", localtime_r(&t, &s_tm));
+	strftime(out, 20, (with_date ? "%Y/%m/%d %H:%M:%S" : "%H:%M:%S"),
+	         localtime_r(&t, &s_tm));
 
 	return out;
 }
