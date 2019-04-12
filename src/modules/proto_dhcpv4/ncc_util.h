@@ -13,6 +13,10 @@
 #define NCC_TIME_STRLEN           (15 + 1)
 #define NCC_DATETIME_STRLEN       (19 + 1)
 
+#define NCC_DATE_FMT              "%Y-%m-%d"
+#define NCC_TIME_FMT              "%H:%M:%S"
+#define NCC_DATETIME_FMT          NCC_DATE_FMT" "NCC_TIME_FMT
+
 
 /*
  *	Using rad_assert defined in include/rad_assert.h

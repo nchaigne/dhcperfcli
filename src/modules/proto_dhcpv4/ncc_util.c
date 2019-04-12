@@ -292,7 +292,7 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 }
 
 /*
- *	Print absolute date/time, in format: [YYYY/MM/DD] HH:MI:SS
+ *	Print absolute date/time, in format: [YYYY-MM-DD ]HH:MI:SS
  */
 char *ncc_absolute_time_sprint(char *out, bool with_date)
 {
@@ -300,7 +300,7 @@ char *ncc_absolute_time_sprint(char *out, bool with_date)
 	struct tm s_tm;
 
 	time(&t);
-	strftime(out, 20, (with_date ? "%Y/%m/%d %H:%M:%S" : "%H:%M:%S"),
+	strftime(out, 20, (with_date ? NCC_DATETIME_FMT : NCC_TIME_FMT),
 	         localtime_r(&t, &s_tm));
 
 	return out;
