@@ -300,7 +300,7 @@ char *ncc_absolute_time_sprint(char *out, bool with_date)
 	struct tm s_tm;
 
 	time(&t);
-	strftime(out, 20, (with_date ? NCC_DATETIME_FMT : NCC_TIME_FMT),
+	strftime(out, NCC_DATETIME_STRLEN, (with_date ? NCC_DATETIME_FMT : NCC_TIME_FMT),
 	         localtime_r(&t, &s_tm));
 
 	return out;
