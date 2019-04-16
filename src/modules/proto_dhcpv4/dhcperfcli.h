@@ -35,8 +35,9 @@ struct dpc_context {
 	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
 
 	float duration_start_max;        //<! Limit duration for starting new input sessions.
-	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
+	struct timeval tve_start_max;    //<! Time after which no input session is allowed to be started.
 
+	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
 	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
 
 	float rate_limit;                //<! Limit rate/s of sessions initialized from input (all transactions combined).
@@ -306,14 +307,18 @@ struct dpc_input {
 
 	/* Specific item data */
 	uint32_t id;              //!< Id of input (0 for the first one).
+	uint32_t num_use;         //!< How many times has this input been used.
 
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
-	uint32_t num_use;         //!< How many times has this input been used.
-	uint32_t max_use;         //<! Maximum number of times this input can be used.
+
 	struct timeval tve_start; //!< Timestamp of first use.
 	struct timeval tve_end;   //!< Timestamp of last use once input is done.
+
+	uint32_t max_use;         //<! Maximum number of times this input can be used.
+	float max_duration;       //!< Maximum duration of starting sessions with this input (relative to input start use).
+	struct timeval tve_max_start; //!< tve_start + max_duration
 
 	bool done;                //!< Is this input done ? (i.e. no session can be started from it)
 

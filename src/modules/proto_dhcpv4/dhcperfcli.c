@@ -47,6 +47,7 @@ fr_dict_attr_t const *attr_packet_src_port = NULL;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
+fr_dict_attr_t const *attr_max_duration = NULL;
 fr_dict_attr_t const *attr_max_use = NULL;
 
 fr_dict_attr_t const *attr_dhcp_hop_count = NULL;
@@ -91,6 +92,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
+	{ .out = &attr_max_duration, .name = "Max-Duration", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
 
 	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
@@ -1430,7 +1432,14 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 		 */
 		if (input->max_use && input->num_use >= input->max_use) {
 			/* Max number of uses reached for this input. */
-			DPC_DEBUG_TRACE("Max number of uses (%u) reached for input (id: %u)", input->num_use, input->id);
+			DEBUG("Max number of uses (%u) reached for input (id: %u)", input->num_use, input->id);
+			input->done = true;
+			input->tve_end = now;
+			continue;
+		}
+		if (timerisset(&input->tve_max_start) && timercmp(&now, &input->tve_max_start, >)) {
+			/* Max session start time reached for this input. */
+			DEBUG("Max session start time reached for input (id: %u)", input->id);
 			input->done = true;
 			input->tve_end = now;
 			continue;
@@ -1480,6 +1489,23 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	/* Store time of first session initialized. */
 	if (!timerisset(&tve_sessions_ini_start)) {
 		gettimeofday(&tve_sessions_ini_start, NULL);
+	}
+
+	/* If this is the first time this input is used, store current time. */
+	if (input->num_use == 0) {
+		gettimeofday(&input->tve_start, NULL);
+
+		/* Also store input max start time, if applicable. */
+		if (input->max_duration) {
+			ncc_float_to_timeval(&input->tve_max_start, input->max_duration);
+			timeradd(&input->tve_max_start, &input->tve_start, &input->tve_max_start);
+		}
+
+		/* If there is a global max start time, store whichever comes first (input, global). */
+		if (timerisset(&ECTX.tve_start_max)
+		    && (!input->max_duration || timercmp(&input->tve_max_start, &ECTX.tve_start_max, >)) ) {
+			input->tve_max_start = ECTX.tve_start_max;
+		}
 	}
 
 	/*
@@ -1883,6 +1909,11 @@ static bool dpc_parse_input(dpc_input_t *input)
 	VALUE_PAIR *vp;
 	VALUE_PAIR *vp_encoded_data = NULL, *vp_workflow_type = NULL;
 
+#define WARN_ATTR_VALUE(_l) { \
+		PWARN("Invalid value for attribute %s (expected: %s). Discarding input (id: %u)", vp->da->name, _l, input->id); \
+		return false; \
+	}
+
 	input->ext.code = FR_CODE_UNDEFINED;
 
 	/* Default: global option -c, can be overriden through Max-Use attr. */
@@ -2010,6 +2041,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
+
+		} else if (vp->da == attr_max_duration) { /* Max-Duration = <n> */
+			if (!ncc_str_to_float(&input->max_duration, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
 
 		} else if (vp->da == attr_max_use) { /* Max-Use = <n> */
 			input->max_use = vp->vp_uint32;
@@ -2876,6 +2910,11 @@ int main(int argc, char **argv)
 #endif
 
 	gettimeofday(&tve_job_start, NULL); /* Job start timestamp. */
+
+	if (ECTX.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
+		ncc_float_to_timeval(&ECTX.tve_start_max, ECTX.duration_start_max);
+		timeradd(&ECTX.tve_start_max, &tve_job_start, &ECTX.tve_start_max);
+	}
 
 	/* Arm a timer to produce periodic statistics. */
 	dpc_event_add_progress_stats();
