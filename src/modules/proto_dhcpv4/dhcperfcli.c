@@ -618,7 +618,8 @@ static void dpc_event_add_progress_stats(void)
 
 	if (fr_event_timer_insert(global_ctx, event_list, &ev_progress_stats,
 	                          &tve_progress_stat, dpc_progress_stats, NULL) < 0) {
-		ERROR("Failed inserting progress statistics event");
+		/* Should never happen. */
+		PERROR("Failed inserting progress statistics event");
 	}
 }
 
@@ -667,7 +668,8 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct tim
 
 	if (fr_event_timer_insert(session, event_list, &session->event,
 	                          &tv_event, dpc_request_timeout, session) < 0) {
-		ERROR("Failed inserting request timeout event");
+		/* Should never happen. */
+		PERROR("Failed inserting request timeout event");
 	}
 }
 
