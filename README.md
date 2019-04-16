@@ -35,18 +35,17 @@ Arguments|Description
 `<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`DHCP-Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
 `-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
-`-c <num>` | Use each input item `<num>` times. (ignored in template mode)<br>Default: 1.
+`-c <num>` | Use each input item up to `<num>` times.<br>Default: unlimited in template mode, or 1 otherwise.
 `-D <dir>` | Dictionaries main directory.<br>Default: directory `share/freeradius/dictionary` of FreeRADIUS installation.
 `-f <file>` | Read input items from `<file>`, in addition to stdin.<br>An input item is a list of *attribute/value pairs*. At least one such item is required, so one packet can be built.
 `-g <gw>[:<port>]` | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>A comma-separated list may be specified, in which case packets will be sent using all of those gateways in a round-robin fashion.<br>Alternatively, option `-g` can be provided multiple times.
 `-i <interface>` | Use this interface for unconfigured clients to broadcast through a raw socket. (This requires libpcap.)
 `-I <num>` | Start generating `xid` values with `<num>`.<br>Default: 0.
-`-L <seconds>` | Limit duration (beyond which no new session will be started).
-`-N <num>` | Start at most `<num>` sessions (in template mode: generate `<num>` sessions).
-`-p <num>` | Send up to `<num>` session packets in parallel.<br>Default: 1 (packets are sent sequentially).
+`-L <seconds>` | Limit duration for starting new input sessions.
+`-N <num>` | Start at most `<num>` sessions from input items.
+`-p <num>` | Send up to `<num>` session initial packets in parallel.<br>Default: 1 (packets are sent sequentially).
 `-P <num>` | Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).<br>A default is figured out according to number of packets and parallelism.
-`-r <num>` | Rate limit. Maximum packet replies per second.<br>Or, if no reply is received, maximum sent packets per second.
-`-R` | Randomize template variable values (default is to increment).<br>Refer to *template* section for details.
+`-r <num>` | Rate limit. Maximum new input sessions initialized per second.
 `-s <seconds>` | Periodically report progress statistics information.<br>Default: 10 s.
 `-t <timeout>` | Wait at most `<timeout>` seconds for a reply (may be a floating point number).<br>Default: 3.
 `-T` | Template mode.

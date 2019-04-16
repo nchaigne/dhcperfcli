@@ -114,7 +114,7 @@ static ncc_list_t vps_list_in = { 0 };
 static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev = NULL; /* In template mode, previous used input item. */
-static uint32_t input_num_use = 1;
+static uint32_t input_num_use = 0; /* Template mode: max use of each input item. Non template: use each input this many time. */
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
@@ -1880,6 +1880,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 	input->ext.code = FR_CODE_UNDEFINED;
 
+	/* Default: global option -c. */
+	input->max_use = input_num_use;
+
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
 	 *	If so, extract (if there is one) the message type and the xid.
@@ -2519,7 +2522,6 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'c':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			input_num_use = atoi(optarg);
-			if (input_num_use == 0) input_num_use = 1;
 			break;
 
 		case 'D':
@@ -2670,6 +2672,8 @@ static void dpc_options_parse(int argc, char **argv)
 
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
+
+	if (!with_template && input_num_use == 0) input_num_use = 1;
 }
 
 /*
@@ -2909,7 +2913,7 @@ static void NEVER_RETURNS usage(int status)
 #ifdef HAVE_LIBPCAP
 	fprintf(fd, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
-	fprintf(fd, "  -c <num>         Use each input item <num> times (has no effect in template mode).\n");
+	fprintf(fd, "  -c <num>         Use each input item up to <num> times.\n");
 	fprintf(fd, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
@@ -2920,13 +2924,13 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -i <interface>   Use this interface for unconfigured clients to broadcast through a raw socket.\n");
 #endif
 	fprintf(fd, "  -I <num>         Start generating xid values with <num>.\n");
-	fprintf(fd, "  -L <seconds>     Limit duration (beyond which no new session will be started).\n");
-	fprintf(fd, "  -N <num>         Start at most <num> sessions (in template mode: generate <num> sessions).\n");
-	fprintf(fd, "  -p <num>         Send up to <num> session packets in parallel.\n");
+	fprintf(fd, "  -L <seconds>     Limit duration for starting new input sessions.\n");
+	fprintf(fd, "  -N <num>         Start at most <num> sessions from input items.\n");
+	fprintf(fd, "  -p <num>         Send up to <num> session initial requests in parallel.\n");
 	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
-	fprintf(fd, "  -r <num>         Rate limit (transaction replies /s)\n");
-	fprintf(fd, "  -s <seconds>     Periodically report progress statistics information.\n");
-	fprintf(fd, "  -t <timeout>     Wait at most <timeout> seconds for a reply (may be a floating point number).\n");
+	fprintf(fd, "  -r <num>         Rate limit. Maximum new input sessions initialized per second.\n");
+	fprintf(fd, "  -s <seconds>     Display ongoing statistics information at periodic time intervals.\n");
+	fprintf(fd, "  -t <seconds>     Maximum time spent waiting for a reply to a request previously sent.\n");
 	fprintf(fd, "  -T               Template mode.\n");
 	fprintf(fd, "  -v               Print version information.\n");
 	fprintf(fd, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
