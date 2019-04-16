@@ -139,12 +139,16 @@ static struct timeval tve_sessions_ini_start = { 0 }; /* Start timestamp of star
 static struct timeval tve_sessions_ini_end = { 0 }; /* End timestamp of starting new sessions. */
 static struct timeval tve_last_session_in = { 0 }; /* Last time a session has been initialized from input. */
 
-static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
+static uint32_t session_num = 0; /* Total number of sessions initialized (including received requests). */
+static uint32_t session_num_in = 0; /* Number of sessions initialized for sending requests. */
+static uint32_t session_num_active = 0; /* Number of active sessions. */
+static uint32_t session_num_in_active = 0; /* Number of active sessions from input. */
+static uint32_t session_num_parallel = 0; /* Number of active sessions from input which are handling initial request. */
+
 static bool job_done = false;
 static bool signal_done = false;
 
-static uint32_t session_num_active = 0; /* Number of active sessions. */
 static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
 fr_event_timer_t const *ev_progress_stats = NULL;
 struct timeval tve_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
@@ -681,6 +685,8 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 
 	DPC_DEBUG_TRACE("Preparing to send one packet");
 
+	session->num_send ++;
+
 	/*
 	 *	Get a socket to send this over.
 	 */
@@ -1055,6 +1061,13 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	talloc_free(session->request);
 	session->request = packet;
 
+	if (session->num_send == 1) {
+		session_num_parallel --; /* Not a session "initial request" anymore. */
+
+		SDEBUG2("Session post initial request - active sessions: %u (in: %u), parallel: %u",
+		    session_num_active, session_num_in_active, session_num_parallel);
+	}
+
 	/*
 	 *	Encode and send packet.
 	 */
@@ -1135,6 +1148,13 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	}
 	talloc_free(session->request);
 	session->request = packet;
+
+	if (session->num_send == 1) {
+		session_num_parallel --; /* Not a session "initial request" anymore. */
+
+		SDEBUG2("Session post initial request - active sessions: %u (in: %u), parallel: %u",
+		    session_num_active, session_num_in_active, session_num_parallel);
+	}
 
 	/*
 	 *	Encode and send packet.
@@ -1300,8 +1320,6 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	request->dst_port = session->dst.port;
 	request->src_ipaddr = session->src.ipaddr;
 	request->dst_ipaddr = session->dst.ipaddr;
-
-	gettimeofday(&tve_last_session_in, NULL);
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
@@ -1514,8 +1532,14 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	/* Store session start time. */
 	gettimeofday(&session->tve_start, NULL);
 
+	session_num_in ++;
 	session_num_active ++;
-	SDEBUG2("New session initialized - active sessions: %u", session_num_active);
+	session_num_in_active ++;
+	session_num_parallel ++;
+	gettimeofday(&tve_last_session_in, NULL);
+
+	SDEBUG2("New session initialized from input - active sessions: %u (in: %u), parallel: %u",
+	        session_num_active, session_num_in_active, session_num_parallel);
 
 	return session;
 }
@@ -1542,8 +1566,16 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 		session->event = NULL;
 	}
 
+	/* Update counters. */
 	session_num_active --;
-	SDEBUG2("Session terminated - active sessions: %u", session_num_active);
+	if (session->input) {
+		session_num_in_active --;
+		if (session->num_send == 1) session_num_parallel --; /* This was a session "initial request". */
+		gettimeofday(&tve_last_session_in, NULL);
+	}
+
+	SDEBUG2("Session terminated - active sessions: %u (in: %u), parallel: %u",
+	         session_num_active, session_num_in_active, session_num_parallel);
 	talloc_free(session);
 }
 
@@ -1706,7 +1738,7 @@ static uint32_t dpc_loop_start_sessions(void)
 			break; /* Cannot initialize new sessions for now. */
 		}
 
-		num_started ++;
+		//session->num_send = 1;
 
 		/* Send the packet. */
 		if (dpc_send_one_packet(session, &session->request) < 0) {
@@ -1723,6 +1755,8 @@ static uint32_t dpc_loop_start_sessions(void)
 			/* We've sent a packet to which no reply is expected. So this session ends right now. */
 			dpc_session_finish(session);
 		}
+
+		num_started ++;
 	}
 
 	return num_started;

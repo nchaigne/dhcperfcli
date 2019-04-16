@@ -333,6 +333,8 @@ struct dpc_session_ctx {
 	DHCP_PACKET *request;
 	DHCP_PACKET *reply;
 
+	uint32_t num_send;        //<! Number of requests sent (not including retransmissions).
+
 	dpc_state_t state;
 	bool reply_expected;      //!< Whether a reply is expected or not.
 
