@@ -43,9 +43,12 @@ fr_dict_attr_t const *attr_packet_dst_ip_address = NULL;
 fr_dict_attr_t const *attr_packet_dst_port = NULL;
 fr_dict_attr_t const *attr_packet_src_ip_address = NULL;
 fr_dict_attr_t const *attr_packet_src_port = NULL;
+
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
+fr_dict_attr_t const *attr_max_use = NULL;
+
 fr_dict_attr_t const *attr_dhcp_hop_count = NULL;
 fr_dict_attr_t const *attr_dhcp_transaction_id = NULL;
 fr_dict_attr_t const *attr_dhcp_client_ip_address = NULL;
@@ -88,6 +91,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
+	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
 
 	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcpv4 },
@@ -1482,9 +1486,10 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	 *	If not using a template, copy this input item if it has to be used again.
 	 */
 	input->num_use ++;
-	if (!with_template && input->num_use < input_num_use) {
+
+	if (!with_template && input->num_use < input->max_use) {
 		DPC_DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)",
-		                input->id, input->num_use, input_num_use);
+		                input->id, input->num_use, input->max_use);
 		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
 		if (input_dup) {
 			/*
@@ -1880,7 +1885,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 	input->ext.code = FR_CODE_UNDEFINED;
 
-	/* Default: global option -c. */
+	/* Default: global option -c, can be overriden through Max-Use attr. */
 	input->max_use = input_num_use;
 
 	/*
@@ -2006,6 +2011,8 @@ static bool dpc_parse_input(dpc_input_t *input)
 		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
 
+		} else if (vp->da == attr_max_use) { /* Max-Use = <n> */
+			input->max_use = vp->vp_uint32;
 		}
 
 	} /* loop over the input vps */

@@ -5,9 +5,13 @@
 
 FLAGS internal
 
+#
+# Control attributes
+#
 ATTRIBUTE DHCP-Encoded-Data            3000   octets virtual
 ATTRIBUTE DHCP-Authorized-Server       3001   ipaddr virtual
 ATTRIBUTE DHCP-Workflow-Type           3002   byte virtual
+ATTRIBUTE Max-Use                      3003   integer virtual
 
 VALUE     DHCP-Workflow-Type           DORA           1
 VALUE     DHCP-Workflow-Type           DORA-Decline   2
