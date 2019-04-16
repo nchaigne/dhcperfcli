@@ -197,6 +197,9 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_lost[_packet_code] ++; \
 }
 
+#define STAT_ALL_LOST (stat_ctx.num_packet_lost[0])
+
+
 /* Specific states of a session. */
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,

@@ -302,28 +302,31 @@ static void dpc_progress_stats_fprint(FILE *fp)
 		fprintf(fp, " (%.1f%%)", duration_progress);
 	}
 
-	/* Number of started sessions. */
-	fprintf(fp, " sessions: [started: %u", session_num);
-	if (ECTX.session_max_num) {
-		/* And percentage of max number of sessions (if set). */
-		float session_progress = 100 * (float)session_num / ECTX.session_max_num;
-		fprintf(fp, " (%.1f%%)", session_progress);
+	/* Sessions. */
+	if (session_num > 0) {
+		fprintf(fp, " sessions: [in: %u", session_num_in);
+
+		/* And percentage of max number of sessions (if set). Unless we're done starting new sessions. */
+		if (ECTX.session_max_num && start_sessions_flag) {
+			float session_progress = 100 * (float)session_num_in / ECTX.session_max_num;
+			fprintf(fp, " (%.1f%%)", session_progress);
+		}
+
+		/* Ongoing (active) sessions. (== number of packets to which we're waiting for a reply) */
+		fprintf(fp, ", ongoing: %u", session_num_active);
+
+		/* Packets lost (for which a reply was expected, but we didn't get one. */
+		if (STAT_ALL_LOST > 0) {
+			fprintf(fp, ", lost: %u", STAT_ALL_LOST);
+		}
+
+		/* NAK replies. */
+		if (stat_ctx.num_packet_recv[6] > 0) {
+			fprintf(fp, ", %s: %u", dpc_message_types[6], stat_ctx.num_packet_recv[6]);
+		}
+
+		fprintf(fp, "]");
 	}
-
-	/* Ongoing (active) sessions. (== number of packets to which we're waiting for a reply) */
-	fprintf(fp, ", ongoing: %u", session_num_active);
-
-	/* Packets lost (for which a reply was expected, but we didn't get one. */
-	if (stat_ctx.num_packet_lost[0] > 0) {
-		fprintf(fp, ", lost: %u", stat_ctx.num_packet_lost[0]);
-	}
-
-	/* NAK replies. */
-	if (stat_ctx.num_packet_recv[6] > 0) {
-		fprintf(fp, ", %s: %u", dpc_message_types[6], stat_ctx.num_packet_recv[6]);
-	}
-
-	fprintf(fp, "]");
 
 	/* Print input sessions rate, if: we've handled at least a few sessions, with sufficient job elapsed time.
 	 * And we're (still) starting sessions.
