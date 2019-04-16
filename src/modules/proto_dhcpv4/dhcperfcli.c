@@ -1722,8 +1722,10 @@ static uint32_t dpc_loop_start_sessions(void)
 			break;
 		}
 
-		/* Max active session reached. Try again later when we've finished some ongoing sessions. */
-		if (session_num_active >= ECTX.session_max_active) break;
+		/* Max active session reached. Try again later when we've finished some ongoing sessions.
+		 * Note: this does not include sessions handling requests past the initial one (e.g. DORA).
+		 */
+		if (session_num_parallel >= ECTX.session_max_active) break;
 
 		/* Rate limit enforced and we've already started as many sessions as allowed for now. */
 		if (do_limit && num_started >= limit_new_sessions) break;
@@ -1737,8 +1739,6 @@ static uint32_t dpc_loop_start_sessions(void)
 
 			break; /* Cannot initialize new sessions for now. */
 		}
-
-		//session->num_send = 1;
 
 		/* Send the packet. */
 		if (dpc_send_one_packet(session, &session->request) < 0) {
