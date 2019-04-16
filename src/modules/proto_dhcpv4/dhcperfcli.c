@@ -22,6 +22,14 @@ TALLOC_CTX *global_ctx = NULL;
 struct timeval tv_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
+dpc_context_t exe_ctx = {
+	.min_session_for_rps = 100,
+	.min_session_time_for_rps = 1.0,
+	.min_ref_time_rate_limit = 0.2,
+	.rate_limit_time_lookahead = 0.02,
+};
+
+
 fr_dict_attr_t const *attr_packet_dst_ip_address = NULL;
 fr_dict_attr_t const *attr_packet_dst_port = NULL;
 fr_dict_attr_t const *attr_packet_src_ip_address = NULL;
@@ -318,8 +326,8 @@ static void dpc_progress_stats_fprint(FILE *fp)
 	/* Print input sessions rate, if: we've handled at least a few sessions, with sufficient job elapsed time.
 	 * And we're (still) starting sessions.
 	 */
-	if (session_num >= 100
-	    && dpc_job_elapsed_time_get() >= 1.0
+	if (session_num >= ECTX.min_session_for_rps
+	    && dpc_job_elapsed_time_get() >= ECTX.min_session_time_for_rps
 		&& start_sessions_flag) {
 		fprintf(fp, ", session rate (/s): %.3f", dpc_get_session_in_rate());
 	}
@@ -1575,16 +1583,16 @@ static void dpc_loop_recv(void)
  */
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit_ref, float elapsed_ref, uint32_t cur_num_started)
 {
-	if (elapsed_ref < 0.2) {
+	if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
 		/*
 		 *	Consider a minimum elapsed time interval for the beginning.
 		 *	We may start more sessions than the desired rate before this time, but this will be quickly corrected.
 		 */
-		elapsed_ref = 0.2;
+		elapsed_ref = ECTX.min_ref_time_rate_limit;
 	}
 
 	/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
-	elapsed_ref += 0.02;
+	elapsed_ref += ECTX.rate_limit_time_lookahead;
 
 	uint32_t session_limit = rate_limit_ref * elapsed_ref + 1; /* + 1 so we always start at least one at the beginning. */
 
@@ -2586,6 +2594,7 @@ static void dpc_options_parse(int argc, char **argv)
 	argc -= (optind - 1);
 	argv += (optind - 1);
 
+	ECTX.debug_lvl = dpc_debug_lvl;
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
 	/* Configure talloc debugging features. */

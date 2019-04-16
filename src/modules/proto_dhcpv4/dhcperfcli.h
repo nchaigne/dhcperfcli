@@ -12,6 +12,25 @@
 #include "ncc_util.h"
 
 
+typedef struct dpc_context dpc_context_t;
+
+extern dpc_context_t exe_ctx;
+#define ECTX exe_ctx
+
+/*
+ *	Execution context.
+ *	Holds global parameters set at initialization stage.
+ */
+struct dpc_context {
+	int debug_lvl;
+
+	uint32_t min_session_for_rps;    //<! Min number of sessions started from input to compute a session rate per second.
+	float min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
+	float min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.
+	float rate_limit_time_lookahead; //<! Time lookahead for rate limit enforcement, to factor in processing time.
+};
+
+
 /*	We don't do RADIUS, but reuse the same structure for DHCP.
  *	(cf. lib/util/packet.h)
  */
