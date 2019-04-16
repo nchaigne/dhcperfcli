@@ -127,7 +127,9 @@ static float rate_limit = 0; /* Try to enforce a rate limit (reply /s, all trans
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 static struct timeval tv_job_start; /* Job start timestamp. */
 static struct timeval tv_job_end; /* Job end timestamp. */
-static struct timeval tve_sessions_ini_end; /* End timestamp of starting new sessions. */
+static struct timeval tve_sessions_ini_start = { 0 }; /* Start timestamp of starting new sessions. */
+static struct timeval tve_sessions_ini_end = { 0 }; /* End timestamp of starting new sessions. */
+static struct timeval tve_last_session_in = { 0 }; /* Last time a session has been initialized from input. */
 
 static uint32_t session_num = 0; /* Number of sessions initialized. */
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -220,6 +222,7 @@ static void dpc_progress_stats_fprint(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static float dpc_get_msg_rate(uint8_t i);
+static float dpc_get_session_in_rate(void);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
@@ -311,22 +314,15 @@ static void dpc_progress_stats_fprint(FILE *fp)
 
 	fprintf(fp, "]");
 
-	/* Print rate if job elapsed time is at least 1 s. */
-	if (dpc_job_elapsed_time_get() >= 1.0) {
-		float reply_rate = dpc_get_tr_rate(DPC_TR_ALL);
-		if (reply_rate > 0) {
-			fprintf(fp, ", reply rate (/s): %.3f", dpc_get_tr_rate(DPC_TR_ALL));
-		} else {
-			/*
-			 *	If we do not have any transaction, it means that all packets are lost (no reply received),
-			 *	or we're not expecting any reply (e.g. sending only Release messages).
-			 *
-			 *	In such a case, display the packets send rate instead.
-			 *	Note: this will be fluctuating in case of "all packets are lost" - because of timeout.
-			 */
-			fprintf(fp, ", send rate (/s): %.3f", dpc_get_msg_rate(0));
-		}
+	/* Print input sessions rate, if: we've handled at least a few sessions, with sufficient job elapsed time.
+	 * And we're (still) starting sessions.
+	 */
+	if (session_num >= 100
+	    && dpc_job_elapsed_time_get() >= 1.0
+		&& start_sessions_flag) {
+		fprintf(fp, ", session rate (/s): %.3f", dpc_get_session_in_rate());
 	}
+
 	fprintf(fp, "\n");
 }
 
@@ -380,6 +376,29 @@ static float dpc_get_msg_rate(uint8_t i)
 
 	if (elapsed <= 0) return 0; /* Should not happen. */
 	return (float)stat_ctx.num_packet_sent[i] / elapsed;
+}
+
+/*
+ *	Compute the rate of input sessions per second.
+ */
+static float dpc_get_session_in_rate()
+{
+	float rate = 0;
+
+	float elapsed;
+	struct timeval tvi_elapsed;
+
+	if (!timerisset(&tve_sessions_ini_start) || !timerisset(&tve_last_session_in)) return 0;
+
+	/* Get elapsed time up to the last session from input. */
+	timersub(&tve_last_session_in, &tve_sessions_ini_start, &tvi_elapsed);
+
+	elapsed = ncc_timeval_to_float(&tvi_elapsed);
+	if (elapsed > 0) { /* Just to be safe. */
+		rate = (float)session_num / elapsed;
+	}
+
+	return rate;
 }
 
 /*
@@ -1248,6 +1267,8 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	request->src_ipaddr = session->src.ipaddr;
 	request->dst_ipaddr = session->dst.ipaddr;
 
+	gettimeofday(&tve_last_session_in, NULL);
+
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DPC_DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
 	                dpc_packet_from_to_sprint(from_to_buf, request, false));
@@ -1388,11 +1409,16 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	dpc_session_ctx_t *session = NULL;
 	DHCP_PACKET *packet = NULL;
 
-	DPC_DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
-
 	input = dpc_get_input();
 	if (!input) { /* No input: cannot create new session. */
 		return NULL;
+	}
+
+	DPC_DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
+
+	/* Store time of first session initialized. */
+	if (!timerisset(&tve_sessions_ini_start)) {
+		gettimeofday(&tve_sessions_ini_start, NULL);
 	}
 
 	/*
