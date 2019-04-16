@@ -220,6 +220,7 @@ static void version_print(void);
 
 static void dpc_progress_stats_fprint(FILE *fp);
 static float dpc_job_elapsed_time_get(void);
+static float dpc_start_sessions_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static float dpc_get_msg_rate(uint8_t i);
 static float dpc_get_session_in_rate(void);
@@ -346,6 +347,33 @@ static float dpc_job_elapsed_time_get(void)
 		timersub(&tv_now, &tv_job_start, &tv_elapsed);
 	}
 	elapsed = ncc_timeval_to_float(&tv_elapsed);
+
+	return elapsed;
+}
+
+/*
+ *	Obtain job elapsed time related to starting new sessions.
+ */
+static float dpc_start_sessions_elapsed_time_get(void)
+{
+	float elapsed;
+	struct timeval tvi_elapsed;
+
+	if (!timerisset(&tve_sessions_ini_start)) return 0; /* No session started yet. */
+
+	/*
+	 *	If we've stopped starting new sessions, get elapsed time from start to this timestamp.
+	 *	Otherwise, get elapsed time from start to now.
+	 */
+	if (timerisset(&tve_sessions_ini_end)) {
+		timersub(&tve_sessions_ini_end, &tve_sessions_ini_start, &tvi_elapsed);
+	} else {
+		struct timeval now;
+		gettimeofday(&now, NULL);
+		timersub(&now, &tve_sessions_ini_start, &tvi_elapsed);
+	}
+
+	elapsed = ncc_timeval_to_float(&tvi_elapsed);
 
 	return elapsed;
 }
@@ -1541,80 +1569,43 @@ static void dpc_loop_recv(void)
 
 /*
  *	Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
+ *	This can be used globally (to enforce a global rate limit on all sessions), or per-input.
+ *
  *	Returns: true if a limit has to be enforced at the moment, false otherwise.
+ */
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit_ref, float elapsed_ref, uint32_t cur_num_started)
+{
+	if (elapsed_ref < 0.2) {
+		/*
+		 *	Consider a minimum elapsed time interval for the beginning.
+		 *	We may start more sessions than the desired rate before this time, but this will be quickly corrected.
+		 */
+		elapsed_ref = 0.2;
+	}
+
+	/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
+	elapsed_ref += 0.02;
+
+	uint32_t session_limit = rate_limit_ref * elapsed_ref + 1; /* + 1 so we always start at least one at the beginning. */
+
+	if (cur_num_started >= session_limit) {
+		/* Already beyond limit, don't start new sessions for now. */
+		*max_new_sessions = 0;
+	} else {
+		*max_new_sessions = session_limit - cur_num_started;
+	}
+	return true;
+}
+
+/*
+ *	If a global rate limit is applicable, get the limit of new sessions allowed to be started for now.
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
 	if (!rate_limit) return false;
 
-	float elapsed, elapsed_T2, rtt_avg, rate_T2;
-	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[DPC_TR_ALL];
-	uint32_t num_packet_sent = stat_ctx.num_packet_sent[0];
-
-	elapsed = dpc_job_elapsed_time_get();
-
-	/*
-	 *	Right at the beginning we do not have enough data to make accurate calculations.
-	 *	So it will be either all or nothing (the latter if we're already beyond the limit).
-	 */
-	if (elapsed < 0.5) {
-		/* If we are already beyond the limit, we're too fast. Hold back. */
-		if (my_stats->num >= rate_limit) {
-			*max_new_sessions = 0;
-			return true;
-		} else if (my_stats->num == 0) {
-			/* If we don't have any reply, limit applies to packets sent. */
-			if (num_packet_sent >= rate_limit) {
-				*max_new_sessions = 0;
-			} else {
-				*max_new_sessions = (rate_limit - num_packet_sent);
-			}
-			return true;
-		}
-
-		/* No limit. */
-		return false;
-	}
-
-	/* If we don't have any reply, limit applies to packets sent. */
-	if (my_stats->num == 0) {
-		if (num_packet_sent >= rate_limit * elapsed) {
-			*max_new_sessions = 0;
-		} else {
-			*max_new_sessions = (rate_limit * elapsed) - num_packet_sent;
-		}
-		return true;
-	}
-
-	/*
-	 *	Now = T1. We've received so far N1 replies (having a current rate/s = N1 / <elapsed time>).
-	 *	Project ourselves in the future at T2 = T1 + <average rtt>.
-	 *	At this point we expect to have received replies to all the ongoing requests (active sessions).
-	 *	If the projected rate/s is higher than the rate limit, do not allow new sessions to be started.
-	 *	Otherwise, compute what we would need to attain this rate limit.
-	 */
-	rtt_avg = ncc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
-	/*
-	 *	Note: we might lose a few milliseconds of precision with a float.
-	 *	But we use that to compute an average, so it will be completely invisible.
-	 */
-
-	elapsed_T2 = elapsed + rtt_avg;
-	rate_T2 = (my_stats->num + session_num_active) / elapsed_T2;
-
-	/* We already expect to be beyond the limit at T2, so do not allow new sessions to be started for now. */
-	if (rate_T2 >= rate_limit) {
-		*max_new_sessions = 0;
-		return true;
-	}
-
-	/*
-	 *	Compute how many new sessions we would need to start now, assuming they are answered in <averate rtt>,
-	 *	to reach the desired rate limit:
-	 *	rate limit = ( N1 + <currently active sessions> + <new sessions to start> ) / ( <elapsed> + <rtt avg> )
-	 */
-	*max_new_sessions = (rate_limit * elapsed_T2) - (my_stats->num + session_num_active);
-	return true;
+	float elapsed_ref = dpc_start_sessions_elapsed_time_get();
+	return dpc_rate_limit_calc_gen(max_new_sessions, rate_limit, elapsed_ref, session_num);
 }
 
 
