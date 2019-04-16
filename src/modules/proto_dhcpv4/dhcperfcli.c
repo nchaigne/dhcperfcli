@@ -2377,7 +2377,7 @@ static void dpc_event_list_init(TALLOC_CTX *ctx)
 {
 	event_list = fr_event_list_alloc(ctx, NULL, NULL);
 	if (!event_list) {
-		ERROR("Failed to create event list");
+		PERROR("Failed to create event list");
 		exit(EXIT_FAILURE);
 	}
 }
