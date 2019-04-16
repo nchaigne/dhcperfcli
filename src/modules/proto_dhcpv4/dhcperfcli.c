@@ -273,10 +273,13 @@ static void dpc_end(void);
 /*
  *	Print ongoing job statistics summary.
  *	E.g.:
- *	t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
+ *	(*) t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
  */
 static void dpc_progress_stats_fprint(FILE *fp)
 {
+	/* Prefix to easily distinguish these ongoing statistics from packet traces and other logs. */
+	fprintf(fp, "(*) ");
+
 	/* Elapsed time. */
 	fprintf(fp, "t(%s)", ELAPSED);
 	if (duration_max) {
