@@ -28,8 +28,8 @@ struct timeval tve_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
-	.request_timeout = 3.0,
 	.progress_interval = 10.0,
+	.request_timeout = 3.0,
 	.session_max_active = 1,
 
 	.min_session_for_rps = 100,
@@ -120,7 +120,6 @@ static ncc_list_t vps_list_in = { 0 };
 static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev = NULL; /* In template mode, previous used input item. */
-static uint32_t input_num_use = 0; /* Template mode: max use of each input item. Non template: use each input this many time. */
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
@@ -1917,7 +1916,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 	input->ext.code = FR_CODE_UNDEFINED;
 
 	/* Default: global option -c, can be overriden through Max-Use attr. */
-	input->max_use = input_num_use;
+	input->max_use = ECTX.input_num_use;
 
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
@@ -2562,7 +2561,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'c':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			input_num_use = atoi(optarg);
+			ECTX.input_num_use = atoi(optarg);
 			break;
 
 		case 'D':
@@ -2714,7 +2713,7 @@ static void dpc_options_parse(int argc, char **argv)
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
 
-	if (!with_template && input_num_use == 0) input_num_use = 1;
+	if (!with_template && ECTX.input_num_use == 0) ECTX.input_num_use = 1;
 }
 
 /*
@@ -2879,7 +2878,7 @@ int main(int argc, char **argv)
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (packet_trace_lvl == -1) {
-		if (ECTX.session_max_num == 1 || (!with_template && vps_list_in.size == 1 && input_num_use == 1)) {
+		if (ECTX.session_max_num == 1 || (!with_template && vps_list_in.size == 1 && ECTX.input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			packet_trace_lvl = 2;
 		} else if (ECTX.session_max_active == 1) {
