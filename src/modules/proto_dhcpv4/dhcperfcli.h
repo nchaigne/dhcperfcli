@@ -26,6 +26,21 @@ struct dpc_context {
 
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
+	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
+	struct timeval tvi_request_timeout;
+
+	float progress_interval;         //<! Time interval between periodic progress statistics.
+	struct timeval tvi_progress_interval;
+
+	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
+
+	float duration_start_max;        //<! Limit duration for starting new input sessions.
+	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
+
+	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
+
+	float rate_limit;                //<! Limit rate/s of sessions initialized from input (all transactions combined).
+
 	uint32_t min_session_for_rps;    //<! Min number of sessions started from input to compute a session rate per second.
 	float min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
 	float min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.

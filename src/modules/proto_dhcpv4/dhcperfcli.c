@@ -28,7 +28,9 @@ struct timeval tve_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
-	.talloc_memory_report = 0,
+	.request_timeout = 3.0,
+	.progress_interval = 10.0,
+	.session_max_active = 1,
 
 	.min_session_for_rps = 100,
 	.min_session_time_for_rps = 1.0,
@@ -130,14 +132,6 @@ static fr_ipaddr_t allowed_server = { 0 }; /* Only allow replies from a specific
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
 
-static float timeout = 3.0;
-static struct timeval tvi_timeout;
-static uint32_t base_xid = 0;
-static uint32_t session_max_active = 1;
-static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
-static float duration_max = 0; /* Default: unlimited. */
-static float rate_limit = 0; /* Enforce a rate limit (sessions initialized /s, all transactions combined). */
-
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 static struct timeval tve_job_start; /* Job start timestamp. */
 static struct timeval tve_job_end; /* Job end timestamp. */
@@ -153,8 +147,6 @@ static bool signal_done = false;
 static uint32_t session_num_active = 0; /* Number of active sessions. */
 static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
 fr_event_timer_t const *ev_progress_stats = NULL;
-static float progress_interval = 10.0; /* Periodically produce progress statistics summary. */
-struct timeval tvi_progress_interval;
 struct timeval tve_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
 
 struct timeval tvi_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
@@ -300,17 +292,17 @@ static void dpc_progress_stats_fprint(FILE *fp)
 
 	/* Elapsed time. */
 	fprintf(fp, "t(%s)", ELAPSED);
-	if (duration_max) {
+	if (ECTX.duration_start_max) {
 		/* And percentage of max duration (if set). */
-		float duration_progress = 100 * dpc_job_elapsed_time_get() / duration_max;
+		float duration_progress = 100 * dpc_job_elapsed_time_get() / ECTX.duration_start_max;
 		fprintf(fp, " (%.1f%%)", duration_progress);
 	}
 
 	/* Number of started sessions. */
 	fprintf(fp, " sessions: [started: %u", session_num);
-	if (session_max_num) {
+	if (ECTX.session_max_num) {
 		/* And percentage of max number of sessions (if set). */
-		float session_progress = 100 * (float)session_num / session_max_num;
+		float session_progress = 100 * (float)session_num / ECTX.session_max_num;
 		fprintf(fp, " (%.1f%%)", session_progress);
 	}
 
@@ -609,7 +601,7 @@ static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval
  */
 static void dpc_event_add_progress_stats(void)
 {
-	if (!timerisset(&tvi_progress_interval)) return;
+	if (!timerisset(&ECTX.tvi_progress_interval)) return;
 
 	/*
 	 *	Generate uniformly spaced out statistics.
@@ -618,7 +610,7 @@ static void dpc_event_add_progress_stats(void)
 	if (!timerisset(&tve_progress_stat)) {
 		gettimeofday(&tve_progress_stat, NULL);
 	}
-	timeradd(&tve_progress_stat, &tvi_progress_interval, &tve_progress_stat);
+	timeradd(&tve_progress_stat, &ECTX.tvi_progress_interval, &tve_progress_stat);
 
 	if (fr_event_timer_insert(global_ctx, event_list, &ev_progress_stats,
 	                          &tve_progress_stat, dpc_progress_stats, NULL) < 0) {
@@ -655,13 +647,13 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 /*
  *	Add timer event: request timeout.
  *	Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
- *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout tvi_timeout.
+ *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout.
  */
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in)
 {
 	struct timeval tv_event;
 	gettimeofday(&tv_event, NULL);
-	timeradd(&tv_event, (timeout_in ? timeout_in : &tvi_timeout), &tv_event);
+	timeradd(&tv_event, (timeout_in ? timeout_in : &ECTX.tvi_request_timeout), &tv_event);
 
 	/* If there is an active event timer for this session, clear it before arming a new one. */
 	if (session->event) {
@@ -1569,7 +1561,7 @@ static void dpc_loop_recv(void)
 		 */
 		struct timeval now, when, wait_max = { 0 };
 
-		if (session_num_active >= session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
+		if (session_num_active >= ECTX.session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
 			gettimeofday(&now, NULL);
 			if (timercmp(&when, &now, >)) timersub(&when, &now, &wait_max); /* No negative. */
 		}
@@ -1616,10 +1608,10 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
-	if (!rate_limit) return false;
+	if (!ECTX.rate_limit) return false;
 
 	float elapsed_ref = dpc_start_sessions_elapsed_time_get();
-	return dpc_rate_limit_calc_gen(max_new_sessions, rate_limit, elapsed_ref, session_num);
+	return dpc_rate_limit_calc_gen(max_new_sessions, ECTX.rate_limit, elapsed_ref, session_num);
 }
 
 
@@ -1679,15 +1671,15 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Max session limit reached. */
-		if (session_max_num && session_num >= session_max_num) {
-			INFO("Max number of sessions (%u) reached: will not start any new session.", session_max_num);
+		if (ECTX.session_max_num && session_num >= ECTX.session_max_num) {
+			INFO("Max number of sessions (%u) reached: will not start any new session.", ECTX.session_max_num);
 			start_sessions_flag = false;
 			break;
 		}
 
 		/* Time limit reached. */
-		if (duration_max && dpc_job_elapsed_time_get() >= duration_max) {
-			INFO("Max duration (%.3f s) reached: will not start any new session.", duration_max);
+		if (ECTX.duration_start_max && dpc_job_elapsed_time_get() >= ECTX.duration_start_max) {
+			INFO("Max duration (%.3f s) reached: will not start any new session.", ECTX.duration_start_max);
 			start_sessions_flag = false;
 			break;
 		}
@@ -1699,7 +1691,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Max active session reached. Try again later when we've finished some ongoing sessions. */
-		if (session_num_active >= session_max_active) break;
+		if (session_num_active >= ECTX.session_max_active) break;
 
 		/* Rate limit enforced and we've already started as many sessions as allowed for now. */
 		if (do_limit && num_started >= limit_new_sessions) break;
@@ -2125,7 +2117,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 		dpc_handle_input(input, list);
 
 		/* Stop reading if we know we won't need it. */
-		if (!with_template && session_max_num && list->size >= session_max_num) break;
+		if (!with_template && ECTX.session_max_num && list->size >= ECTX.session_max_num) break;
 
 	} while (!file_done);
 
@@ -2359,7 +2351,7 @@ static void dpc_event_list_init(TALLOC_CTX *ctx)
  */
 static void dpc_packet_list_init(TALLOC_CTX *ctx)
 {
-	pl = dpc_packet_list_create(ctx, base_xid);
+	pl = dpc_packet_list_create(ctx, ECTX.base_xid);
 	if (!pl) {
 		ERROR("Failed to create packet list");
 		exit(EXIT_FAILURE);
@@ -2516,11 +2508,11 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-			if (!ncc_str_to_uint32(&base_xid, optarg)) ERROR_OPT_VALUE("integer or hex string");
+			if (!ncc_str_to_uint32(&ECTX.base_xid, optarg)) ERROR_OPT_VALUE("integer or hex string");
 			break;
 
 		case 'L':
-			if (!ncc_str_to_float(&duration_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			if (!ncc_str_to_float(&ECTX.duration_start_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			break;
 
 		case 'M':
@@ -2529,13 +2521,12 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'N':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			session_max_num = atoi(optarg);
+			ECTX.session_max_num = atoi(optarg);
 			break;
 
 		case 'p':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			session_max_active = atoi(optarg);
-			if (session_max_active == 0) session_max_active = 1;
+			ECTX.session_max_active = atoi(optarg);
 			break;
 
 		case 'P':
@@ -2545,19 +2536,19 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'r':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			rate_limit = atoi(optarg);
+			ECTX.rate_limit = atoi(optarg);
 			break;
 
 		case 's':
-			if (!ncc_str_to_float(&progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
-			if (progress_interval < 0.1) progress_interval = 0.1; /* Don't allow absurdly low values. */
-			else if (progress_interval > 864000) progress_interval = 0; /* Just don't. */
+			if (!ncc_str_to_float(&ECTX.progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			if (ECTX.progress_interval < 0.1) ECTX.progress_interval = 0.1; /* Don't allow absurdly low values. */
+			else if (ECTX.progress_interval > 864000) ECTX.progress_interval = 0; /* Just don't. */
 			break;
 
 		case 't':
-			if (!ncc_str_to_float(&timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
-			if (timeout < 0.01) timeout = 0.01; /* Don't allow absurdly low values. */
-			else if (timeout > 3600) timeout = 3600;
+			if (!ncc_str_to_float(&ECTX.request_timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			if (ECTX.request_timeout < 0.01) ECTX.request_timeout = 0.01; /* Don't allow absurdly low values. */
+			else if (ECTX.request_timeout > 3600) ECTX.request_timeout = 3600;
 			break;
 
 		case 'T':
@@ -2634,8 +2625,9 @@ static void dpc_options_parse(int argc, char **argv)
 		}
 	}
 
-	ncc_float_to_timeval(&tvi_timeout, timeout);
-	ncc_float_to_timeval(&tvi_progress_interval, progress_interval);
+	if (ECTX.session_max_active == 0) ECTX.session_max_active = 1;
+	ncc_float_to_timeval(&ECTX.tvi_request_timeout, ECTX.request_timeout);
+	ncc_float_to_timeval(&ECTX.tvi_progress_interval, ECTX.progress_interval);
 
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
@@ -2668,7 +2660,7 @@ static void dpc_end(void)
 	gettimeofday(&tve_job_end, NULL);
 
 	/* If we're producing progress statistics, do it one last time. */
-	if (timerisset(&tvi_progress_interval)) dpc_progress_stats_fprint(stdout);
+	if (timerisset(&ECTX.tvi_progress_interval)) dpc_progress_stats_fprint(stdout);
 
 	/* Statistics report. */
 	dpc_stats_fprint(stdout);
@@ -2803,16 +2795,16 @@ int main(int argc, char **argv)
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (packet_trace_lvl == -1) {
-		if (session_max_num == 1 || (!with_template && vps_list_in.size == 1 && input_num_use == 1)) {
+		if (ECTX.session_max_num == 1 || (!with_template && vps_list_in.size == 1 && input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			packet_trace_lvl = 2;
-		} else if (session_max_active == 1) {
+		} else if (ECTX.session_max_active == 1) {
 			/*
 			 *	Several requests, but no parallelism.
 			 *	If the number of sessions and the max duration are reasonably small, print packets header.
 			 *	Otherwise: no packet print.
 			 */
-			if (session_max_num > 50 || duration_max > 1.0) {
+			if (ECTX.session_max_num > 50 || ECTX.duration_start_max > 1.0) {
 				packet_trace_lvl = 0;
 			} else {
 				packet_trace_lvl = 1;
