@@ -19,10 +19,17 @@ static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
  */
 TALLOC_CTX *global_ctx = NULL;
 
-struct timeval tv_start; /* Program execution start timestamp. */
+/*
+ *	Naming convention for "struct timeval" variables, for clarity, depending on their purpose:
+ *	tve_ = timeval "epoch", tvi_ = timeval "interval".
+ */
+
+struct timeval tve_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
+	.talloc_memory_report = 0,
+
 	.min_session_for_rps = 100,
 	.min_session_time_for_rps = 1.0,
 	.min_ref_time_rate_limit = 0.2,
@@ -93,7 +100,6 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ NULL }
 };
 
-static bool talloc_memory_report; //!< On exit, print a memory report on what's left unfreed.
 static int with_debug_dev = 0;
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
@@ -125,16 +131,16 @@ static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
 
 static float timeout = 3.0;
-static struct timeval tv_timeout;
+static struct timeval tvi_timeout;
 static uint32_t base_xid = 0;
 static uint32_t session_max_active = 1;
 static uint32_t session_max_num = 0; /* Default: consume all input (or in template mode, no limit). */
 static float duration_max = 0; /* Default: unlimited. */
-static float rate_limit = 0; /* Try to enforce a rate limit (reply /s, all transactions combined). */
+static float rate_limit = 0; /* Enforce a rate limit (sessions initialized /s, all transactions combined). */
 
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
-static struct timeval tv_job_start; /* Job start timestamp. */
-static struct timeval tv_job_end; /* Job end timestamp. */
+static struct timeval tve_job_start; /* Job start timestamp. */
+static struct timeval tve_job_end; /* Job end timestamp. */
 static struct timeval tve_sessions_ini_start = { 0 }; /* Start timestamp of starting new sessions. */
 static struct timeval tve_sessions_ini_end = { 0 }; /* End timestamp of starting new sessions. */
 static struct timeval tve_last_session_in = { 0 }; /* Last time a session has been initialized from input. */
@@ -148,10 +154,10 @@ static uint32_t session_num_active = 0; /* Number of active sessions. */
 static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
 fr_event_timer_t const *ev_progress_stats = NULL;
 static float progress_interval = 10.0; /* Periodically produce progress statistics summary. */
-struct timeval tv_progress_interval;
-struct timeval tv_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
+struct timeval tvi_progress_interval;
+struct timeval tve_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
 
-struct timeval tv_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
+struct timeval tvi_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
 
 static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
@@ -217,7 +223,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_STATS    20
 
 char elapsed_buf[NCC_TIME_STRLEN];
-#define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tv_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+#define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tve_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
@@ -347,12 +353,12 @@ static float dpc_job_elapsed_time_get(void)
 	 *	If job is finished, get elapsed time from start to end.
 	 *	Otherwise, get elapsed time from start to now.
 	 */
-	if (timerisset(&tv_job_end)) {
-		timersub(&tv_job_end, &tv_job_start, &tv_elapsed);
+	if (timerisset(&tve_job_end)) {
+		timersub(&tve_job_end, &tve_job_start, &tv_elapsed);
 	} else {
 		struct timeval tv_now;
 		gettimeofday(&tv_now, NULL);
-		timersub(&tv_now, &tv_job_start, &tv_elapsed);
+		timersub(&tv_now, &tve_job_start, &tv_elapsed);
 	}
 	elapsed = ncc_timeval_to_float(&tv_elapsed);
 
@@ -495,7 +501,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-		ncc_delta_time_sprint(elapsed_buf, &tv_job_start, &tv_job_end, DPC_DELTA_TIME_DECIMALS));
+		ncc_delta_time_sprint(elapsed_buf, &tve_job_start, &tve_job_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
@@ -603,19 +609,19 @@ static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval
  */
 static void dpc_event_add_progress_stats(void)
 {
-	if (!timerisset(&tv_progress_interval)) return;
+	if (!timerisset(&tvi_progress_interval)) return;
 
 	/*
 	 *	Generate uniformly spaced out statistics.
 	 *	To avoid drifting, schedule next event relatively to the expected trigger of previous one.
 	 */
-	if (!timerisset(&tv_progress_stat)) {
-		gettimeofday(&tv_progress_stat, NULL);
+	if (!timerisset(&tve_progress_stat)) {
+		gettimeofday(&tve_progress_stat, NULL);
 	}
-	timeradd(&tv_progress_stat, &tv_progress_interval, &tv_progress_stat);
+	timeradd(&tve_progress_stat, &tvi_progress_interval, &tve_progress_stat);
 
 	if (fr_event_timer_insert(global_ctx, event_list, &ev_progress_stats,
-	                          &tv_progress_stat, dpc_progress_stats, NULL) < 0) {
+	                          &tve_progress_stat, dpc_progress_stats, NULL) < 0) {
 		ERROR("Failed inserting progress statistics event");
 	}
 }
@@ -649,13 +655,13 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 /*
  *	Add timer event: request timeout.
  *	Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
- *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout tv_timeout.
+ *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout tvi_timeout.
  */
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in)
 {
 	struct timeval tv_event;
 	gettimeofday(&tv_event, NULL);
-	timeradd(&tv_event, (timeout_in ? timeout_in : &tv_timeout), &tv_event);
+	timeradd(&tv_event, (timeout_in ? timeout_in : &tvi_timeout), &tv_event);
 
 	/* If there is an active event timer for this session, clear it before arming a new one. */
 	if (session->event) {
@@ -957,7 +963,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		/*
 		 *	Update statistics for DORA workflows.
 		 */
-		timersub(&session->reply->timestamp, &session->tv_start, &rtt);
+		timersub(&session->reply->timestamp, &session->tve_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
 		/*
@@ -1514,7 +1520,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	}
 
 	/* Store session start time. */
-	gettimeofday(&session->tv_start, NULL);
+	gettimeofday(&session->tve_start, NULL);
 
 	session_num_active ++;
 	SDEBUG2("New session initialized - active sessions: %u", session_num_active);
@@ -1656,11 +1662,11 @@ static uint32_t dpc_loop_start_sessions(void)
 	/* Set a max allowed loop time - don't loop forever in case of packets not expecting replies. */
 	struct timeval tv_loop_max;
 	gettimeofday(&tv_loop_max, NULL);
-	timeradd(&tv_loop_max, &tv_loop_max_time, &tv_loop_max);
+	timeradd(&tv_loop_max, &tvi_loop_max_time, &tv_loop_max);
 
 	/* Also limit time up to the next scheduled statistics event. */
-	if (timerisset(&tv_progress_stat) && timercmp(&tv_loop_max, &tv_progress_stat, >)) {
-		tv_loop_max = tv_progress_stat;
+	if (timerisset(&tve_progress_stat) && timercmp(&tv_loop_max, &tve_progress_stat, >)) {
+		tv_loop_max = tve_progress_stat;
 	}
 
 	while (!done) {
@@ -2518,7 +2524,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'M':
-			talloc_memory_report = true;
+			ECTX.talloc_memory_report = true;
 			break;
 
 		case 'N':
@@ -2598,7 +2604,7 @@ static void dpc_options_parse(int argc, char **argv)
 	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
 	/* Configure talloc debugging features. */
-	if (talloc_memory_report) {
+	if (ECTX.talloc_memory_report) {
 		talloc_enable_null_tracking();
 	} else {
 		talloc_disable_null_tracking();
@@ -2628,8 +2634,8 @@ static void dpc_options_parse(int argc, char **argv)
 		}
 	}
 
-	ncc_float_to_timeval(&tv_timeout, timeout);
-	ncc_float_to_timeval(&tv_progress_interval, progress_interval);
+	ncc_float_to_timeval(&tvi_timeout, timeout);
+	ncc_float_to_timeval(&tvi_progress_interval, progress_interval);
 
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
@@ -2659,10 +2665,10 @@ static void dpc_signal(int sig)
 static void dpc_end(void)
 {
 	/* Job end timestamp. */
-	gettimeofday(&tv_job_end, NULL);
+	gettimeofday(&tve_job_end, NULL);
 
 	/* If we're producing progress statistics, do it one last time. */
-	if (timerisset(&tv_progress_interval)) dpc_progress_stats_fprint(stdout);
+	if (timerisset(&tvi_progress_interval)) dpc_progress_stats_fprint(stdout);
 
 	/* Statistics report. */
 	dpc_stats_fprint(stdout);
@@ -2688,7 +2694,7 @@ static void dpc_end(void)
 	 * Anything not cleaned up by the above is allocated in
 	 * the NULL top level context, and is likely leaked memory.
 	 */
-	if (talloc_memory_report) {
+	if (ECTX.talloc_memory_report) {
 		fprintf(stdout, "--> EXIT talloc memory report:\n");
 		fr_log_talloc_report(NULL);
 		fprintf(stdout, "<-- EXIT talloc memory report END.\n");
@@ -2713,7 +2719,7 @@ int main(int argc, char **argv)
 
 	global_ctx = talloc_autofree_context();
 
-	gettimeofday(&tv_start, NULL); /* Program start timestamp. */
+	gettimeofday(&tve_start, NULL); /* Program start timestamp. */
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -2827,7 +2833,7 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	gettimeofday(&tv_job_start, NULL); /* Job start timestamp. */
+	gettimeofday(&tve_job_start, NULL); /* Job start timestamp. */
 
 	/* Arm a timer to produce periodic statistics. */
 	dpc_event_add_progress_stats();

@@ -24,6 +24,8 @@ extern dpc_context_t exe_ctx;
 struct dpc_context {
 	int debug_lvl;
 
+	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
+
 	uint32_t min_session_for_rps;    //<! Min number of sessions started from input to compute a session rate per second.
 	float min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
 	float min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.
@@ -304,20 +306,20 @@ struct dpc_input {
  *	Session context.
  */
 struct dpc_session_ctx {
-	uint32_t id;             //!< Id of session (0 for the first one).
+	uint32_t id;              //!< Id of session (0 for the first one).
 
-	dpc_input_t *input;      //!< Input data.
-	struct timeval tv_start; //<! Session start timestamp.
+	dpc_input_t *input;       //!< Input data.
+	struct timeval tve_start; //<! Session start timestamp.
 
-	ncc_endpoint_t *gateway; //!< If using a gateway as source endpoint.
-	ncc_endpoint_t src;      //!< Src IP address and port.
-	ncc_endpoint_t dst;      //!< Dst IP address and port.
+	ncc_endpoint_t *gateway;  //!< If using a gateway as source endpoint.
+	ncc_endpoint_t src;       //!< Src IP address and port.
+	ncc_endpoint_t dst;       //!< Dst IP address and port.
 
 	DHCP_PACKET *request;
 	DHCP_PACKET *reply;
 
 	dpc_state_t state;
-	bool reply_expected;     //!< Whether a reply is expected or not.
+	bool reply_expected;      //!< Whether a reply is expected or not.
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
