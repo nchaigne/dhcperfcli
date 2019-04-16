@@ -249,7 +249,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
-static int dpc_recv_one_packet(struct timeval *tv_wait_time);
+static int dpc_recv_one_packet(struct timeval *tvi_wait_time);
 static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply);
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
@@ -347,20 +347,20 @@ static void dpc_progress_stats_fprint(FILE *fp)
 static float dpc_job_elapsed_time_get(void)
 {
 	float elapsed;
-	struct timeval tv_elapsed;
+	struct timeval tvi_elapsed;
 
 	/*
 	 *	If job is finished, get elapsed time from start to end.
 	 *	Otherwise, get elapsed time from start to now.
 	 */
 	if (timerisset(&tve_job_end)) {
-		timersub(&tve_job_end, &tve_job_start, &tv_elapsed);
+		timersub(&tve_job_end, &tve_job_start, &tvi_elapsed);
 	} else {
-		struct timeval tv_now;
-		gettimeofday(&tv_now, NULL);
-		timersub(&tv_now, &tve_job_start, &tv_elapsed);
+		struct timeval now;
+		gettimeofday(&now, NULL);
+		timersub(&now, &tve_job_start, &tvi_elapsed);
 	}
-	elapsed = ncc_timeval_to_float(&tv_elapsed);
+	elapsed = ncc_timeval_to_float(&tvi_elapsed);
 
 	return elapsed;
 }
@@ -784,11 +784,11 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 
 /*
  *	Receive one packet, maybe.
- *	If tv_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
+ *	If tvi_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
  *	If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
  *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
-static int dpc_recv_one_packet(struct timeval *tv_wait_time)
+static int dpc_recv_one_packet(struct timeval *tvi_wait_time)
 {
 	fd_set set;
 	struct timeval tv;
@@ -807,10 +807,10 @@ static int dpc_recv_one_packet(struct timeval *tv_wait_time)
 		return 0;
 	}
 
-	if (tv_wait_time == NULL || !timerisset(tv_wait_time)) {
+	if (tvi_wait_time == NULL || !timerisset(tvi_wait_time)) {
 		timerclear(&tv);
 	} else {
-		tv = *tv_wait_time;
+		tv = *tvi_wait_time;
 		DPC_DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tv));
 	}
 
@@ -1660,20 +1660,20 @@ static uint32_t dpc_loop_start_sessions(void)
 	bool do_limit = dpc_rate_limit_calc(&limit_new_sessions);
 
 	/* Set a max allowed loop time - don't loop forever in case of packets not expecting replies. */
-	struct timeval tv_loop_max;
-	gettimeofday(&tv_loop_max, NULL);
-	timeradd(&tv_loop_max, &tvi_loop_max_time, &tv_loop_max);
+	struct timeval tvi_loop_max;
+	gettimeofday(&tvi_loop_max, NULL);
+	timeradd(&tvi_loop_max, &tvi_loop_max_time, &tvi_loop_max);
 
 	/* Also limit time up to the next scheduled statistics event. */
-	if (timerisset(&tve_progress_stat) && timercmp(&tv_loop_max, &tve_progress_stat, >)) {
-		tv_loop_max = tve_progress_stat;
+	if (timerisset(&tve_progress_stat) && timercmp(&tvi_loop_max, &tve_progress_stat, >)) {
+		tvi_loop_max = tve_progress_stat;
 	}
 
 	while (!done) {
 		/* Max loop time limit reached. */
 		struct timeval now;
 		gettimeofday(&now, NULL);
-		if (timercmp(&now, &tv_loop_max, >)) {
+		if (timercmp(&now, &tvi_loop_max, >)) {
 			DPC_DEBUG_TRACE("Loop time limit reached, started: %u", num_started);
 			break;
 		}
