@@ -142,7 +142,7 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 #define SPWARN(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#define DPC_DEBUG_TRACE(_f, ...)         NCC_DEBUG(3, _f, ## __VA_ARGS__)
+#define DEBUG_TRACE(_f, ...)         NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.

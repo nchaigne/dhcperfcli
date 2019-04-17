@@ -413,8 +413,8 @@ char *dpc_hex_data_sprint(char *out, size_t outlen, const uint8_t *in, int in_le
 	ssize_t needed = (num_line * (prefix_len + 1))
 		+ (2 + strlen(sep)) * in_len + 1;
 
-	DPC_DEBUG_TRACE("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
-	                outlen, in_len, num_line, prefix_len, needed);
+	DEBUG_TRACE("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
+	            outlen, in_len, num_line, prefix_len, needed);
 
 	CHECK_BUFFER_SIZE(NULL, needed, outlen, "hex data");
 
@@ -644,7 +644,7 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 	}
 
 end:
-	DPC_DEBUG_TRACE("Extracted message code: %u", code);
+	DEBUG_TRACE("Extracted message code: %u", code);
 	return code;
 }
 
