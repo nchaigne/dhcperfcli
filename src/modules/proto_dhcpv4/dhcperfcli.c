@@ -47,6 +47,7 @@ fr_dict_attr_t const *attr_packet_src_port = NULL;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
+fr_dict_attr_t const *attr_start_delay = NULL;
 fr_dict_attr_t const *attr_rate_limit = NULL;
 fr_dict_attr_t const *attr_max_duration = NULL;
 fr_dict_attr_t const *attr_max_use = NULL;
@@ -93,6 +94,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
+	{ .out = &attr_start_delay, .name = "Start-Delay", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_rate_limit, .name = "Rate-Limit", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_duration, .name = "Max-Duration", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
@@ -263,6 +265,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input);
 
+static bool dpc_item_available(dpc_input_t *item);
 static float dpc_item_get_elapsed(dpc_input_t *input);
 static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
@@ -1436,6 +1439,20 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 	}
 }
 
+
+/*
+ *	Check if a given input item is available for starting sessions.
+ *	Return true if it is.
+ */
+static bool dpc_item_available(dpc_input_t *item)
+{
+	/* Check if this input is available for starting sessions. */
+	if (!item->start_delay || dpc_job_elapsed_time_get() >= item->start_delay) {
+		return true;
+	}
+	return false;
+}
+
 /*
  *	Get the elapsed time of an input item from when it started being used.
  */
@@ -1532,7 +1549,9 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 
 		not_done++;
 
-		if (!dpc_item_rate_limited(input)) return input;
+		//if (!dpc_item_rate_limited(input)) return input;
+		//zzz
+		if (!dpc_item_rate_limited(input) && dpc_item_available(input)) return input;
 	}
 
 	if (not_done == 0) {
@@ -2129,6 +2148,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
+
+		} else if (vp->da == attr_start_delay) { /* Start-Delay = <n> */
+			if (!ncc_str_to_float(&input->start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
 
 		} else if (vp->da == attr_rate_limit) { /* Rate-Limit = <n> */
 			if (!ncc_str_to_float(&input->rate_limit, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");

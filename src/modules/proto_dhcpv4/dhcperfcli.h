@@ -315,6 +315,7 @@ struct dpc_input {
 
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
+	float start_delay;        //!< Delay after which this input can be used to start sessions.
 	struct timeval tve_start; //!< Timestamp of first use.
 	struct timeval tve_end;   //!< Timestamp of last use once input is done.
 
