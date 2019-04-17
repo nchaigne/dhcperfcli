@@ -32,8 +32,8 @@ dpc_context_t exe_ctx = {
 	.request_timeout = 3.0,
 	.session_max_active = 1,
 
-	.min_session_for_rps = 100,
-	.min_session_time_for_rps = 1.0,
+	.min_session_for_rps = 50,
+	.min_session_time_for_rps = 0.9,
 	.min_ref_time_rate_limit = 0.2,
 	.rate_limit_time_lookahead = 0.02,
 };
@@ -240,7 +240,7 @@ static float dpc_job_elapsed_time_get(void);
 static float dpc_start_sessions_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
 static float dpc_get_msg_rate(uint8_t i);
-static float dpc_get_session_in_rate(void);
+static float dpc_get_session_in_rate(bool per_input);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
@@ -264,6 +264,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet);
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input);
 
 static float dpc_item_get_elapsed(dpc_input_t *input);
+static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
 static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
@@ -347,7 +348,8 @@ static void dpc_progress_stats_fprint(FILE *fp)
 	if (session_num >= ECTX.min_session_for_rps
 	    && dpc_job_elapsed_time_get() >= ECTX.min_session_time_for_rps
 		&& start_sessions_flag) {
-		fprintf(fp, ", session rate (/s): %.3f", dpc_get_session_in_rate());
+		bool per_input = ECTX.rate_limit ? false : true;
+		fprintf(fp, ", session rate (/s): %.3f", dpc_get_session_in_rate(per_input));
 	}
 
 	fprintf(fp, "\n");
@@ -435,21 +437,37 @@ static float dpc_get_msg_rate(uint8_t i)
 /*
  *	Compute the rate of input sessions per second.
  */
-static float dpc_get_session_in_rate()
+static float dpc_get_session_in_rate(bool per_input)
 {
 	float rate = 0;
 
-	float elapsed;
-	struct timeval tvi_elapsed;
+	if (!per_input) {
+		/* Global rate because inputs are not correlated. */
+		float elapsed;
+		struct timeval tvi_elapsed;
 
-	if (!timerisset(&tve_sessions_ini_start) || !timerisset(&tve_last_session_in)) return 0;
+		if (!timerisset(&tve_sessions_ini_start) || !timerisset(&tve_last_session_in)) return 0;
 
-	/* Get elapsed time up to the last session from input. */
-	timersub(&tve_last_session_in, &tve_sessions_ini_start, &tvi_elapsed);
+		/* Get elapsed time up to the last session from input. */
+		timersub(&tve_last_session_in, &tve_sessions_ini_start, &tvi_elapsed);
 
-	elapsed = ncc_timeval_to_float(&tvi_elapsed);
-	if (elapsed > 0) { /* Just to be safe. */
-		rate = (float)session_num / elapsed;
+		elapsed = ncc_timeval_to_float(&tvi_elapsed);
+		if (elapsed > 0) { /* Just to be safe. */
+			rate = (float)session_num_in / elapsed;
+		}
+
+	} else {
+		/* Compute the rate per input, and sum them. */
+		ncc_list_item_t *list_item = vps_list_in.head;
+		while (list_item) {
+			dpc_input_t *input = (dpc_input_t *)list_item;
+
+			float input_rate = 0;
+			if (dpc_item_get_rate(&input_rate, input)) {
+				rate += input_rate;
+			}
+			list_item = list_item->next;
+		}
 	}
 
 	return rate;
@@ -1438,6 +1456,25 @@ static float dpc_item_get_elapsed(dpc_input_t *input)
 	timersub(ref, &input->tve_start, &tvi_elapsed);
 	elapsed = ncc_timeval_to_float(&tvi_elapsed);
 	return elapsed;
+}
+
+/*
+ *	Get the use rate of an input item, relative to the point at which it started being used,
+ *	up to now (if it's still active) or the last time is was used.
+ */
+static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input)
+{
+	if (!timerisset(&input->tve_start)) {
+		return false; /* Item has not been used yet. */
+	}
+
+	float elapsed = dpc_item_get_elapsed(input);
+
+	if (input->num_use < ECTX.min_session_for_rps
+	    || elapsed < ECTX.min_session_time_for_rps) return false;
+
+	*input_rate = (float)input->num_use / elapsed;
+	return true;
 }
 
 /*
