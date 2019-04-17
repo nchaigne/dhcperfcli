@@ -32,6 +32,8 @@ dpc_context_t exe_ctx = {
 	.request_timeout = 3.0,
 	.session_max_active = 1,
 
+	.per_input_pr_stat = 1,
+
 	.min_session_for_rps = 50,
 	.min_session_time_for_rps = 0.9,
 	.min_ref_time_rate_limit = 0.2,
@@ -237,7 +239,8 @@ char elapsed_buf[NCC_TIME_STRLEN];
 static void usage(int);
 static void version_print(void);
 
-static void dpc_progress_stats_fprint(FILE *fp);
+static void dpc_per_input_stats_fprint(FILE *fp, bool force);
+static void dpc_progress_stats_fprint(FILE *fp, bool force);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_start_sessions_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
@@ -266,6 +269,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet);
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input);
 
 static bool dpc_item_available(dpc_input_t *item);
+static char dpc_item_get_status(dpc_input_t *input);
 static float dpc_item_get_elapsed(dpc_input_t *input);
 static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
@@ -302,11 +306,47 @@ static void dpc_end(void);
 
 
 /*
+ *	Print ongoing statistics detail per input.
+ */
+static void dpc_per_input_stats_fprint(FILE *fp, bool force)
+{
+	if (!ECTX.per_input_pr_stat || !with_template || vps_list_in.size < 2) return;
+
+	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
+
+	fprintf(fp, " └─ per-input rate (/s): ");
+
+	ncc_list_item_t *list_item = vps_list_in.head;
+	int i = 0;
+	while (list_item) {
+		dpc_input_t *input = (dpc_input_t *)list_item;
+		if (i) fprintf(fp, ", ");
+
+		/* also print status: W = waiting, A = active, T = terminated. */
+		char status = dpc_item_get_status(input);
+		fprintf(fp, "#%u (%c)", input->id, status);
+
+		if (status != 'W') {
+			float input_rate = 0;
+			if (dpc_item_get_rate(&input_rate, input)) {
+				fprintf(fp, ": %.3f", input_rate);
+			} else {
+				fprintf(fp, ": N/A"); /* No relevant rate. */
+			}
+		}
+
+		list_item = list_item->next;
+		i++;
+	}
+	fprintf(fp, "\n");
+}
+
+/*
  *	Print ongoing job statistics summary.
  *	E.g.:
  *	(*) t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
  */
-static void dpc_progress_stats_fprint(FILE *fp)
+static void dpc_progress_stats_fprint(FILE *fp, bool force)
 {
 	/* Prefix to easily distinguish these ongoing statistics from packet traces and other logs. */
 	fprintf(fp, "(*) ");
@@ -348,7 +388,7 @@ static void dpc_progress_stats_fprint(FILE *fp)
 	/* Print input sessions rate, if: we've handled at least a few sessions, with sufficient job elapsed time.
 	 * And we're (still) starting sessions.
 	 */
-	if (session_num >= ECTX.min_session_for_rps
+	if (session_num_in >= ECTX.min_session_for_rps
 	    && dpc_job_elapsed_time_get() >= ECTX.min_session_time_for_rps
 		&& start_sessions_flag) {
 		bool per_input = ECTX.rate_limit ? false : true;
@@ -356,6 +396,11 @@ static void dpc_progress_stats_fprint(FILE *fp)
 	}
 
 	fprintf(fp, "\n");
+
+	/* Per-input statistics line. */
+	if (session_num_in >= ECTX.min_session_for_rps) {
+		dpc_per_input_stats_fprint(fp, force);
+	}
 }
 
 /*
@@ -633,7 +678,7 @@ static void dpc_statistics_update(DHCP_PACKET *request, DHCP_PACKET *reply)
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, UNUSED void *uctx)
 {
 	/* Do statistics summary. */
-	dpc_progress_stats_fprint(stdout);
+	dpc_progress_stats_fprint(stdout, false);
 
 	/* ... and schedule next time. */
 	dpc_event_add_progress_stats();
@@ -1454,6 +1499,16 @@ static bool dpc_item_available(dpc_input_t *item)
 }
 
 /*
+ *	Get the usage status of an input item: waiting, active, or terminated.
+ */
+static char dpc_item_get_status(dpc_input_t *input)
+{
+	if (input->done) return 'T';
+	if (!timerisset(&input->tve_start)) return 'W';
+	return 'A';
+}
+
+/*
  *	Get the elapsed time of an input item from when it started being used.
  */
 static float dpc_item_get_elapsed(dpc_input_t *input)
@@ -1549,8 +1604,6 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 
 		not_done++;
 
-		//if (!dpc_item_rate_limited(input)) return input;
-		//zzz
 		if (!dpc_item_rate_limited(input) && dpc_item_available(input)) return input;
 	}
 
@@ -2857,7 +2910,7 @@ static void dpc_end(void)
 	gettimeofday(&tve_job_end, NULL);
 
 	/* If we're producing progress statistics, do it one last time. */
-	if (timerisset(&ECTX.tvi_progress_interval)) dpc_progress_stats_fprint(stdout);
+	if (timerisset(&ECTX.tvi_progress_interval)) dpc_progress_stats_fprint(stdout, true);
 
 	/* Statistics report. */
 	dpc_stats_fprint(stdout);

@@ -43,6 +43,8 @@ struct dpc_context {
 
 	float rate_limit;                //<! Limit rate/s of sessions initialized from input (all transactions combined).
 
+	int per_input_pr_stat;           //<! Print per-input progress statistics (if multiple input).
+
 	uint32_t min_session_for_rps;    //<! Min number of sessions started from input to compute a session rate per second.
 	float min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
 	float min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.
