@@ -1492,6 +1492,9 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 
 	/* If this is the first time this input is used, store current time. */
 	if (input->num_use == 0) {
+		DEBUG("Input (id: %u) start (max use: %u, duration: %.1f s)",
+		      input->id, input->max_use, input->max_duration);
+
 		gettimeofday(&input->tve_start, NULL);
 
 		/* Also store input max start time, if applicable. */
@@ -1507,11 +1510,11 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		}
 	}
 
+	input->num_use ++;
+
 	/*
 	 *	If not using a template, copy this input item if it has to be used again.
 	 */
-	input->num_use ++;
-
 	if (!with_template && input->num_use < input->max_use) {
 		DPC_DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)",
 		                input->id, input->num_use, input->max_use);
