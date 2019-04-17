@@ -462,9 +462,11 @@ static float dpc_get_session_in_rate(bool per_input)
 		while (list_item) {
 			dpc_input_t *input = (dpc_input_t *)list_item;
 
-			float input_rate = 0;
-			if (dpc_item_get_rate(&input_rate, input)) {
-				rate += input_rate;
+			if (!input->done) { /* Ignore item if we're done with it. */
+				float input_rate = 0;
+				if (dpc_item_get_rate(&input_rate, input)) {
+					rate += input_rate;
+				}
 			}
 			list_item = list_item->next;
 		}
