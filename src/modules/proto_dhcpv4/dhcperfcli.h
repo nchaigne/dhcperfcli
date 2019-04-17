@@ -107,7 +107,7 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 #define DEBUG(_f, ...)  NCC_DEBUG(1, _f, ## __VA_ARGS__)
 
 #undef DEBUG2
-#define DEBUG2(_f, ...)  NCC_DEBUG(2, _f, ## __VA_ARGS__)
+#define DEBUG2(_f, ...) NCC_DEBUG(2, _f, ## __VA_ARGS__)
 
 #undef DEBUG3
 #define DEBUG3(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
@@ -142,7 +142,7 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 #define SPWARN(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
 
 /* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#define DEBUG_TRACE(_f, ...)         NCC_DEBUG(3, _f, ## __VA_ARGS__)
+#define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
@@ -308,6 +308,7 @@ struct dpc_input {
 
 	/* Specific item data */
 	uint32_t id;              //!< Id of input (0 for the first one).
+	bool done;                //!< Is this input done ? (i.e. no session can be started from it).
 	uint32_t num_use;         //!< How many times has this input been used.
 
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
@@ -317,11 +318,11 @@ struct dpc_input {
 	struct timeval tve_start; //!< Timestamp of first use.
 	struct timeval tve_end;   //!< Timestamp of last use once input is done.
 
+	float rate_limit;         //<! Limit rate/s of sessions initialized from this input.
+
 	uint32_t max_use;         //<! Maximum number of times this input can be used.
 	float max_duration;       //!< Maximum duration of starting sessions with this input (relative to input start use).
 	struct timeval tve_max_start; //!< tve_start + max_duration
-
-	bool done;                //!< Is this input done ? (i.e. no session can be started from it)
 
 	dpc_input_ext_t ext;      //!< Input pre-parsed information.
 };

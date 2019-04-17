@@ -47,6 +47,7 @@ fr_dict_attr_t const *attr_packet_src_port = NULL;
 fr_dict_attr_t const *attr_encoded_data = NULL;
 fr_dict_attr_t const *attr_authorized_server = NULL;
 fr_dict_attr_t const *attr_workflow_type = NULL;
+fr_dict_attr_t const *attr_rate_limit = NULL;
 fr_dict_attr_t const *attr_max_duration = NULL;
 fr_dict_attr_t const *attr_max_use = NULL;
 
@@ -92,6 +93,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
+	{ .out = &attr_rate_limit, .name = "Rate-Limit", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_duration, .name = "Max-Duration", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
 
@@ -259,11 +261,17 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input);
 static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
+static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input);
+
+static float dpc_item_get_elapsed(dpc_input_t *input);
+static bool dpc_item_rate_limited(dpc_input_t *input);
+static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit_ref, float elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
 static uint32_t dpc_loop_start_sessions(void);
@@ -1409,6 +1417,45 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 }
 
 /*
+ *	Get the elapsed time of an input item from when it started being used.
+ */
+static float dpc_item_get_elapsed(dpc_input_t *input)
+{
+	if (!timerisset(&input->tve_start)) {
+		return 0; /* Item has not been used yet. */
+	}
+
+	/* Get elapsed time from when this input started being used. */
+	float elapsed;
+	struct timeval *ref, now, tvi_elapsed;
+
+	if (timerisset(&input->tve_end)) {
+		ref = &input->tve_end;
+	} else {
+		gettimeofday(&now, NULL);
+		ref = &now;
+	}
+	timersub(ref, &input->tve_start, &tvi_elapsed);
+	elapsed = ncc_timeval_to_float(&tvi_elapsed);
+	return elapsed;
+}
+
+/*
+ *	Check if an item is currently rate limited or not.
+ *	Return: true = item is not allowed to start new sessions at the moment (rate limit enforced).
+ */
+static bool dpc_item_rate_limited(dpc_input_t *input)
+{
+	if (!input->rate_limit) return false; /* No rate limit applies to this input. */
+
+	float elapsed_ref = dpc_item_get_elapsed(input);
+	uint32_t max_new_sessions = 0;
+
+	dpc_rate_limit_calc_gen(&max_new_sessions, input->rate_limit, elapsed_ref, input->num_use);
+	return (max_new_sessions == 0);
+}
+
+/*
  *	Get an input item from template (round robin on all template inputs).
  */
 static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
@@ -1446,7 +1493,7 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 
 		not_done++;
 
-		return input;
+		if (!dpc_item_rate_limited(input)) return input;
 	}
 
 	if (not_done == 0) {
@@ -2043,6 +2090,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
+
+		} else if (vp->da == attr_rate_limit) { /* Rate-Limit = <n> */
+			if (!ncc_str_to_float(&input->rate_limit, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
 
 		} else if (vp->da == attr_max_duration) { /* Max-Duration = <n> */
 			if (!ncc_str_to_float(&input->max_duration, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
