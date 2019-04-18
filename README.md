@@ -126,17 +126,29 @@ For a given DHCP packet, a specific xid value can be requested (through input at
 For a DORA transaction, the xid used to build the Request message is the same as from the Offer reply (which is also the same as the xid from the Discover message), as described in RFC 2131.
 
 
-## Template
+## Template and program termination
 
 Template mode is enabled through option `-T`.
 
-If not in template mode, each input item is used to build and send exactly one request. The program can only start as many sessions as there are input items.
+If not in template mode, each input item is used to build and send exactly one request (unless option `-c` is provided). The program can only start as many sessions as there are input items.
 
 Conversely, in template mode, each input item can be used to build any number of requests. After reaching the last input item, the program loops back to the first one. Template mode is essential to running performance tests.
 
 A single input item may actually be all you need. Variability between requests can be achieved through xlat expansion (see related section).
 
-In template mode you should provide a limit to the number of DHCP sessions to start (option `-N`) - unless you would like the program to go on forever. Alternatively, you can opt to limit the program duration (option `-L`).
+In template mode, the program will run indefinitely, unless you explicitly provide a limit, through:
+- Option `-L` (maximum duration for starting new sessions).
+- Option `-N` (number of sessions to start from input).
+- Option `-c` (number of sessions to start from each input item).
+
+Limits can also be set in each input item using control attributes.
+
+You can also manually signal the program to end (by sending a SIGHUP, SIGINT, or SIGTERM):
+- The first time one such signal is received, the program will stop starting new sessions. It will wait until ongoing sessions are gracefully terminated.
+- If a second signal is received, then it will halt immediately. Remaining ongoing sessions will be forcefully terminated.
+
+A SIGKILL signal (a.k.a « kill -9 ») will stop the program immediately, but won’t allow for the end report statistics to be displayed.
+
 
 Example:
 
