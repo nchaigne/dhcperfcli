@@ -695,10 +695,17 @@ static void dpc_event_add_progress_stats(void)
 	 *	Generate uniformly spaced out statistics.
 	 *	To avoid drifting, schedule next event relatively to the expected trigger of previous one.
 	 */
+	struct timeval now;
+	gettimeofday(&now, NULL);
+
 	if (!timerisset(&tve_progress_stat)) {
-		gettimeofday(&tve_progress_stat, NULL);
+		tve_progress_stat = now;
 	}
-	timeradd(&tve_progress_stat, &ECTX.tvi_progress_interval, &tve_progress_stat);
+
+	/* Ensure the scheduled time is in the future. */
+	do {
+		timeradd(&tve_progress_stat, &ECTX.tvi_progress_interval, &tve_progress_stat);
+	} while (!timercmp(&tve_progress_stat, &now, >));
 
 	if (fr_event_timer_insert(global_ctx, event_list, &ev_progress_stats,
 	                          &tve_progress_stat, dpc_progress_stats, NULL) < 0) {
