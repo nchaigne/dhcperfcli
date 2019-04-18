@@ -104,6 +104,10 @@ Attribute|Description
 `Packet-Dst-IP-Address` | The packet destination IP address. Can also be set through argument `<server>`.
 `Packet-Src-Port` | The packet source UDP port. Default is 68 for a client, 67 for a gateway.
 `Packet-Dst-Port` | The packet destination UDP port. Default is 67 for a server or a gateway.
+`Rate-Limit` | Maximum new sessions initialized per second from this input item.<br>Actual rate for a given item is calculated from the time it started being used.
+`Start-Delay` | Delay (seconds) before allowing to use this input item to start new sessions.<br>This is useful to handle synchronization between multiple input items.
+`Max-Duration` | Limit duration (seconds) for starting new sessions from this input item (relative to the time it started being used).<br>If a global limit is set (option `-L`), then the earliest limit applies.
+`Max-Use` | Maximum number of sessions that can be initialized from this input item. (Same as option `-c` for this input item only.)
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
 `DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for a single packet.
 `DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `DHCP-Message-Type` is provided.
