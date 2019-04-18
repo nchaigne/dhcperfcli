@@ -180,7 +180,24 @@ There are two categories of xlat expansion:
 
 ### Xlat attribute reference
 
-__TODO__
+Example:
+
+```text
+Tmp-Ethernet-0 = 50:41:4e:44:41:00
+DHCP-Client-Hardware-Address = "%{Tmp-Ethernet-0}"
+DHCP-Hostname = "host.%{Tmp-Ethernet-0}.whimsical.org"
+```
+
+This will expand field `chaddr` to `50:41:4e:44:41:00`, and DHCP option 12 (HostName) to `host.50:41:4e:44:41:00.whimsical.org`.
+
+Here, `Tmp-Ethernet-0` is not directly used to encode the DHCP packet. It is merely a temporary attribute, whose sole purpose is to be referenced by other attributes.
+
+Other such temporary attributes are available (defined in [freeradius/dictionary.freeradius.internal](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/freeradius/dictionary.freeradius.internal)):
+- `Tmp-String-0` to `Tmp-String-9`
+- `Tmp-Integer-0` to `Tmp-Integer-9`
+- `Tmp-IP-Address-0` to `Tmp-IP-Address-9`
+- `Tmp-Octets-0` to `Tmp-Octets-9`
+- `Tmp-Ethernet-0` to `Tmp-Ethernet-4`
 
 ### Xlat functions
 
