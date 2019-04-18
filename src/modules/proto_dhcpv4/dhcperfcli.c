@@ -17,7 +17,7 @@ static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 /*
  *	Global variables.
  */
-TALLOC_CTX *global_ctx = NULL;
+TALLOC_CTX *global_ctx;
 
 /*
  *	Naming convention for "struct timeval" variables, for clarity, depending on their purpose:
@@ -41,29 +41,29 @@ dpc_context_t exe_ctx = {
 };
 
 
-fr_dict_attr_t const *attr_packet_dst_ip_address = NULL;
-fr_dict_attr_t const *attr_packet_dst_port = NULL;
-fr_dict_attr_t const *attr_packet_src_ip_address = NULL;
-fr_dict_attr_t const *attr_packet_src_port = NULL;
+fr_dict_attr_t const *attr_packet_dst_ip_address;
+fr_dict_attr_t const *attr_packet_dst_port;
+fr_dict_attr_t const *attr_packet_src_ip_address;
+fr_dict_attr_t const *attr_packet_src_port;
 
-fr_dict_attr_t const *attr_encoded_data = NULL;
-fr_dict_attr_t const *attr_authorized_server = NULL;
-fr_dict_attr_t const *attr_workflow_type = NULL;
-fr_dict_attr_t const *attr_start_delay = NULL;
-fr_dict_attr_t const *attr_rate_limit = NULL;
-fr_dict_attr_t const *attr_max_duration = NULL;
-fr_dict_attr_t const *attr_max_use = NULL;
+fr_dict_attr_t const *attr_encoded_data;
+fr_dict_attr_t const *attr_authorized_server;
+fr_dict_attr_t const *attr_workflow_type;
+fr_dict_attr_t const *attr_start_delay;
+fr_dict_attr_t const *attr_rate_limit;
+fr_dict_attr_t const *attr_max_duration;
+fr_dict_attr_t const *attr_max_use;
 
-fr_dict_attr_t const *attr_dhcp_hop_count = NULL;
-fr_dict_attr_t const *attr_dhcp_transaction_id = NULL;
-fr_dict_attr_t const *attr_dhcp_client_ip_address = NULL;
-fr_dict_attr_t const *attr_dhcp_your_ip_address = NULL;
-fr_dict_attr_t const *attr_dhcp_gateway_ip_address = NULL;
-fr_dict_attr_t const *attr_dhcp_server_identifier = NULL;
-fr_dict_attr_t const *attr_dhcp_requested_ip_address = NULL;
-fr_dict_attr_t const *attr_dhcp_message_type = NULL;
+fr_dict_attr_t const *attr_dhcp_hop_count;
+fr_dict_attr_t const *attr_dhcp_transaction_id;
+fr_dict_attr_t const *attr_dhcp_client_ip_address;
+fr_dict_attr_t const *attr_dhcp_your_ip_address;
+fr_dict_attr_t const *attr_dhcp_gateway_ip_address;
+fr_dict_attr_t const *attr_dhcp_server_identifier;
+fr_dict_attr_t const *attr_dhcp_requested_ip_address;
+fr_dict_attr_t const *attr_dhcp_message_type;
 
-static char const *progname = NULL;
+static char const *progname;
 
 /*
  *	Dictionaries and attributes.
@@ -117,15 +117,15 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 static int with_debug_dev = 0;
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
-static dpc_packet_list_t *pl = NULL; /* List of outgoing packets. */
-static fr_event_list_t *event_list = NULL;
+static dpc_packet_list_t *pl; /* List of outgoing packets. */
+static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
-static char const *file_vps_in = NULL;
-static ncc_list_t vps_list_in = { 0 };
+static char const *file_vps_in;
+static ncc_list_t vps_list_in;
 static int with_template = 0;
 static int with_xlat = 0;
-static ncc_list_item_t *template_input_prev = NULL; /* In template mode, previous used input item. */
+static ncc_list_item_t *template_input_prev; /* In template mode, previous used input item. */
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
@@ -136,9 +136,9 @@ static ncc_endpoint_t client_ep = {
 	.port = DHCP_PORT_CLIENT
 };
 
-static char *gateway_arg = NULL;
-static ncc_endpoint_list_t *gateway_list = NULL; /* List of gateways. */
-static fr_ipaddr_t allowed_server = { 0 }; /* Only allow replies from a specific server. */
+static char *gateway_arg;
+static ncc_endpoint_list_t *gateway_list; /* List of gateways. */
+static fr_ipaddr_t allowed_server; /* Only allow replies from a specific server. */
 
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
@@ -146,9 +146,9 @@ static int workflow_code = DPC_WORKFLOW_NONE;
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
 static struct timeval tve_job_start; /* Job start timestamp. */
 static struct timeval tve_job_end; /* Job end timestamp. */
-static struct timeval tve_sessions_ini_start = { 0 }; /* Start timestamp of starting new sessions. */
-static struct timeval tve_sessions_ini_end = { 0 }; /* End timestamp of starting new sessions. */
-static struct timeval tve_last_session_in = { 0 }; /* Last time a session has been initialized from input. */
+static struct timeval tve_sessions_ini_start; /* Start timestamp of starting new sessions. */
+static struct timeval tve_sessions_ini_end; /* End timestamp of starting new sessions. */
+static struct timeval tve_last_session_in; /* Last time a session has been initialized from input. */
 
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 static uint32_t session_num = 0; /* Total number of sessions initialized (including received requests). */
@@ -160,9 +160,9 @@ static uint32_t session_num_parallel = 0; /* Number of active sessions from inpu
 static bool job_done = false;
 static bool signal_done = false;
 
-static dpc_statistics_t stat_ctx = { 0 }; /* Statistics. */
-fr_event_timer_t const *ev_progress_stats = NULL;
-struct timeval tve_progress_stat = { 0 }; /* When next ongoing statistics is supposed to fire. */
+static dpc_statistics_t stat_ctx; /* Statistics. */
+fr_event_timer_t const *ev_progress_stats;
+struct timeval tve_progress_stat; /* When next ongoing statistics is supposed to fire. */
 
 struct timeval tvi_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
 
