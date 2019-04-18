@@ -206,13 +206,16 @@ The following xlat functions are available:
 Function|Description
 -|-
 `num.range` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | `"%{num.range:<lower value>-<upper value>}"`.<br><br>Allows to generate incrementing values within a specified range of numbers (`<lower value>` and `<upper value>`). After reaching `<upper value>`, it will wrap around (reset to `<lower value>`).<br>`<lower value>` and `<upper value>` can be omitted (default : respectively, 0 and UINT64_MAX).<br><br>Example: `"%{num.range:33900000000-33900000999}"`
-`num.rand` | `"%{num.rand:<lower value>-<upper value>}"`<br><br>Similar to `num.range`, but the numbers are generated randomly in the specified range.
+`num.rand` | `"%{num.rand:<lower value>-<upper value>}"`<br><br>Similar to `num.range`, but with the numbers generated randomly in the specified range.
 `ipaddr.range` | `"%{ipaddr.range:<lower value>-<upper value>}"`
 `ipaddr.rand` | `"%{ipaddr.rand:<lower value>-<upper value>}"`
 `ethaddr.range` | `"%{ethaddr.range:<lower value>-<upper value>}"`
 `ethaddr.rand` | `"%{ethaddr.rand:<lower value>-<upper value>}"`
 `randstr` | `"%{randstr:<char sequence>}"`
 
+
+Xlat expressions can contain nested functions. For example:<br>
+`"%{randstr:%{num.rand:3-42}C}"`
 
 ## DHCP pre-encoded data
 
