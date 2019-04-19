@@ -303,10 +303,21 @@ In addition, the following information is displayed if relevant:
 - Number of lost packets (for which a reply was expected, but we didn't get one).
 - Number of NAK replies.
 
-For example (no reply is received):
+For example (unresponsive server):
 
 ```
-t(5.000) (25.0%) sessions: [started: 256, ongoing: 128, lost: 128], send rate (/s): 42.659
+(*) t(5.001) (50.0%) sessions: [in: 320, ongoing: 64, lost: 256], session rate (/s): 63.987
+```
+
+If multiple input items are involved, a second line provides additional, per-input statistics, which shows:
+- The input item status (`W` = waiting, `A` = active, `T` = terminated).
+- The rate per second of sessions started from this input item over its lifespan.
+
+
+```
+ (*) t(9.000) (60.0%) sessions: [in: 1806, ongoing: 0], session rate (/s): 100.335
+ └─ per-input rate (/s): #0 (A): 100.334, #1 (T): 200.665, #2 (W)
+
 ```
 
 
