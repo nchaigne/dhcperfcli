@@ -205,13 +205,13 @@ The following xlat functions are available:
 
 Function|Description
 -|-
-`num.range` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | `"%{num.range:<lower value>-<upper value>}"`.<br><br>Allows to generate incrementing values within a specified range of numbers (`<lower value>` and `<upper value>`). After reaching `<upper value>`, it will wrap around (reset to `<lower value>`).<br>`<lower value>` and `<upper value>` can be omitted (default : respectively, 0 and UINT64_MAX).<br><br>Example: `"%{num.range:33900000000-33900000999}"`
+`num.range` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | `"%{num.range:<lower value>-<upper value>}"`.<br><br>Generate incrementing values within a specified range of numbers (`<lower value>` and `<upper value>`). After reaching `<upper value>`, it will wrap around (reset to `<lower value>`).<br>`<lower value>` and `<upper value>` can be omitted (default : respectively, 0 and `UINT64_MAX`).<br><br>Example: `"%{num.range:0-65535}"`
 `num.rand` | `"%{num.rand:<lower value>-<upper value>}"`<br><br>Similar to `num.range`, but with the numbers generated randomly in the specified range.
-`ipaddr.range` | `"%{ipaddr.range:<lower value>-<upper value>}"`
-`ipaddr.rand` | `"%{ipaddr.rand:<lower value>-<upper value>}"`
-`ethaddr.range` | `"%{ethaddr.range:<lower value>-<upper value>}"`
-`ethaddr.rand` | `"%{ethaddr.rand:<lower value>-<upper value>}"`
-`randstr` | `"%{randstr:<char sequence>}"`
+`ipaddr.range` | `"%{ipaddr.range:<lower value>-<upper value>}"`<br><br>Generate incrementing values within a specified range of IPv4 addresses (`<lower value>` and `<upper value>`). After reaching `<upper value>`, it will wrap around (reset to `<lower value>`).<br>`<lower value>` and `<upper value>` can be omitted (default : respectively, `0.0.0.1` and `255.255.255.254`).<br><br>Example: `"%{ipaddr.range:10.0.0.1-10.0.0.255}"`
+`ipaddr.rand` | `"%{ipaddr.rand:<lower value>-<upper value>}"`<br><br>Similar to `ipaddr.range`, but with the IPv4 addresses generated randomly in the specified range.
+`ethaddr.range` | `"%{ethaddr.range:<lower value>-<upper value>}"`<br><br>Generate incrementing values within a specified range of Ethernet addresses (`<lower value>` and `<upper value>`). After reaching `<upper value>`, it will wrap around (reset to `<lower value>`).<br>`<lower value>` and `<upper value>` can be omitted (default : respectively, `00:00:00:00:00:01` and `ff:ff:ff:ff:ff:fe`).<br><br>Example: `"%{ethaddr.range:50:41:4e:44:41:00-50:41:4e:44:41:09}"`
+`ethaddr.rand` | `"%{ethaddr.rand:<lower value>-<upper value>}"`<br><br>Similar to `ethaddr.range`, but with the Ethernet addresses generated randomly in the specified range.
+`randstr` | `"%{randstr:<char sequence>}"`<br><br>Generate a random string from a sequence of character classes. This is mostly equivalent to the FreeRADIUS xlat function of the same name.<br><br>Example: `"%{randstr:Cc12na ,.so}"`
 
 
 Xlat expressions can contain nested functions. For example:<br>
@@ -315,7 +315,7 @@ If multiple input items are involved, a second line provides additional, per-inp
 
 
 ```
- (*) t(9.000) (60.0%) sessions: [in: 1806, ongoing: 0], session rate (/s): 100.335
+(*) t(9.000) (60.0%) sessions: [in: 1806, ongoing: 0], session rate (/s): 100.335
  └─ per-input rate (/s): #0 (A): 100.334, #1 (T): 200.665, #2 (W)
 
 ```
