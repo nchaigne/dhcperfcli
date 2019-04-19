@@ -336,9 +336,10 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			}
 		}
 
-		list_item = list_item->next;
 		i++;
 		if (i >= ECTX.pr_stat_per_input_max) break;
+
+		list_item = list_item->next;
 	}
 	fprintf(fp, "\n");
 }
@@ -492,14 +493,27 @@ static float dpc_get_session_in_rate(bool per_input)
 	float rate = 0;
 
 	if (!per_input) {
-		/* Global rate because inputs are not correlated. */
+		/* Compute a global session rate:
+		 * From when the first session was initialized,
+		 * To now (if still starting new sessions) or when the last session was initialized.
+		 */
 		float elapsed;
 		struct timeval tvi_elapsed;
+		struct timeval tve_end;
 
 		if (!timerisset(&tve_sessions_ini_start) || !timerisset(&tve_last_session_in)) return 0;
 
-		/* Get elapsed time up to the last session from input. */
-		timersub(&tve_last_session_in, &tve_sessions_ini_start, &tvi_elapsed);
+		/* If not starting new sessions, use last session time as end time.
+		 * Otherwise, use current time.
+		 */
+		if (!start_sessions_flag) {
+			tve_end = tve_last_session_in;
+		} else {
+			gettimeofday(&tve_end, NULL);
+		}
+
+		/* Compute elapsed time. */
+		timersub(&tve_end, &tve_sessions_ini_start, &tvi_elapsed);
 
 		elapsed = ncc_timeval_to_float(&tvi_elapsed);
 		if (elapsed > 0) { /* Just to be safe. */

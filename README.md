@@ -288,7 +288,7 @@ In addition to the end report, an ongoing statistics summary can also be display
 For example:
 
 ```
-t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], reply rate (/s): 999.990
+(*) t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], session rate (/s): 999.990
 ```
 
 This shows the following information:
@@ -297,7 +297,7 @@ This shows the following information:
 - Number of sessions started.
 - If the test is session-limited (option `-N`), completed percentage of said limit.
 - Number of ongoing sessions (requests expecting a reply).
-- Rate of all replies per second (average calculated from the beginning of the test); or, if no reply is received, rate of packets sent per second.
+- Rate of all sessions started per second (average calculated from the beginning of the test).
 
 In addition, the following information is displayed if relevant:
 - Number of lost packets (for which a reply was expected, but we didn't get one).
