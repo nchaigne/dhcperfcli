@@ -32,7 +32,8 @@ dpc_context_t exe_ctx = {
 	.request_timeout = 3.0,
 	.session_max_active = 1,
 
-	.per_input_pr_stat = 1,
+	.pr_stat_per_input = 1,
+	.pr_stat_per_input_max = 20,
 
 	.min_session_for_rps = 50,
 	.min_session_time_for_rps = 0.9,
@@ -310,7 +311,7 @@ static void dpc_end(void);
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
-	if (!ECTX.per_input_pr_stat || !with_template || vps_list_in.size < 2) return;
+	if (!ECTX.pr_stat_per_input || !with_template || vps_list_in.size < 2) return;
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
@@ -337,6 +338,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 
 		list_item = list_item->next;
 		i++;
+		if (i >= ECTX.pr_stat_per_input_max) break;
 	}
 	fprintf(fp, "\n");
 }
