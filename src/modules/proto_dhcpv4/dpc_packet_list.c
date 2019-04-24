@@ -249,29 +249,29 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 	DEBUG_TRACE("No suitable managed socket found, need a new one...");
 
 	/* Open a connectionless UDP socket for sending and receiving. */
-	int my_sockfd = fr_socket_server_udp(src_ipaddr, &src_port, NULL, false);
-	if (my_sockfd < 0) {
+	int sockfd = fr_socket_server_udp(src_ipaddr, &src_port, NULL, false);
+	if (sockfd < 0) {
 		fr_strerror_printf("Error opening socket: %s", fr_strerror());
 		return -1;
 	}
 
-	if (fr_socket_bind(my_sockfd, src_ipaddr, &src_port, NULL) < 0) {
+	if (fr_socket_bind(sockfd, src_ipaddr, &src_port, NULL) < 0) {
 		fr_strerror_printf("Error binding socket: %s", fr_strerror());
 		return -1;
 	}
 
 	/* Allow to use this socket to broadcast. */
 	int on = 1;
-	if (setsockopt(my_sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
+	if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) < 0) {
 		fr_strerror_printf("Can't set broadcast option: %s", fr_syserror(errno));
 		return -1;
 	}
 
 	/* Add the socket to our list of managed sockets. */
-	if (!dpc_socket_add(pl, my_sockfd, src_ipaddr, src_port)) {
+	if (!dpc_socket_add(pl, sockfd, src_ipaddr, src_port)) {
 		return -1;
 	}
-	return my_sockfd;
+	return sockfd;
 }
 
 /*
