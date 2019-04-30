@@ -173,6 +173,8 @@ ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list, c
 ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list);
 char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list);
 
+bool ncc_stdin_peek();
+
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
 # define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))

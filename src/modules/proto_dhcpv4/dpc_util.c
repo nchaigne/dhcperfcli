@@ -711,26 +711,6 @@ void dpc_input_list_fprint(FILE *fp, ncc_list_t *list)
 }
 
 /*
- *	Peek at stdin (fd 0) to see if it has input.
- */
-bool dpc_stdin_peek()
-{
-	fd_set set;
-	int max_fd = 1;
-	struct timeval tv;
-
-	FD_ZERO(&set);
-	FD_SET(0, &set);
-	timerclear(&tv);
-
-	if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
-		return false;
-	}
-
-	return true;
-}
-
-/*
  *	Determine if an IP address is the broadcast address.
  *	Returns: 0 if it is not, 1 if it is, -1 on error.
  */

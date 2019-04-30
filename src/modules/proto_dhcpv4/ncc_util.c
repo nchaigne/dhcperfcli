@@ -632,3 +632,23 @@ char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list
 
 	return out;
 }
+
+/*
+ *	Peek at stdin (fd 0) to see if it has input.
+ */
+bool ncc_stdin_peek()
+{
+	fd_set set;
+	int max_fd = 1;
+	struct timeval tv;
+
+	FD_ZERO(&set);
+	FD_SET(0, &set);
+	timerclear(&tv);
+
+	if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
+		return false;
+	}
+
+	return true;
+}

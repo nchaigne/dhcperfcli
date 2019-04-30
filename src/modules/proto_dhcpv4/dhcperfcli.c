@@ -2405,7 +2405,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	/*
 	 *	If there's something on stdin, read it.
 	 */
-	if (dpc_stdin_peek()) {
+	if (ncc_stdin_peek()) {
 		with_stdin_input = true;
 
 		DEBUG("Reading input from stdin");
