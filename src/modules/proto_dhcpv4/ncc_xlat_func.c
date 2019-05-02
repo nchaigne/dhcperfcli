@@ -274,22 +274,31 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 	}
 
 	FILE *fp = ncc_xlat_file_list[xlat_frame->file.num].fp;
-	char buf[8192];
-	if (fgets(buf, sizeof(buf), fp) != NULL) {
-
-		/* Remove trailing \n if there is one. */
-		size_t len = strlen(buf);
-		if (len > 0 && buf[len-1] == '\n') {
-			buf[--len] = '\0';
-		}
-
-		*out = talloc_strdup(ctx, buf);
-		/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
-
-		return strlen(*out);
+	if (!fp) {
+		return -1;
 	}
 
-	return 0;
+	char buf[8192];
+	if (fgets(buf, sizeof(buf), fp) == NULL) {
+		/* Rewind file. Then read again. */
+		fseek(fp, 0L, SEEK_SET);
+
+		if (fgets(buf, sizeof(buf), fp) == NULL) {
+			/* Should never happen: even if the file is empty, we can read once (obtaining an empty string). */
+			return -1;
+		}
+	}
+
+	/* Remove trailing \n if there is one. */
+	size_t len = strlen(buf);
+	if (len > 0 && buf[len-1] == '\n') {
+		buf[--len] = '\0';
+	}
+
+	*out = talloc_strdup(ctx, buf);
+	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+	return strlen(*out);
 }
 
 
