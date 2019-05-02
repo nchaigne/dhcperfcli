@@ -17,6 +17,7 @@
 /*
  *	Xlat names.
  */
+#define NCC_XLAT_FILE          "file"
 #define NCC_XLAT_NUM_RANGE     "num.range"
 #define NCC_XLAT_NUM_RAND      "num.rand"
 #define NCC_XLAT_IPADDR_RANGE  "ipaddr.range"
@@ -30,7 +31,8 @@
  *	Different kinds of xlat contexts.
  */
 typedef enum {
-	NCC_CTX_TYPE_NUM_RANGE = 1,
+	NCC_CTX_TYPE_FILE = 1,
+	NCC_CTX_TYPE_NUM_RANGE,
 	NCC_CTX_TYPE_NUM_RAND,
 	NCC_CTX_TYPE_IPADDR_RANGE,
 	NCC_CTX_TYPE_IPADDR_RAND,
@@ -50,6 +52,9 @@ typedef struct ncc_xlat_frame {
 
 	union {
 		struct {
+			uint32_t num;
+		} file;
+		struct {
 			uint64_t min;
 			uint64_t max;
 			uint64_t next;
@@ -68,10 +73,17 @@ typedef struct ncc_xlat_frame {
 
 } ncc_xlat_frame_t;
 
-static TALLOC_CTX *xlat_ctx = NULL;
+typedef struct ncc_xlat_file {
+	FILE *fp;
+} ncc_xlat_file_t;
 
-static ncc_list_t *ncc_xlat_frame_list = NULL; /* This is an array of lists. */
+static TALLOC_CTX *xlat_ctx;
+
+static ncc_list_t *ncc_xlat_frame_list; /* This is an array of lists. */
 static uint32_t num_xlat_frame_list = 0;
+
+static ncc_xlat_file_t *ncc_xlat_file_list;
+static uint32_t num_xlat_file = 0;
 
 
 void ncc_xlat_init()
@@ -143,6 +155,25 @@ int ncc_xlat_get_rcode()
 	return FX_request->rcode;
 }
 
+/*
+ *	Add a xlat file from which values will be read sequentially.
+ */
+int ncc_xlat_file_add(char const *filename)
+{
+	FILE *fp = fopen(filename, "r");
+	if (!fp) {
+		ERROR("Error opening %s: %s", filename, strerror(errno));
+		return -1;
+	}
+
+	ncc_xlat_file_list = talloc_realloc(xlat_ctx, ncc_xlat_file_list, ncc_xlat_file_t, num_xlat_file + 1);
+	ncc_xlat_file_list[num_xlat_file].fp = fp;
+	num_xlat_file++;
+
+	return 0;
+}
+
+
 #define XLAT_ERR_RETURN \
 	request->rcode = -1; \
 	return -1;
@@ -187,6 +218,78 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 	FX_request->child_number ++; /* Prepare next xlat context. */
 
 	return xlat_frame;
+}
+
+
+/*
+ *	Parse file "<index>".
+ */
+int ncc_parse_file(uint32_t *num_file, char const *in)
+{
+	fr_type_t type = FR_TYPE_UINT32;
+	fr_value_box_t vb = { 0 };
+
+	*num_file = 0; /* Default. */
+
+	if (in) {
+		/* Convert the file index. */
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, -1, '\0', false) < 0) {
+			fr_strerror_printf("Invalid index, in: [%s]", in);
+			return -1;
+		}
+		*num_file = vb.vb_uint32;
+	}
+
+	if (*num_file >= num_xlat_file) { /* Not a valid file. */
+		fr_strerror_printf("Not a valid file index: %u", *num_file);
+		return -1;
+	}
+	return 0;
+}
+
+/** Read values sequentially from a file.
+ *
+ *  %{file:<index>} - where <index> (0, 1, ...) correspond to xlat files added through ncc_xlat_file_add.
+ */
+static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	*out = NULL;
+
+	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
+	if (!xlat_frame) return -1; /* Cannot happen. */
+
+	if (!xlat_frame->type) {
+		/* Not yet parsed. */
+		uint32_t num_file;
+		if (ncc_parse_file(&num_file, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat file: %s", fr_strerror());
+			XLAT_ERR_RETURN;
+		}
+
+		xlat_frame->type = NCC_CTX_TYPE_FILE;
+		xlat_frame->file.num = num_file;
+	}
+
+	FILE *fp = ncc_xlat_file_list[xlat_frame->file.num].fp;
+	char buf[8192];
+	if (fgets(buf, sizeof(buf), fp) != NULL) {
+
+		/* Remove trailing \n if there is one. */
+		size_t len = strlen(buf);
+		if (len > 0 && buf[len-1] == '\n') {
+			buf[--len] = '\0';
+		}
+
+		*out = talloc_strdup(ctx, buf);
+		/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+		return strlen(*out);
+	}
+
+	return 0;
 }
 
 
@@ -880,6 +983,8 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 void ncc_xlat_register(void)
 {
 	ncc_xlat_init();
+
+	ncc_xlat_core_register(NULL, NCC_XLAT_FILE, _ncc_xlat_file, NULL, NULL, 0, 0, true);
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RAND, _ncc_xlat_num_rand, NULL, NULL, 0, 0, true);
