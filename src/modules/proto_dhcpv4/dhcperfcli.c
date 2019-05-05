@@ -2691,6 +2691,16 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 	return *ep_list;
 }
 
+
+/* Short options. */
+#define OPTSTR_BASE "a:D:c:f:g:hI:L:MN:p:P:r:s:t:TvxX"
+#ifdef HAVE_LIBPCAP
+  #define OPTSTR_LIBPCAP "Ai:"
+#else
+  #define OPTSTR_LIBPCAP ""
+#endif
+#define OPTSTR OPTSTR_BASE OPTSTR_LIBPCAP
+
 static struct option long_options[] = {
 	/* Long options with no short option equivalent. */
 
@@ -2731,12 +2741,7 @@ static void dpc_options_parse(int argc, char **argv)
 	while (1)
 	{
 		opt_index = -1;
-		argval = getopt_long(argc, argv,
-#ifdef HAVE_LIBPCAP
-		                    "Ai:"
-#endif
-		                    "a:D:c:f:g:hI:L:MN:p:P:r:s:t:TvxX",
-		                    long_options, &opt_index);
+		argval = getopt_long(argc, argv, OPTSTR, long_options, &opt_index);
 		if (argval == -1) break;
 
 		switch (argval) {
