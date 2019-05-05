@@ -2731,13 +2731,35 @@ static void dpc_options_parse(int argc, char **argv)
 	int opt_index = -1; /* Stores the option index for long options. */
 	bool debug_fr = false;
 
-	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* So we can log while parsing options. */
-
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
 		usage(1); \
 	}
 
+	/* Parse options: first pass.
+	 * Get debug level, and set logging accordingly.
+	 */
+	optind = 0;
+	opterr = 0; /* No error messages. */
+	while (1)
+	{
+		argval = getopt_long(argc, argv, "-x", NULL, NULL);
+		if (argval == -1) break;
+
+		switch (argval) {
+		case 'x':
+			dpc_debug_lvl ++;
+			break;
+		}
+	}
+
+	ECTX.debug_lvl = dpc_debug_lvl;
+	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Initialize logging. */
+
+	/* Parse options: second pass.
+	 */
+	optind = 0;
+	opterr = 1; /* Now we want errors. */
 	while (1)
 	{
 		opt_index = -1;
