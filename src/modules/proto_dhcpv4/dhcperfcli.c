@@ -137,7 +137,6 @@ static ncc_endpoint_t client_ep = {
 	.port = DHCP_PORT_CLIENT
 };
 
-static char *gateway_arg;
 static ncc_endpoint_list_t *gateway_list; /* List of gateways. */
 static fr_ipaddr_t allowed_server; /* Only allow replies from a specific server. */
 
@@ -2789,9 +2788,8 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			/* Allow to have multiple -g options, the last is handled after we've parsed all options. */
-			dpc_addr_list_parse(global_ctx, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
-			gateway_arg = optarg;
+			DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", optarg);
+			dpc_addr_list_parse(global_ctx, &gateway_list, optarg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 			break;
 
 		case 'h':
@@ -2901,11 +2899,6 @@ static void dpc_options_parse(int argc, char **argv)
 	 */
 	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
 		ncc_host_addr_resolve(&server_ep, argv[1]);
-	}
-
-	if (gateway_arg) {
-		DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", gateway_arg);
-		dpc_addr_list_parse(global_ctx, &gateway_list, gateway_arg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 	}
 
 	/*
