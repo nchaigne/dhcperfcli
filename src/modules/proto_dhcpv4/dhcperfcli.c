@@ -2729,7 +2729,6 @@ static void dpc_options_parse(int argc, char **argv)
 {
 	int argval;
 	int opt_index = -1; /* Stores the option index for long options. */
-	bool debug_fr = false;
 
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
@@ -2857,12 +2856,11 @@ static void dpc_options_parse(int argc, char **argv)
 			version_print();
 			exit(EXIT_SUCCESS);
 
-		case 'x':
-			dpc_debug_lvl ++;
+		case 'x': /* Handled in first pass. */
 			break;
 
 		case 'X':
-			debug_fr = true;
+			fr_debug_lvl = dpc_debug_lvl;
 			break;
 
 		case 0: /* Long option flag set, nothing to do. */
@@ -2888,9 +2886,6 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 	argc -= (optind - 1);
 	argv += (optind - 1);
-
-	ECTX.debug_lvl = dpc_debug_lvl;
-	if (debug_fr) fr_debug_lvl = dpc_debug_lvl;
 
 	/* Configure talloc debugging features. */
 	if (ECTX.talloc_memory_report) {
