@@ -219,6 +219,7 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 	n->op = vp->op;
 	n->tag = vp->tag;
 	n->next = NULL;
+	n->type = vp->type;
 
 	/*
 	 *	Copy the unknown attribute hierarchy
@@ -237,7 +238,6 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 	 *	the VALUE_PAIR.
 	 */
 	if (vp->type == VT_XLAT) {
-		n->type = VT_XLAT;
 		n->xlat = talloc_typed_strdup(n, vp->xlat);
 		n->vp_ptr = vp->vp_ptr; /* This stores the compiled xlat .*/
 		return n;
@@ -327,10 +327,19 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 	/* Iterate on the value pairs of the list. */
 	int i = 0;
 	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
-
 		len = fr_pair_snprint(buf, sizeof(buf), vp);
-		fprintf(fp, "  #%u (%s) %s\n", i, (vp->type == VT_XLAT ? "XLAT" : "DATA"), buf);
 
+		char *type_info = "";
+		switch (vp->type) {
+			case VT_XLAT:
+				type_info = "XLAT"; break;
+			case VT_DATA:
+				type_info = "DATA"; break;
+			default:
+				type_info = "???";
+		}
+
+		fprintf(fp, "  #%u (%u: %s) %s\n", i, vp->type, type_info, buf);
 		i++;
 	}
 }
