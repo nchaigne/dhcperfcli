@@ -238,7 +238,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 		 */
 		if (pevent == DPC_PACKET_SENT && !vp_encoded_data) {
 			VALUE_PAIR *vp = ncc_pair_create_by_da(packet, NULL, attr_encoded_data);
-			fr_pair_value_memcpy(vp, packet->data, packet->data_len);
+			fr_pair_value_memcpy(vp, packet->data, packet->data_len, true);
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp);
 		}
@@ -507,7 +507,7 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 		uint8_t *buff = talloc_zero_array(vp, uint8_t, vp->vp_length);
 		memcpy(buff, vp->vp_octets, vp->vp_length);
 		dpc_octet_array_increment(buff, vp->vp_length, 0, 255);
-		fr_pair_value_memsteal(vp, buff);
+		fr_pair_value_memsteal(vp, buff, true);
 		break;
 	}
 
@@ -584,7 +584,7 @@ VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp)
 		uint8_t *buff = talloc_zero_array(vp, uint8_t, vp->vp_length);
 		memcpy(buff, vp->vp_octets, vp->vp_length);
 		fr_rand_buffer(buff, vp->vp_length);
-		fr_pair_value_memsteal(vp, buff);
+		fr_pair_value_memsteal(vp, buff, true);
 		break;
 	}
 
