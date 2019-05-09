@@ -144,6 +144,8 @@ VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da);
 int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from);
 int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value);
+VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp);
+int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);

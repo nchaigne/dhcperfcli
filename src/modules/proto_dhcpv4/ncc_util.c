@@ -202,14 +202,97 @@ int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
 }
 
 /*
+ *	Copy a single VP.
+ *	(FreeRADIUS's fr_pair_copy, altered to work with pre-compiled xlat)
+ */
+VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
+{
+	VALUE_PAIR *n;
+
+	if (!vp) return NULL;
+
+	VP_VERIFY(vp);
+
+	n = fr_pair_afrom_da(ctx, vp->da);
+	if (!n) return NULL;
+
+	n->op = vp->op;
+	n->tag = vp->tag;
+	n->next = NULL;
+
+	/*
+	 *	Copy the unknown attribute hierarchy
+	 */
+	if (n->da->flags.is_unknown) {
+		n->da = fr_dict_unknown_acopy(n, n->da);
+		if (!n->da) {
+			talloc_free(n);
+			return NULL;
+		}
+	}
+
+	/*
+	 *	If it's an xlat, copy the raw string and return
+	 *	early, so we don't pre-expand or otherwise mangle
+	 *	the VALUE_PAIR.
+	 */
+	if (vp->type == VT_XLAT) {
+		n->type = VT_XLAT;
+		n->xlat = talloc_typed_strdup(n, vp->xlat);
+		n->vp_ptr = vp->vp_ptr; /* This stores the compiled xlat .*/
+		return n;
+	}
+	fr_value_box_copy(n, &n->data, &vp->data);
+
+	return n;
+}
+
+/*
+ *	Copy a list of VP.
+ *	(FreeRADIUS's fr_pair_list_copy, altered to work with pre-compiled xlat)
+ */
+int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
+{
+	fr_cursor_t	src, dst, tmp;
+
+	VALUE_PAIR	*head = NULL;
+	VALUE_PAIR	*vp;
+	int		cnt = 0;
+
+	fr_cursor_talloc_init(&tmp, &head, VALUE_PAIR);
+	for (vp = fr_cursor_talloc_init(&src, &from, VALUE_PAIR);
+	     vp;
+	     vp = fr_cursor_next(&src), cnt++) {
+		VP_VERIFY(vp);
+		vp = ncc_pair_copy(ctx, vp);
+		if (!vp) {
+			fr_pair_list_free(&head);
+			return -1;
+		}
+		fr_cursor_append(&tmp, vp); /* fr_pair_list_copy sets next pointer to NULL */
+	}
+
+	if (!*to) {	/* Fast Path */
+		*to = head;
+	} else {
+		fr_cursor_talloc_init(&dst, to, VALUE_PAIR);
+		fr_cursor_head(&tmp);
+		fr_cursor_merge(&dst, &tmp);
+	}
+
+	return cnt;
+}
+
+/*
  *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
+ *	Note: contrary to fr_pair_list_copy, this preserves the order of the value pairs.
  */
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
 {
 	vp_cursor_t src, dst;
 
 	if (*to == NULL) { /* fall back to fr_pair_list_copy for a new list. */
-		MEM(fr_pair_list_copy(ctx, to, from) >= 0);
+		MEM(ncc_pair_list_copy(ctx, to, from) >= 0);
 		return (*to);
 	}
 
@@ -220,7 +303,7 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 	     vp;
 	     vp = fr_pair_cursor_next(&src)) {
 		VP_VERIFY(vp);
-		vp = fr_pair_copy(ctx, vp);
+		vp = ncc_pair_copy(ctx, vp);
 		if (!vp) {
 			fr_pair_list_free(&out);
 			return NULL;
