@@ -333,8 +333,6 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 
 		i++;
 	}
-
-	fprintf(fp, "\n");
 }
 
 
