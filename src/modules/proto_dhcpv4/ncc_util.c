@@ -314,6 +314,29 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 	return *to;
 }
 
+/*
+ *	Print a list of VP.
+ */
+void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
+{
+	VALUE_PAIR *vp;
+	fr_cursor_t cursor;
+	char buf[4096];
+	UNUSED size_t len;
+
+	/* Iterate on the value pairs of the list. */
+	int i = 0;
+	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
+
+		len = fr_pair_snprint(buf, sizeof(buf), vp);
+		fprintf(fp, "  #%u (%s) %s\n", i, (vp->type == VT_XLAT ? "XLAT" : "DATA"), buf);
+
+		i++;
+	}
+
+	fprintf(fp, "\n");
+}
+
 
 /*
  *	Print endpoint: <IP>:<port>.

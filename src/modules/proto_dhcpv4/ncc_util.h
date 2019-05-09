@@ -147,6 +147,7 @@ int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value);
 VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp);
 int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
+void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps);
 
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
