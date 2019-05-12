@@ -2702,6 +2702,7 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 
 static struct option long_options[] = {
 	/* Long options with no short option equivalent. */
+	{ "xlat-file",             required_argument, NULL, 1 },
 
 	/* Long options with short option equivalent. */
 	{ "dict-dir",               required_argument, NULL, 'D' },
@@ -2720,6 +2721,13 @@ static struct option long_options[] = {
 
 	{ 0, 0, 0, 0 }
 };
+
+typedef enum {
+	/* Careful: numbering here is important.
+	 * It must match long_options order defined above.
+	 */
+	LONGOPT_IDX_XLAT_FILE = 0,
+} longopt_index_t;
 
 /*
  *	Process command line options and arguments.
@@ -2869,6 +2877,11 @@ static void dpc_options_parse(int argc, char **argv)
 			 *	Option is identified by its index in the option[] array.
 			 */
 			switch (opt_index) {
+			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
+				if (ncc_xlat_file_add(optarg) != 0) {
+					exit(EXIT_FAILURE);
+				}
+				break;
 
 			default:
 				printf("Error: Unexpected 'option index': %d\n", opt_index);
