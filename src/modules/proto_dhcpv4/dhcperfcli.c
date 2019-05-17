@@ -29,7 +29,8 @@ int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
 	.progress_interval = 10.0,
-	.request_timeout = 3.0,
+	.request_timeout = 1.0,
+	.retransmit_max = 2,
 	.session_max_active = 1,
 
 	.pr_stat_per_input = 1,
