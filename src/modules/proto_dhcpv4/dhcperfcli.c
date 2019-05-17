@@ -772,13 +772,14 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 
 		if (!signal_done && dpc_retransmit(session)) {
 			/* Packet has been successfully retransmitted. */
+			STAT_INCR_PACKET_RETR(session->request);
 			return;
 		}
 
 		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
 
 		/* Statistics. */
-		STAT_INCR_PACKET_LOST(session->request->code);
+		STAT_INCR_PACKET_LOST(session->request);
 	}
 
 	/* Finish the session. */
@@ -911,7 +912,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	/* Statistics. */
-	STAT_INCR_PACKET_SENT(packet->code);
+	STAT_INCR_PACKET_SENT(packet);
 
 	return 0;
 }
@@ -1034,7 +1035,7 @@ static int dpc_recv_one_packet(struct timeval *tvi_wait_time)
 	}
 
 	/* Statistics. */
-	STAT_INCR_PACKET_RECV(packet->code);
+	STAT_INCR_PACKET_RECV(packet);
 
 	/*
 	 *	Handle the reply, and decide if the session is finished or not yet.

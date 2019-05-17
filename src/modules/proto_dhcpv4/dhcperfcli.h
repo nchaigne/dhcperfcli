@@ -184,26 +184,22 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 // attribute is a DHCP sub-option if it has a parent of type "tlv", which has also a parent (the protocol itself).
 
 
+
 /*
- *	Statistics update.
+ *	Statistics macros.
  */
-#define STAT_INCR_PACKET_SENT(_packet_code) \
+#define STAT_INCR(_type, _packet) \
 { \
-	stat_ctx.num_packet_sent[0] ++; \
-	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_sent[_packet_code] ++; \
-}
-#define STAT_INCR_PACKET_RECV(_packet_code) \
-{ \
-	stat_ctx.num_packet_recv[0] ++; \
-	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_recv[_packet_code] ++; \
-}
-#define STAT_INCR_PACKET_LOST(_packet_code) \
-{ \
-	stat_ctx.num_packet_lost[0] ++; \
-	if (is_dhcp_message(_packet_code)) stat_ctx.num_packet_lost[_packet_code] ++; \
+	stat_ctx.dpc_stat[_type][0] ++; \
+	if (is_dhcp_message(_packet->code)) stat_ctx.dpc_stat[_type][_packet->code] ++; \
 }
 
-#define STAT_ALL_LOST (stat_ctx.num_packet_lost[0])
+#define STAT_INCR_PACKET_SENT(_packet) STAT_INCR(DPC_STAT_PACKET_SENT, _packet)
+#define STAT_INCR_PACKET_RETR(_packet) STAT_INCR(DPC_STAT_PACKET_RETR, _packet)
+#define STAT_INCR_PACKET_LOST(_packet) STAT_INCR(DPC_STAT_PACKET_LOST, _packet)
+#define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(DPC_STAT_PACKET_RECV, _packet)
+
+#define STAT_ALL_LOST (stat_ctx.dpc_stat[DPC_STAT_PACKET_LOST][0])
 
 
 /* Specific states of a session. */
@@ -248,6 +244,16 @@ typedef enum {
 	DPC_PACKET_TIMEOUT
 } dpc_packet_event_t;
 
+/* Packet statistics. */
+typedef enum {
+	DPC_STAT_PACKET_SENT = 0,  //<! Packets sent
+	DPC_STAT_PACKET_RETR = 1,  //<! Packets retransmitted
+	DPC_STAT_PACKET_LOST = 2,  //<! Packets lost (no reply received before timeout + all retransmissions)
+	DPC_STAT_PACKET_RECV = 3,  //<! Packets (replies) received
+
+	DPC_STAT_MAX_TYPE = DPC_STAT_PACKET_RECV
+} dpc_packet_stat_t;
+
 /* Template variable update mode. */
 typedef enum {
 	DPC_TEMPL_VAR_NONE = 0,
@@ -279,6 +285,8 @@ typedef struct dpc_statistics {
 	uint32_t num_packet_sent[DHCP_MAX_MESSAGE_TYPE];
 	uint32_t num_packet_lost[DHCP_MAX_MESSAGE_TYPE];
 	uint32_t num_packet_recv[DHCP_MAX_MESSAGE_TYPE];
+
+	uint32_t dpc_stat[DPC_STAT_MAX_TYPE + 1][DHCP_MAX_MESSAGE_TYPE + 1];
 
 	uint32_t num_packet_recv_unexpected;
 
