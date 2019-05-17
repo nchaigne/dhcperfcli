@@ -245,7 +245,6 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_start_sessions_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_type_t i);
-static float dpc_get_msg_rate(uint8_t i);
 static float dpc_get_session_in_rate(bool per_input);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
@@ -507,21 +506,6 @@ static float dpc_get_tr_rate(dpc_transaction_type_t i)
 	if (elapsed <= 0) return 0; /* Should not happen. */
 	return (float)my_stats->num / elapsed;
 }
-
-/*
- *	Compute the rate (packets sent per second) of a given message type (or all).
- */
-#if 0
-static float dpc_get_msg_rate(uint8_t i)
-{
-	dpc_assert(i < DHCP_MAX_MESSAGE_TYPE);
-
-	float elapsed = dpc_job_elapsed_time_get();
-
-	if (elapsed <= 0) return 0; /* Should not happen. */
-	return (float)stat_ctx.num_packet_sent[i] / elapsed;
-}
-#endif
 
 /*
  *	Compute the rate of input sessions per second.

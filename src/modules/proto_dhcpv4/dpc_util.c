@@ -33,39 +33,6 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
 
 
 /*
- *	Print number of each type of message (sent or received).
- */
-char *__dpc_num_message_type_sprint(char *out, uint32_t num_packet[])
-{
-	int i;
-	char *p = out;
-	size_t len = 0;
-
-	uint32_t remain = num_packet[0]; /* Total. */
-
-	*p = '\0';
-	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
-		if (num_packet[i] > 0) {
-			if (p != out) {
-				len = sprintf(p, ", ");
-				p += len;
-			}
-			len = sprintf(p, "%s: %u", dpc_message_types[i], num_packet[i]);
-			p += len;
-			remain -= num_packet[i];
-		}
-	}
-	if (remain) { /* Unknown message types. */
-		if (p != out) {
-			len = sprintf(p, ", ");
-			p += len;
-		}
-		sprintf(p, "%s: %u", "unknown", remain);
-	}
-	return out;
-}
-
-/*
  *	Print the message type from packet code.
  */
 char *dpc_message_type_sprint(char *out, int message)
