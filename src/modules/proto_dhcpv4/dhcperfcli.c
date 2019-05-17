@@ -2766,7 +2766,8 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 
 static struct option long_options[] = {
 	/* Long options with no short option equivalent. */
-	{ "xlat-file",             required_argument, NULL, 1 },
+	{ "retransmit",             required_argument, NULL, 1 },
+	{ "xlat-file",              required_argument, NULL, 1 },
 
 	/* Long options with short option equivalent. */
 	{ "dict-dir",               required_argument, NULL, 'D' },
@@ -2790,7 +2791,8 @@ typedef enum {
 	/* Careful: numbering here is important.
 	 * It must match long_options order defined above.
 	 */
-	LONGOPT_IDX_XLAT_FILE = 0,
+	LONGOPT_IDX_RETRANSMIT = 0,
+	LONGOPT_IDX_XLAT_FILE,
 } longopt_index_t;
 
 /*
@@ -2803,6 +2805,11 @@ static void dpc_options_parse(int argc, char **argv)
 
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
+		usage(1); \
+	}
+
+#define ERROR_LONGOPT_VALUE(_l) { \
+		ERROR("Invalid value for option --%s (expected: %s)", long_options[opt_index].name, _l); \
 		usage(1); \
 	}
 
@@ -2941,6 +2948,11 @@ static void dpc_options_parse(int argc, char **argv)
 			 *	Option is identified by its index in the option[] array.
 			 */
 			switch (opt_index) {
+			case LONGOPT_IDX_RETRANSMIT: // --retransmit
+				if (!is_integer(optarg)) ERROR_LONGOPT_VALUE("integer");
+				ECTX.retransmit_max = atoi(optarg);
+				break;
+
 			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
 				if (ncc_xlat_file_add(optarg) != 0) {
 					exit(EXIT_FAILURE);
