@@ -239,6 +239,7 @@ char elapsed_buf[NCC_TIME_STRLEN];
 static void usage(int);
 static void version_print(void);
 
+static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t stat_type);
 static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 static float dpc_job_elapsed_time_get(void);
@@ -304,6 +305,42 @@ static void dpc_options_parse(int argc, char **argv);
 static void dpc_signal(int sig);
 static void dpc_end(void);
 
+
+/*
+ *	Print number of each type of message (sent, received, ...).
+ */
+char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t stat_type)
+{
+	int i;
+	char *p = out;
+	size_t len = 0;
+
+	*p = '\0';
+
+#define MSG_TYPE_PRINT(_num, _label) \
+{ \
+	if (_num > 0) { \
+		if (p != out) { \
+			len = sprintf(p, ", "); \
+			p += len; \
+		} \
+		len = sprintf(p, "%s: %u", _label, _num); \
+		p += len; \
+		remain -= _num; \
+	} \
+}
+
+	uint32_t *num_packet = stat_ctx.dpc_stat[stat_type];
+	uint32_t remain = num_packet[0]; /* Total. */
+
+	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
+		MSG_TYPE_PRINT(num_packet[i], dpc_message_types[i]);
+	}
+	if (remain) { /* Unknown message types. */
+		MSG_TYPE_PRINT(remain, "unknown");
+	}
+	return out;
+}
 
 /*
  *	Print ongoing statistics detail per input.
@@ -380,8 +417,8 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 		}
 
 		/* NAK replies. */
-		if (stat_ctx.num_packet_recv[6] > 0) {
-			fprintf(fp, ", %s: %u", dpc_message_types[6], stat_ctx.num_packet_recv[6]);
+		if (STAT_NAK_RECV > 0) {
+			fprintf(fp, ", %s: %u", dpc_message_types[6], STAT_NAK_RECV);
 		}
 
 		fprintf(fp, "]");
@@ -474,6 +511,7 @@ static float dpc_get_tr_rate(dpc_transaction_type_t i)
 /*
  *	Compute the rate (packets sent per second) of a given message type (or all).
  */
+#if 0
 static float dpc_get_msg_rate(uint8_t i)
 {
 	dpc_assert(i < DHCP_MAX_MESSAGE_TYPE);
@@ -483,6 +521,7 @@ static float dpc_get_msg_rate(uint8_t i)
 	if (elapsed <= 0) return 0; /* Should not happen. */
 	return (float)stat_ctx.num_packet_sent[i] / elapsed;
 }
+#endif
 
 /*
  *	Compute the rate of input sessions per second.
@@ -601,21 +640,22 @@ static void dpc_stats_fprint(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	/* Packets sent (total, and of each message type). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.num_packet_sent[0]);
-	if (stat_ctx.num_packet_sent[0] > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, stat_ctx.num_packet_sent));
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0]);
+	if (stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0] > 0) {
+		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, sizeof(messages), DPC_STAT_PACKET_SENT));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.num_packet_recv[0]);
-	if (stat_ctx.num_packet_recv[0] > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, stat_ctx.num_packet_recv));
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][0]);
+	if (stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][0] > 0) {
+		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, sizeof(messages), DPC_STAT_PACKET_RECV));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets to which no response was received. */
-	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.num_packet_lost[0]);
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Retransmissions", stat_ctx.dpc_stat[DPC_STAT_PACKET_RETR][0]);
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.dpc_stat[DPC_STAT_PACKET_LOST][0]);
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",

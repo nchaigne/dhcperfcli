@@ -12,7 +12,6 @@
 #define DPC_DELTA_TIME_DECIMALS  3
 
 
-char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[]);
 char *dpc_message_type_sprint(char *out, int code);
 void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);

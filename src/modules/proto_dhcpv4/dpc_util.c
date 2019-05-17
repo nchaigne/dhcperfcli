@@ -35,7 +35,7 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
 /*
  *	Print number of each type of message (sent or received).
  */
-char *dpc_num_message_type_sprint(char *out, uint32_t num_packet[])
+char *__dpc_num_message_type_sprint(char *out, uint32_t num_packet[])
 {
 	int i;
 	char *p = out;

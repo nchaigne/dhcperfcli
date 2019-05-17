@@ -200,6 +200,7 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(DPC_STAT_PACKET_RECV, _packet)
 
 #define STAT_ALL_LOST (stat_ctx.dpc_stat[DPC_STAT_PACKET_LOST][0])
+#define STAT_NAK_RECV (stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][6])
 
 
 /* Specific states of a session. */
@@ -281,10 +282,6 @@ typedef struct dpc_statistics {
 	 *	Note: entry "All" aggregates all unitary transactions (i.e. DORA workflow not included).
 	 */
 	dpc_transaction_stats_t tr_stats[DPC_TR_MAX];
-
-	uint32_t num_packet_sent[DHCP_MAX_MESSAGE_TYPE];
-	uint32_t num_packet_lost[DHCP_MAX_MESSAGE_TYPE];
-	uint32_t num_packet_recv[DHCP_MAX_MESSAGE_TYPE];
 
 	uint32_t dpc_stat[DPC_STAT_MAX_TYPE + 1][DHCP_MAX_MESSAGE_TYPE + 1];
 
