@@ -71,6 +71,9 @@ void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	switch (pevent) {
 		case DPC_PACKET_SENT:
 			fprintf(fp, "Sent");
+			if (session->retransmit > 0) {
+				fprintf(fp, " (retr: %u)", session->retransmit);
+			}
 			break;
 		case DPC_PACKET_RECEIVED:
 			fprintf(fp, "Received");

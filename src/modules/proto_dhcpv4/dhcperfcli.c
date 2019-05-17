@@ -1462,6 +1462,8 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
+	session->retransmit = 0;
+
 	/* Fill in the packet value pairs. */
 	ncc_pair_list_append(request, &request->vps, input->vps);
 
