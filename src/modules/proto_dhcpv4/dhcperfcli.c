@@ -730,6 +730,31 @@ static void dpc_event_add_progress_stats(void)
 }
 
 /*
+ *	One request timed-out, but maybe we can retransmit.
+ */
+static bool dpc_retransmit(dpc_session_ctx_t *session)
+{
+	if (session->retransmit >= ECTX.retransmit_max) {
+		/* Give up. */
+		return false;
+	}
+
+	/* Try again. */
+	session->retransmit ++;
+
+	if (dpc_send_one_packet(session, &session->request) < 0) {
+		/* Caller will finish session. */
+		return false;
+	}
+
+	/*
+	 *	Arm request timeout.
+	 */
+	dpc_event_add_request_timeout(session, NULL);
+	return true;
+}
+
+/*
  *	Event callback: request timeout.
  */
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx)
@@ -744,6 +769,11 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 		DEBUG_TRACE("Stop waiting for more replies");
 	} else {
 		DEBUG_TRACE("Request timed out (retransmissions so far: %u)", session->retransmit);
+
+		if (!signal_done && dpc_retransmit(session)) {
+			/* Packet has been successfully retransmitted. */
+			return;
+		}
 
 		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
 

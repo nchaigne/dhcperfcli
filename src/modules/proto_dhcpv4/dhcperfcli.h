@@ -31,6 +31,7 @@ struct dpc_context {
 
 	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
 	struct timeval tvi_request_timeout;
+	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 
 	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
 
