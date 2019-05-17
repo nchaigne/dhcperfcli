@@ -743,7 +743,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 		 */
 		DEBUG_TRACE("Stop waiting for more replies");
 	} else {
-		DEBUG_TRACE("Request timed out");
+		DEBUG_TRACE("Request timed out (retransmissions so far: %u)", session->retransmit);
 
 		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
 
@@ -792,8 +792,6 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	int ret;
 
 	DEBUG_TRACE("Preparing to send one packet");
-
-	session->num_send ++;
 
 	/*
 	 *	Get a socket to send this over.
@@ -1176,6 +1174,8 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 		    session_num_active, session_num_in_active, session_num_parallel);
 	}
 
+	session->num_send ++;
+
 	/*
 	 *	Encode and send packet.
 	 */
@@ -1264,6 +1264,8 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 		    session_num_active, session_num_in_active, session_num_parallel);
 	}
 
+	session->num_send ++;
+
 	/*
 	 *	Encode and send packet.
 	 */
@@ -1344,6 +1346,8 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	}
 	talloc_free(session->request);
 	session->request = packet;
+
+	session->num_send ++;
 
 	/*
 	 *	Encode and send packet.
@@ -1957,6 +1961,8 @@ static uint32_t dpc_loop_start_sessions(void)
 
 			break; /* Cannot initialize new sessions for now. */
 		}
+
+		session->num_send = 1;
 
 		/* Send the packet. */
 		if (dpc_send_one_packet(session, &session->request) < 0) {
