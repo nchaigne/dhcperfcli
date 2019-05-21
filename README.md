@@ -29,9 +29,9 @@ To build and install *dhcperfcli*, refer to [INSTALL.md](https://github.com/ncha
 dhcperfcli [options] [<server>[:<port>] [<command>]]
 ```
 
-Arguments|Description
+Arguments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|Description
 -|-
-`<server>:[<port>]` &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
+`<server>:[<port>]` | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
 `<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`DHCP-Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
 `-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
@@ -47,7 +47,8 @@ Arguments|Description
 `-P <num>` | Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).<br>A default is figured out according to number of packets and parallelism.
 `-r <num>` | Rate limit. Maximum new input sessions initialized per second.
 `-s <seconds>` | Periodically report progress statistics information.<br>Default: 10 s.
-`-t <seconds>` | Maximum time spent waiting for a reply to a request previously sent (before retransmissing or giving up).<br>If set to 0, the program will never wait for a reply.<br>Default: 1 s.
+`-t <seconds>`<br>`--timeout <seconds>` | Maximum time spent waiting for a reply to a request previously sent (before retransmissing or giving up).<br>If set to 0, the program will never wait for a reply.<br>Default: 1 s.
+`--retransmit <num>` | Maximum number of retransmissions (not including the first packet) of a given request to which no reply was received (before giving up).<br>Default: 2.
 `-T` | Template mode.
 `-v` | Print program version information.
 `-x` | Turn on additional debugging. (`-xx` gives more debugging, up to `-xxxx`).
