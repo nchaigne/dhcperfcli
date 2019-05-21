@@ -2921,8 +2921,17 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 't':
 			if (!ncc_str_to_float(&ECTX.request_timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
-			if (ECTX.request_timeout < 0.01) ECTX.request_timeout = 0.01; /* Don't allow absurdly low values. */
-			else if (ECTX.request_timeout > 3600) ECTX.request_timeout = 3600;
+			/* 0 is allowed, it means we don't wait for replies, ever.
+			 * This entails that:
+			 * - we won't have "timed out" requests
+			 * - we won't have rtt statistics
+			 * - and we probably will have "unexpected replies" (if the server is responsive)
+			 */
+			if (ECTX.request_timeout) {
+				/* Don't allow absurd values. */
+				if (ECTX.request_timeout < 0.01) ECTX.request_timeout = 0.01;
+				else if (ECTX.request_timeout > 3600) ECTX.request_timeout = 3600;
+			}
 			break;
 
 		case 'T':
