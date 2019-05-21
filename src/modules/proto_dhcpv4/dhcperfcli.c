@@ -2023,19 +2023,16 @@ static uint32_t dpc_loop_start_sessions(void)
 		session->num_send = 1;
 
 		/* Send the packet. */
-		if (dpc_send_one_packet(session, &session->request) < 0) {
+		if (dpc_send_one_packet(session, &session->request) < 0
+		    || !session->reply_expected /* No reply is expected to this kind of packet (e.g. Release). */
+		    || !ECTX.request_timeout /* Do not wait for a reply. */
+		    ) {
 			dpc_session_finish(session);
-			continue;
-		}
-
-		if (session->reply_expected) {
+		} else {
 			/*
 			 *	Arm request timeout.
 			 */
 			dpc_event_add_request_timeout(session, NULL);
-		} else {
-			/* We've sent a packet to which no reply is expected. So this session ends right now. */
-			dpc_session_finish(session);
 		}
 
 		num_started ++;
