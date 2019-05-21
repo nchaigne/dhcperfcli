@@ -47,7 +47,7 @@ Arguments|Description
 `-P <num>` | Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).<br>A default is figured out according to number of packets and parallelism.
 `-r <num>` | Rate limit. Maximum new input sessions initialized per second.
 `-s <seconds>` | Periodically report progress statistics information.<br>Default: 10 s.
-`-t <timeout>` | Wait at most `<timeout>` seconds for a reply (may be a floating point number).<br>Default: 3.
+`-t <seconds>` | Maximum time spent waiting for a reply to a request previously sent (before retransmissing or giving up).<br>If set to 0, the program will never wait for a reply.<br>Default: 1 s.
 `-T` | Template mode.
 `-v` | Print program version information.
 `-x` | Turn on additional debugging. (`-xx` gives more debugging, up to `-xxxx`).
