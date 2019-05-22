@@ -939,7 +939,9 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
 
 	/* Statistics. */
-	STAT_INCR_PACKET_SENT(packet);
+	if (session->retransmit == 0) {
+		STAT_INCR_PACKET_SENT(packet);
+	}
 
 	return 0;
 }
@@ -2298,6 +2300,9 @@ static bool dpc_parse_input(dpc_input_t *input)
 
 		} else if (vp->da == attr_max_use) { /* Max-Use = <n> */
 			input->max_use = vp->vp_uint32;
+
+		} else if (vp->da == attr_request_label) { /* Request-Label = <string> */
+			input->request_label = talloc_strdup(input, vp->vp_strvalue);
 		}
 
 	} /* loop over the input vps */

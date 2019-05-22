@@ -247,7 +247,7 @@ typedef enum {
 
 /* Packet statistics. */
 typedef enum {
-	DPC_STAT_PACKET_SENT = 0,  //<! Packets sent
+	DPC_STAT_PACKET_SENT = 0,  //<! Packets sent (not including retransmissions)
 	DPC_STAT_PACKET_RETR = 1,  //<! Packets retransmitted
 	DPC_STAT_PACKET_LOST = 2,  //<! Packets lost (no reply received before timeout + all retransmissions)
 	DPC_STAT_PACKET_RECV = 3,  //<! Packets (replies) received
@@ -333,6 +333,8 @@ struct dpc_input {
 	uint32_t max_use;         //<! Maximum number of times this input can be used.
 	float max_duration;       //!< Maximum duration of starting sessions with this input (relative to input start use).
 	struct timeval tve_max_start; //!< tve_start + max_duration
+
+	char *request_label;      //<! Request custom label.
 
 	dpc_input_ext_t ext;      //!< Input pre-parsed information.
 };

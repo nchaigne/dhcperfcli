@@ -258,6 +258,7 @@ For example:
         Sessions            : 1
         Packets sent        : 3 (Discover: 1, Request: 1, Decline: 1)
         Packets received    : 2 (Offer: 1, Ack: 1)
+        Retransmissions     : 1
         Packets lost        : 0
         Replies unexpected  : 0
 *** Statistics (per-transaction):
@@ -271,8 +272,9 @@ This shows the following information:
 - Global statistics
   - Total duration of the test, in seconds.
   - Number of sessions played out.
-  - Number of packets sent (as a whole and broken down by message type).
+  - Number of packets sent (as a whole and broken down by message type).<br>Note: this does not include retransmissions.
   - Number of packets received (as a whole and broken down by message type).
+  - Number of retransmissions (if any).
   - Number of requests for which no response was received (in the allowed time limit).
   - Number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
 - Per-transaction statistics
