@@ -356,6 +356,8 @@ struct dpc_session_ctx {
 	DHCP_PACKET *reply;
 
 	uint32_t retransmit;      //!< Number of times we've retransmitted this request.
+	struct timeval tve_init;  //!< When the packet was (first) initialized. Not altered when retransmitting.
+	struct timeval tvi_rtt;   //!< Request to reply rtt (round trip time).
 
 	uint32_t num_send;        //<! Number of requests sent (not including retransmissions).
 

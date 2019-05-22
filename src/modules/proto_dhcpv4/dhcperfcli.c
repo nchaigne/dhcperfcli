@@ -252,7 +252,7 @@ static float dpc_get_session_in_rate(bool per_input);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
-static void dpc_statistics_update(DHCP_PACKET *request, DHCP_PACKET *reply);
+static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply);
 
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
 static void dpc_event_add_progress_stats(void);
@@ -681,7 +681,7 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 /*
  *	Update statistics.
  */
-static void dpc_statistics_update(DHCP_PACKET *request, DHCP_PACKET *reply)
+static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply)
 {
 	if (!request || !reply) return;
 
@@ -705,7 +705,8 @@ static void dpc_statistics_update(DHCP_PACKET *request, DHCP_PACKET *reply)
 		else if (reply_code == FR_DHCP_LEASE_ACTIVE) tr_type = DPC_TR_LEASE_QUERY_ACTIVE;
 	}
 
-	timersub(&reply->timestamp, &request->timestamp, &rtt);
+	/* Get rtt previously computed. */
+	rtt = session->tvi_rtt;
 
 	/* Update statistics for that kind of transaction. */
 	dpc_tr_stats_update(tr_type, &rtt);
@@ -1082,8 +1083,6 @@ static int dpc_recv_one_packet(struct timeval *tvi_wait_time)
  */
 static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply)
 {
-	struct timeval rtt;
-
 	if (!session || !reply) return false;
 
 	if (   (session->state == DPC_STATE_DORA_EXPECT_OFFER && reply->code != FR_DHCP_OFFER)
@@ -1104,14 +1103,16 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	session->reply = reply;
 	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
 
-	/* Compute rtt. */
-	timersub(&session->reply->timestamp, &session->request->timestamp, &rtt);
-	DEBUG_TRACE("Packet response time: %.6f", ncc_timeval_to_float(&rtt));
+	/* Compute rtt.
+	 * Relative to initial request so we get the real rtt (regardless of retransmissions).
+	 */
+	timersub(&session->reply->timestamp, &session->tve_init, &session->tvi_rtt);
+	DEBUG_TRACE("Packet response time: %.6f", ncc_timeval_to_float(&session->tvi_rtt));
 
 	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
 	/* Update statistics. */
-	dpc_statistics_update(session->request, session->reply);
+	dpc_statistics_update(session, session->request, session->reply);
 
 	/*
 	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
@@ -1127,6 +1128,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		/*
 		 *	Update statistics for DORA workflows.
 		 */
+		struct timeval rtt;
 		timersub(&session->reply->timestamp, &session->tve_start, &rtt);
 		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
@@ -1467,6 +1469,10 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
 	session->retransmit = 0;
+	timerclear(&session->tvi_rtt);
+
+	/* Store request initial time. */
+	gettimeofday(&session->tve_init, NULL);
 
 	/* Fill in the packet value pairs. */
 	ncc_pair_list_append(request, &request->vps, input->vps);
