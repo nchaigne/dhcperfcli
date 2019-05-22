@@ -164,7 +164,8 @@ static bool job_done = false;
 static bool signal_done = false;
 
 static dpc_statistics_t stat_ctx; /* Statistics. */
-fr_event_timer_t const *ev_progress_stats;
+static uint32_t *retr_breakdown; /* Retransmit breakdown by number of retransmissions. */
+static fr_event_timer_t const *ev_progress_stats;
 struct timeval tve_progress_stat; /* When next ongoing statistics is supposed to fire. */
 
 struct timeval tvi_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
@@ -768,6 +769,7 @@ static bool dpc_retransmit(dpc_session_ctx_t *session)
 	}
 
 	/* Try again. */
+	retr_breakdown[session->retransmit] ++;
 	session->retransmit ++;
 
 	if (dpc_send_one_packet(session, &session->request) < 0) {
@@ -3027,6 +3029,8 @@ static void dpc_options_parse(int argc, char **argv)
 	if (with_template) with_xlat = 1;
 
 	if (!with_template && ECTX.input_num_use == 0) ECTX.input_num_use = 1;
+
+	retr_breakdown = talloc_zero_array(global_ctx, uint32_t, ECTX.retransmit_max);
 }
 
 /*
