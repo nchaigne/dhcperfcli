@@ -649,7 +649,11 @@ static void dpc_stats_fprint(FILE *fp)
 		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET_SENT, retr_breakdown));
 	}
 
-	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_LOST);
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_LOST);
+	if (STAT_ALL_LOST > 0) {
+		fprintf(fp, " (%.1f%%)", 100 * (float)STAT_ALL_LOST / STAT_ALL_PACKET_SENT);
+	}
+	fprintf(fp, "\n");
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",
