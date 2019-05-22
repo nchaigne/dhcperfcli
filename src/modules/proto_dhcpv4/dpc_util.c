@@ -52,6 +52,37 @@ char *dpc_message_type_sprint(char *out, int message)
 }
 
 /*
+ *	Print retransmissions breakdown by number of retransmissions per request sent.
+ */
+char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown)
+{
+	int i;
+	char *p = out;
+	size_t len = 0;
+
+	*p = '\0';
+	if (num_sent == 0 || !breakdown) return out;
+
+#define RETR_PRINT(_num, _ind) \
+{ \
+	if (_num > 0) { \
+		if (p != out) { \
+			len = sprintf(p, ", "); \
+			p += len; \
+		} \
+		len = sprintf(p, "#%u: %u (%.1f%%)", _ind, _num, 100 * (float)_num / num_sent); \
+		p += len; \
+	} \
+}
+
+	for (i = 0; i < ECTX.retransmit_max; i++) {
+		if (i >= 10) break; /* Limit what we print. */
+		RETR_PRINT(breakdown[i], i + 1);
+	}
+	return out;
+}
+
+/*
  *	Print the packet header.
  */
 void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)

@@ -617,7 +617,7 @@ static void dpc_stats_fprint(FILE *fp)
 {
 	if (!fp) return;
 
-	char messages[DPC_MSG_NUM_STRLEN];
+	char buffer[4096];
 
 	fprintf(fp, "*** Statistics (global):\n");
 
@@ -628,22 +628,28 @@ static void dpc_stats_fprint(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	/* Packets sent (total, and of each message type). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0]);
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", STAT_ALL_PACKET_SENT);
 	if (stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0] > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, sizeof(messages), DPC_STAT_PACKET_SENT));
+		fprintf(fp, " (%s)", dpc_num_message_type_sprint(buffer, sizeof(buffer), DPC_STAT_PACKET_SENT));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][0]);
 	if (stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][0] > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_sprint(messages, sizeof(messages), DPC_STAT_PACKET_RECV));
+		fprintf(fp, " (%s)", dpc_num_message_type_sprint(buffer, sizeof(buffer), DPC_STAT_PACKET_RECV));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets to which no response was received. */
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Retransmissions", stat_ctx.dpc_stat[DPC_STAT_PACKET_RETR][0]);
-	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", stat_ctx.dpc_stat[DPC_STAT_PACKET_LOST][0]);
+
+	if (retr_breakdown && retr_breakdown[0] > 0) {
+		fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "  Retr breakdown",
+		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET_SENT, retr_breakdown));
+	}
+
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_LOST);
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",

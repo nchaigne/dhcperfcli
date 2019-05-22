@@ -199,6 +199,7 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define STAT_INCR_PACKET_LOST(_packet) STAT_INCR(DPC_STAT_PACKET_LOST, _packet)
 #define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(DPC_STAT_PACKET_RECV, _packet)
 
+#define STAT_ALL_PACKET_SENT (stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0])
 #define STAT_ALL_LOST (stat_ctx.dpc_stat[DPC_STAT_PACKET_LOST][0])
 #define STAT_NAK_RECV (stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][6])
 
