@@ -12,6 +12,7 @@
 #define DPC_DELTA_TIME_DECIMALS  3
 
 
+char *dpc_session_transaction_sprint(char *out, size_t outlen, dpc_session_ctx_t *session);
 char *dpc_message_type_sprint(char *out, int code);
 char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown);
 

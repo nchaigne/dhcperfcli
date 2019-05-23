@@ -33,6 +33,33 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
 
 
 /*
+ *	Print the transaction type associated to a session.
+ */
+char *dpc_session_transaction_sprint(char *out, size_t outlen, dpc_session_ctx_t *session)
+{
+	char *p = out;
+	char const *p_name_request = NULL;
+	char const *p_name_reply = NULL;
+
+	*p = '\0';
+
+	if (session->input->request_label) {
+		p_name_request = session->input->request_label;
+	} else if (is_dhcp_message(session->request->code)) {
+		p_name_request = dpc_message_types[session->request->code];
+	}
+
+	if (is_dhcp_message(session->reply->code)) {
+		p_name_reply = dpc_message_types[session->reply->code];
+	}
+
+	if (p_name_request && p_name_reply) {
+		sprintf(p, "%s:%s", p_name_request, p_name_reply);
+	}
+	return out;
+}
+
+/*
  *	Print the message type from packet code.
  */
 char *dpc_message_type_sprint(char *out, int message)

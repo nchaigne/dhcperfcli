@@ -233,6 +233,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_TR_TYPES 23 /* Longest of transaction_types + 1 */
 #define LG_PAD_STATS    20
 
+static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
+
 char elapsed_buf[NCC_TIME_STRLEN];
 #define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tve_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 
@@ -661,14 +663,12 @@ static void dpc_stats_fprint(FILE *fp)
 }
 
 /*
- *	Update statistics for a type of transaction: number of transactions, cumulated rtt, min/max rtt.
+ *	Update a type of transaction statistics, with one newly completed transaction:
+ *	number of such transactions, cumulated rtt, min/max rtt.
  */
-static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt)
+static void dpc_tr_stats_update_values(dpc_transaction_stats_t *my_stats, struct timeval *rtt)
 {
-	if (tr_type < 0 || tr_type >= DPC_TR_MAX) return;
 	if (!rtt) return;
-
-	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type]; /* For easier access. */
 
 	/* Update 'rtt_min'. */
 	if ((my_stats->num == 0) || (timercmp(rtt, &my_stats->rtt_min, <))) {
@@ -683,9 +683,50 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	/* Update 'rtt_cumul' and 'num'. */
 	timeradd(&my_stats->rtt_cumul, rtt, &my_stats->rtt_cumul);
 	my_stats->num ++;
+}
+
+/*
+ *	Update statistics for a type of transaction
+ */
+static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt)
+{
+	if (tr_type < 0 || tr_type >= DPC_TR_MAX) return;
+	if (!rtt) return;
+
+	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type];
+
+	dpc_tr_stats_update_values(my_stats, rtt);
 
 	DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
 	            tr_type, my_stats->num, ncc_timeval_to_float(rtt),
+	            ncc_timeval_to_float(&my_stats->rtt_min), ncc_timeval_to_float(&my_stats->rtt_max));
+}
+
+/*
+ *	Update statistics for a dynamically named transaction type.
+ */
+static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, struct timeval *rtt)
+{
+	char name[256];
+
+	/* Build the transaction name. */
+	dpc_session_transaction_sprint(name, sizeof(name), session);
+
+	/* Get the transaction name id. */
+	int i = ncc_str_array_index(global_ctx, &arr_tr_types, name);
+
+	if (i >= stat_ctx.num_transaction_type) {
+		TALLOC_REALLOC_ZERO(global_ctx, stat_ctx.dyn_tr_stats,
+		                    dpc_transaction_stats_t, stat_ctx.num_transaction_type, i + 1);
+
+		stat_ctx.num_transaction_type = i + 1;
+	}
+
+	dpc_transaction_stats_t *my_stats = &stat_ctx.dyn_tr_stats[i];
+	dpc_tr_stats_update_values(my_stats, rtt);
+
+	DEBUG_TRACE("Updated named transaction stats: id: %u, name: %s, num: %u, this rtt: %.6f, min: %.6f, max: %.6f",
+	            i, name, my_stats->num, ncc_timeval_to_float(rtt),
 	            ncc_timeval_to_float(&my_stats->rtt_min), ncc_timeval_to_float(&my_stats->rtt_max));
 }
 
@@ -724,6 +765,9 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 
 	/* Also update for 'All'. */
 	dpc_tr_stats_update(DPC_TR_ALL, &rtt);
+
+	/* Name the transaction and update its statistics. */
+	dpc_dyn_tr_stats_update(session, &rtt);
 }
 
 /*

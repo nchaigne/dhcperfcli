@@ -284,6 +284,10 @@ typedef struct dpc_statistics {
 	 */
 	dpc_transaction_stats_t tr_stats[DPC_TR_MAX];
 
+	/* Statistics per dynamically named transaction type. */
+	uint32_t num_transaction_type;
+	dpc_transaction_stats_t *dyn_tr_stats;
+
 	uint32_t dpc_stat[DPC_STAT_MAX_TYPE + 1][DHCP_MAX_MESSAGE_TYPE + 1];
 
 	uint32_t num_packet_recv_unexpected;
