@@ -592,7 +592,7 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 	float rtt_min = 1000 * ncc_timeval_to_float(&my_stats->rtt_min);
 	float rtt_max = 1000 * ncc_timeval_to_float(&my_stats->rtt_max);
 
-	fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
+	fprintf(fp, "\t%-*.*s: num: %u, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
 
 	/* Print rate if job elapsed time is at least 1 s. */
