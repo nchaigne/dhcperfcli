@@ -765,3 +765,52 @@ bool ncc_stdin_peek()
 
 	return true;
 }
+
+/*
+ *	Allocate an array of strings (if not already allocated).
+ */
+void ncc_str_array_alloc(TALLOC_CTX *ctx, ncc_str_array_t **pt_array)
+{
+	if (!*pt_array) {
+		MEM(*pt_array = talloc_zero(ctx, ncc_str_array_t));
+	}
+}
+
+/*
+ *	Add a value to an array of strings.
+ */
+uint32_t ncc_str_array_add(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *value)
+{
+	/* Allocate the array first, if needed. */
+	ncc_str_array_alloc(ctx, pt_array);
+
+	ncc_str_array_t *array = *pt_array;
+	uint32_t size_pre = array->size; /* Previous size (which is also the index of the new element). */
+
+	TALLOC_REALLOC_ZERO(ctx, array->strings, char *, size_pre, size_pre + 1);
+	array->size ++;
+	array->strings[size_pre] = talloc_strdup(ctx, value);
+
+	return array->size;
+}
+
+/*
+ *	Search for a value in an array of string, add it if not found. Return its index.
+ */
+uint32_t ncc_str_array_index(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *value)
+{
+	/* Allocate the array first, if needed. */
+	ncc_str_array_alloc(ctx, pt_array);
+
+	ncc_str_array_t *array = *pt_array;
+	uint32_t size_pre = array->size; /* Previous size (which is also the index of the new element if added). */
+	int i;
+	for (i = 0; i < size_pre; i++) {
+		if (strcmp(value, array->strings[i]) == 0) return i;
+	}
+
+	/* Value not found, add it. */
+	ncc_str_array_add(ctx, pt_array, value);
+	return size_pre;
+}
+

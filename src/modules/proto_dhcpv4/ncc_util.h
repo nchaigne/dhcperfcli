@@ -101,6 +101,14 @@ struct ncc_list_item {
 };
 
 /*
+ *	Dynamic array of strings, reallocated as needed.
+ */
+typedef struct ncc_str_array {
+	char **strings;
+	uint32_t size;
+} ncc_str_array_t;
+
+/*
  *	Transport endpoint (IP address, port).
  */
 typedef struct ncc_endpoint {
@@ -177,6 +185,10 @@ ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list);
 char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list);
 
 bool ncc_stdin_peek();
+
+void ncc_str_array_alloc(TALLOC_CTX *ctx, ncc_str_array_t **pt_array);
+uint32_t ncc_str_array_add(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *value);
+uint32_t ncc_str_array_index(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *value);
 
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
