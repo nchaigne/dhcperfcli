@@ -34,27 +34,28 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
 
 /*
  *	Print the transaction type associated to a session.
+ *	Built as follows: [<label>.]<request>:<reply>
  */
 char *dpc_session_transaction_sprint(char *out, size_t outlen, dpc_session_ctx_t *session)
 {
 	char *p = out;
-	char const *p_name_request = NULL;
-	char const *p_name_reply = NULL;
+	char const *p_name_request;
+	char const *p_name_reply;
 
 	*p = '\0';
 
+	if (!session || !session->request || !session->reply
+	    || !is_dhcp_message(session->request->code) || !is_dhcp_message(session->reply->code)) {
+		return NULL;
+	}
+
+	p_name_request = dpc_message_types[session->request->code];
+	p_name_reply = dpc_message_types[session->reply->code];
+
 	if (session->input->request_label) {
-		p_name_request = session->input->request_label;
-	} else if (is_dhcp_message(session->request->code)) {
-		p_name_request = dpc_message_types[session->request->code];
-	}
-
-	if (is_dhcp_message(session->reply->code)) {
-		p_name_reply = dpc_message_types[session->reply->code];
-	}
-
-	if (p_name_request && p_name_reply) {
-		sprintf(p, "%s:%s", p_name_request, p_name_reply);
+		snprintf(p, outlen, "%s.%s:%s", session->input->request_label, p_name_request, p_name_reply);
+	} else {
+		snprintf(p, outlen, "%s:%s", p_name_request, p_name_reply);
 	}
 	return out;
 }

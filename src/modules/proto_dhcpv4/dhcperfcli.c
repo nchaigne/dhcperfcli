@@ -748,7 +748,7 @@ static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, struct timeval *
 	dpc_transaction_stats_t *my_stats = &stat_ctx.dyn_tr_stats[i];
 	dpc_tr_stats_update_values(my_stats, rtt);
 
-	DEBUG_TRACE("Updated named transaction stats: id: %u, name: %s, num: %u, this rtt: %.6f, min: %.6f, max: %.6f",
+	DEBUG_TRACE("Updated named transaction stats: id: %u, name: [%s], num: %u, this rtt: %.6f, min: %.6f, max: %.6f",
 	            i, name, my_stats->num, ncc_timeval_to_float(rtt),
 	            ncc_timeval_to_float(&my_stats->rtt_min), ncc_timeval_to_float(&my_stats->rtt_max));
 }

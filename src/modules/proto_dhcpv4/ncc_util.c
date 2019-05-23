@@ -796,6 +796,7 @@ uint32_t ncc_str_array_add(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *va
 
 /*
  *	Search for a value in an array of string, add it if not found. Return its index.
+ *	Note: this is unefficient, but it's meant for only a handful of elements so it doesn't matter.
  */
 uint32_t ncc_str_array_index(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *value)
 {
@@ -813,4 +814,3 @@ uint32_t ncc_str_array_index(TALLOC_CTX *ctx, ncc_str_array_t **pt_array, char *
 	ncc_str_array_add(ctx, pt_array, value);
 	return size_pre;
 }
-
