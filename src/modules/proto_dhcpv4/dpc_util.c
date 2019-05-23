@@ -83,9 +83,9 @@ char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_
 }
 
 /*
- *	Print the packet header.
+ *	Print the packet summary.
  */
-void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
+void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
 {
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 
@@ -217,7 +217,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 	if (!fp || !packet) return;
 
 	if (trace_lvl >= 1) {
-		dpc_packet_header_fprint(fp, session, packet, pevent);
+		dpc_packet_digest_fprint(fp, session, packet, pevent);
 	}
 
 	if (trace_lvl >= 2) {

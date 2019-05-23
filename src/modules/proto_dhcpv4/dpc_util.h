@@ -15,7 +15,7 @@
 char *dpc_message_type_sprint(char *out, int code);
 char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown);
 
-void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
+void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp);
 void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet,

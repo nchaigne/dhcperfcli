@@ -816,7 +816,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeva
 			return;
 		}
 
-		if (packet_trace_lvl >= 1) dpc_packet_header_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
+		if (packet_trace_lvl >= 1) dpc_packet_digest_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
 
 		/* Statistics. */
 		STAT_INCR_PACKET_LOST(session->request);
@@ -1106,7 +1106,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		 */
 		DEBUG_TRACE("Discarding received reply code %d (session state: %d)", reply->code, session->state);
 
-		dpc_packet_header_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
+		dpc_packet_digest_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
 		fr_radius_packet_free(&reply);
 
 		return true; /* Session is not finished. */
