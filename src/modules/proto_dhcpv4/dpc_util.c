@@ -150,7 +150,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 
 	/* Also print rtt for replies. */
 	if (pevent == DPC_PACKET_RECEIVED && timerisset(&session->tvi_rtt)) {
-		fprintf(fp, ", rtt: %.3f ms\n", 1000 * ncc_timeval_to_float(&session->tvi_rtt));
+		fprintf(fp, ", rtt: %.3f ms", 1000 * ncc_timeval_to_float(&session->tvi_rtt));
 	}
 	fprintf(fp, "\n");
 }
