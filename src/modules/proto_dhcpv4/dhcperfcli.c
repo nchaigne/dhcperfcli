@@ -568,6 +568,23 @@ static float dpc_get_session_in_rate(bool per_input)
 }
 
 /*
+ *	Print statistics for a given transaction type.
+ */
+static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name)
+{
+	if (!my_stats || my_stats->num == 0) return 0;
+
+	float rtt_avg = 1000 * ncc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
+	float rtt_min = 1000 * ncc_timeval_to_float(&my_stats->rtt_min);
+	float rtt_max = 1000 * ncc_timeval_to_float(&my_stats->rtt_max);
+
+	fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
+	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
+
+	return 1;
+}
+
+/*
  *	Print per-transaction type statistics.
  */
 static void dpc_tr_stats_fprint(FILE *fp)
@@ -593,15 +610,7 @@ static void dpc_tr_stats_fprint(FILE *fp)
 
 	for (i = i_start; i < DPC_TR_MAX; i++) {
 		dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
-
-		if (my_stats->num == 0) continue;
-
-		float rtt_avg = 1000 * ncc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
-		float rtt_min = 1000 * ncc_timeval_to_float(&my_stats->rtt_min);
-		float rtt_max = 1000 * ncc_timeval_to_float(&my_stats->rtt_max);
-
-		fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
-		        pad_len, pad_len, transaction_types[i], my_stats->num, rtt_avg, rtt_min, rtt_max);
+		if (!dpc_tr_stat_fprint(fp, pad_len, my_stats, transaction_types[i])) continue;
 
 		/* Print rate if job elapsed time is at least 1 s. */
 		if (dpc_job_elapsed_time_get() >= 1.0) {
