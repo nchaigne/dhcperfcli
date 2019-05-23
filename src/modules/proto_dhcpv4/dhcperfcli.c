@@ -230,8 +230,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
 	"Lease-Query:Active",
 	"<DORA>"
 };
-#define LG_PAD_TR_TYPES 23 /* Longest of transaction_types + 1 */
-#define LG_PAD_STATS    20
+#define LG_PAD_TR_TYPE_MAX 50 /* Limit transaction type name displayed. */
+#define LG_PAD_STATS       20
 
 static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
 
@@ -250,8 +250,10 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 static float dpc_job_elapsed_time_get(void);
 static float dpc_start_sessions_elapsed_time_get(void);
-static float dpc_get_tr_rate(dpc_transaction_type_t i);
+static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
 static float dpc_get_session_in_rate(bool per_input);
+static size_t dpc_tr_name_max_len(void);
+static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
@@ -502,11 +504,8 @@ static float dpc_start_sessions_elapsed_time_get(void)
  *	Compute the effective rate (reply per second) of a given transaction type (or all).
  *	Note: for a workflow (DORA), this is based on the final reply (Ack).
  */
-static float dpc_get_tr_rate(dpc_transaction_type_t i)
+static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 {
-	dpc_assert(i < DPC_TR_MAX);
-
-	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
 	float elapsed = dpc_job_elapsed_time_get();
 
 	if (elapsed <= 0) return 0; /* Should not happen. */
@@ -568,6 +567,21 @@ static float dpc_get_session_in_rate(bool per_input)
 }
 
 /*
+ *	Get the longest name of actual transactions.
+ */
+static size_t dpc_tr_name_max_len(void)
+{
+	int i;
+	size_t max_len = strlen(transaction_types[DPC_TR_ALL]); /* (All) */
+
+	for (i = 0; i < stat_ctx.num_transaction_type; i++) {
+		size_t len = strlen(arr_tr_types->strings[i]);
+		if (len > max_len) max_len = len;
+	}
+	return max_len;
+}
+
+/*
  *	Print statistics for a given transaction type.
  */
 static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name)
@@ -581,6 +595,13 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 	fprintf(fp, "\t%-*.*s:  num: %d, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
 
+	/* Print rate if job elapsed time is at least 1 s. */
+	if (dpc_job_elapsed_time_get() >= 1.0) {
+		fprintf(fp, ", rate (avg/s): %.3f", dpc_get_tr_rate(my_stats));
+	}
+
+	fprintf(fp, "\n");
+
 	return 1;
 }
 
@@ -590,34 +611,27 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 static void dpc_tr_stats_fprint(FILE *fp)
 {
 	int i;
-	int i_start = 0;
-	int num_stat = 0;
-	unsigned int pad_len = 0;
+	int pad_len = 0;
 
-	/* Check the number of statistics types with actual data. */
-	for (i = 1; i < DPC_TR_MAX; i ++) {
-		if (stat_ctx.tr_stats[i].num > 0) {
-			num_stat ++;
-			if (strlen(transaction_types[i]) > pad_len) pad_len = strlen(transaction_types[i]);
-		}
-	}
-	if (num_stat == 0) return; /* If we got nothing, do nothing. */
+	if (stat_ctx.num_transaction_type == 0) return; /* We got nothing. */
+
+	pad_len = dpc_tr_name_max_len() + 1;
+	if (pad_len > LG_PAD_TR_TYPE_MAX) pad_len = LG_PAD_TR_TYPE_MAX;
 
 	fprintf(fp, "*** Statistics (per-transaction):\n");
 
-	if (num_stat == 1) i_start = 1; /* only print "All" if we have more than one (otherwise it's redundant). */
-	pad_len ++;
+	/* only print "All" if we have more than one (otherwise it's redundant). */
+	if (stat_ctx.num_transaction_type > 1) {
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.tr_stats[DPC_TR_ALL], transaction_types[DPC_TR_ALL]);
+	}
 
-	for (i = i_start; i < DPC_TR_MAX; i++) {
-		dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[i];
-		if (!dpc_tr_stat_fprint(fp, pad_len, my_stats, transaction_types[i])) continue;
+	for (i = 0; i < stat_ctx.num_transaction_type; i++) {
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.dyn_tr_stats[i], arr_tr_types->strings[i]);
+	}
 
-		/* Print rate if job elapsed time is at least 1 s. */
-		if (dpc_job_elapsed_time_get() >= 1.0) {
-			fprintf(fp, ", rate (avg/s): %.3f", dpc_get_tr_rate(i));
-		}
-
-		fprintf(fp, "\n");
+	/* print DORA if we have some. */
+	if (stat_ctx.tr_stats[DPC_TR_DORA].num > 0) {
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.tr_stats[DPC_TR_DORA], transaction_types[DPC_TR_DORA]);
 	}
 }
 
@@ -770,7 +784,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 	rtt = session->tvi_rtt;
 
 	/* Update statistics for that kind of transaction. */
-	dpc_tr_stats_update(tr_type, &rtt);
+	//dpc_tr_stats_update(tr_type, &rtt);
 
 	/* Also update for 'All'. */
 	dpc_tr_stats_update(DPC_TR_ALL, &rtt);
