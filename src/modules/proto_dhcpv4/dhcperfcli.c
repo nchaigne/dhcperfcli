@@ -760,37 +760,16 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 {
 	if (!request || !reply) return;
 
-	dpc_transaction_type_t tr_type = -1;
 	struct timeval rtt;
-	int request_code = request->code;
-	int reply_code = reply->code;
-
-	/* Identify the transaction (request / reply). */
-	if (request_code == FR_DHCP_DISCOVER) {
-		if (reply_code == FR_DHCP_OFFER) tr_type = DPC_TR_DISCOVER_OFFER;
-		else if (reply_code == FR_DHCP_ACK) tr_type = DPC_TR_DISCOVER_ACK;
-	}
-	else if (request_code == FR_DHCP_REQUEST) {
-		if (reply_code == FR_DHCP_ACK) tr_type = DPC_TR_REQUEST_ACK;
-		else if (reply_code == FR_DHCP_NAK) tr_type = DPC_TR_REQUEST_NAK;
-	}
-	else if (request_code == FR_DHCP_LEASE_QUERY) {
-		if (reply_code == FR_DHCP_LEASE_UNASSIGNED) tr_type = DPC_TR_LEASE_QUERY_UNASSIGNED;
-		else if (reply_code == FR_DHCP_LEASE_UNKNOWN) tr_type = DPC_TR_LEASE_QUERY_UNKNOWN;
-		else if (reply_code == FR_DHCP_LEASE_ACTIVE) tr_type = DPC_TR_LEASE_QUERY_ACTIVE;
-	}
 
 	/* Get rtt previously computed. */
 	rtt = session->tvi_rtt;
 
-	/* Update statistics for that kind of transaction. */
-	//dpc_tr_stats_update(tr_type, &rtt);
+	/* Name the transaction and update its statistics. */
+	dpc_dyn_tr_stats_update(session, &rtt);
 
 	/* Also update for 'All'. */
 	dpc_tr_stats_update(DPC_TR_ALL, &rtt);
-
-	/* Name the transaction and update its statistics. */
-	dpc_dyn_tr_stats_update(session, &rtt);
 }
 
 /*
