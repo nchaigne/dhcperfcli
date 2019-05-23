@@ -145,8 +145,14 @@ void dpc_packet_header_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 		fprintf(fp, ")");
 	}
 
-	fprintf(fp, " Id %u (0x%08x) %s length %zu\n", packet->id, packet->id,
+	fprintf(fp, " Id %u (0x%08x) %s length %zu", packet->id, packet->id,
 	        dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->data_len);
+
+	/* Also print rtt for replies. */
+	if (pevent == DPC_PACKET_RECEIVED && timerisset(&session->tvi_rtt)) {
+		fprintf(fp, ", rtt: %.3f ms\n", 1000 * ncc_timeval_to_float(&session->tvi_rtt));
+	}
+	fprintf(fp, "\n");
 }
 
 /*
