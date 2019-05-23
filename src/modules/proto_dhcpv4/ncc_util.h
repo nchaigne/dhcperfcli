@@ -180,9 +180,9 @@ bool ncc_stdin_peek();
 
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
-# define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))
+#define fr_packet2myptr(TYPE, MEMBER, PTR) (TYPE *) (((char *)PTR) - offsetof(TYPE, MEMBER))
 
-/* Same as in_integer, but allow to work on a given length. */
+/* Same as is_integer, but allow to work on a given length. */
 static inline bool is_integer_n(char const *value, ssize_t len)
 {
 	if (*value == '\0' || len == 0) return false;
@@ -197,3 +197,13 @@ static inline bool is_integer_n(char const *value, ssize_t len)
 
 	return true;
 }
+
+/* talloc_realloc doesn't zero-initialize the new memory. */
+#define TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, _count_pre, _count) \
+{ \
+	_ptr = talloc_realloc(_ctx, _ptr, _type, _count); \
+	if (_count > _count_pre) { \
+		memset(&_ptr[_count_pre], 0, sizeof(_type) * (_count - _count_pre)); \
+	} \
+}
+

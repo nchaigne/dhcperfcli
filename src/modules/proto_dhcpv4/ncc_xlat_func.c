@@ -196,11 +196,8 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 		num_xlat_frame_list = id_list + 1;
 
 		/* Allocate lists to all input items, even if they don't need xlat'ing. This is simpler. */
-		ncc_xlat_frame_list = talloc_realloc(ctx, ncc_xlat_frame_list, ncc_list_t, num_xlat_frame_list);
-
-		/* talloc_realloc doesn't zero out the new elements. */
-		memset(&ncc_xlat_frame_list[num_xlat_frame_list_pre], 0,
-		       sizeof(ncc_list_t) * (num_xlat_frame_list - num_xlat_frame_list_pre));
+		TALLOC_REALLOC_ZERO(ctx, ncc_xlat_frame_list, ncc_list_t,
+		                    num_xlat_frame_list_pre, num_xlat_frame_list);
 	}
 	list = &ncc_xlat_frame_list[id_list];
 
