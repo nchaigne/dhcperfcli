@@ -3171,6 +3171,8 @@ int main(int argc, char **argv)
 
 	global_ctx = talloc_autofree_context();
 
+	fr_time_start();
+
 	gettimeofday(&tve_start, NULL); /* Program start timestamp. */
 
 	/* Get program name from argv. */
