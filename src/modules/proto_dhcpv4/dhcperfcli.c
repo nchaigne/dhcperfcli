@@ -259,9 +259,9 @@ static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
 static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply);
 
-static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
+static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, UNUSED void *ctx);
 static void dpc_event_add_progress_stats(void);
-static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx);
+static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
@@ -775,7 +775,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 /*
  *	Event callback: progress statistics summary.
  */
-static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, UNUSED void *uctx)
+static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, UNUSED void *ctx)
 {
 	/* Do statistics summary. */
 	dpc_progress_stats_fprint(stdout, false);
@@ -807,8 +807,8 @@ static void dpc_event_add_progress_stats(void)
 		timeradd(&tve_progress_stat, &ECTX.tvi_progress_interval, &tve_progress_stat);
 	} while (!timercmp(&tve_progress_stat, &now, >));
 
-	if (fr_event_timer_insert(global_ctx, event_list, &ev_progress_stats,
-	                          &tve_progress_stat, dpc_progress_stats, NULL) < 0) {
+	if (fr_event_timer_at(global_ctx, event_list, &ev_progress_stats,
+	                      fr_time_from_timeval(&tve_progress_stat), dpc_progress_stats, NULL) < 0) {
 		/* Should never happen. */
 		PERROR("Failed inserting progress statistics event");
 	}
@@ -843,7 +843,7 @@ static bool dpc_retransmit(dpc_session_ctx_t *session)
 /*
  *	Event callback: request timeout.
  */
-static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED struct timeval *when, void *uctx)
+static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, void *uctx)
 {
 	dpc_session_ctx_t *session = talloc_get_type_abort(uctx, dpc_session_ctx_t);
 
@@ -889,8 +889,8 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct tim
 		session->event = NULL;
 	}
 
-	if (fr_event_timer_insert(session, event_list, &session->event,
-	                          &tv_event, dpc_request_timeout, session) < 0) {
+	if (fr_event_timer_at(session, event_list, &session->event,
+	                      fr_time_from_timeval(&tv_event), dpc_request_timeout, session) < 0) {
 		/* Should never happen. */
 		PERROR("Failed inserting request timeout event");
 	}
@@ -966,10 +966,11 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	/*
 	 *	Send the packet.
 	 */
-	gettimeofday(&packet->timestamp, NULL); /* Store packet send time. */
+	packet->timestamp = fr_time(); /* Store packet send time. */
+
 	// shouldn't FreeRADIUS lib do that ? TODO.
 	// on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv
-	// - actual value is obtained from recvfromto, from a gettimeofday right before returning
+	// - actual value is set in recvfromto right before returning
 
 	packet->sockfd = my_sockfd;
 
@@ -1164,7 +1165,8 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	/* Compute rtt.
 	 * Relative to initial request so we get the real rtt (regardless of retransmissions).
 	 */
-	timersub(&session->reply->timestamp, &session->tve_init, &session->tvi_rtt);
+//zzz TODO: fix this.
+	//timersub(&session->reply->timestamp, &session->tve_init, &session->tvi_rtt);
 	DEBUG_TRACE("Packet response time: %.6f", ncc_timeval_to_float(&session->tvi_rtt));
 
 	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
@@ -1187,8 +1189,9 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		 *	Update statistics for DORA workflows.
 		 */
 		struct timeval rtt;
-		timersub(&session->reply->timestamp, &session->tve_start, &rtt);
-		dpc_tr_stats_update(DPC_TR_DORA, &rtt);
+//zzz TODO: fix this.
+		//timersub(&session->reply->timestamp, &session->tve_start, &rtt);
+		//dpc_tr_stats_update(DPC_TR_DORA, &rtt);
 
 		/*
 		 *	Maybe send a Decline or Release now.
@@ -2115,12 +2118,13 @@ static uint32_t dpc_loop_start_sessions(void)
 static void dpc_loop_timer_events(void)
 {
 	int num_processed = 0; /* Number of timers events triggered. */
-	struct timeval when;
+	fr_time_t now;
 
 	if (fr_event_list_num_timers(event_list) <= 0) return;
 
-	gettimeofday(&when, NULL); /* Now. */
-	while (fr_event_timer_run(event_list, &when)) {
+	now = fr_time();
+
+	while (fr_event_timer_run(event_list, &now)) {
 		num_processed ++;
 	}
 }
