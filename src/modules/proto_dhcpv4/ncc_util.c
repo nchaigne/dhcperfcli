@@ -404,6 +404,43 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 	return out;
 }
 
+// same as ncc_delta_time_sprint but using fr_time_t
+char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint8_t decimals)
+{
+	fr_time_delta_t delta;
+	fr_time_t to;
+	uint32_t sec, min, hour, delta_sec;
+
+	if (!when) {
+		to = fr_time();
+		when = &to;
+	}
+
+	delta = *when - *from;
+	delta_sec = delta / NSEC;
+
+	hour = delta_sec / 3600;
+	min = (delta_sec % 3600) / 60;
+	sec = (delta_sec % 3600) % 60;
+
+	if (hour > 0) {
+		sprintf(out, "%d:%.02d:%.02d", hour, min, sec);
+	} else if (min > 0) {
+		sprintf(out, "%d:%.02d", min, sec);
+	} else {
+		sprintf(out, "%d", sec);
+	}
+
+	if (decimals) {
+		char buffer[32] = "";
+		uint32_t usec = (delta / 1000) % USEC;
+		sprintf(buffer, ".%06d", usec);
+		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
+	}
+
+	return out;
+}
+
 /*
  *	Print absolute date/time, in format: [YYYY-MM-DD ]HH:MI:SS
  */

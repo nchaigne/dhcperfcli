@@ -160,6 +160,7 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps);
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
 char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);
+char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint8_t decimals);
 char *ncc_absolute_time_sprint(char *out, bool with_date);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
