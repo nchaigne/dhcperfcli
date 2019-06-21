@@ -528,6 +528,14 @@ int ncc_float_to_timeval(struct timeval *tv, float in)
 }
 
 /*
+ *	Convert a float to fr_time.
+ */
+fr_time_t ncc_float_to_fr_time(float in)
+{
+	return (in * NSEC);
+}
+
+/*
  *	Check that a string represents a valid floating point number (e.g. 3, 2.5, .542).
  *	If so convert it to float.
  *	Note: not using strtof because we want to be more restrictive.
