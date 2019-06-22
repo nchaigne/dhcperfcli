@@ -13,7 +13,7 @@
  *	(I know, this is dangerous. We'll be fine as long as they do not change.)
  *	Ideally, this should be provided by FreeRADIUS lib. TODO: ask them ?
  */
-int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when)
+int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
 {
 	ncc_fr_event_list_t *el = (ncc_fr_event_list_t *)fr_el;
 	ncc_fr_event_timer_t *ev;
@@ -21,15 +21,13 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when)
 	if (unlikely(!el)) return 0;
 
 	if (fr_heap_num_elements(el->times) == 0) {
-		when->tv_sec = 0;
-		when->tv_usec = 0;
+		*when = 0;
 		return 0;
 	}
 
 	ev = fr_heap_peek(el->times);
 	if (!ev) {
-		when->tv_sec = 0;
-		when->tv_usec = 0;
+		*when = 0;
 		return 0;
 	}
 

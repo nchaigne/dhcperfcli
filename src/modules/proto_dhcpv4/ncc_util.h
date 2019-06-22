@@ -129,7 +129,7 @@ typedef struct ncc_endpoint_list {
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
 typedef struct ncc_fr_event_timer {
 	fr_event_list_t		*el;			//!< because talloc_parent() is O(N) in number of objects
-	struct timeval		when;			//!< When this timer should fire.
+	fr_time_t		when;			//!< When this timer should fire.
 	/* We don't need anything beyond that. */
 } ncc_fr_event_timer_t;
 
@@ -140,7 +140,7 @@ typedef struct ncc_fr_event_list {
 } ncc_fr_event_list_t;
 
 
-int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, struct timeval *when);
+int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when);
 
 void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev);
 void ncc_printf_log(char const *fmt, ...);
