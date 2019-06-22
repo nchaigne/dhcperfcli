@@ -526,6 +526,14 @@ int ncc_float_to_timeval(struct timeval *tv, float in)
 }
 
 /*
+ *	Convert a fr_time to float.
+ */
+float ncc_fr_time_to_float(fr_time_delta_t in)
+{
+	return (float)in / NSEC;
+}
+
+/*
  *	Convert a float to fr_time.
  */
 fr_time_t ncc_float_to_fr_time(float in)

@@ -167,6 +167,7 @@ int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 
 float ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *out, float in);
+float ncc_fr_time_to_float(fr_time_delta_t in);
 fr_time_t ncc_float_to_fr_time(float in);
 bool ncc_str_to_float(float *out, char const *in, bool allow_negative);
 bool ncc_str_to_uint32(uint32_t *out, char const *in);
