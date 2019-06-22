@@ -27,16 +27,19 @@ struct dpc_context {
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
 	float progress_interval;         //<! Time interval between periodic progress statistics.
-	struct timeval tvi_progress_interval;
+			struct timeval tvi_progress_interval;
+	fr_time_delta_t ftd_progress_interval;
 
 	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
-	struct timeval tvi_request_timeout;
+			struct timeval tvi_request_timeout;
+	fr_time_delta_t ftd_request_timeout;
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 
 	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
 
 	float duration_start_max;        //<! Limit duration for starting new input sessions.
-	struct timeval tve_start_max;    //<! Time after which no input session is allowed to be started.
+			struct timeval tve_start_max;    //<! Time after which no input session is allowed to be started.
+	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 
 	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).
 	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
@@ -268,10 +271,10 @@ typedef enum {
  *	Holds statistics for a given transaction type.
  */
 typedef struct dpc_transaction_stats {
-	uint32_t       num;       //!< Number of completed transactions
-	struct timeval rtt_cumul; //!< Cumulated rtt (request to reply time)
-	struct timeval rtt_min;   //!< Lowest rtt
-	struct timeval rtt_max;   //!< Highest rtt (timeout are not included)
+	uint32_t       num;        //!< Number of completed transactions
+	fr_time_delta_t rtt_cumul; //!< Cumulated rtt (request to reply time)
+	fr_time_delta_t rtt_min;   //!< Lowest rtt
+	fr_time_delta_t rtt_max;   //!< Highest rtt (timeout are not included)
 } dpc_transaction_stats_t;
 
 /*
@@ -330,14 +333,17 @@ struct dpc_input {
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
 	float start_delay;        //!< Delay after which this input can be used to start sessions.
-	struct timeval tve_start; //!< Timestamp of first use.
-	struct timeval tve_end;   //!< Timestamp of last use once input is done.
+			struct timeval tve_start; //!< Timestamp of first use.
+			struct timeval tve_end;   //!< Timestamp of last use once input is done.
+	fr_time_t fte_start;      //!< Timestamp of first use.
+	fr_time_t fte_end;        //!< Timestamp of last use once input is done.
 
 	float rate_limit;         //<! Limit rate/s of sessions initialized from this input.
 
 	uint32_t max_use;         //<! Maximum number of times this input can be used.
 	float max_duration;       //!< Maximum duration of starting sessions with this input (relative to input start use).
-	struct timeval tve_max_start; //!< tve_start + max_duration
+			struct timeval tve_max_start; //!< tve_start + max_duration
+	fr_time_t fte_max_start;  // fte_start + max_duration
 
 	char *request_label;      //<! Request custom label.
 
@@ -351,7 +357,8 @@ struct dpc_session_ctx {
 	uint32_t id;              //!< Id of session (0 for the first one).
 
 	dpc_input_t *input;       //!< Input data.
-	struct timeval tve_start; //<! Session start timestamp.
+			struct timeval tve_start; //<! Session start timestamp.
+	fr_time_t fte_start;      //<! Session start timestamp.
 
 	ncc_endpoint_t *gateway;  //!< If using a gateway as source endpoint.
 	ncc_endpoint_t src;       //!< Src IP address and port.
@@ -361,8 +368,10 @@ struct dpc_session_ctx {
 	DHCP_PACKET *reply;
 
 	uint32_t retransmit;      //!< Number of times we've retransmitted this request.
-	struct timeval tve_init;  //!< When the packet was (first) initialized. Not altered when retransmitting.
-	struct timeval tvi_rtt;   //!< Request to reply rtt (round trip time).
+			struct timeval tve_init;  //!< When the packet was (first) initialized. Not altered when retransmitting.
+	fr_time_t fte_init;       //!< When the packet was (first) initialized. Not altered when retransmitting.
+			struct timeval tvi_rtt;   //!< Request to reply rtt (round trip time).
+	fr_time_delta_t ftd_rtt;  //!< Request to reply rtt (round trip time).
 
 	uint32_t num_send;        //<! Number of requests sent (not including retransmissions).
 

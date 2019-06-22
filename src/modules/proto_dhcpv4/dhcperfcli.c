@@ -23,8 +23,12 @@ TALLOC_CTX *global_ctx;
  *	Naming convention for "struct timeval" variables, for clarity, depending on their purpose:
  *	tve_ = timeval "epoch", tvi_ = timeval "interval".
  */
+/*
+ *	Naming convention for FreeRADIUS time variables, depending on their purpose:
+ *	fte_ = fr_time_t ("epoch"), ftd_ = fr_time_delta_t ("delta").
+ */
 
-struct timeval tve_start; /* Program execution start timestamp. */
+fr_time_t fte_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
@@ -147,11 +151,11 @@ static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
 
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
-static struct timeval tve_job_start; /* Job start timestamp. */
-static struct timeval tve_job_end; /* Job end timestamp. */
-static struct timeval tve_sessions_ini_start; /* Start timestamp of starting new sessions. */
-static struct timeval tve_sessions_ini_end; /* End timestamp of starting new sessions. */
-static struct timeval tve_last_session_in; /* Last time a session has been initialized from input. */
+fr_time_t fte_job_start; /* Job start timestamp. */
+fr_time_t fte_job_end; /* Job end timestamp. */
+fr_time_t fte_sessions_ini_start; /* Start timestamp of starting new sessions. */
+fr_time_t fte_sessions_ini_end; /* End timestamp of starting new sessions. */
+fr_time_t fte_last_session_in; /* Last time a session has been initialized from input. */
 
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 static uint32_t session_num = 0; /* Total number of sessions initialized (including received requests). */
@@ -236,7 +240,8 @@ static char const *transaction_types[DPC_TR_MAX] = {
 static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
 
 char elapsed_buf[NCC_TIME_STRLEN];
-#define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tve_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+//#define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tve_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+#define ELAPSED ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
@@ -256,7 +261,7 @@ static size_t dpc_tr_name_max_len(void);
 static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
-static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt);
+static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt);
 static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply);
 
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, UNUSED void *ctx);
@@ -265,7 +270,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
-static int dpc_recv_one_packet(struct timeval *tvi_wait_time);
+static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time);
 static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply);
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
@@ -453,23 +458,23 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
  *	Obtain the job (either ongoing or finished) elapsed time.
  */
 static float dpc_job_elapsed_time_get(void)
+// or maybe we should just return a fr_time_t ? TODO.
 {
 	float elapsed;
-	struct timeval tvi_elapsed;
+	fr_time_delta_t ftd_elapsed;
 
 	/*
 	 *	If job is finished, get elapsed time from start to end.
 	 *	Otherwise, get elapsed time from start to now.
 	 */
-	if (timerisset(&tve_job_end)) {
-		timersub(&tve_job_end, &tve_job_start, &tvi_elapsed);
+	if (fte_job_end) {
+		ftd_elapsed = fte_job_end - fte_job_start;
 	} else {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		timersub(&now, &tve_job_start, &tvi_elapsed);
+		fr_time_t now = fr_time();
+		ftd_elapsed = now - fte_job_start;
 	}
-	elapsed = ncc_timeval_to_float(&tvi_elapsed);
-
+	//elapsed = (float)ftd_elapsed / NSEC;
+	elapsed = ncc_fr_time_to_float(ftd_elapsed);
 	return elapsed;
 }
 
@@ -479,24 +484,22 @@ static float dpc_job_elapsed_time_get(void)
 static float dpc_start_sessions_elapsed_time_get(void)
 {
 	float elapsed;
-	struct timeval tvi_elapsed;
+	fr_time_delta_t ftd_elapsed;
 
-	if (!timerisset(&tve_sessions_ini_start)) return 0; /* No session started yet. */
+	if (!fte_sessions_ini_start) return 0; /* No session started yet. */
 
 	/*
 	 *	If we've stopped starting new sessions, get elapsed time from start to this timestamp.
 	 *	Otherwise, get elapsed time from start to now.
 	 */
-	if (timerisset(&tve_sessions_ini_end)) {
-		timersub(&tve_sessions_ini_end, &tve_sessions_ini_start, &tvi_elapsed);
+	if (fte_sessions_ini_end) {
+		ftd_elapsed = fte_sessions_ini_end - fte_sessions_ini_start;
 	} else {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		timersub(&now, &tve_sessions_ini_start, &tvi_elapsed);
+		fr_time_t now = fr_time();
+		ftd_elapsed = now - fte_sessions_ini_start;
 	}
-
-	elapsed = ncc_timeval_to_float(&tvi_elapsed);
-
+	//elapsed = (float)ftd_elapsed / NSEC;
+	elapsed = ncc_fr_time_to_float(ftd_elapsed);
 	return elapsed;
 }
 
@@ -525,24 +528,23 @@ static float dpc_get_session_in_rate(bool per_input)
 		 * To now (if still starting new sessions) or when the last session was initialized.
 		 */
 		float elapsed;
-		struct timeval tvi_elapsed;
-		struct timeval tve_end;
+		fr_time_t fte_end;
+		fr_time_delta_t ftd_elapsed;
 
-		if (!timerisset(&tve_sessions_ini_start) || !timerisset(&tve_last_session_in)) return 0;
+		if (!fte_sessions_ini_start || !fte_last_session_in) return 0;
 
 		/* If not starting new sessions, use last session time as end time.
 		 * Otherwise, use current time.
 		 */
 		if (!start_sessions_flag) {
-			tve_end = tve_last_session_in;
+			fte_end = fte_last_session_in;
 		} else {
-			gettimeofday(&tve_end, NULL);
+			fte_end = fr_time();
 		}
 
 		/* Compute elapsed time. */
-		timersub(&tve_end, &tve_sessions_ini_start, &tvi_elapsed);
-
-		elapsed = ncc_timeval_to_float(&tvi_elapsed);
+		ftd_elapsed = fte_end - fte_sessions_ini_start;
+		elapsed = ncc_fr_time_to_float(ftd_elapsed);
 		if (elapsed > 0) { /* Just to be safe. */
 			rate = (float)session_num_in / elapsed;
 		}
@@ -588,9 +590,9 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 {
 	if (!my_stats || my_stats->num == 0) return 0;
 
-	float rtt_avg = 1000 * ncc_timeval_to_float(&my_stats->rtt_cumul) / my_stats->num;
-	float rtt_min = 1000 * ncc_timeval_to_float(&my_stats->rtt_min);
-	float rtt_max = 1000 * ncc_timeval_to_float(&my_stats->rtt_max);
+	float rtt_avg = 1000 * ncc_fr_time_to_float(my_stats->rtt_cumul) / my_stats->num;
+	float rtt_min = 1000 * ncc_fr_time_to_float(my_stats->rtt_min);
+	float rtt_max = 1000 * ncc_fr_time_to_float(my_stats->rtt_max);
 
 	fprintf(fp, "\t%-*.*s: num: %u, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
@@ -648,7 +650,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-		ncc_delta_time_sprint(elapsed_buf, &tve_job_start, &tve_job_end, DPC_DELTA_TIME_DECIMALS));
+		ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, &fte_job_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
@@ -689,29 +691,29 @@ static void dpc_stats_fprint(FILE *fp)
  *	Update a type of transaction statistics, with one newly completed transaction:
  *	number of such transactions, cumulated rtt, min/max rtt.
  */
-static void dpc_tr_stats_update_values(dpc_transaction_stats_t *my_stats, struct timeval *rtt)
+static void dpc_tr_stats_update_values(dpc_transaction_stats_t *my_stats, fr_time_delta_t rtt)
 {
 	if (!rtt) return;
 
 	/* Update 'rtt_min'. */
-	if ((my_stats->num == 0) || (timercmp(rtt, &my_stats->rtt_min, <))) {
-		my_stats->rtt_min = *rtt;
+	if (my_stats->num == 0 || rtt < my_stats->rtt_min) {
+		my_stats->rtt_min = rtt;
 	}
 
 	/* Update 'rtt_max'. */
-	if ((my_stats->num == 0) || (timercmp(rtt, &my_stats->rtt_max, >=))) {
-		my_stats->rtt_max = *rtt;
+	if (my_stats->num == 0 || rtt > my_stats->rtt_max) {
+		my_stats->rtt_max = rtt;
 	}
 
 	/* Update 'rtt_cumul' and 'num'. */
-	timeradd(&my_stats->rtt_cumul, rtt, &my_stats->rtt_cumul);
+	my_stats->rtt_cumul += rtt;
 	my_stats->num ++;
 }
 
 /*
  *	Update statistics for a type of transaction
  */
-static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *rtt)
+static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt)
 {
 	if (tr_type < 0 || tr_type >= DPC_TR_MAX) return;
 	if (!rtt) return;
@@ -721,14 +723,14 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, struct timeval *
 	dpc_tr_stats_update_values(my_stats, rtt);
 
 	DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
-	            tr_type, my_stats->num, ncc_timeval_to_float(rtt),
-	            ncc_timeval_to_float(&my_stats->rtt_min), ncc_timeval_to_float(&my_stats->rtt_max));
+	            tr_type, my_stats->num, ncc_fr_time_to_float(rtt),
+	            ncc_fr_time_to_float(my_stats->rtt_min), ncc_fr_time_to_float(my_stats->rtt_max));
 }
 
 /*
  *	Update statistics for a dynamically named transaction type.
  */
-static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, struct timeval *rtt)
+static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t rtt)
 {
 	char name[256];
 
@@ -749,8 +751,8 @@ static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, struct timeval *
 	dpc_tr_stats_update_values(my_stats, rtt);
 
 	DEBUG_TRACE("Updated named transaction stats: id: %u, name: [%s], num: %u, this rtt: %.6f, min: %.6f, max: %.6f",
-	            i, name, my_stats->num, ncc_timeval_to_float(rtt),
-	            ncc_timeval_to_float(&my_stats->rtt_min), ncc_timeval_to_float(&my_stats->rtt_max));
+	            i, name, my_stats->num, ncc_fr_time_to_float(rtt),
+	            ncc_fr_time_to_float(my_stats->rtt_min), ncc_fr_time_to_float(my_stats->rtt_max));
 }
 
 /*
@@ -760,16 +762,16 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 {
 	if (!request || !reply) return;
 
-	struct timeval rtt;
+	fr_time_delta_t rtt;
 
 	/* Get rtt previously computed. */
-	rtt = session->tvi_rtt;
+	rtt = session->ftd_rtt;
 
 	/* Name the transaction and update its statistics. */
-	dpc_dyn_tr_stats_update(session, &rtt);
+	dpc_dyn_tr_stats_update(session, rtt);
 
 	/* Also update for 'All'. */
-	dpc_tr_stats_update(DPC_TR_ALL, &rtt);
+	dpc_tr_stats_update(DPC_TR_ALL, rtt);
 }
 
 /*
@@ -1012,10 +1014,10 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
  *	If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
  *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
-static int dpc_recv_one_packet(struct timeval *tvi_wait_time)
+static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 {
 	fd_set set;
-	struct timeval tv;
+	struct timeval tv = { 0 };
 	DHCP_PACKET *packet = NULL, **packet_p;
 	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
@@ -1031,10 +1033,8 @@ static int dpc_recv_one_packet(struct timeval *tvi_wait_time)
 		return 0;
 	}
 
-	if (tvi_wait_time == NULL || !timerisset(tvi_wait_time)) {
-		timerclear(&tv);
-	} else {
-		tv = *tvi_wait_time;
+	if (ftd_wait_time) {
+		tv = fr_time_delta_to_timeval(*ftd_wait_time);
 		DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tv));
 	}
 
@@ -1165,9 +1165,8 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	/* Compute rtt.
 	 * Relative to initial request so we get the real rtt (regardless of retransmissions).
 	 */
-//zzz TODO: fix this.
-	//timersub(&session->reply->timestamp, &session->tve_init, &session->tvi_rtt);
-	DEBUG_TRACE("Packet response time: %.6f", ncc_timeval_to_float(&session->tvi_rtt));
+	session->ftd_rtt = session->reply->timestamp - session->fte_init;
+	DEBUG_TRACE("Packet response time: %.6f", ncc_fr_time_to_float(session->ftd_rtt));
 
 	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
 
@@ -1188,10 +1187,9 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		/*
 		 *	Update statistics for DORA workflows.
 		 */
-		struct timeval rtt;
-//zzz TODO: fix this.
-		//timersub(&session->reply->timestamp, &session->tve_start, &rtt);
-		//dpc_tr_stats_update(DPC_TR_DORA, &rtt);
+		fr_time_delta_t rtt;
+		rtt = session->reply->timestamp - session->fte_start;
+		dpc_tr_stats_update(DPC_TR_DORA, rtt);
 
 		/*
 		 *	Maybe send a Decline or Release now.
@@ -1799,8 +1797,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
 
 	/* Store time of first session initialized. */
-	if (!timerisset(&tve_sessions_ini_start)) {
-		gettimeofday(&tve_sessions_ini_start, NULL);
+	if (!fte_sessions_ini_start) {
+		fte_sessions_ini_start = fr_time();
 	}
 
 	/* If this is the first time this input is used, store current time. */
@@ -1881,13 +1879,13 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	}
 
 	/* Store session start time. */
-	gettimeofday(&session->tve_start, NULL);
+	session->fte_start = fr_time();
 
 	session_num_in ++;
 	session_num_active ++;
 	session_num_in_active ++;
 	session_num_parallel ++;
-	gettimeofday(&tve_last_session_in, NULL);
+	fte_last_session_in = fr_time();
 
 	SDEBUG2("New session initialized from input - active sessions: %u (in: %u), parallel: %u",
 	        session_num_active, session_num_in_active, session_num_parallel);
@@ -1922,7 +1920,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	if (session->input) {
 		session_num_in_active --;
 		if (session->num_send == 1) session_num_parallel --; /* This was a session "initial request". */
-		gettimeofday(&tve_last_session_in, NULL);
+		//gettimeofday(&tve_last_session_in, NULL); // why ?? zzz
 	}
 
 	SDEBUG2("Session terminated - active sessions: %u (in: %u), parallel: %u",
@@ -1942,11 +1940,12 @@ static void dpc_loop_recv(void)
 		 *	Allow to block waiting until the next scheduled event.
 		 *	We know we don't have anything else to do until then. It will avoid needlessly hogging one full CPU.
 		 */
-		struct timeval now, when, wait_max = { 0 };
+		fr_time_t now, when;
+		fr_time_delta_t wait_max = 0;
 
 		if (session_num_active >= ECTX.session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
-			gettimeofday(&now, NULL);
-			if (timercmp(&when, &now, >)) timersub(&when, &now, &wait_max); /* No negative. */
+			now = fr_time();
+			if (when > now) wait_max = when - now; /* No negative. */
 		}
 
 		/*
@@ -2005,14 +2004,14 @@ static void dpc_end_start_sessions(void)
 {
 	if (start_sessions_flag) {
 		start_sessions_flag = false;
-		gettimeofday(&tve_sessions_ini_end, NULL);
+		fte_sessions_ini_end = fr_time();
 
 		/* Also mark all input as done. */
 		ncc_list_item_t *list_item = vps_list_in.head;
 		while (list_item) {
 			dpc_input_t *input = (dpc_input_t *)list_item;
 			input->done = true;
-			input->tve_end = tve_sessions_ini_end;
+			input->fte_end = fte_sessions_ini_end;
 
 			list_item = list_item->next;
 		}
@@ -3117,7 +3116,7 @@ static void dpc_signal(int sig)
 static void dpc_end(void)
 {
 	/* Job end timestamp. */
-	gettimeofday(&tve_job_end, NULL);
+	fte_job_end = fr_time();
 
 	/* If we're producing progress statistics, do it one last time. */
 	if (timerisset(&ECTX.tvi_progress_interval)) dpc_progress_stats_fprint(stdout, true);
@@ -3173,7 +3172,8 @@ int main(int argc, char **argv)
 
 	fr_time_start();
 
-	gettimeofday(&tve_start, NULL); /* Program start timestamp. */
+	fte_start = fr_time(); /* Program start timestamp. */
+// maybe we don't need this at all? TODO.
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -3287,11 +3287,10 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	gettimeofday(&tve_job_start, NULL); /* Job start timestamp. */
+	fte_job_start = fr_time(); /* Job start timestamp. */
 
 	if (ECTX.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
-		ncc_float_to_timeval(&ECTX.tve_start_max, ECTX.duration_start_max);
-		timeradd(&ECTX.tve_start_max, &tve_job_start, &ECTX.tve_start_max);
+		ECTX.fte_start_max = ncc_float_to_fr_time(ECTX.duration_start_max) + fte_job_start;
 	}
 
 	/* Arm a timer to produce periodic statistics. */
