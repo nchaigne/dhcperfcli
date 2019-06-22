@@ -170,9 +170,9 @@ static bool signal_done = false;
 static dpc_statistics_t stat_ctx; /* Statistics. */
 static uint32_t *retr_breakdown; /* Retransmit breakdown by number of retransmissions. */
 static fr_event_timer_t const *ev_progress_stats;
-struct timeval tve_progress_stat; /* When next ongoing statistics is supposed to fire. */
+fr_time_t fte_progress_stat; /* When next ongoing statistics is supposed to fire. */
 
-struct timeval tvi_loop_max_time = { .tv_usec = 50000 }; /* Max time spent in each iteration of the start loop. */
+fr_time_delta_t ftd_loop_max_time = 50 * 1000 * 1000; /* Max time spent in each iteration of the start loop. */
 
 static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
@@ -267,7 +267,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, UNUSED void *ctx);
 static void dpc_event_add_progress_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, void *uctx);
-static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in);
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
 static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time);
@@ -791,26 +791,25 @@ static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_
  */
 static void dpc_event_add_progress_stats(void)
 {
-	if (!timerisset(&ECTX.tvi_progress_interval)) return;
+	if (!ECTX.ftd_progress_interval) return;
 
 	/*
 	 *	Generate uniformly spaced out statistics.
 	 *	To avoid drifting, schedule next event relatively to the expected trigger of previous one.
 	 */
-	struct timeval now;
-	gettimeofday(&now, NULL);
+	fr_time_t now = fr_time();
 
-	if (!timerisset(&tve_progress_stat)) {
-		tve_progress_stat = now;
+	if (!fte_progress_stat) {
+		fte_progress_stat = now;
 	}
 
 	/* Ensure the scheduled time is in the future. */
 	do {
-		timeradd(&tve_progress_stat, &ECTX.tvi_progress_interval, &tve_progress_stat);
-	} while (!timercmp(&tve_progress_stat, &now, >));
+		fte_progress_stat += ECTX.ftd_progress_interval;
+	} while (fte_progress_stat < now);
 
 	if (fr_event_timer_at(global_ctx, event_list, &ev_progress_stats,
-	                      fr_time_from_timeval(&tve_progress_stat), dpc_progress_stats, NULL) < 0) {
+	                      fte_progress_stat, dpc_progress_stats, NULL) < 0) {
 		/* Should never happen. */
 		PERROR("Failed inserting progress statistics event");
 	}
@@ -879,11 +878,10 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
  *	Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
  *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout.
  */
-static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct timeval *timeout_in)
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in)
 {
-	struct timeval tv_event;
-	gettimeofday(&tv_event, NULL);
-	timeradd(&tv_event, (timeout_in ? timeout_in : &ECTX.tvi_request_timeout), &tv_event);
+	fr_time_t fte_event = fr_time();
+	fte_event += (timeout_in ? *timeout_in : ECTX.ftd_request_timeout);
 
 	/* If there is an active event timer for this session, clear it before arming a new one. */
 	if (session->event) {
@@ -892,7 +890,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, struct tim
 	}
 
 	if (fr_event_timer_at(session, event_list, &session->event,
-	                      fr_time_from_timeval(&tv_event), dpc_request_timeout, session) < 0) {
+	                      fte_event, dpc_request_timeout, session) < 0) {
 		/* Should never happen. */
 		PERROR("Failed inserting request timeout event");
 	}
@@ -2034,20 +2032,17 @@ static uint32_t dpc_loop_start_sessions(void)
 	bool do_limit = dpc_rate_limit_calc(&limit_new_sessions);
 
 	/* Set a max allowed loop time - don't loop forever in case of packets not expecting replies. */
-	struct timeval tvi_loop_max;
-	gettimeofday(&tvi_loop_max, NULL);
-	timeradd(&tvi_loop_max, &tvi_loop_max_time, &tvi_loop_max);
+	fr_time_delta_t fte_loop_max = fr_time() + ftd_loop_max_time;
 
 	/* Also limit time up to the next scheduled statistics event. */
-	if (timerisset(&tve_progress_stat) && timercmp(&tvi_loop_max, &tve_progress_stat, >)) {
-		tvi_loop_max = tve_progress_stat;
+	if (fte_progress_stat && fte_loop_max > fte_progress_stat) {
+		fte_loop_max = fte_progress_stat;
 	}
 
 	while (!done) {
 		/* Max loop time limit reached. */
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		if (timercmp(&now, &tvi_loop_max, >)) {
+		fr_time_t now = fr_time();
+		if (now > fte_loop_max) {
 			DEBUG_TRACE("Loop time limit reached, started: %u", num_started);
 			break;
 		}
@@ -3081,8 +3076,8 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	if (ECTX.session_max_active == 0) ECTX.session_max_active = 1;
-	ncc_float_to_timeval(&ECTX.tvi_request_timeout, ECTX.request_timeout);
-	ncc_float_to_timeval(&ECTX.tvi_progress_interval, ECTX.progress_interval);
+	ECTX.ftd_request_timeout = ncc_float_to_fr_time(ECTX.request_timeout);
+	ECTX.ftd_progress_interval = ncc_float_to_fr_time(ECTX.progress_interval);
 
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
@@ -3119,7 +3114,7 @@ static void dpc_end(void)
 	fte_job_end = fr_time();
 
 	/* If we're producing progress statistics, do it one last time. */
-	if (timerisset(&ECTX.tvi_progress_interval)) dpc_progress_stats_fprint(stdout, true);
+	if (ECTX.ftd_progress_interval) dpc_progress_stats_fprint(stdout, true);
 
 	/* Statistics report. */
 	dpc_stats_fprint(stdout);
