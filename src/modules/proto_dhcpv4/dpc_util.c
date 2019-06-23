@@ -8,8 +8,6 @@
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 
-extern struct timeval tv_start;
-
 
 typedef struct {
 	uint8_t size;
@@ -177,8 +175,8 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	        dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->data_len);
 
 	/* Also print rtt for replies. */
-	if (pevent == DPC_PACKET_RECEIVED && timerisset(&session->tvi_rtt)) {
-		fprintf(fp, ", rtt: %.3f ms", 1000 * ncc_timeval_to_float(&session->tvi_rtt));
+	if (pevent == DPC_PACKET_RECEIVED && session->ftd_rtt) {
+		fprintf(fp, ", rtt: %.3f ms", 1000 * ncc_fr_time_to_float(session->ftd_rtt));
 	}
 	fprintf(fp, "\n");
 }

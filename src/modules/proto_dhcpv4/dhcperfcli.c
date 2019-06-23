@@ -1526,10 +1526,10 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
 	session->retransmit = 0;
-	timerclear(&session->tvi_rtt);
+	session->ftd_rtt = 0;
 
 	/* Store request initial time. */
-	gettimeofday(&session->tve_init, NULL);
+	session->fte_init = fr_time();
 
 	/* Fill in the packet value pairs. */
 	ncc_pair_list_append(request, &request->vps, input->vps);
@@ -1655,7 +1655,7 @@ static bool dpc_item_available(dpc_input_t *item)
 static char dpc_item_get_status(dpc_input_t *input)
 {
 	if (input->done) return 'T';
-	if (!timerisset(&input->tve_start)) return 'W';
+	if (!input->fte_start) return 'W';
 	return 'A';
 }
 
