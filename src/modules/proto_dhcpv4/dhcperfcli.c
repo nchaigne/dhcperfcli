@@ -1664,23 +1664,19 @@ static char dpc_item_get_status(dpc_input_t *input)
  */
 static float dpc_item_get_elapsed(dpc_input_t *input)
 {
-	if (!timerisset(&input->tve_start)) {
+	if (!input->fte_start) {
 		return 0; /* Item has not been used yet. */
 	}
 
 	/* Get elapsed time from when this input started being used. */
-	float elapsed;
-	struct timeval *ref, now, tvi_elapsed;
-
-	if (timerisset(&input->tve_end)) {
-		ref = &input->tve_end;
+	fr_time_delta_t ftd_elapsed;
+	if (input->fte_end) {
+		ftd_elapsed = input->fte_end - input->fte_start;
 	} else {
-		gettimeofday(&now, NULL);
-		ref = &now;
+		ftd_elapsed = fr_time() - input->fte_start;
 	}
-	timersub(ref, &input->tve_start, &tvi_elapsed);
-	elapsed = ncc_timeval_to_float(&tvi_elapsed);
-	return elapsed;
+
+	return ncc_fr_time_to_float(ftd_elapsed);
 }
 
 /*
@@ -1689,7 +1685,7 @@ static float dpc_item_get_elapsed(dpc_input_t *input)
  */
 static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input)
 {
-	if (!timerisset(&input->tve_start)) {
+	if (!input->fte_start) {
 		return false; /* Item has not been used yet. */
 	}
 
@@ -1723,8 +1719,7 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 {
 	uint32_t checked = 0, not_done = 0;
-	struct timeval now;
-	gettimeofday(&now, NULL);
+	fr_time_t now = fr_time();
 
 	while (checked < vps_list_in.size) {
 		if (!template_input_prev) template_input_prev = vps_list_in.head;
@@ -1742,14 +1737,14 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 			/* Max number of uses reached for this input. */
 			DEBUG("Max number of uses (%u) reached for input (id: %u)", input->num_use, input->id);
 			input->done = true;
-			input->tve_end = now;
+			input->fte_end = now;
 			continue;
 		}
-		if (timerisset(&input->tve_max_start) && timercmp(&now, &input->tve_max_start, >)) {
+		if (input->fte_max_start && now > input->fte_max_start) {
 			/* Max session start time reached for this input. */
 			DEBUG("Max session start time reached for input (id: %u)", input->id);
 			input->done = true;
-			input->tve_end = now;
+			input->fte_end = now;
 			continue;
 		}
 
@@ -1804,18 +1799,17 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		DEBUG("Input (id: %u) start (max use: %u, duration: %.1f s, rate: %.1f)",
 		      input->id, input->max_use, input->max_duration, input->rate_limit);
 
-		gettimeofday(&input->tve_start, NULL);
+		input->fte_start = fr_time();
 
 		/* Also store input max start time, if applicable. */
 		if (input->max_duration) {
-			ncc_float_to_timeval(&input->tve_max_start, input->max_duration);
-			timeradd(&input->tve_max_start, &input->tve_start, &input->tve_max_start);
+			input->fte_max_start = input->fte_start + ncc_float_to_fr_time(input->max_duration);
 		}
 
 		/* If there is a global max start time, store whichever comes first (input, global). */
-		if (timerisset(&ECTX.tve_start_max)
-		    && (!input->max_duration || timercmp(&input->tve_max_start, &ECTX.tve_start_max, >)) ) {
-			input->tve_max_start = ECTX.tve_start_max;
+		if (ECTX.fte_start_max
+		    && (!input->fte_max_start || input->fte_max_start > ECTX.fte_start_max)) {
+			input->fte_max_start = ECTX.fte_start_max;
 		}
 	}
 
