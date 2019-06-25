@@ -253,8 +253,8 @@ static void version_print(void);
 static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t stat_type);
 static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
-static float dpc_job_elapsed_time_get(void);
-static float dpc_start_sessions_elapsed_time_get(void);
+static double dpc_job_elapsed_time_get(void);
+static double dpc_start_sessions_elapsed_time_get(void);
 static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
 static float dpc_get_session_in_rate(bool per_input);
 static size_t dpc_tr_name_max_len(void);
@@ -283,7 +283,7 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 
 static bool dpc_item_available(dpc_input_t *item);
 static char dpc_item_get_status(dpc_input_t *input);
-static float dpc_item_get_elapsed(dpc_input_t *input);
+static double dpc_item_get_elapsed(dpc_input_t *input);
 static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
 static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx);
@@ -457,10 +457,9 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 /*
  *	Obtain the job (either ongoing or finished) elapsed time.
  */
-static float dpc_job_elapsed_time_get(void)
+static double dpc_job_elapsed_time_get(void)
 // or maybe we should just return a fr_time_t ? TODO.
 {
-	float elapsed;
 	fr_time_delta_t ftd_elapsed;
 
 	/*
@@ -473,17 +472,15 @@ static float dpc_job_elapsed_time_get(void)
 		fr_time_t now = fr_time();
 		ftd_elapsed = now - fte_job_start;
 	}
-	//elapsed = (float)ftd_elapsed / NSEC;
-	elapsed = ncc_fr_time_to_float(ftd_elapsed);
-	return elapsed;
+
+	return ncc_fr_time_to_float(ftd_elapsed);
 }
 
 /*
  *	Obtain job elapsed time related to starting new sessions.
  */
-static float dpc_start_sessions_elapsed_time_get(void)
+static double dpc_start_sessions_elapsed_time_get(void)
 {
-	float elapsed;
 	fr_time_delta_t ftd_elapsed;
 
 	if (!fte_sessions_ini_start) return 0; /* No session started yet. */
@@ -498,9 +495,8 @@ static float dpc_start_sessions_elapsed_time_get(void)
 		fr_time_t now = fr_time();
 		ftd_elapsed = now - fte_sessions_ini_start;
 	}
-	//elapsed = (float)ftd_elapsed / NSEC;
-	elapsed = ncc_fr_time_to_float(ftd_elapsed);
-	return elapsed;
+
+	return ncc_fr_time_to_float(ftd_elapsed);
 }
 
 /*
@@ -509,10 +505,10 @@ static float dpc_start_sessions_elapsed_time_get(void)
  */
 static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 {
-	float elapsed = dpc_job_elapsed_time_get();
+	double elapsed = dpc_job_elapsed_time_get();
 
 	if (elapsed <= 0) return 0; /* Should not happen. */
-	return (float)my_stats->num / elapsed;
+	return (double)my_stats->num / elapsed;
 }
 
 /*
@@ -527,7 +523,7 @@ static float dpc_get_session_in_rate(bool per_input)
 		 * From when the first session was initialized,
 		 * To now (if still starting new sessions) or when the last session was initialized.
 		 */
-		float elapsed;
+		double elapsed;
 		fr_time_t fte_end;
 		fr_time_delta_t ftd_elapsed;
 
@@ -546,7 +542,7 @@ static float dpc_get_session_in_rate(bool per_input)
 		ftd_elapsed = fte_end - fte_sessions_ini_start;
 		elapsed = ncc_fr_time_to_float(ftd_elapsed);
 		if (elapsed > 0) { /* Just to be safe. */
-			rate = (float)session_num_in / elapsed;
+			rate = (double)session_num_in / elapsed;
 		}
 
 	} else {
@@ -590,9 +586,9 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 {
 	if (!my_stats || my_stats->num == 0) return 0;
 
-	float rtt_avg = 1000 * ncc_fr_time_to_float(my_stats->rtt_cumul) / my_stats->num;
-	float rtt_min = 1000 * ncc_fr_time_to_float(my_stats->rtt_min);
-	float rtt_max = 1000 * ncc_fr_time_to_float(my_stats->rtt_max);
+	double rtt_avg = 1000 * ncc_fr_time_to_float(my_stats->rtt_cumul) / my_stats->num;
+	double rtt_min = 1000 * ncc_fr_time_to_float(my_stats->rtt_min);
+	double rtt_max = 1000 * ncc_fr_time_to_float(my_stats->rtt_max);
 
 	fprintf(fp, "\t%-*.*s: num: %u, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
@@ -1662,7 +1658,7 @@ static char dpc_item_get_status(dpc_input_t *input)
 /*
  *	Get the elapsed time of an input item from when it started being used.
  */
-static float dpc_item_get_elapsed(dpc_input_t *input)
+static double dpc_item_get_elapsed(dpc_input_t *input)
 {
 	if (!input->fte_start) {
 		return 0; /* Item has not been used yet. */
