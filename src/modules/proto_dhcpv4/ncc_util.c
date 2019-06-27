@@ -503,19 +503,19 @@ int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
 /*
  *	Convert a struct timeval to float.
  */
-float ncc_timeval_to_float(struct timeval *in)
+double ncc_timeval_to_float(struct timeval *in)
 {
-	float value = (in->tv_sec + (float)in->tv_usec / USEC);
+	double value = (in->tv_sec + (double)in->tv_usec / USEC);
 	return value;
 }
 
 /*
  *	Convert a float to struct timeval.
  */
-int ncc_float_to_timeval(struct timeval *tv, float in)
+int ncc_float_to_timeval(struct timeval *tv, double in)
 {
 	/* Boundary check. */
-	if (in >= (float)LONG_MAX) {
+	if (in >= (double)LONG_MAX) {
 		ERROR("Cannot convert to timeval: float value %.0f exceeds LONG_MAX (%ld)", in, LONG_MAX);
 		return -1;
 	}
