@@ -20,12 +20,13 @@ static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 TALLOC_CTX *global_ctx;
 
 /*
- *	Naming convention for "struct timeval" variables, for clarity, depending on their purpose:
- *	tve_ = timeval "epoch", tvi_ = timeval "interval".
- */
-/*
- *	Naming convention for FreeRADIUS time variables, depending on their purpose:
+ *	Scheduling and time measurement are performed using FreeRADIUS time library, whichs is not susceptible
+ *	to drifts that can occur when using gettimeofday.
+ *
+ *	Naming convention for FreeRADIUS time variables, depending on their purpose (for clarity):
  *	fte_ = fr_time_t ("epoch"), ftd_ = fr_time_delta_t ("delta").
+ *
+ *	("epoch" here means: number of nanoseconds since the start of the program)
  */
 
 fr_time_t fte_start; /* Program execution start timestamp. */
