@@ -255,8 +255,8 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 static double dpc_job_elapsed_time_get(void);
 static double dpc_start_sessions_elapsed_time_get(void);
-static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
-static float dpc_get_session_in_rate(bool per_input);
+static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
+static double dpc_get_session_in_rate(bool per_input);
 static size_t dpc_tr_name_max_len(void);
 static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name);
 static void dpc_tr_stats_fprint(FILE *fp);
@@ -406,7 +406,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	fprintf(fp, "t(%s)", ELAPSED);
 	if (ECTX.duration_start_max) {
 		/* And percentage of max duration (if set). */
-		float duration_progress = 100 * dpc_job_elapsed_time_get() / ECTX.duration_start_max;
+		double duration_progress = 100 * dpc_job_elapsed_time_get() / ECTX.duration_start_max;
 		fprintf(fp, " (%.1f%%)", duration_progress);
 	}
 
@@ -416,7 +416,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 
 		/* And percentage of max number of sessions (if set). Unless we're done starting new sessions. */
 		if (ECTX.session_max_num && start_sessions_flag) {
-			float session_progress = 100 * (float)session_num_in / ECTX.session_max_num;
+			double session_progress = 100 * (double)session_num_in / ECTX.session_max_num;
 			fprintf(fp, " (%.1f%%)", session_progress);
 		}
 
@@ -503,7 +503,7 @@ static double dpc_start_sessions_elapsed_time_get(void)
  *	Compute the effective rate (reply per second) of a given transaction type (or all).
  *	Note: for a workflow (DORA), this is based on the final reply (Ack).
  */
-static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
+static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 {
 	double elapsed = dpc_job_elapsed_time_get();
 
@@ -514,9 +514,9 @@ static float dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 /*
  *	Compute the rate of input sessions per second.
  */
-static float dpc_get_session_in_rate(bool per_input)
+static double dpc_get_session_in_rate(bool per_input)
 {
-	float rate = 0;
+	double rate = 0;
 
 	if (!per_input) {
 		/* Compute a global session rate:

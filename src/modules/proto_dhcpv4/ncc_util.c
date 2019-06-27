@@ -546,7 +546,7 @@ fr_time_t ncc_float_to_fr_time(double in)
  *	If so convert it to float.
  *	Note: not using strtof because we want to be more restrictive.
  */
-bool ncc_str_to_float(float *out, char const *in, bool allow_negative)
+bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 {
 	if (!in || in[0] == '\0') return false;
 

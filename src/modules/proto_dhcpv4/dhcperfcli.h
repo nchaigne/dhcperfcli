@@ -26,16 +26,16 @@ struct dpc_context {
 
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
-	float progress_interval;         //<! Time interval between periodic progress statistics.
+	double progress_interval;        //<! Time interval between periodic progress statistics.
 	fr_time_delta_t ftd_progress_interval;
 
-	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
+	double request_timeout;          //<! Max time waiting for a reply to a request we've sent.
 	fr_time_delta_t ftd_request_timeout;
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 
 	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
 
-	float duration_start_max;        //<! Limit duration for starting new input sessions.
+	double duration_start_max;       //<! Limit duration for starting new input sessions.
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 
 	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).
@@ -47,10 +47,10 @@ struct dpc_context {
 	int pr_stat_per_input;           //<! Print per-input progress statistics (if multiple input).
 	int pr_stat_per_input_max;       //<! Max number of input items shown in progress statistics.
 
-	uint32_t min_session_for_rps;    //<! Min number of sessions started from input to compute a session rate per second.
-	float min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
-	float min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.
-	float rate_limit_time_lookahead; //<! Time lookahead for rate limit enforcement, to factor in processing time.
+	uint32_t min_session_for_rps;     //<! Min number of sessions started from input to compute a session rate per second.
+	double min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
+	double min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.
+	double rate_limit_time_lookahead; //<! Time lookahead for rate limit enforcement, to factor in processing time.
 };
 
 
@@ -329,14 +329,14 @@ struct dpc_input {
 
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
-	float start_delay;        //!< Delay after which this input can be used to start sessions.
+	double start_delay;       //!< Delay after which this input can be used to start sessions.
 	fr_time_t fte_start;      //!< Timestamp of first use.
 	fr_time_t fte_end;        //!< Timestamp of last use once input is done.
 
-	float rate_limit;         //<! Limit rate/s of sessions initialized from this input.
+	double rate_limit;        //<! Limit rate/s of sessions initialized from this input.
 
 	uint32_t max_use;         //<! Maximum number of times this input can be used.
-	float max_duration;       //!< Maximum duration of starting sessions with this input (relative to input start use).
+	double max_duration;      //!< Maximum duration of starting sessions with this input (relative to input start use).
 	fr_time_t fte_max_start;  // fte_start + max_duration
 
 	char *request_label;      //<! Request custom label.
