@@ -349,8 +349,9 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
-	sprintf(out, "%s:%u",
-	        fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr) ? ipaddr_buf : "(undef)", ep->port);
+	if (!fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr)) return NULL;
+
+	sprintf(out, "%s:%u", ipaddr_buf, ep->port);
 	return out;
 }
 
