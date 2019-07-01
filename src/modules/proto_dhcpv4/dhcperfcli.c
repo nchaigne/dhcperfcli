@@ -152,11 +152,11 @@ static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
 
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
-fr_time_t fte_job_start; /* Job start timestamp. */
-fr_time_t fte_job_end; /* Job end timestamp. */
-fr_time_t fte_sessions_ini_start; /* Start timestamp of starting new sessions. */
-fr_time_t fte_sessions_ini_end; /* End timestamp of starting new sessions. */
-fr_time_t fte_last_session_in; /* Last time a session has been initialized from input. */
+static fr_time_t fte_job_start; /* Job start timestamp. */
+static fr_time_t fte_job_end; /* Job end timestamp. */
+static fr_time_t fte_sessions_ini_start; /* Start timestamp of starting new sessions. */
+static fr_time_t fte_sessions_ini_end; /* End timestamp of starting new sessions. */
+static fr_time_t fte_last_session_in; /* Last time a session has been initialized from input. */
 
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 static uint32_t session_num = 0; /* Total number of sessions initialized (including received requests). */
@@ -171,9 +171,9 @@ static bool signal_done = false;
 static dpc_statistics_t stat_ctx; /* Statistics. */
 static uint32_t *retr_breakdown; /* Retransmit breakdown by number of retransmissions. */
 static fr_event_timer_t const *ev_progress_stats;
-fr_time_t fte_progress_stat; /* When next ongoing statistics is supposed to fire. */
+static fr_time_t fte_progress_stat; /* When next ongoing statistics is supposed to fire. */
 
-fr_time_delta_t ftd_loop_max_time = 50 * 1000 * 1000; /* Max time spent in each iteration of the start loop. */
+static fr_time_delta_t ftd_loop_max_time = 50 * 1000 * 1000; /* Max time spent in each iteration of the start loop. */
 
 static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
@@ -265,9 +265,9 @@ static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt);
 static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply);
 
-static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, UNUSED void *ctx);
+static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, UNUSED void *ctx);
 static void dpc_event_add_progress_stats(void);
-static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, void *uctx);
+static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, void *uctx);
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
@@ -285,7 +285,7 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 static bool dpc_item_available(dpc_input_t *item);
 static char dpc_item_get_status(dpc_input_t *input);
 static double dpc_item_get_elapsed(dpc_input_t *input);
-static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input);
+static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
 static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
@@ -377,7 +377,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 		fprintf(fp, "#%u (%c)", input->id, status);
 
 		if (status != 'W') {
-			float input_rate = 0;
+			double input_rate = 0;
 			if (dpc_item_get_rate(&input_rate, input)) {
 				fprintf(fp, ": %.3f", input_rate);
 			} else {
@@ -553,7 +553,7 @@ static double dpc_get_session_in_rate(bool per_input)
 			dpc_input_t *input = (dpc_input_t *)list_item;
 
 			if (!input->done) { /* Ignore item if we're done with it. */
-				float input_rate = 0;
+				double input_rate = 0;
 				if (dpc_item_get_rate(&input_rate, input)) {
 					rate += input_rate;
 				}
@@ -647,7 +647,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-		ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, &fte_job_end, DPC_DELTA_TIME_DECIMALS));
+	        ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, &fte_job_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
@@ -681,7 +681,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",
-		stat_ctx.num_packet_recv_unexpected);
+	        stat_ctx.num_packet_recv_unexpected);
 }
 
 /*
@@ -774,7 +774,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 /*
  *	Event callback: progress statistics summary.
  */
-static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, UNUSED void *ctx)
+static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, UNUSED void *ctx)
 {
 	/* Do statistics summary. */
 	dpc_progress_stats_fprint(stdout, false);
@@ -841,7 +841,7 @@ static bool dpc_retransmit(dpc_session_ctx_t *session)
 /*
  *	Event callback: request timeout.
  */
-static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now_t, void *uctx)
+static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, void *uctx)
 {
 	dpc_session_ctx_t *session = talloc_get_type_abort(uctx, dpc_session_ctx_t);
 
@@ -1005,14 +1005,14 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 
 /*
  *	Receive one packet, maybe.
- *	If tvi_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
+ *	If ftd_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
  *	If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
  *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
 static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 {
 	fd_set set;
-	struct timeval tv = { 0 };
+	struct timeval tvi_wait = { 0 };
 	DHCP_PACKET *packet = NULL, **packet_p;
 	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
@@ -1029,14 +1029,14 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	}
 
 	if (ftd_wait_time) {
-		tv = fr_time_delta_to_timeval(*ftd_wait_time);
-		DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tv));
+		tvi_wait = fr_time_delta_to_timeval(*ftd_wait_time);
+		DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tvi_wait));
 	}
 
 	/*
 	 *	No packet was received.
 	 */
-	if (select(max_fd, &set, NULL, NULL, &tv) <= 0) {
+	if (select(max_fd, &set, NULL, NULL, &tvi_wait) <= 0) {
 		return 0;
 	}
 
@@ -1680,18 +1680,18 @@ static double dpc_item_get_elapsed(dpc_input_t *input)
  *	Get the use rate of an input item, relative to the point at which it started being used,
  *	up to now (if it's still active) or the last time is was used.
  */
-static bool dpc_item_get_rate(float *input_rate, dpc_input_t *input)
+static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input)
 {
 	if (!input->fte_start) {
 		return false; /* Item has not been used yet. */
 	}
 
-	float elapsed = dpc_item_get_elapsed(input);
+	double elapsed = dpc_item_get_elapsed(input);
 
 	if (input->num_use < ECTX.min_session_for_rps
 	    || elapsed < ECTX.min_session_time_for_rps) return false;
 
-	*input_rate = (float)input->num_use / elapsed;
+	*input_rate = (double)input->num_use / elapsed;
 	return true;
 }
 
