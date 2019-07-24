@@ -3075,7 +3075,9 @@ static void dpc_options_parse(int argc, char **argv)
 
 	if (!with_template && ECTX.input_num_use == 0) ECTX.input_num_use = 1;
 
-	retr_breakdown = talloc_zero_array(global_ctx, uint32_t, ECTX.retransmit_max);
+	if (ECTX.retransmit_max > 0) {
+		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, ECTX.retransmit_max);
+	}
 }
 
 /*
