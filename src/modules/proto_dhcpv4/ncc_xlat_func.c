@@ -18,6 +18,7 @@
  *	Xlat names.
  */
 #define NCC_XLAT_FILE          "file"
+#define NCC_XLAT_FILE_CSV      "file.csv"
 #define NCC_XLAT_NUM_RANGE     "num.range"
 #define NCC_XLAT_NUM_RAND      "num.rand"
 #define NCC_XLAT_IPADDR_RANGE  "ipaddr.range"
@@ -32,6 +33,7 @@
  */
 typedef enum {
 	NCC_CTX_TYPE_FILE = 1,
+	NCC_CTX_TYPE_FILE_CSV,
 	NCC_CTX_TYPE_NUM_RANGE,
 	NCC_CTX_TYPE_NUM_RAND,
 	NCC_CTX_TYPE_IPADDR_RANGE,
@@ -52,8 +54,12 @@ typedef struct ncc_xlat_frame {
 
 	union {
 		struct {
-			uint32_t num;
+			uint32_t idx_file;
 		} file;
+		struct {
+			uint32_t idx_file;
+			uint32_t idx_value;
+		} file_csv;
 		struct {
 			uint64_t min;
 			uint64_t max;
@@ -227,14 +233,99 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 
 
 /*
+ *	Parse csv file "<file index>.<value index>".
+ */
+int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
+{
+	fr_type_t type = FR_TYPE_UINT32;
+	fr_value_box_t vb = { 0 };
+	ssize_t len;
+	char const *p = NULL;
+
+	if (!in || in[0] == '\0') {
+		fr_strerror_printf("No input format provided");
+		return -1;
+	}
+
+	p = strchr(in, '.');
+	if (!p) {
+		fr_strerror_printf("No index delimiter found, in: [%s]", in);
+		return -1;
+	}
+
+	/* Convert the file index. */
+	len = p - in;
+	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		fr_strerror_printf("Invalid file index, in: [%s]", in);
+		return -1;
+	}
+	*idx_file = vb.vb_uint32;
+
+	if (*idx_file >= num_xlat_file) { /* Not a valid file. */
+		fr_strerror_printf("Not a valid file index: %u", *idx_file);
+		return -1;
+	}
+
+	/* Convert the value index. */
+	if (fr_value_box_from_str(NULL, &vb, &type, NULL, p + 1, -1, '\0', false) < 0) {
+		fr_strerror_printf("Invalid value index, in: [%s]", in);
+		return -1;
+	}
+	*idx_value = vb.vb_uint32;
+
+	/* Note: value index cannot be checked at parsing time. */
+
+	return 0;
+}
+
+/** Read comma-separated values sequentially from a file.
+ *
+ *  %{file.csv:<file index>.<value index>}
+ *  <file index> (0, 1, ...) corresponds to xlat files added through ncc_xlat_file_add.
+ *  <value index> (0, 1, ...) is the index of the value obtained from one line of the xlat file.
+ */
+static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
+				UNUSED REQUEST *request, char const *fmt)
+{
+	*out = NULL;
+
+	/* Do *not* use the TALLOC context we get from FreeRADIUS. We don't want our contexts to be freed. */
+	ncc_xlat_frame_t *xlat_frame = ncc_xlat_get_ctx(xlat_ctx);
+	if (!xlat_frame) return -1; /* Cannot happen. */
+
+	if (!xlat_frame->type) {
+		/* Not yet parsed. */
+		if (ncc_parse_file_csv(&xlat_frame->file_csv.idx_file, &xlat_frame->file_csv.idx_value, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat file csv: %s", fr_strerror());
+			XLAT_ERR_RETURN;
+		}
+
+		xlat_frame->type = NCC_CTX_TYPE_FILE_CSV;
+	}
+
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file_csv.idx_file];
+
+	// for now. TODO.
+	char buf[64];
+	sprintf(buf, "%u.%u", xlat_frame->file_csv.idx_file, xlat_frame->file_csv.idx_value);
+
+	*out = talloc_strdup(ctx, buf);
+	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
+
+	return strlen(*out);
+}
+//zzz
+
+/*
  *	Parse file "<index>".
  */
-int ncc_parse_file(uint32_t *num_file, char const *in)
+int ncc_parse_file(uint32_t *idx_file, char const *in)
 {
 	fr_type_t type = FR_TYPE_UINT32;
 	fr_value_box_t vb = { 0 };
 
-	*num_file = 0; /* Default. */
+	*idx_file = 0; /* Default. */
 
 	if (in) {
 		/* Convert the file index. */
@@ -242,11 +333,11 @@ int ncc_parse_file(uint32_t *num_file, char const *in)
 			fr_strerror_printf("Invalid index, in: [%s]", in);
 			return -1;
 		}
-		*num_file = vb.vb_uint32;
+		*idx_file = vb.vb_uint32;
 	}
 
-	if (*num_file >= num_xlat_file) { /* Not a valid file. */
-		fr_strerror_printf("Not a valid file index: %u", *num_file);
+	if (*idx_file >= num_xlat_file) { /* Not a valid file. */
+		fr_strerror_printf("Not a valid file index: %u", *idx_file);
 		return -1;
 	}
 	return 0;
@@ -254,7 +345,7 @@ int ncc_parse_file(uint32_t *num_file, char const *in)
 
 /** Read values sequentially from a file.
  *
- *  %{file:<index>} - where <index> (0, 1, ...) correspond to xlat files added through ncc_xlat_file_add.
+ *  %{file:<index>} - where <index> (0, 1, ...) corresponds to xlat files added through ncc_xlat_file_add.
  */
 static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
@@ -268,17 +359,15 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 
 	if (!xlat_frame->type) {
 		/* Not yet parsed. */
-		uint32_t num_file;
-		if (ncc_parse_file(&num_file, fmt) < 0) {
+		if (ncc_parse_file(&xlat_frame->file.idx_file, fmt) < 0) {
 			fr_strerror_printf("Failed to parse xlat file: %s", fr_strerror());
 			XLAT_ERR_RETURN;
 		}
 
 		xlat_frame->type = NCC_CTX_TYPE_FILE;
-		xlat_frame->file.num = num_file;
 	}
 
-	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file.num];
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file.idx_file];
 
 	/* If we have a value stored already, use it. */
 	if (xlat_file->value) {
@@ -1013,6 +1102,7 @@ void ncc_xlat_register(void)
 	ncc_xlat_init();
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_FILE, _ncc_xlat_file, NULL, NULL, 0, 0, true);
+	ncc_xlat_core_register(NULL, NCC_XLAT_FILE_CSV, _ncc_xlat_file_csv, NULL, NULL, 0, 0, true);
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RAND, _ncc_xlat_num_rand, NULL, NULL, 0, 0, true);
