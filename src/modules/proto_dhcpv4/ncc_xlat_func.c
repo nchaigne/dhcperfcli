@@ -75,6 +75,7 @@ typedef struct ncc_xlat_frame {
 
 typedef struct ncc_xlat_file {
 	FILE *fp;
+	char *value; /* Provide the same value if xlat'ed multiple times in one request. */
 } ncc_xlat_file_t;
 
 static TALLOC_CTX *xlat_ctx;
@@ -145,6 +146,13 @@ void ncc_xlat_set_num(uint64_t num)
 	FX_request->number = num; /* Our input id. */
 	FX_request->child_number = 0; /* The index of the xlat context for this input. */
 	FX_request->rcode = 0; /* Stores xlat error code. */
+
+	/* Free previously stored values for xlat file. */
+	int i;
+	for (i = 0; i < num_xlat_file; i++) {
+		ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[i];
+		TALLOC_FREE(xlat_file->value);
+	}
 }
 
 /*
@@ -166,7 +174,7 @@ int ncc_xlat_file_add(char const *filename)
 		return -1;
 	}
 
-	ncc_xlat_file_list = talloc_realloc(xlat_ctx, ncc_xlat_file_list, ncc_xlat_file_t, num_xlat_file + 1);
+	TALLOC_REALLOC_ZERO(xlat_ctx, ncc_xlat_file_list, ncc_xlat_file_t, num_xlat_file, num_xlat_file + 1);
 	ncc_xlat_file_list[num_xlat_file].fp = fp;
 	num_xlat_file++;
 
@@ -270,7 +278,16 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 		xlat_frame->file.num = num_file;
 	}
 
-	FILE *fp = ncc_xlat_file_list[xlat_frame->file.num].fp;
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file.num];
+
+	/* If we have a value stored already, use it. */
+	if (xlat_file->value) {
+		*out = talloc_strdup(ctx, xlat_file->value);
+		return strlen(*out);
+	}
+
+	/* Otherwise, read a new value from file. */
+	FILE *fp = xlat_file->fp;
 	if (!fp) {
 		return -1;
 	}
@@ -290,6 +307,11 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 	size_t len = strlen(buf);
 	if (len > 0 && buf[len-1] == '\n') {
 		buf[--len] = '\0';
+	}
+
+	if (!xlat_file->value) {
+		/* Store value in case we need it later on. */
+		xlat_file->value = talloc_strdup(xlat_ctx, buf);
 	}
 
 	*out = talloc_strdup(ctx, buf);
