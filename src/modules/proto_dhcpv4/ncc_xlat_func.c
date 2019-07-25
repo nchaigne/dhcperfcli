@@ -81,8 +81,11 @@ typedef struct ncc_xlat_frame {
 
 typedef struct ncc_xlat_file {
 	FILE *fp;
-	char *value; /* Provide the same value if xlat'ed multiple times in one request. */
+	char *value; /* Store single value read from current line using xlat "file". */
+	VALUE_PAIR *vps; /* Store list of values read from current line using xlat "file.csv". */
 } ncc_xlat_file_t;
+
+static bool done_init = false;
 
 static TALLOC_CTX *xlat_ctx;
 
@@ -92,16 +95,49 @@ static uint32_t num_xlat_frame_list = 0;
 static ncc_xlat_file_t *ncc_xlat_file_list;
 static uint32_t num_xlat_file = 0;
 
+static fr_dict_t *dict_freeradius;
 
-void ncc_xlat_init()
+static fr_dict_autoload_t _dict_autoload[] = {
+	{ .out = &dict_freeradius, .proto = "freeradius" },
+	{ NULL }
+};
+
+static fr_dict_attr_t const *attr_tmp_string;
+
+static fr_dict_attr_autoload_t _dict_attr_autoload[] = {
+	{ .out = &attr_tmp_string, .name = "Tmp-String-0", .type = FR_TYPE_STRING, .dict = &dict_freeradius },
+	{ NULL }
+};
+
+
+int ncc_xlat_init()
 {
+	if (done_init) return 0;
+
 	if (!xlat_ctx) xlat_ctx = talloc_new(talloc_autofree_context());
+
+	if (fr_dict_autoload(_dict_autoload) < 0) {
+		PERROR("Failed to autoload dictionaries");
+		return -1;
+	}
+	if (fr_dict_attr_autoload(_dict_attr_autoload) < 0) {
+		PERROR("Failed to autoload dictionary attributes");
+		fr_dict_autofree(_dict_autoload);
+		return -1;
+	}
+
+	done_init = true;
+	return 0;
 }
 
 void ncc_xlat_free()
 {
+	fr_dict_autofree(_dict_autoload);
+
 	if (FX_request) TALLOC_FREE(FX_request);
 	TALLOC_FREE(xlat_ctx);
+
+	done_init = false;
 }
 
 /*
@@ -143,6 +179,7 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 	FX_request->rcode = 0;
 }
 
+
 /*
  *	Initialize xlat context in our fake request for processing a list of input vps.
  */
@@ -158,6 +195,7 @@ void ncc_xlat_set_num(uint64_t num)
 	for (i = 0; i < num_xlat_file; i++) {
 		ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[i];
 		TALLOC_FREE(xlat_file->value);
+		fr_pair_list_free(&xlat_file->vps);
 	}
 }
 
@@ -306,16 +344,31 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 
 	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file_csv.idx_file];
 
-	// for now. TODO.
-	char buf[64];
-	sprintf(buf, "%u.%u", xlat_frame->file_csv.idx_file, xlat_frame->file_csv.idx_value);
+	if (!xlat_file->vps) {
+		if (ncc_value_list_afrom_file(ctx, attr_tmp_string, &xlat_file->vps, xlat_file->fp) < 0) {
+			fr_strerror_printf("Failed to read values from file");
+			XLAT_ERR_RETURN;
+		}
+	}
 
-	*out = talloc_strdup(ctx, buf);
+	/* Retrieve the requested value from the list. */
+	VALUE_PAIR *vp = xlat_file->vps;
+	int i = 0;
+	while (vp) {
+		if (i == xlat_frame->file_csv.idx_value) break;
+		vp = vp->next;
+		i++;
+	}
+	if (!vp) {
+		fr_strerror_printf("Not enough values (have %u)", i);
+		XLAT_ERR_RETURN;
+	}
+
+	*out = talloc_strdup(ctx, vp->vp_strvalue);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
 
 	return strlen(*out);
 }
-//zzz
 
 /*
  *	Parse file "<index>".
