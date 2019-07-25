@@ -157,6 +157,10 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps);
 
+FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
+FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);
+int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp);
+
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
 char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);

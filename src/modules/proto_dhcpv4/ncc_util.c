@@ -344,6 +344,198 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 
 
 /*
+ *	Read a single value from a buffer, and advance the pointer.
+ *	(Without attribute name and operator.)
+ *	Inspired from FreeRADIUS function fr_pair_raw_from_str
+ */
+FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
+{
+	char const *p;
+	FR_TOKEN ret = T_INVALID, next, quote;
+	char buf[8];
+
+	if (!ptr || !*ptr || !raw) {
+		fr_strerror_printf("Invalid arguments");
+		return T_INVALID;
+	}
+
+	/*
+	 *	Skip leading spaces
+	 */
+	p = *ptr;
+	while ((*p == ' ') || (*p == '\t')) p++;
+
+	if (!*p) {
+		fr_strerror_printf("No token read where we expected a value");
+		return T_INVALID;
+	}
+
+	/*
+	 *	Read value. Note that empty string values are allowed
+	 */
+	quote = gettoken(ptr, raw->r_opand, sizeof(raw->r_opand), false);
+	if (quote == T_EOL) {
+		fr_strerror_printf("Failed to get value");
+		return T_INVALID;
+	}
+
+	/*
+	 *	Peek at the next token. Must be T_EOL or T_COMMA
+	 */
+	p = *ptr;
+
+	next = gettoken(&p, buf, sizeof(buf), false);
+	switch (next) {
+	case T_EOL:
+		break;
+
+	case T_COMMA:
+		*ptr = p;
+		break;
+
+	default:
+		fr_strerror_printf("Expected end of line or comma");
+		return T_INVALID;
+	}
+	ret = next;
+
+	switch (quote) {
+	case T_DOUBLE_QUOTED_STRING:
+		raw->quote = T_SINGLE_QUOTED_STRING; /* xlat expansion is not handled here, so report as single quoted. */
+		break;
+
+	case T_SINGLE_QUOTED_STRING:
+	case T_BACK_QUOTED_STRING:
+	case T_BARE_WORD:
+		raw->quote = quote;
+		break;
+
+	default:
+		fr_strerror_printf("Failed to parse string");
+		return T_INVALID;
+	}
+
+	return ret;
+}
+
+/*
+ *	Read one line of values into a list.
+ *	The line may specify multiple values separated by commas.
+ *	All VP's are created using the same (provided) dictionary attribute.
+ *	Inspired from FreeRADIUS function fr_pair_list_afrom_str.
+ */
+FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list)
+{
+	VALUE_PAIR *vp, *head, **tail;
+	char const *p;
+	FR_TOKEN last_token = T_INVALID;
+	VALUE_PAIR_RAW raw;
+
+	/*
+	 *	We allow an empty line.
+	 */
+	if (buffer[0] == 0) {
+		return T_EOL;
+	}
+
+	head = NULL;
+	tail = &head;
+
+	p = buffer;
+	do {
+		raw.l_opand[0] = '\0';
+		raw.r_opand[0] = '\0';
+
+		last_token = ncc_value_raw_from_str(&p, &raw);
+
+		if (last_token == T_INVALID) break;
+
+		//vp = fr_pair_make(ctx, dict, NULL, raw.l_opand, NULL, raw.op);
+		// instead, create a vp with the fixed dictionary attribute, and value read.
+		vp = ncc_pair_create_by_da(ctx, NULL, da);
+		if (!vp) {
+		invalid:
+			last_token = T_INVALID;
+			break;
+		}
+
+		/* Parse the value (and mark it as 'tainted'). */
+		if (fr_pair_value_from_str(vp, raw.r_opand, -1, '"', true) < 0) {
+			talloc_free(vp);
+			goto invalid;
+		}
+
+	next:
+		*tail = vp;
+		tail = &((*tail)->next);
+	} while (*p && (last_token == T_COMMA));
+
+	if (last_token == T_INVALID) {
+		fr_pair_list_free(&head);
+	} else {
+		fr_pair_add(list, head);
+	}
+
+	/*
+	 *	And return the last token which we read.
+	 */
+	return last_token;
+}
+
+/*
+ *	Read values from one line using the fp.
+ *	Inspired from FreeRADIUS function fr_pair_list_afrom_file.
+ */
+int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp)
+{
+	char buf[8192];
+	FR_TOKEN last_token = T_EOL;
+
+	fr_cursor_t cursor;
+
+	VALUE_PAIR *vp = NULL;
+	fr_cursor_init(&cursor, out);
+
+	if (fgets(buf, sizeof(buf), fp) == NULL) {
+		/* Rewind file. Then read again. */
+		fseek(fp, 0L, SEEK_SET);
+
+		if (fgets(buf, sizeof(buf), fp) == NULL) {
+			/* Should never happen: even if the file is empty, we can read once (obtaining an empty string). */
+			return -1;
+		}
+	}
+
+	/*
+	 * Read all of the values on the current line.
+	 */
+	vp = NULL;
+	last_token = ncc_value_list_afrom_str(ctx, da, buf, &vp);
+	if (!vp) {
+		if (last_token != T_EOL) goto error;
+		goto done;
+	}
+
+	VALUE_PAIR *next;
+	do {
+		next = vp->next;
+		fr_cursor_append(&cursor, vp);
+	} while (next && (vp = next));
+
+	buf[0] = '\0';
+
+done:
+	return 0;
+
+error:
+	vp = fr_cursor_head(&cursor);
+	if (vp) fr_pair_list_free(&vp);
+	*out = NULL;
+	return -1;
+}
+
+
+/*
  *	Print endpoint: <IP>:<port>.
  */
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
