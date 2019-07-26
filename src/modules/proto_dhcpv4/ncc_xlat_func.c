@@ -315,6 +315,33 @@ error:
 }
 
 /*
+ *	Get a value from CSV file. First, read a new line if it has not already been done.
+ *	Then extract the Nth value as requested.
+ */
+VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file, uint32_t idx_value)
+{
+	/* Read a line from the file, or check we've already read. */
+	if (ncc_xlat_get_vps_from_file(ctx, xlat_file) < 0) {
+		return NULL;
+	}
+
+	/* Retrieve the requested value from the list. */
+	VALUE_PAIR *vp = xlat_file->vps;
+	int i = 0;
+	while (vp) {
+		if (i == idx_value) break;
+		vp = vp->next;
+		i++;
+	}
+	if (!vp) {
+		fr_strerror_printf("Not enough CSV values (file #%u, line %u)", xlat_file->idx_file, xlat_file->num_line);
+		return NULL;
+	}
+
+	return vp;
+}
+
+/*
  *	Parse csv file "<file index>.<value index>".
  */
 int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
@@ -388,20 +415,9 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 
 	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file_csv.idx_file];
 
-	if (ncc_xlat_get_vps_from_file(ctx, xlat_file) < 0) {
-		XLAT_ERR_RETURN;
-	}
-
-	/* Retrieve the requested value from the list. */
-	VALUE_PAIR *vp = xlat_file->vps;
-	int i = 0;
-	while (vp) {
-		if (i == xlat_frame->file_csv.idx_value) break;
-		vp = vp->next;
-		i++;
-	}
+	/* Read the requested value from CSV file. */
+	VALUE_PAIR *vp = ncc_xlat_get_value_from_csv_file(ctx, xlat_file, xlat_frame->file_csv.idx_value);
 	if (!vp) {
-		fr_strerror_printf("Not enough values (have %u)", i);
 		XLAT_ERR_RETURN;
 	}
 
