@@ -486,7 +486,7 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
  *	Read values from one line using the fp.
  *	Inspired from FreeRADIUS function fr_pair_list_afrom_file.
  */
-int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp)
+int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone)
 {
 	char buf[8192];
 	FR_TOKEN last_token = T_EOL;
@@ -497,14 +497,10 @@ int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_P
 	fr_cursor_init(&cursor, out);
 
 	if (fgets(buf, sizeof(buf), fp) == NULL) {
-		/* Rewind file. Then read again. */
-		fseek(fp, 0L, SEEK_SET);
-
-		if (fgets(buf, sizeof(buf), fp) == NULL) {
-			/* Should never happen: even if the file is empty, we can read once (obtaining an empty string). */
-			return -1;
-		}
+		*pfiledone = true;
+		goto done;
 	}
+	(*line)++;
 
 	/*
 	 * Read all of the values on the current line.

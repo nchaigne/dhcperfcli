@@ -80,7 +80,10 @@ typedef struct ncc_xlat_frame {
 } ncc_xlat_frame_t;
 
 typedef struct ncc_xlat_file {
+	uint32_t idx_file; /* Index of this xlat file. */
 	FILE *fp;
+	uint32_t num_line; /* Last line read. */
+
 	char *value; /* Store single value read from current line using xlat "file". */
 	VALUE_PAIR *vps; /* Store list of values read from current line using xlat "file.csv". */
 } ncc_xlat_file_t;
@@ -219,7 +222,10 @@ int ncc_xlat_file_add(char const *filename)
 	}
 
 	TALLOC_REALLOC_ZERO(xlat_ctx, ncc_xlat_file_list, ncc_xlat_file_t, num_xlat_file, num_xlat_file + 1);
-	ncc_xlat_file_list[num_xlat_file].fp = fp;
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[num_xlat_file];
+	xlat_file->idx_file = num_xlat_file;
+	xlat_file->fp = fp;
+
 	num_xlat_file++;
 
 	return 0;
@@ -269,6 +275,44 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 	return xlat_frame;
 }
 
+
+/*
+ *	Read a list of values from a xlat file.
+ *	Rewind if we're at EOF.
+ */
+int ncc_xlat_get_vps_from_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file)
+{
+	if (xlat_file->vps) {
+		return 0;
+	}
+
+	int tries = 0;
+	while (!xlat_file->vps && tries < 2) {
+		bool filedone = false;
+		tries++;
+		if (ncc_value_list_afrom_file(ctx, attr_tmp_string, &xlat_file->vps, xlat_file->fp, &xlat_file->num_line, &filedone) < 0) {
+			goto error;
+		}
+
+		if (filedone) {
+			/* Rewind file. */
+			fseek(xlat_file->fp, 0L, SEEK_SET);
+			xlat_file->num_line = 0;
+		}
+	}
+
+	if (!xlat_file->vps) {
+		fr_strerror_printf("No data");
+		goto error;
+	}
+
+	return 0;
+
+error:
+	fr_strerror_printf("Failed to read CSV values (file #%u, line %u): %s",
+	                   xlat_file->idx_file, xlat_file->num_line, fr_strerror());
+	return -1;
+}
 
 /*
  *	Parse csv file "<file index>.<value index>".
@@ -344,11 +388,8 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 
 	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file_csv.idx_file];
 
-	if (!xlat_file->vps) {
-		if (ncc_value_list_afrom_file(ctx, attr_tmp_string, &xlat_file->vps, xlat_file->fp) < 0) {
-			fr_strerror_printf("Failed to read values from file");
-			XLAT_ERR_RETURN;
-		}
+	if (ncc_xlat_get_vps_from_file(ctx, xlat_file) < 0) {
+		XLAT_ERR_RETURN;
 	}
 
 	/* Retrieve the requested value from the list. */

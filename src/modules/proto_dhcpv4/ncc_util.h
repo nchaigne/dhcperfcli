@@ -159,7 +159,7 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps);
 
 FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
 FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);
-int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp);
+int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone);
 
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
