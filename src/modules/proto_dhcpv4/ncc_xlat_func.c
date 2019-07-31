@@ -84,6 +84,7 @@ typedef struct ncc_xlat_file {
 	FILE *fp;
 	uint32_t num_line; /* Last line read. */
 
+	bool is_read; /* If current line has been read yet. */
 	char *value; /* Store single value read from current line using xlat "file". */
 	VALUE_PAIR *vps; /* Store list of values read from current line using xlat "file.csv". */
 } ncc_xlat_file_t;
@@ -199,6 +200,7 @@ void ncc_xlat_set_num(uint64_t num)
 		ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[i];
 		TALLOC_FREE(xlat_file->value);
 		fr_pair_list_free(&xlat_file->vps);
+		xlat_file->is_read = false;
 	}
 }
 
@@ -282,6 +284,11 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
  */
 int ncc_xlat_get_vps_from_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file)
 {
+	if (xlat_file->is_read && !xlat_file->vps) {
+		fr_strerror_printf("Cannot read CSV values (file #%u): inconsistent usage", xlat_file->idx_file);
+		return -1;
+	}
+
 	if (xlat_file->vps) {
 		return 0;
 	}
@@ -306,6 +313,7 @@ int ncc_xlat_get_vps_from_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file)
 		goto error;
 	}
 
+	xlat_file->is_read = true;
 	return 0;
 
 error:
@@ -453,7 +461,7 @@ int ncc_parse_file(uint32_t *idx_file, char const *in)
 	return 0;
 }
 
-/** Read values sequentially from a file.
+/** Read raw values sequentially from a file.
  *
  *  %{file:<index>} - where <index> (0, 1, ...) corresponds to xlat files added through ncc_xlat_file_add.
  */
@@ -478,6 +486,11 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 	}
 
 	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file.idx_file];
+
+	if (xlat_file->is_read && !xlat_file->value) {
+		fr_strerror_printf("Cannot read raw value (file #%u): inconsistent usage", xlat_file->idx_file);
+		XLAT_ERR_RETURN;
+	}
 
 	/* If we have a value stored already, use it. */
 	if (xlat_file->value) {
@@ -510,6 +523,7 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 
 	if (!xlat_file->value) {
 		/* Store value in case we need it later on. */
+		xlat_file->is_read = true;
 		xlat_file->value = talloc_strdup(xlat_ctx, buf);
 	}
 
