@@ -351,6 +351,7 @@ VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *x
 
 /*
  *	Parse csv file "<file index>.<value index>".
+ *	Default: <file index> = 0 (first file); <value index> is mandatory.
  */
 int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 {
@@ -364,19 +365,18 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 		return -1;
 	}
 
-	p = strchr(in, '.');
-	if (!p) {
-		fr_strerror_printf("No index delimiter found, in: [%s]", in);
-		return -1;
-	}
+	*idx_file = 0; /* Default. */
 
-	/* Convert the file index. */
-	len = p - in;
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
-		fr_strerror_printf("Invalid file index, in: [%s]", in);
-		return -1;
+	p = strchr(in, '.');
+	if (p) {
+		/* Convert the file index. */
+		len = p - in;
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+			fr_strerror_printf("Invalid file index, in: [%s]", in);
+			return -1;
+		}
+		*idx_file = vb.vb_uint32;
 	}
-	*idx_file = vb.vb_uint32;
 
 	if (*idx_file >= num_xlat_file) { /* Not a valid file. */
 		fr_strerror_printf("Not a valid file index: %u", *idx_file);
@@ -384,7 +384,8 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 	}
 
 	/* Convert the value index. */
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, p + 1, -1, '\0', false) < 0) {
+	p = (p ? p + 1 : in);
+	if (fr_value_box_from_str(NULL, &vb, &type, NULL, p, -1, '\0', false) < 0) {
 		fr_strerror_printf("Invalid value index, in: [%s]", in);
 		return -1;
 	}
@@ -436,7 +437,7 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 }
 
 /*
- *	Parse file "<index>".
+ *	Parse file "<index>". Default: <index> = 0 (first file).
  */
 int ncc_parse_file(uint32_t *idx_file, char const *in)
 {
