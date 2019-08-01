@@ -17,7 +17,7 @@
 /*
  *	Xlat names.
  */
-#define NCC_XLAT_FILE          "file"
+#define NCC_XLAT_FILE_RAW      "file.raw"
 #define NCC_XLAT_FILE_CSV      "file.csv"
 #define NCC_XLAT_NUM_RANGE     "num.range"
 #define NCC_XLAT_NUM_RAND      "num.rand"
@@ -439,7 +439,7 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 /*
  *	Parse file "<index>". Default: <index> = 0 (first file).
  */
-int ncc_parse_file(uint32_t *idx_file, char const *in)
+int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
 {
 	fr_type_t type = FR_TYPE_UINT32;
 	fr_value_box_t vb = { 0 };
@@ -466,7 +466,7 @@ int ncc_parse_file(uint32_t *idx_file, char const *in)
  *
  *  %{file:<index>} - where <index> (0, 1, ...) corresponds to xlat files added through ncc_xlat_file_add.
  */
-static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
+static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
 				UNUSED REQUEST *request, char const *fmt)
 {
@@ -478,8 +478,8 @@ static ssize_t _ncc_xlat_file(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 
 	if (!xlat_frame->type) {
 		/* Not yet parsed. */
-		if (ncc_parse_file(&xlat_frame->file.idx_file, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat file: %s", fr_strerror());
+		if (ncc_parse_file_raw(&xlat_frame->file.idx_file, fmt) < 0) {
+			fr_strerror_printf("Failed to parse xlat file raw: %s", fr_strerror());
 			XLAT_ERR_RETURN;
 		}
 
@@ -1226,7 +1226,7 @@ void ncc_xlat_register(void)
 {
 	ncc_xlat_init();
 
-	ncc_xlat_core_register(NULL, NCC_XLAT_FILE, _ncc_xlat_file, NULL, NULL, 0, 0, true);
+	ncc_xlat_core_register(NULL, NCC_XLAT_FILE_RAW, _ncc_xlat_file_raw, NULL, NULL, 0, 0, true);
 	ncc_xlat_core_register(NULL, NCC_XLAT_FILE_CSV, _ncc_xlat_file_csv, NULL, NULL, 0, 0, true);
 
 	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
