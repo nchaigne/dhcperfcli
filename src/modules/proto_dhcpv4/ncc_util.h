@@ -27,13 +27,21 @@
 /*
  *	Trace / logging.
  */
-extern fr_log_t default_log;
+typedef struct {
+	fr_log_timestamp_t timestamp;  //!< Prefix log messages with timestamps.
+
+	bool line_number;              //!< Log source file and line number.
+	bool basename;                 //<! Print only source file base name.
+
+} ncc_log_t;
+
+extern ncc_log_t ncc_default_log;
 extern FILE *ncc_log_fp;
 extern int ncc_debug_lvl;
 #define NCC_LOG_ENABLED          (ncc_log_fp)
 #define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
-#define NCC_DEBUG(_p, _f, ...)   do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_printf_log(&default_log, _f "\n", ## __VA_ARGS__); } while(0)
+#define NCC_DEBUG(_p, _f, ...)   do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
+#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_printf_log(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
 
 
 /*	After a call to snprintf and similar functions, check if we have enough remaining buffer space.
@@ -144,8 +152,8 @@ typedef struct ncc_fr_event_list {
 int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when);
 
 void ncc_log_init(FILE *log_fp, int debug_lvl);
-void ncc_printf_log(fr_log_t const *log, char const *fmt, ...);
-void ncc_log_dev_printf(fr_log_t const *log, char const *file, int line, char const *fmt, ...);
+void ncc_printf_log(ncc_log_t const *log, char const *fmt, ...);
+void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...);
 
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,

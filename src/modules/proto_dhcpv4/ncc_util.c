@@ -42,14 +42,8 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
 FILE *ncc_log_fp = NULL;
 fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
-int ncc_debug_basename = 1;
-// TODO: make this configurable.
 
-fr_log_t default_log = {
-	.colourise = false,
-	.fd = STDOUT_FILENO,
-	.dst = L_DST_STDOUT,
-	.file = NULL,
+ncc_log_t ncc_default_log = {
 	.timestamp = L_TIMESTAMP_AUTO
 };
 
@@ -68,7 +62,7 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 /*
  *	Print a log message.
  */
-void ncc_printf_log(fr_log_t const *log, char const *fmt, ...)
+void ncc_printf_log(ncc_log_t const *log, char const *fmt, ...)
 {
 	va_list ap;
 
@@ -98,7 +92,7 @@ void ncc_printf_log(fr_log_t const *log, char const *fmt, ...)
  */
 static unsigned int dev_log_indent = 30;
 static char spaces[] = "                                                 ";
-void ncc_log_dev_printf(fr_log_t const *log, char const *file, int line, char const *fmt, ...)
+void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...)
 {
 	va_list ap;
 	size_t len;
@@ -112,7 +106,7 @@ void ncc_log_dev_printf(fr_log_t const *log, char const *file, int line, char co
 	}
 
 	if (log->line_number) {
-		if (ncc_debug_basename) {
+		if (log->basename) {
 			/* file is __FILE__ which is set at build time by gcc.
 			 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
 			 * Extract the file base name to have leaner traces.

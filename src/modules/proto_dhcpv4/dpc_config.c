@@ -11,6 +11,7 @@ static const CONF_PARSER server_config[] = {
 
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level), .dflt = "0" },
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
+	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp) },
 
@@ -76,8 +77,9 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
 
 	ncc_log_init(stdout, dpc_debug_lvl); /* Update with file configuration. */
-	default_log.timestamp = config->log_timestamp ? L_TIMESTAMP_ON : L_TIMESTAMP_OFF;
-	default_log.line_number = config->debug_dev;
+	ncc_default_log.timestamp = config->log_timestamp ? L_TIMESTAMP_ON : L_TIMESTAMP_OFF;
+	ncc_default_log.line_number = config->debug_dev;
+	ncc_default_log.basename = config->debug_basename;
 
 	//TODO: have command line options take precedence over configuration from file?
 

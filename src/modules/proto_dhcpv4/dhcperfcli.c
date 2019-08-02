@@ -3068,7 +3068,7 @@ static void dpc_options_parse(int argc, char **argv)
 	dpc_config->debug_dev = (with_debug_dev == 1);
 
 	ncc_log_init(stdout, dpc_debug_lvl); /* Update with actual options. */
-	default_log.line_number = dpc_config->debug_dev;
+	ncc_default_log.line_number = dpc_config->debug_dev;
 
 	/*
 	 *	Resolve server host address and port.
