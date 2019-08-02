@@ -2898,7 +2898,7 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	ECTX.debug_lvl = dpc_debug_lvl;
-	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Initialize logging. */
+	ncc_log_init(stdout, dpc_debug_lvl); /* Initialize logging. */
 
 	/* Parse options: second pass.
 	 */
@@ -3061,7 +3061,14 @@ static void dpc_options_parse(int argc, char **argv)
 		talloc_disable_null_tracking();
 	}
 
-	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Update with actual options. */
+	/*
+	 *	Initialize configuration elements that can be set through command-line options.
+	 *	Note: Those may later be overriden with values read from configuration file.
+	 */
+	dpc_config->debug_dev = (with_debug_dev == 1);
+
+	ncc_log_init(stdout, dpc_debug_lvl); /* Update with actual options. */
+	default_log.line_number = dpc_config->debug_dev;
 
 	/*
 	 *	Resolve server host address and port.

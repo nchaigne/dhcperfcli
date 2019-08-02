@@ -42,7 +42,6 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
 FILE *ncc_log_fp = NULL;
 fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
-int ncc_debug_dev = 0; /* 0 = basic debug, 1 = developper. */
 int ncc_debug_basename = 1;
 // TODO: make this configurable.
 
@@ -57,14 +56,13 @@ fr_log_t default_log = {
 /*
  *	Initialize debug logging.
  */
-void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev)
+void ncc_log_init(FILE *log_fp, int debug_lvl)
 {
 	if (!fte_ncc_start) {
 		fte_ncc_start = fr_time();
 	}
 	ncc_log_fp = log_fp;
 	ncc_debug_lvl = debug_lvl;
-	ncc_debug_dev = debug_dev;
 }
 
 /*
@@ -113,7 +111,7 @@ void ncc_log_dev_printf(fr_log_t const *log, char const *file, int line, char co
 		return;
 	}
 
-	if (ncc_debug_dev) {
+	if (log->line_number) {
 		if (ncc_debug_basename) {
 			/* file is __FILE__ which is set at build time by gcc.
 			 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c

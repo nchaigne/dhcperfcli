@@ -75,9 +75,9 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
 
+	ncc_log_init(stdout, dpc_debug_lvl); /* Update with file configuration. */
 	default_log.timestamp = config->log_timestamp ? L_TIMESTAMP_ON : L_TIMESTAMP_OFF;
-
-	ncc_log_init(stdout, dpc_debug_lvl, config->debug_dev); /* Update with file configuration. */
+	default_log.line_number = config->debug_dev;
 
 	//TODO: have command line options take precedence over configuration from file?
 
