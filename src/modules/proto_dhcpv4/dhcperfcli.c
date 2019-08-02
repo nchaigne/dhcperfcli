@@ -8,6 +8,7 @@
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 #include "dpc_xlat.h"
+#include "dpc_config.h"
 
 #include <getopt.h>
 
@@ -18,6 +19,7 @@ static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
  *	Global variables.
  */
 TALLOC_CTX *global_ctx;
+dpc_config_t *dpc_config;
 
 /*
  *	Scheduling and time measurement are performed using FreeRADIUS time library, whichs is not susceptible
@@ -2886,6 +2888,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 		}
 	}
+// this doesn't work properly... TODO: FIX THIS.
 
 	ECTX.debug_lvl = dpc_debug_lvl;
 	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Initialize logging. */
@@ -3114,6 +3117,9 @@ static void dpc_end(void)
 	dpc_tr_stats_fprint(stdout);
 
 	/* Free memory. */
+	ncc_xlat_free();
+	ncc_xlat_core_free();
+
 	fr_dhcpv4_global_free();
 	// not working !? stuff allocated when calling fr_dhcpv4_global_init is not freed.
 	fr_dict_autofree(dpc_dict_autoload);
@@ -3122,8 +3128,6 @@ static void dpc_end(void)
 	// (maybe temporary - FreeRADIUS might fix this in the future)
 	//fr_dict_free(&dict_dhcpv4); // <- nope. :'(
 
-	ncc_xlat_free();
-	ncc_xlat_core_free();
 	fr_strerror_free();
 	TALLOC_FREE(pl);
 	TALLOC_FREE(event_list);
@@ -3161,7 +3165,15 @@ int main(int argc, char **argv)
 	fr_time_start();
 
 	fte_start = fr_time(); /* Program start timestamp. */
-// maybe we don't need this at all? TODO.
+
+	/*
+	 *	Allocate the main config structure.
+	 */
+	dpc_config = dpc_config_alloc(global_ctx);
+	if (!dpc_config) {
+		fprintf(stderr, "Failed allocating main config\n"); /* Logging is not initialized yet. */
+		exit(EXIT_FAILURE);
+	}
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -3170,7 +3182,9 @@ int main(int argc, char **argv)
 	} else {
 		progname = p + 1;
 	}
+	dpc_config_name_set_default(dpc_config, progname, false);
 
+	/* Parse the command line options. */
 	dpc_options_parse(argc, argv);
 
 	/*
@@ -3182,6 +3196,11 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	if (dpc_config_init(dpc_config, "./conf/dhcperfcli.conf") < 0) exit(EXIT_FAILURE);
+
+	/*
+	 *	Read the configuration files.
+	 */
 	dpc_dict_init(global_ctx);
 
 	dpc_event_list_init(global_ctx);

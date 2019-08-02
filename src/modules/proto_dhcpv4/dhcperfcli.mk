@@ -1,7 +1,7 @@
 TARGET		:= dhcperfcli
 SOURCES		:= dhcperfcli.c
 SOURCES		+= ncc_util.c ncc_xlat_core.c ncc_xlat_func.c
-SOURCES		+= dpc_packet_list.c dpc_util.c dpc_xlat.c
+SOURCES		+= dpc_config.c dpc_packet_list.c dpc_util.c dpc_xlat.c
 
 # Using FreeRADIUS libraries:
 # - libfreeradius-util
