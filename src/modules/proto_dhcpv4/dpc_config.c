@@ -12,6 +12,8 @@ static const CONF_PARSER server_config[] = {
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level), .dflt = "0" },
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
 
+	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp) },
+
 	CONF_PARSER_TERMINATOR
 };
 
@@ -70,16 +72,14 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
 
-	/*
-	 *	Starting WITHOUT "-x" on the command-line: use whatever is in the config file.
-	 */
+	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
+
+	default_log.timestamp = config->log_timestamp ? L_TIMESTAMP_ON : L_TIMESTAMP_OFF;
 
 	ncc_log_init(stdout, dpc_debug_lvl, config->debug_dev); /* Update with file configuration. */
 
 	//TODO: have command line options take precedence over configuration from file?
-
-printf("CONF dpc_debug_lvl = %u\n", dpc_debug_lvl);
 
 	return 0;
 

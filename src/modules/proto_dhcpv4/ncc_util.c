@@ -44,15 +44,24 @@ fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
 int ncc_debug_dev = 0; /* 0 = basic debug, 1 = developper. */
 int ncc_debug_basename = 1;
-int ncc_debug_datetime = 1; /* Absolute date/time. */
 // TODO: make this configurable.
+
+fr_log_t default_log = {
+	.colourise = false,
+	.fd = STDOUT_FILENO,
+	.dst = L_DST_STDOUT,
+	.file = NULL,
+	.timestamp = L_TIMESTAMP_AUTO
+};
 
 /*
  *	Initialize debug logging.
  */
 void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev)
 {
-	fte_ncc_start = fr_time();
+	if (!fte_ncc_start) {
+		fte_ncc_start = fr_time();
+	}
 	ncc_log_fp = log_fp;
 	ncc_debug_lvl = debug_lvl;
 	ncc_debug_dev = debug_dev;
@@ -61,7 +70,7 @@ void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev)
 /*
  *	Print a log message.
  */
-void ncc_printf_log(char const *fmt, ...)
+void ncc_printf_log(fr_log_t const *log, char const *fmt, ...)
 {
 	va_list ap;
 
@@ -72,7 +81,7 @@ void ncc_printf_log(char const *fmt, ...)
 	}
 
 	/* Print absolute date/time. */
-	if (ncc_debug_datetime) {
+	if (log->timestamp == L_TIMESTAMP_ON) {
 		char datetime_buf[NCC_DATETIME_STRLEN];
 		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, true));
 	}
@@ -91,7 +100,7 @@ void ncc_printf_log(char const *fmt, ...)
  */
 static unsigned int dev_log_indent = 30;
 static char spaces[] = "                                                 ";
-void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
+void ncc_log_dev_printf(fr_log_t const *log, char const *file, int line, char const *fmt, ...)
 {
 	va_list ap;
 	size_t len;
@@ -126,7 +135,7 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 
 	} else {
 		/* Print absolute date/time. */
-		if (ncc_debug_datetime) {
+		if (log->timestamp == L_TIMESTAMP_ON) {
 			char datetime_buf[NCC_DATETIME_STRLEN];
 			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, true));
 		}
@@ -521,6 +530,8 @@ int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_P
 	buf[0] = '\0';
 
 done:
+printf("line read by ncc_value_list_afrom_file (line: %u):\n", *line);
+ncc_pair_list_fprint(stdout, *out); // zzz temporary
 	return 0;
 
 error:

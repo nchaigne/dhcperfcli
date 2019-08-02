@@ -18,6 +18,7 @@ struct dpc_config_s {
 
 	int debug_level;             //!< The base debug level.
 	bool debug_dev;              //!< Enable extended debug information for developper.
+	bool log_timestamp;          //!< Add timestamp to log messages.
 };
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
