@@ -40,7 +40,7 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
  *	Trace / logging.
  */
 FILE *ncc_log_fp = NULL;
-struct timeval tve_ncc_start; /* Program execution start timestamp. */
+fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
 int ncc_debug_dev = 0; /* 0 = basic debug, 1 = developper. */
 int ncc_debug_basename = 1;
@@ -52,7 +52,7 @@ int ncc_debug_datetime = 1; /* Absolute date/time. */
  */
 void ncc_log_init(FILE *log_fp, int debug_lvl, int debug_dev)
 {
-	gettimeofday(&tve_ncc_start, NULL);
+	fte_ncc_start = fr_time();
 	ncc_log_fp = log_fp;
 	ncc_debug_lvl = debug_lvl;
 	ncc_debug_dev = debug_dev;
@@ -122,7 +122,7 @@ void ncc_log_dev_printf(char const *file, int line, char const *fmt, ...)
 		/* Print elapsed time. */
 		char time_buf[NCC_TIME_STRLEN];
 		fprintf(ncc_log_fp, "t(%s) ",
-		        ncc_delta_time_sprint(time_buf, &tve_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
+		        ncc_fr_delta_time_sprint(time_buf, &fte_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
 
 	} else {
 		/* Print absolute date/time. */
