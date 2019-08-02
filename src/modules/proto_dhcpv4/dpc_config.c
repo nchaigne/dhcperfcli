@@ -52,23 +52,25 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 /*
  *	Read configuration file.
  */
-int dpc_config_init(dpc_config_t *config, char *conf_file)
+int dpc_config_init(dpc_config_t *config, char const *conf_file)
 {
 	CONF_SECTION *cs = NULL;
 	char buffer[1024];
+
+	if (!conf_file) return 0;
 
 	cs = cf_section_alloc(NULL, NULL, "main", NULL);
 	if (!cs) return -1;
 
 	/* Read the configuration file */
 	if (cf_file_read(cs, conf_file) < 0) {
-		ERROR("Error reading or parsing %s", conf_file);
+		ERROR("Failed to read configuration file %s", conf_file);
 		goto failure;
 	}
 
 	if (cf_section_rules_push(cs, server_config) < 0) goto failure;
 
-	DEBUG("Parsing main configuration");
+	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
 
 	/*

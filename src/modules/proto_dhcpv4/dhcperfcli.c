@@ -125,6 +125,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ NULL }
 };
 
+static char const *file_config; /* Optional configuration file. */
 static int with_debug_dev = 0;
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
@@ -810,7 +811,7 @@ static void dpc_event_add_progress_stats(void)
 	if (fr_event_timer_at(global_ctx, event_list, &ev_progress_stats,
 	                      fte_progress_stat, dpc_progress_stats, NULL) < 0) {
 		/* Should never happen. */
-		PERROR("Failed inserting progress statistics event");
+		PERROR("Failed to insert progress statistics event");
 	}
 }
 
@@ -891,7 +892,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_de
 	if (fr_event_timer_at(session, event_list, &session->event,
 	                      fte_event, dpc_request_timeout, session) < 0) {
 		/* Should never happen. */
-		PERROR("Failed inserting request timeout event");
+		PERROR("Failed to insert request timeout event");
 	}
 }
 
@@ -958,7 +959,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	 */
 	DEBUG_TRACE("Encoding and sending packet");
 	if (dpc_dhcp_encode(packet) < 0) { /* Should never happen. */
-		SERROR("Failed encoding request packet");
+		SERROR("Failed to encode request packet");
 		exit(EXIT_FAILURE);
 	}
 
@@ -2273,7 +2274,7 @@ static bool dpc_parse_input(dpc_input_t *input)
 					char *spaces, *text;
 					fr_canonicalize_error(input, &spaces, &text, slen, vp->xlat);
 
-					WARN("Failed parsing '%s' expansion string. Discarding input (id: %u)", vp->da->name, input->id);
+					WARN("Failed to parse '%s' expansion string. Discarding input (id: %u)", vp->da->name, input->id);
 					INFO("%s", text);
 					INFO("%s^ %s", spaces, fr_strerror());
 
@@ -2544,7 +2545,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 
 		file_in = fopen(file_vps_in, "r");
 		if (!file_in) {
-			ERROR("Error opening %s: %s", file_vps_in, strerror(errno));
+			ERROR("Failed to open file %s: %s", file_vps_in, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 
@@ -2815,7 +2816,7 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 
 
 /* Short options. */
-#define OPTSTR_BASE "a:D:c:f:g:hI:L:MN:p:P:r:s:t:TvxX"
+#define OPTSTR_BASE "a:c:C:D:f:g:hI:L:MN:p:P:r:s:t:TvxX"
 #ifdef HAVE_LIBPCAP
   #define OPTSTR_LIBPCAP "Ai:"
 #else
@@ -2829,6 +2830,7 @@ static struct option long_options[] = {
 	{ "xlat-file",              required_argument, NULL, 1 },
 
 	/* Long options with short option equivalent. */
+	{ "conf-file",              required_argument, NULL, 'C' },
 	{ "dict-dir",               required_argument, NULL, 'D' },
 	{ "input-file",             required_argument, NULL, 'f' },
 	{ "duration-start-max",     required_argument, NULL, 'L' },
@@ -2916,6 +2918,10 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'c':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
 			ECTX.input_num_use = atoi(optarg);
+			break;
+
+		case 'C':
+			file_config = optarg;
 			break;
 
 		case 'D':
@@ -3171,7 +3177,7 @@ int main(int argc, char **argv)
 	 */
 	dpc_config = dpc_config_alloc(global_ctx);
 	if (!dpc_config) {
-		fprintf(stderr, "Failed allocating main config\n"); /* Logging is not initialized yet. */
+		fprintf(stderr, "Failed to allocate main configuration\n"); /* Logging is not initialized yet. */
 		exit(EXIT_FAILURE);
 	}
 
@@ -3196,7 +3202,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (dpc_config_init(dpc_config, "./conf/dhcperfcli.conf") < 0) exit(EXIT_FAILURE);
+	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
 	/*
 	 *	Read the configuration files.
@@ -3241,7 +3247,7 @@ int main(int argc, char **argv)
 	     (fr_set_signal(SIGINT, dpc_signal) < 0) ||
 	     (fr_set_signal(SIGTERM, dpc_signal) < 0))
 	{
-		PERROR("Failed installing signal handler");
+		PERROR("Failed to install signal handler");
 		exit(EXIT_FAILURE);
 	}
 
@@ -3344,6 +3350,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fd, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
 	fprintf(fd, "  -c <num>         Use each input item up to <num> times.\n");
+	fprintf(fd, "  -C <file>        Read configuration from <file>.\n");
 	fprintf(fd, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
 	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");

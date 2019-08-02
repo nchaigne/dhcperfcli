@@ -21,4 +21,4 @@ struct dpc_config_s {
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
 dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx);
-int dpc_config_init(dpc_config_t *config, char *conf_file);
+int dpc_config_init(dpc_config_t *config, char const *conf_file);
