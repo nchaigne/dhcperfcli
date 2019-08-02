@@ -2881,7 +2881,13 @@ static void dpc_options_parse(int argc, char **argv)
 	opterr = 0; /* No error messages. */
 	while (1)
 	{
-		argval = getopt_long(argc, argv, "-x", NULL, NULL);
+		argval = getopt_long(argc, argv, "-x", long_options, &opt_index);
+		/*
+		 * "If the first character of optstring is '-', then each nonoption argv-element is handled
+		 *  as if it were the argument of an option with character code 1."
+		 * This prevents getopt_long from modifying argv, as it would normally do.
+		 * Also, argument "long_options" must be provided so that options starting with "--x" are not parsed as "-x".
+		 */
 		if (argval == -1) break;
 
 		switch (argval) {
@@ -2890,7 +2896,6 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 		}
 	}
-// this doesn't work properly... TODO: FIX THIS.
 
 	ECTX.debug_lvl = dpc_debug_lvl;
 	ncc_log_init(stdout, dpc_debug_lvl, with_debug_dev); /* Initialize logging. */
@@ -3202,11 +3207,11 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
-
 	/*
 	 *	Read the configuration files.
 	 */
+	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
+
 	dpc_dict_init(global_ctx);
 
 	dpc_event_list_init(global_ctx);
