@@ -10,6 +10,7 @@
 static const CONF_PARSER server_config[] = {
 
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level), .dflt = "0" },
+	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -41,10 +42,7 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 	dpc_config_t *config;
 
 	config = talloc_zero(ctx, dpc_config_t);
-	if (!config) {
-		fr_strerror_printf("Failed allocating main config");
-		return NULL;
-	}
+	if (!config) return NULL;
 
 	return config;
 }
@@ -55,7 +53,6 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 int dpc_config_init(dpc_config_t *config, char const *conf_file)
 {
 	CONF_SECTION *cs = NULL;
-	char buffer[1024];
 
 	if (!conf_file) return 0;
 
@@ -77,6 +74,10 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 	 *	Starting WITHOUT "-x" on the command-line: use whatever is in the config file.
 	 */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
+
+	ncc_log_init(stdout, dpc_debug_lvl, config->debug_dev); /* Update with file configuration. */
+
+	//TODO: have command line options take precedence over configuration from file?
 
 printf("CONF dpc_debug_lvl = %u\n", dpc_debug_lvl);
 

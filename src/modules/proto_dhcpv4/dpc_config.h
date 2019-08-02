@@ -16,7 +16,8 @@ struct dpc_config_s {
 	                             ///< was specified by the user on the command line.
 	CONF_SECTION *root_cs;       //!< Root of the main config.
 
-	uint32_t debug_level;        //!< The base log level for the server.
+	int debug_level;             //!< The base debug level.
+	bool debug_dev;              //!< Enable extended debug information for developper.
 };
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
