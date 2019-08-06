@@ -466,7 +466,6 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
 			goto invalid;
 		}
 
-	next:
 		*tail = vp;
 		tail = &((*tail)->next);
 	} while (*p && (last_token == T_COMMA));
@@ -522,8 +521,6 @@ int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_P
 	buf[0] = '\0';
 
 done:
-printf("line read by ncc_value_list_afrom_file (line: %u):\n", *line);
-ncc_pair_list_fprint(stdout, *out); // zzz temporary
 	return 0;
 
 error:
@@ -539,8 +536,8 @@ error:
  */
 VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp)
 {
-	char *attr, *value;
-	fr_dict_attr_t *da;
+	char const *attr, *value;
+	fr_dict_attr_t const *da;
 	VALUE_PAIR *vp;
 
 	attr = cf_pair_attr(cp); /* Note: attr cannot be NULL. */
