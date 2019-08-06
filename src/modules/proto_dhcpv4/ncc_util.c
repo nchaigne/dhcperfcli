@@ -533,6 +533,7 @@ error:
 	return -1;
 }
 
+
 /*
  *	Convert a CONF_PAIR to a VALUE_PAIR.
  */
@@ -584,6 +585,46 @@ VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR 
 		return NULL;
 	}
 	return vp;
+}
+
+/*
+ *	Convert a config section into an attribute list.
+ *	Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
+ */
+int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, CONF_SECTION *cs, unsigned int max)
+{
+	CONF_PAIR *cp;
+	CONF_ITEM *ci;
+
+	unsigned int total = 0;
+
+	ci = cf_section_to_item(cs);
+
+	for (ci = cf_item_next(cs, NULL);
+	     ci != NULL;
+	     ci = cf_item_next(cs, ci)) {
+		if (total++ == max) {
+			cf_log_err(ci, "Too many attributes");
+		error:
+			TALLOC_FREE(*out);
+			return -1;
+		}
+
+		if (!cf_item_is_pair(ci)) {
+			cf_log_err(ci, "Entry is not in \"attribute = value\" format");
+			goto error;
+		}
+
+		cp = cf_item_to_pair(ci);
+		rad_assert(cp != NULL);
+
+		VALUE_PAIR *vp = ncc_pair_afrom_cp(ctx, dict, cp);
+		if (!vp) goto error;
+
+		fr_pair_add(out, vp);
+	}
+
+	return 0;
 }
 
 
