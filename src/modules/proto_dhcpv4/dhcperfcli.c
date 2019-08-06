@@ -134,7 +134,7 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 static char const *file_vps_in;
-static ncc_list_t vps_list_in;
+ncc_list_t vps_list_in;
 static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev; /* In template mode, previous used input item. */
@@ -304,7 +304,7 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_parse_input(dpc_input_t *input);
-static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list);
+void dpc_handle_input(dpc_input_t *input, ncc_list_t *list);
 static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
@@ -2455,7 +2455,7 @@ static void dpc_input_debug(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-static void dpc_handle_input(dpc_input_t *input, ncc_list_t *list)
+void dpc_handle_input(dpc_input_t *input, ncc_list_t *list)
 {
 	input->id = input_num ++;
 
@@ -3215,11 +3215,15 @@ int main(int argc, char **argv)
 	}
 
 	/*
+	 *	Initialize the xlat framework, and register xlat expansion functions.
+	 */
+	ncc_xlat_register();
+
+	/*
 	 *	Read the configuration files.
 	 */
-	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
-
 	dpc_dict_init(global_ctx);
+	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
 	dpc_event_list_init(global_ctx);
 	dpc_packet_list_init(global_ctx);
@@ -3249,8 +3253,6 @@ int main(int argc, char **argv)
 		dpc_pcap_init(global_ctx);
 	}
 #endif
-
-	ncc_xlat_register();
 
 	/*
 	 *	Set signal handler.

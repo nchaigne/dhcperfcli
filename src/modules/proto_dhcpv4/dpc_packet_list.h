@@ -3,9 +3,6 @@
  * dpc_packet_list.h
  */
 
-#define DPC_PACKET_ID_UNASSIGNED (-1)
-
-
 typedef struct dpc_packet_list dpc_packet_list_t;
 
 

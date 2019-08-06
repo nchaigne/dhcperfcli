@@ -183,6 +183,7 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define vp_is_dhcp_sub_option(_vp) vp_is_dhcp_attr(_vp) && (_vp->da->parent && _vp->da->parent->type == FR_TYPE_TLV && _vp->da->parent->parent)
 // attribute is a DHCP sub-option if it has a parent of type "tlv", which has also a parent (the protocol itself).
 
+#define DPC_PACKET_ID_UNASSIGNED (-1)
 
 
 /*
