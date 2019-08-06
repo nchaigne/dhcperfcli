@@ -303,7 +303,7 @@ static uint32_t dpc_loop_start_sessions(void);
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
-static bool dpc_parse_input(dpc_input_t *input);
+static bool dpc_input_parse(dpc_input_t *input);
 void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
 static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
@@ -2206,7 +2206,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 /*
  *	Parse an input item and prepare information necessary to build a packet.
  */
-static bool dpc_parse_input(dpc_input_t *input)
+static bool dpc_input_parse(dpc_input_t *input)
 {
 	fr_cursor_t cursor;
 	VALUE_PAIR *vp;
@@ -2460,7 +2460,7 @@ void dpc_input_handle(dpc_input_t *input, ncc_list_t *list)
 	input->id = input_num ++;
 	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
-	if (!dpc_parse_input(input)) {
+	if (!dpc_input_parse(input)) {
 		/*
 		 *	Invalid item. Discard.
 		 */
