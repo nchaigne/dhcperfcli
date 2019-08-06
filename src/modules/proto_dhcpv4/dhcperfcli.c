@@ -134,7 +134,7 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 static char const *file_vps_in;
-ncc_list_t vps_list_in;
+ncc_list_t input_list;
 static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev; /* In template mode, previous used input item. */
@@ -304,7 +304,7 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_parse_input(dpc_input_t *input);
-void dpc_handle_input(dpc_input_t *input, ncc_list_t *list);
+void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
 static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
@@ -363,13 +363,13 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
-	if (!ECTX.pr_stat_per_input || !with_template || vps_list_in.size < 2) return;
+	if (!ECTX.pr_stat_per_input || !with_template || input_list.size < 2) return;
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
 	fprintf(fp, " └─ per-input rate (/s): ");
 
-	ncc_list_item_t *list_item = vps_list_in.head;
+	ncc_list_item_t *list_item = input_list.head;
 	int i = 0;
 	while (list_item) {
 		dpc_input_t *input = (dpc_input_t *)list_item;
@@ -551,7 +551,7 @@ static double dpc_get_session_in_rate(bool per_input)
 
 	} else {
 		/* Compute the rate per input, and sum them. */
-		ncc_list_item_t *list_item = vps_list_in.head;
+		ncc_list_item_t *list_item = input_list.head;
 		while (list_item) {
 			dpc_input_t *input = (dpc_input_t *)list_item;
 
@@ -1721,8 +1721,8 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 	uint32_t checked = 0, not_done = 0;
 	fr_time_t now = fr_time();
 
-	while (checked < vps_list_in.size) {
-		if (!template_input_prev) template_input_prev = vps_list_in.head;
+	while (checked < input_list.size) {
+		if (!template_input_prev) template_input_prev = input_list.head;
 
 		dpc_input_t *input = (dpc_input_t *)template_input_prev; /* No need for a copy (read-only). This is faster. */
 		template_input_prev = template_input_prev->next;
@@ -1767,7 +1767,7 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 static dpc_input_t *dpc_get_input()
 {
 	if (!with_template) {
-		return NCC_LIST_DEQUEUE(&vps_list_in);
+		return NCC_LIST_DEQUEUE(&input_list);
 	} else {
 		return dpc_get_input_from_template(global_ctx);
 	}
@@ -1826,7 +1826,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 			/*
 			 *	Add it to the list of input items.
 			 */
-			NCC_LIST_ENQUEUE(&vps_list_in, input_dup);
+			NCC_LIST_ENQUEUE(&input_list, input_dup);
 		}
 	}
 
@@ -1999,7 +1999,7 @@ static void dpc_end_start_sessions(void)
 		fte_sessions_ini_end = fr_time();
 
 		/* Also mark all input as done. */
-		ncc_list_item_t *list_item = vps_list_in.head;
+		ncc_list_item_t *list_item = input_list.head;
 		while (list_item) {
 			dpc_input_t *input = (dpc_input_t *)list_item;
 			input->done = true;
@@ -2056,7 +2056,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* No more input. */
-		if (!with_template && vps_list_in.size == 0) {
+		if (!with_template && input_list.size == 0) {
 			start_sessions_flag = false;
 			break;
 		}
@@ -2455,9 +2455,10 @@ static void dpc_input_debug(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-void dpc_handle_input(dpc_input_t *input, ncc_list_t *list)
+void dpc_input_handle(dpc_input_t *input, ncc_list_t *list)
 {
 	input->id = input_num ++;
+	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 	if (!dpc_parse_input(input)) {
 		/*
@@ -2489,7 +2490,6 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 	 */
 	do {
 		MEM(input = talloc_zero(ctx, dpc_input_t));
-		input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, file_in, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
@@ -2509,7 +2509,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 		 *	Just ignore this.
 		*/
 
-		dpc_handle_input(input, list);
+		dpc_input_handle(input, list);
 
 		/* Stop reading if we know we won't need it. */
 		if (!with_template && ECTX.session_max_num && list->size >= ECTX.session_max_num) break;
@@ -2532,7 +2532,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		with_stdin_input = true;
 
 		DEBUG("Reading input from stdin");
-		dpc_input_load_from_fd(ctx, stdin, &vps_list_in, "stdin");
+		dpc_input_load_from_fd(ctx, stdin, &input_list, "stdin");
 	} else {
 		DEBUG_TRACE("Nothing to read on stdin");
 	}
@@ -2549,12 +2549,12 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 			exit(EXIT_FAILURE);
 		}
 
-		dpc_input_load_from_fd(ctx, file_in, &vps_list_in, file_vps_in);
+		dpc_input_load_from_fd(ctx, file_in, &input_list, file_vps_in);
 
 		fclose(file_in);
 	}
 
-	DEBUG("Done reading input, list size: %d", vps_list_in.size);
+	DEBUG("Done reading input, list size: %d", input_list.size);
 
 	return 0;
 }
@@ -3273,7 +3273,7 @@ int main(int argc, char **argv)
 	/*
 	 *	Ensure we have something to work with.
 	 */
-	if (vps_list_in.size == 0) {
+	if (input_list.size == 0) {
 		if (!with_stdin_input && argc < 2) usage(0); /* If no input nor arguments, show usage. */
 
 		WARN("No valid input loaded, nothing to do");
@@ -3284,7 +3284,7 @@ int main(int argc, char **argv)
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (packet_trace_lvl == -1) {
-		if (ECTX.session_max_num == 1 || (!with_template && vps_list_in.size == 1 && ECTX.input_num_use == 1)) {
+		if (ECTX.session_max_num == 1 || (!with_template && input_list.size == 1 && ECTX.input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			packet_trace_lvl = 2;
 		} else if (ECTX.session_max_active == 1) {
