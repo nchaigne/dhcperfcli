@@ -3215,6 +3215,11 @@ int main(int argc, char **argv)
 	}
 
 	/*
+	 *	Initialize dictionaries and preload attributes.
+	 */
+	dpc_dict_init(global_ctx);
+
+	/*
 	 *	Initialize the xlat framework, and register xlat expansion functions.
 	 */
 	ncc_xlat_register();
@@ -3222,7 +3227,6 @@ int main(int argc, char **argv)
 	/*
 	 *	Read the configuration files.
 	 */
-	dpc_dict_init(global_ctx);
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
 	dpc_event_list_init(global_ctx);
