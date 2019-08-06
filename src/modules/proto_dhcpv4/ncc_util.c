@@ -533,6 +533,59 @@ error:
 	return -1;
 }
 
+/*
+ *	Convert a CONF_PAIR to a VALUE_PAIR.
+ */
+VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp)
+{
+	char *attr, *value;
+	fr_dict_attr_t *da;
+	VALUE_PAIR *vp;
+
+	attr = cf_pair_attr(cp); /* Note: attr cannot be NULL. */
+
+	da = fr_dict_attr_by_name(dict, attr);
+	if (!da) {
+		cf_log_err(cp, "Not a valid attribute: \"%s\"", attr);
+		return NULL;
+	}
+
+	value = cf_pair_value(cp);
+	if (!value) {
+		cf_log_err(cp, "No value for attribute: \"%s\"", attr);
+		return NULL;
+	}
+
+	vp = fr_pair_afrom_da(ctx, da);
+	if (!vp) return NULL;
+
+	/* If value is a double-quoted string, it might be an xlat expansion.
+	 * If it is, set the vp as xlat.
+	 */
+	if (cf_pair_value_quote(cp) == T_DOUBLE_QUOTED_STRING) {
+
+		/* Check if it is an xlat expansion (cf. fr_pair_raw_from_str) */
+		char const *p = strchr(value, '%');
+		if (p && (p[1] == '{')) {
+			/* Mark it as xlat. */
+			if (fr_pair_mark_xlat(vp, value) < 0) {
+				PERROR("Error marking pair for xlat");
+				talloc_free(vp);
+				return NULL;
+			}
+			return vp;
+		}
+	}
+
+	/* Parse the value (and mark it as 'tainted'). */
+	if (fr_pair_value_from_str(vp, value, -1, '\0', true) < 0) {
+		cf_log_err(cp, "%s", fr_strerror());
+		talloc_free(vp);
+		return NULL;
+	}
+	return vp;
+}
+
 
 /*
  *	Print endpoint: <IP>:<port>.
