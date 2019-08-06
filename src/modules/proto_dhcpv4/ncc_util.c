@@ -601,9 +601,9 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 	     ci != NULL;
 	     ci = cf_item_next(cs, ci)) {
 		if (total++ == max) {
-			cf_log_err(ci, "Too many attributes");
+			cf_log_err(ci, "Too many attributes (max: %u)", max);
 		error:
-			TALLOC_FREE(*out);
+			fr_pair_list_free(out);
 			return -1;
 		}
 
