@@ -415,7 +415,7 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		if (ncc_parse_file_csv(&xlat_frame->file_csv.idx_file, &xlat_frame->file_csv.idx_value, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat file csv: %s", fr_strerror());
+			fr_strerror_printf("Failed to parse xlat file.csv: %s", fr_strerror());
 			XLAT_ERR_RETURN;
 		}
 
@@ -479,7 +479,7 @@ static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		if (ncc_parse_file_raw(&xlat_frame->file.idx_file, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat file raw: %s", fr_strerror());
+			fr_strerror_printf("Failed to parse xlat file.raw: %s", fr_strerror());
 			XLAT_ERR_RETURN;
 		}
 

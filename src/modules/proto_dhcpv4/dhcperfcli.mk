@@ -6,7 +6,7 @@ SOURCES		+= dpc_config.c dpc_packet_list.c dpc_util.c dpc_xlat.c
 # Using FreeRADIUS libraries:
 # - libfreeradius-util
 # - libfreeradius-dhcpv4 (fr_dhcpv4_*)
-# - libfreeradius-server, libfreeradius-unlang (for xlat engine)
+# - libfreeradius-server, libfreeradius-unlang (for xlat engine, and config parser)
 
 TGT_PREREQS	:= libfreeradius-util.a libfreeradius-dhcpv4.a
 TGT_PREREQS	+= libfreeradius-unlang.a libfreeradius-server.a
