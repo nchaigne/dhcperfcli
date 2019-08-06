@@ -3222,7 +3222,7 @@ int main(int argc, char **argv)
 	/*
 	 *	Initialize the xlat framework, and register xlat expansion functions.
 	 */
-	ncc_xlat_register();
+	if (ncc_xlat_register() < 0) exit(EXIT_FAILURE);
 
 	/*
 	 *	Read the configuration files.

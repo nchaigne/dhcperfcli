@@ -35,7 +35,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section)
 
 		MEM(input = talloc_zero(section, dpc_input_t));
 
-		int ret = ncc_pair_list_afrom_cs(section, dict_dhcpv4, &input->vps, cs, MAX_ATTR_INPUT);
+		int ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, cs, MAX_ATTR_INPUT);
 		if (ret != 0) {
 			return -1;
 		}
@@ -108,7 +108,10 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 	ncc_default_log.basename = config->debug_basename;
 
 	DEBUG2("%s: #### Loading 'input' entries ####", config->name);
-	if (dpc_input_list_parse_section(cs) != 0) goto failure;
+	if (dpc_input_list_parse_section(cs) != 0) {
+		ERROR("Failed to load 'input' entries from configuration file");
+		goto failure;
+	}
 
 	return 0;
 

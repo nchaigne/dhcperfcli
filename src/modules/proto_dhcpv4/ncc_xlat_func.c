@@ -1222,21 +1222,28 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 /*
  *	Register our own xlat functions (and implicitly initialize the xlat framework).
  */
-void ncc_xlat_register(void)
+int ncc_xlat_register(void)
 {
-	ncc_xlat_init();
+	if (ncc_xlat_init() < 0) return -1;
 
-	ncc_xlat_core_register(NULL, NCC_XLAT_FILE_RAW, _ncc_xlat_file_raw, NULL, NULL, 0, 0, true);
-	ncc_xlat_core_register(NULL, NCC_XLAT_FILE_CSV, _ncc_xlat_file_csv, NULL, NULL, 0, 0, true);
+	if (
+		ncc_xlat_core_register(NULL, NCC_XLAT_FILE_RAW, _ncc_xlat_file_raw, NULL, NULL, 0, 0, true) < 0 ||
+		ncc_xlat_core_register(NULL, NCC_XLAT_FILE_CSV, _ncc_xlat_file_csv, NULL, NULL, 0, 0, true) < 0 ||
 
-	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true);
-	ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RAND, _ncc_xlat_num_rand, NULL, NULL, 0, 0, true);
+		ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RANGE, _ncc_xlat_num_range, NULL, NULL, 0, 0, true) < 0 ||
+		ncc_xlat_core_register(NULL, NCC_XLAT_NUM_RAND, _ncc_xlat_num_rand, NULL, NULL, 0, 0, true) < 0 ||
 
-	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RANGE, _ncc_xlat_ipaddr_range, NULL, NULL, 0, 0, true);
-	ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RAND, _ncc_xlat_ipaddr_rand, NULL, NULL, 0, 0, true);
+		ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RANGE, _ncc_xlat_ipaddr_range, NULL, NULL, 0, 0, true) < 0 ||
+		ncc_xlat_core_register(NULL, NCC_XLAT_IPADDR_RAND, _ncc_xlat_ipaddr_rand, NULL, NULL, 0, 0, true) < 0 ||
 
-	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RANGE, _ncc_xlat_ethaddr_range, NULL, NULL, 0, 0, true);
-	ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RAND, _ncc_xlat_ethaddr_rand, NULL, NULL, 0, 0, true);
+		ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RANGE, _ncc_xlat_ethaddr_range, NULL, NULL, 0, 0, true) < 0 ||
+		ncc_xlat_core_register(NULL, NCC_XLAT_ETHADDR_RAND, _ncc_xlat_ethaddr_rand, NULL, NULL, 0, 0, true) < 0 ||
 
-	ncc_xlat_core_register(NULL, NCC_XLAT_RANDSTR, _ncc_xlat_randstr, NULL, NULL, 0, 0, true);
+		ncc_xlat_core_register(NULL, NCC_XLAT_RANDSTR, _ncc_xlat_randstr, NULL, NULL, 0, 0, true) < 0
+		)
+	{
+		return -1;
+	}
+
+	return 0;
 }
