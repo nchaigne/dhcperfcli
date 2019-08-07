@@ -304,7 +304,7 @@ static void dpc_main_loop(void);
 
 static bool dpc_input_parse(dpc_input_t *input);
 void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
-static int dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
+static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
@@ -2477,9 +2477,9 @@ void dpc_input_handle(dpc_input_t *input, ncc_list_t *list)
 }
 
 /*
- *	Load input vps.
+ *	Load input vps from the provided file pointer.
  */
-static int dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename)
+static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, char const *filename)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -2490,7 +2490,7 @@ static int dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *li
 	do {
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
-		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, file_in, &file_done) < 0) {
+		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
 			return -1;
 		}
@@ -2532,7 +2532,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		with_stdin_input = true;
 
 		DEBUG("Reading input from stdin");
-		if (dpc_input_load_from_fd(ctx, stdin, &input_list, "stdin") < 0) return -1;
+		if (dpc_input_load_from_fp(ctx, stdin, &input_list, "stdin") < 0) return -1;
 	} else {
 		DEBUG_TRACE("Nothing to read on stdin");
 	}
@@ -2549,7 +2549,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 			return -1;
 		}
 
-		ret = dpc_input_load_from_fd(ctx, file_in, &input_list, file_input);
+		ret = dpc_input_load_from_fp(ctx, file_in, &input_list, file_input);
 		fclose(file_in);
 		if (ret < 0) return -1;
 	}
