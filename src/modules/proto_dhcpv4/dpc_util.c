@@ -236,7 +236,7 @@ int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
  * Print a DHCP packet.
  */
 void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet,
-                      dpc_packet_event_t pevent, int trace_lvl)
+                       dpc_packet_event_t pevent, int trace_lvl)
 {
 	VALUE_PAIR *vp_encoded_data = NULL;
 

@@ -2522,7 +2522,7 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, c
  */
 static int dpc_input_load(TALLOC_CTX *ctx)
 {
-	FILE *file_in = NULL;
+	FILE *fp = NULL;
 	int ret;
 
 	/*
@@ -2543,14 +2543,14 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	if (file_input && strcmp(file_input, "-") != 0) {
 		DEBUG("Reading input from file: %s", file_input);
 
-		file_in = fopen(file_input, "r");
-		if (!file_in) {
+		fp = fopen(file_input, "r");
+		if (!fp) {
 			ERROR("Failed to open file \"%s\": %s", file_input, strerror(errno));
 			return -1;
 		}
 
-		ret = dpc_input_load_from_fp(ctx, file_in, &input_list, file_input);
-		fclose(file_in);
+		ret = dpc_input_load_from_fp(ctx, fp, &input_list, file_input);
+		fclose(fp);
 		if (ret < 0) return -1;
 	}
 
@@ -3354,45 +3354,45 @@ static void version_print(void)
  */
 static void NEVER_RETURNS usage(int status)
 {
-	FILE *fd = status ? stderr : stdout;
+	FILE *fp = status ? stderr : stdout;
 
-	fprintf(fd, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
-	fprintf(fd, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
-	fprintf(fd, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
-	fprintf(fd, "                   (or the message type numeric value: 1 = Discover, 2 = Request, ...).\n");
-	fprintf(fd, "                   Or (workflow): dora, doradec (DORA / Decline), dorarel (DORA / Release).\n");
-	fprintf(fd, "                   If omitted, message type must be specified in input items.\n");
-	fprintf(fd, " Options:\n");
-	fprintf(fd, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
+	fprintf(fp, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
+	fprintf(fp, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
+	fprintf(fp, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
+	fprintf(fp, "                   (or the message type numeric value: 1 = Discover, 2 = Request, ...).\n");
+	fprintf(fp, "                   Or (workflow): dora, doradec (DORA / Decline), dorarel (DORA / Release).\n");
+	fprintf(fp, "                   If omitted, message type must be specified in input items.\n");
+	fprintf(fp, " Options:\n");
+	fprintf(fp, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
 #ifdef HAVE_LIBPCAP
-	fprintf(fd, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
+	fprintf(fp, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
-	fprintf(fd, "  -c <num>         Use each input item up to <num> times.\n");
-	fprintf(fd, "  -C <file>        Read configuration from <file>.\n");
-	fprintf(fd, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
-	fprintf(fd, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
-	fprintf(fd, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
-	fprintf(fd, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
-	fprintf(fd, "                   of those gateways in a round-robin fashion.\n");
-	fprintf(fd, "  -h               Print this help message.\n");
+	fprintf(fp, "  -c <num>         Use each input item up to <num> times.\n");
+	fprintf(fp, "  -C <file>        Read configuration from <file>.\n");
+	fprintf(fp, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
+	fprintf(fp, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
+	fprintf(fp, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
+	fprintf(fp, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
+	fprintf(fp, "                   of those gateways in a round-robin fashion.\n");
+	fprintf(fp, "  -h               Print this help message.\n");
 #ifdef HAVE_LIBPCAP
-	fprintf(fd, "  -i <interface>   Use this interface for unconfigured clients to broadcast through a raw socket.\n");
+	fprintf(fp, "  -i <interface>   Use this interface for unconfigured clients to broadcast through a raw socket.\n");
 #endif
-	fprintf(fd, "  -I <num>         Start generating xid values with <num>.\n");
-	fprintf(fd, "  -L <seconds>     Limit duration for starting new input sessions.\n");
-	fprintf(fd, "  -N <num>         Start at most <num> sessions from input items.\n");
-	fprintf(fd, "  -p <num>         Send up to <num> session initial requests in parallel.\n");
-	fprintf(fd, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
-	fprintf(fd, "  -r <num>         Rate limit. Maximum new input sessions initialized per second.\n");
-	fprintf(fd, "  -s <seconds>     Display ongoing statistics information at periodic time intervals.\n");
-	fprintf(fd, "  -t <seconds>     Maximum time spent waiting for a reply to a request previously sent.\n");
-	fprintf(fd, "  -T               Template mode.\n");
-	fprintf(fd, "  -v               Print version information.\n");
-	fprintf(fd, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
-	fprintf(fd, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
-	fprintf(fd, "\n");
-	fprintf(fd, "Refer to manual for the full usage (with long options).\n");
-	fprintf(fd, "\n");
+	fprintf(fp, "  -I <num>         Start generating xid values with <num>.\n");
+	fprintf(fp, "  -L <seconds>     Limit duration for starting new input sessions.\n");
+	fprintf(fp, "  -N <num>         Start at most <num> sessions from input items.\n");
+	fprintf(fp, "  -p <num>         Send up to <num> session initial requests in parallel.\n");
+	fprintf(fp, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
+	fprintf(fp, "  -r <num>         Rate limit. Maximum new input sessions initialized per second.\n");
+	fprintf(fp, "  -s <seconds>     Display ongoing statistics information at periodic time intervals.\n");
+	fprintf(fp, "  -t <seconds>     Maximum time spent waiting for a reply to a request previously sent.\n");
+	fprintf(fp, "  -T               Template mode.\n");
+	fprintf(fp, "  -v               Print version information.\n");
+	fprintf(fp, "  -x               Turn on additional debugging. (-xx gives more debugging).\n");
+	fprintf(fp, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
+	fprintf(fp, "\n");
+	fprintf(fp, "Refer to manual for the full usage (with long options).\n");
+	fprintf(fp, "\n");
 
 	exit(status);
 }
