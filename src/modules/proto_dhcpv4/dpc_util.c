@@ -247,7 +247,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 	}
 
 	if (trace_lvl >= 2) {
-		if (attr_encoded_data && (vp_encoded_data = fr_pair_find_by_da(packet->vps, attr_encoded_data, TAG_ANY))) {
+		if ((vp_encoded_data = ncc_pair_find_by_da(packet->vps, attr_encoded_data)) != NULL) {
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp_encoded_data);
 		} else {

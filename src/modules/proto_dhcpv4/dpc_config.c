@@ -6,6 +6,8 @@
 #include "dhcperfcli.h"
 #include "dpc_config.h"
 
+#define MAX_ATTR_INPUT 128
+
 
 static const CONF_PARSER server_config[] = {
 
@@ -21,8 +23,6 @@ static const CONF_PARSER server_config[] = {
 /*
  *	Iterates over all input definitions in the specified section, adding them to the list.
  */
-extern ncc_list_t input_list;
-#define MAX_ATTR_INPUT 128
 int dpc_input_list_parse_section(CONF_SECTION *section)
 {
 	CONF_SECTION *cs = NULL;

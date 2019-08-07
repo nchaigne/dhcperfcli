@@ -68,6 +68,7 @@ struct dpc_context {
 
 
 extern int dpc_debug_lvl;
+extern ncc_list_t input_list;
 extern fr_dict_attr_t const *attr_encoded_data;
 extern fr_dict_attr_t const *attr_dhcp_message_type;
 
@@ -372,3 +373,6 @@ struct dpc_session_ctx {
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
+
+
+void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);

@@ -133,7 +133,7 @@ static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
-static char const *file_vps_in;
+static char const *file_input;
 ncc_list_t input_list;
 static int with_template = 0;
 static int with_xlat = 0;
@@ -244,7 +244,6 @@ static char const *transaction_types[DPC_TR_MAX] = {
 static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
 
 char elapsed_buf[NCC_TIME_STRLEN];
-//#define ELAPSED ncc_delta_time_sprint(elapsed_buf, &tve_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 #define ELAPSED ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
 
 
@@ -305,7 +304,7 @@ static void dpc_main_loop(void);
 
 static bool dpc_input_parse(dpc_input_t *input);
 void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
+static int dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
@@ -2480,7 +2479,7 @@ void dpc_input_handle(dpc_input_t *input, ncc_list_t *list)
 /*
  *	Load input vps.
  */
-static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename)
+static int dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *list, char const *filename)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -2493,8 +2492,7 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 
 		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, file_in, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
-			exit(EXIT_FAILURE); /* Be unforgiving. */
-			break;
+			return -1;
 		}
 		if (!input->vps) {
 			/* Last line might be empty, in this case we will obtain a NULL vps pointer. Silently ignore this. */
@@ -2516,14 +2514,16 @@ static void dpc_input_load_from_fd(TALLOC_CTX *ctx, FILE *file_in, ncc_list_t *l
 
 	} while (!file_done);
 
+	return 0;
 }
 
 /*
- *	Load input vps, either from a file if specified, or stdin otherwise.
+ *	Load input vps: first, from stdin (if there is something to read), then from input file (if one is specified).
  */
 static int dpc_input_load(TALLOC_CTX *ctx)
 {
 	FILE *file_in = NULL;
+	int ret;
 
 	/*
 	 *	If there's something on stdin, read it.
@@ -2532,7 +2532,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		with_stdin_input = true;
 
 		DEBUG("Reading input from stdin");
-		dpc_input_load_from_fd(ctx, stdin, &input_list, "stdin");
+		if (dpc_input_load_from_fd(ctx, stdin, &input_list, "stdin") < 0) return -1;
 	} else {
 		DEBUG_TRACE("Nothing to read on stdin");
 	}
@@ -2540,21 +2540,21 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	/*
 	 *	If an input file is provided, read it.
 	 */
-	if (file_vps_in && strcmp(file_vps_in, "-") != 0) {
-		DEBUG("Reading input from file: %s", file_vps_in);
+	if (file_input && strcmp(file_input, "-") != 0) {
+		DEBUG("Reading input from file: %s", file_input);
 
-		file_in = fopen(file_vps_in, "r");
+		file_in = fopen(file_input, "r");
 		if (!file_in) {
-			ERROR("Failed to open file %s: %s", file_vps_in, strerror(errno));
-			exit(EXIT_FAILURE);
+			ERROR("Failed to open file \"%s\": %s", file_input, strerror(errno));
+			return -1;
 		}
 
-		dpc_input_load_from_fd(ctx, file_in, &input_list, file_vps_in);
-
+		ret = dpc_input_load_from_fd(ctx, file_in, &input_list, file_input);
 		fclose(file_in);
+		if (ret < 0) return -1;
 	}
 
-	DEBUG("Done reading input, list size: %d", input_list.size);
+	DEBUG("Done reading input, list size: %u", input_list.size);
 
 	return 0;
 }
@@ -2934,7 +2934,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'f':
-			file_vps_in = optarg;
+			file_input = optarg;
 			break;
 
 		case 'g':
