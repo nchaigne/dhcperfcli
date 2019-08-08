@@ -41,6 +41,8 @@ dpc_context_t exe_ctx = {
 	.pr_stat_per_input = 1,
 	.pr_stat_per_input_max = 20,
 
+	.packet_trace_elapsed = 1,
+
 	.min_session_for_rps = 50,
 	.min_session_time_for_rps = 0.9,
 	.min_ref_time_rate_limit = 0.2,
