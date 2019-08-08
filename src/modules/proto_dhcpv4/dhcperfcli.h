@@ -46,6 +46,7 @@ struct dpc_context {
 	int pr_stat_per_input_max;       //<! Max number of input items shown in progress statistics.
 
 	int packet_trace_elapsed;        //<! Prefix packet trace with elapsed time.
+	int packet_trace_datetime;       //<! Prefix packet trace with date/time.
 
 	uint32_t min_session_for_rps;     //<! Min number of sessions started from input to compute a session rate per second.
 	double min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.

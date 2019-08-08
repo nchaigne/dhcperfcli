@@ -131,6 +131,12 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 		fprintf(fp, "t(%s) ", ncc_fr_delta_time_sprint(time_buf, &fte_start, NULL, DPC_DELTA_TIME_DECIMALS));
 	}
 
+	/* Absolute date/time. */
+	if (ECTX.packet_trace_datetime) {
+		char datetime_buf[DPC_DATETIME_STRLEN];
+		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, false));
+	}
+
 	switch (pevent) {
 		case DPC_PACKET_SENT:
 			fprintf(fp, "Sent");
