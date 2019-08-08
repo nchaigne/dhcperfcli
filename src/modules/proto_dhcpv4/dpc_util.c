@@ -7,6 +7,7 @@
 #include "ncc_util.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
+#include "dpc_config.h"
 
 
 typedef struct {
@@ -126,13 +127,13 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	if (session) fprintf(fp, "(%u) ", session->id);
 
 	/* Elapsed time. */
-	if (ECTX.packet_trace_elapsed) {
+	if (CONF.packet_trace_elapsed) {
 		char time_buf[DPC_TIME_STRLEN];
 		fprintf(fp, "t(%s) ", ncc_fr_delta_time_sprint(time_buf, &fte_start, NULL, DPC_DELTA_TIME_DECIMALS));
 	}
 
 	/* Absolute date/time. */
-	if (ECTX.packet_trace_datetime) {
+	if (CONF.packet_trace_datetime) {
 		char datetime_buf[DPC_DATETIME_STRLEN];
 		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, false));
 	}

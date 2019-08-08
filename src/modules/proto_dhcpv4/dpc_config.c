@@ -8,12 +8,22 @@
 
 #define MAX_ATTR_INPUT 128
 
-/* Note: Type 'float64' is not supported by FreeRADIUS in configuration files... */
+/* Note: Type 'float64' is not supported by FreeRADIUS in configuration files.
+ * So we must use 'float32' instead.
+ */
 
-static const CONF_PARSER timing[] = {
+static const CONF_PARSER timing_config[] = {
 
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT32, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
+
+	CONF_PARSER_TERMINATOR
+};
+
+static const CONF_PARSER packet_config[] = {
+
+	{ FR_CONF_OFFSET("trace_elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
+	{ FR_CONF_OFFSET("trace_datetime", FR_TYPE_BOOL, dpc_config_t, packet_trace_datetime), .dflt = "no" },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -31,7 +41,8 @@ static const CONF_PARSER server_config[] = {
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
 
-	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) timing },
+	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) packet_config },
+	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) timing_config },
 
 	CONF_PARSER_TERMINATOR
 };

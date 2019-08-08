@@ -17,10 +17,13 @@ struct dpc_config_s {
 	                             ///< was specified by the user on the command line.
 	CONF_SECTION *root_cs;       //!< Root of the main config.
 
-	int debug_level;             //!< The base debug level.
-	bool debug_dev;              //!< Enable extended debug information for developper.
-	bool debug_basename;         //!< Print only file base name.
-	bool log_timestamp;          //!< Add timestamp to log messages.
+	int debug_level;                 //!< The base debug level.
+	bool debug_dev;                  //!< Enable extended debug information for developper.
+	bool debug_basename;             //!< Print only file base name.
+	bool log_timestamp;              //!< Add timestamp to log messages.
+
+	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
+	bool packet_trace_datetime;      //<! Prefix packet trace with date/time.
 
 	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
