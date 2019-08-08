@@ -9,6 +9,13 @@
 #define MAX_ATTR_INPUT 128
 
 
+static const CONF_PARSER timing[] = {
+
+	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) },  /* No default */
+
+	CONF_PARSER_TERMINATOR
+};
+
 /*
  * Note:
  * Some parameters may be defined through command-line options and configuration files.
@@ -17,10 +24,12 @@
  */
 static const CONF_PARSER server_config[] = {
 
-	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level), }, /* No default */
-	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev), }, /* No default */
+	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
+	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
+
+	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) timing },
 
 	CONF_PARSER_TERMINATOR
 };

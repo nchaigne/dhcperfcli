@@ -37,7 +37,6 @@ int dpc_debug_lvl = 0;
 dpc_context_t exe_ctx = {
 	.progress_interval = 10.0,
 	.request_timeout = 1.0,
-	.retransmit_max = 2,
 	.session_max_active = 1,
 
 	.pr_stat_per_input = 1,
@@ -48,7 +47,9 @@ dpc_context_t exe_ctx = {
 	.min_ref_time_rate_limit = 0.2,
 	.rate_limit_time_lookahead = 0.02,
 };
-
+static dpc_config_t default_config = {
+	.retransmit_max = 2,
+};
 
 fr_dict_attr_t const *attr_packet_dst_ip_address;
 fr_dict_attr_t const *attr_packet_dst_port;
@@ -672,7 +673,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	if (retr_breakdown && retr_breakdown[0] > 0) {
 		fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "  Retr breakdown",
-		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET_SENT, retr_breakdown));
+		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET_SENT, retr_breakdown, CONF.retransmit_max));
 	}
 
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_LOST);
@@ -819,7 +820,7 @@ static void dpc_event_add_progress_stats(void)
  */
 static bool dpc_retransmit(dpc_session_ctx_t *session)
 {
-	if (session->retransmit >= ECTX.retransmit_max) {
+	if (session->retransmit >= CONF.retransmit_max) {
 		/* Give up. */
 		return false;
 	}
@@ -3030,7 +3031,7 @@ static void dpc_options_parse(int argc, char **argv)
 			switch (opt_index) {
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
 				if (!is_integer(optarg)) ERROR_LONGOPT_VALUE("integer");
-				ECTX.retransmit_max = atoi(optarg);
+				CONF.retransmit_max = atoi(optarg);
 				break;
 
 			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
@@ -3096,10 +3097,6 @@ static void dpc_options_parse(int argc, char **argv)
 	if (with_template) with_xlat = 1;
 
 	if (!with_template && ECTX.input_num_use == 0) ECTX.input_num_use = 1;
-
-	if (ECTX.retransmit_max > 0) {
-		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, ECTX.retransmit_max);
-	}
 }
 
 /*
@@ -3193,6 +3190,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Failed to allocate main configuration\n"); /* Logging is not initialized yet. */
 		exit(EXIT_FAILURE);
 	}
+	/* Set default (static) configuration values. */
+	*dpc_config = default_config;
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -3229,6 +3228,10 @@ int main(int argc, char **argv)
 	 *	Read the configuration files.
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
+
+	if (CONF.retransmit_max > 0) {
+		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);
+	}
 
 	dpc_event_list_init(global_ctx);
 	dpc_packet_list_init(global_ctx);

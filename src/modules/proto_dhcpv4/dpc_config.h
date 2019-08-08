@@ -21,6 +21,8 @@ struct dpc_config_s {
 	bool debug_dev;              //!< Enable extended debug information for developper.
 	bool debug_basename;         //!< Print only file base name.
 	bool log_timestamp;          //!< Add timestamp to log messages.
+
+	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 };
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);

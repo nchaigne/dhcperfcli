@@ -80,7 +80,7 @@ char *dpc_message_type_sprint(char *out, int message)
 /*
  *	Print retransmissions breakdown by number of retransmissions per request sent.
  */
-char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown)
+char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max)
 {
 	int i;
 	char *p = out;
@@ -101,7 +101,7 @@ char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_
 	} \
 }
 
-	for (i = 0; i < ECTX.retransmit_max; i++) {
+	for (i = 0; i < retransmit_max; i++) {
 		if (i >= 10) break; /* Limit what we print. */
 		RETR_PRINT(breakdown[i], i + 1);
 	}
