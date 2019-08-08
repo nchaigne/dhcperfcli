@@ -3063,8 +3063,9 @@ static void dpc_options_parse(int argc, char **argv)
 
 	/*
 	 *	Initialize configuration elements that can be set through command-line options.
-	 *	Note: Those may later be overriden with values read from configuration file.
+	 *	Note: Those may later be overriden with values read from configuration files.
 	 */
+	dpc_config->debug_level = dpc_debug_lvl;
 	dpc_config->debug_dev = (with_debug_dev == 1);
 
 	ncc_log_init(stdout, dpc_debug_lvl); /* Update with actual options. */
