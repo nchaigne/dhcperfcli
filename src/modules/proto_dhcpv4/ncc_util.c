@@ -865,6 +865,15 @@ bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 	return true;
 }
 
+/* Wrapper to ncc_str_to_float, using float32 instead of float64 */
+bool ncc_str_to_float32(float *out, char const *in, bool allow_negative)
+{
+	double value;
+	bool ret = ncc_str_to_float(&value, in, allow_negative);
+	if (ret) *out = value;
+	return ret;
+}
+
 /*
  *	Check that a string represents either an integer or a valid hex string.
  *	If so convert it to uint32.

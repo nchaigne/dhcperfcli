@@ -1,6 +1,6 @@
 /**
  * @file dpc_config.c
- * @brief Handle the program configuration (heavy reuse from FreeRADIUS main_config.c)
+ * @brief Handle the program configuration (reuse from FreeRADIUS main_config.c)
  */
 
 #include "dhcperfcli.h"
@@ -8,10 +8,12 @@
 
 #define MAX_ATTR_INPUT 128
 
+/* Note: Type 'float64' is not supported by FreeRADIUS in configuration files... */
 
 static const CONF_PARSER timing[] = {
 
-	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) },  /* No default */
+	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT32, dpc_config_t, request_timeout) }, /* No default */
+	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
 
 	CONF_PARSER_TERMINATOR
 };

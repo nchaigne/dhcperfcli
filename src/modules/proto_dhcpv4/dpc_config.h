@@ -22,6 +22,7 @@ struct dpc_config_s {
 	bool debug_basename;         //!< Print only file base name.
 	bool log_timestamp;          //!< Add timestamp to log messages.
 
+	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 };
 

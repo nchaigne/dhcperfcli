@@ -36,7 +36,6 @@ int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
 	.progress_interval = 10.0,
-	.request_timeout = 1.0,
 	.session_max_active = 1,
 
 	.pr_stat_per_input = 1,
@@ -48,6 +47,7 @@ dpc_context_t exe_ctx = {
 	.rate_limit_time_lookahead = 0.02,
 };
 static dpc_config_t default_config = {
+	.request_timeout = 1.0,
 	.retransmit_max = 2,
 };
 
@@ -2084,7 +2084,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		/* Send the packet. */
 		if (dpc_send_one_packet(session, &session->request) < 0
 		    || !session->reply_expected /* No reply is expected to this kind of packet (e.g. Release). */
-		    || !ECTX.request_timeout /* Do not wait for a reply. */
+		    || !CONF.request_timeout /* Do not wait for a reply. */
 		    ) {
 			dpc_session_finish(session);
 		} else {
@@ -2992,17 +2992,17 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 't':
-			if (!ncc_str_to_float(&ECTX.request_timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			if (!ncc_str_to_float32(&CONF.request_timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			/* 0 is allowed, it means we don't wait for replies, ever.
 			 * This entails that:
 			 * - we won't have "timed out" requests
 			 * - we won't have rtt statistics
 			 * - and we probably will have "unexpected replies" (if the server is responsive)
 			 */
-			if (ECTX.request_timeout) {
+			if (CONF.request_timeout) {
 				/* Don't allow absurd values. */
-				if (ECTX.request_timeout < 0.01) ECTX.request_timeout = 0.01;
-				else if (ECTX.request_timeout > 3600) ECTX.request_timeout = 3600;
+				if (CONF.request_timeout < 0.01) CONF.request_timeout = 0.01;
+				else if (CONF.request_timeout > 3600) CONF.request_timeout = 3600;
 			}
 			break;
 
@@ -3090,7 +3090,6 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	if (ECTX.session_max_active == 0) ECTX.session_max_active = 1;
-	ECTX.ftd_request_timeout = ncc_float_to_fr_time(ECTX.request_timeout);
 	ECTX.ftd_progress_interval = ncc_float_to_fr_time(ECTX.progress_interval);
 
 	/* Xlat is automatically enabled in template mode. */
@@ -3232,6 +3231,7 @@ int main(int argc, char **argv)
 	if (CONF.retransmit_max > 0) {
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);
 	}
+	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 
 	dpc_event_list_init(global_ctx);
 	dpc_packet_list_init(global_ctx);

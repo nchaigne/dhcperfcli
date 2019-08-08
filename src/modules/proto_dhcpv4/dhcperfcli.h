@@ -29,7 +29,6 @@ struct dpc_context {
 	double progress_interval;        //<! Time interval between periodic progress statistics.
 	fr_time_delta_t ftd_progress_interval;
 
-	double request_timeout;          //<! Max time waiting for a reply to a request we've sent.
 	fr_time_delta_t ftd_request_timeout;
 
 	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
@@ -375,4 +374,3 @@ struct dpc_session_ctx {
 
 
 void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
-                                                                                                                       
