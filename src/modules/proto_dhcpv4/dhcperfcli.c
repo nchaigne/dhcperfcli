@@ -2245,6 +2245,20 @@ static bool dpc_input_parse(dpc_input_t *input)
 	     vp = fr_cursor_next(&cursor)) {
 
 		/*
+		 * First ensure the operator makes sense. It should be '=' (T_OP_EQ) or ':=' (T_OP_SET).
+ 		 * Anything else is not allowed.
+		 * These are the same that are allowed by the configuration parser (cf. function cf_section_read).
+		 *
+		 * Note: dhcpclient doesn't care, it allows all operators.
+		 * It displays VPs after a "fr_dhcpv4_packet_decode" whichs sets all operators to '='.
+		 */
+		if (vp->op != T_OP_EQ && vp->op != T_OP_SET) {
+			WARN("Invalid operator '%s' in assignment for attribute '%s'. Discarding input (id: %u)", fr_tokens[vp->op], vp->da->name, input->id);
+			return false;
+		}
+		vp->op = T_OP_EQ; /* Force to '=' for consistency. */
+
+		/*
 		 *	A value is identified as an xlat expression if it is a double quoted string which contains some %{...}
 		 *	e.g. "foo %{tolower:Bar}"
 		 *
