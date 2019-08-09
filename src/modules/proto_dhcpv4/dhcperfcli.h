@@ -22,8 +22,6 @@ extern dpc_context_t exe_ctx;
  *	Holds global parameters set at initialization stage.
  */
 struct dpc_context {
-	int debug_lvl;
-
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
 	double progress_interval;        //<! Time interval between periodic progress statistics.

@@ -2924,7 +2924,6 @@ static void dpc_options_parse(int argc, char **argv)
 		}
 	}
 
-	ECTX.debug_lvl = dpc_debug_lvl;
 	ncc_log_init(stdout, dpc_debug_lvl); /* Initialize logging. */
 
 	/* Parse options: second pass.
