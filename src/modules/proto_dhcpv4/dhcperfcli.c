@@ -2818,7 +2818,7 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 
 
 /* Short options. */
-#define OPTSTR_BASE "a:c:C:D:f:g:hI:L:MN:p:P:r:s:t:TvxX"
+#define OPTSTR_BASE "a:c:CD:f:g:hI:L:MN:p:P:r:s:t:TvxX"
 #ifdef HAVE_LIBPCAP
   #define OPTSTR_LIBPCAP "Ai:"
 #else
@@ -3135,12 +3135,14 @@ static void dpc_end(void)
 	/* Job end timestamp. */
 	fte_job_end = fr_time();
 
-	/* If we're producing progress statistics, do it one last time. */
-	if (ECTX.ftd_progress_interval) dpc_progress_stats_fprint(stdout, true);
+	if (!check_config) {
+		/* If we're producing progress statistics, do it one last time. */
+		if (ECTX.ftd_progress_interval) dpc_progress_stats_fprint(stdout, true);
 
-	/* Statistics report. */
-	dpc_stats_fprint(stdout);
-	dpc_tr_stats_fprint(stdout);
+		/* Statistics report. */
+		dpc_stats_fprint(stdout);
+		dpc_tr_stats_fprint(stdout);
+	}
 
 	/* Free memory. */
 	ncc_xlat_free();
@@ -3350,6 +3352,14 @@ int main(int argc, char **argv)
 		ECTX.fte_start_max = ncc_float_to_fr_time(ECTX.duration_start_max) + fte_job_start;
 	}
 
+	/*
+	 *	Everything seems to have loaded OK, exit gracefully.
+	 */
+	if (check_config) {
+		DEBUG("Configuration appears to be OK");
+		dpc_end();
+	}
+
 	/* Arm a timer to produce periodic statistics. */
 	dpc_event_add_progress_stats();
 
@@ -3394,7 +3404,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fp, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
 	fprintf(fp, "  -c <num>         Use each input item up to <num> times.\n");
-	fprintf(fp, "  -C <file>        Read configuration from <file>.\n");
+	fprintf(fp, "  -C               Check configuration and exit.\n");
 	fprintf(fp, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
 	fprintf(fp, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
 	fprintf(fp, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
