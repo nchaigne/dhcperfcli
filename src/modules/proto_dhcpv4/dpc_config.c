@@ -12,7 +12,7 @@
  * So we must use 'float32' instead.
  */
 
-static const CONF_PARSER timing_config[] = {
+static const CONF_PARSER _timing_config[] = {
 
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT32, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
@@ -20,7 +20,7 @@ static const CONF_PARSER timing_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER packet_config[] = {
+static const CONF_PARSER _packet_config[] = {
 
 	{ FR_CONF_OFFSET("trace_elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
 	{ FR_CONF_OFFSET("trace_datetime", FR_TYPE_BOOL, dpc_config_t, packet_trace_datetime), .dflt = "no" },
@@ -34,15 +34,15 @@ static const CONF_PARSER packet_config[] = {
  * For these parameters, do *not* provide a default ("dflt") to the configuration parser.
  * A value will be set by the configuration parser only if the parameter is explicitly defined in configuration files.
  */
-static const CONF_PARSER server_config[] = {
+static const CONF_PARSER _main_config[] = {
 
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
 
-	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) packet_config },
-	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) timing_config },
+	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
+	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _timing_config },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -122,7 +122,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 		goto failure;
 	}
 
-	if (cf_section_rules_push(cs, server_config) < 0) goto failure;
+	if (cf_section_rules_push(cs, _main_config) < 0) goto failure;
 
 	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
