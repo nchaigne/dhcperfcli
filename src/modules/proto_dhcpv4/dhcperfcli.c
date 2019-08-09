@@ -128,7 +128,6 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 };
 
 static char const *file_config; /* Optional configuration file. */
-static int with_debug_dev = 0;
 static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
 static dpc_packet_list_t *pl; /* List of outgoing packets. */
@@ -2845,6 +2844,7 @@ static struct option long_options[] = {
 	 * Note: these must be defined at the beginning, because they are identified by their index in this array.
 	 */
 	{ "conf-file",              required_argument, NULL, 1 },
+	{ "debug",                  no_argument,       NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
 	{ "xlat-file",              required_argument, NULL, 1 },
 
@@ -2863,7 +2863,6 @@ static struct option long_options[] = {
 	/* Long options flags can be handled automaticaly.
 	 * Note: this requires an "int" as flag variable. A boolean cannot be handled automatically.
 	 */
-	{ "debug",                  no_argument, &with_debug_dev, 1 },
 	{ "xlat",                   no_argument, &with_xlat, 1 },
 
 	{ 0, 0, 0, 0 }
@@ -2874,6 +2873,7 @@ typedef enum {
 	 * It must match long_options order defined above.
 	 */
 	LONGOPT_IDX_CONF_FILE = 0,
+	LONGOPT_IDX_DEBUG,
 	LONGOPT_IDX_RETRANSMIT,
 	LONGOPT_IDX_XLAT_FILE,
 } longopt_index_t;
@@ -3054,6 +3054,10 @@ static void dpc_options_parse(int argc, char **argv)
 				file_config = optarg;
 				break;
 
+			case LONGOPT_IDX_DEBUG: // --debug
+				CONF.debug_dev = true;
+				break;
+
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
 				if (!is_integer(optarg)) ERROR_LONGOPT_VALUE("integer");
 				CONF.retransmit_max = atoi(optarg);
@@ -3092,7 +3096,6 @@ static void dpc_options_parse(int argc, char **argv)
 	 *	Note: Those may later be overriden with values read from configuration files.
 	 */
 	dpc_config->debug_level = dpc_debug_lvl;
-	dpc_config->debug_dev = (with_debug_dev == 1);
 
 	ncc_log_init(stdout, dpc_debug_lvl); /* Update with actual options. */
 	ncc_default_log.line_number = dpc_config->debug_dev;
