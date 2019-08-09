@@ -2828,11 +2828,12 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 
 static struct option long_options[] = {
 	/* Long options with no short option equivalent. */
+	{ "conf-file",              required_argument, NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
 	{ "xlat-file",              required_argument, NULL, 1 },
 
 	/* Long options with short option equivalent. */
-	{ "conf-file",              required_argument, NULL, 'C' },
+	{ "conf-check",             no_argument,       NULL, 'C' },
 	{ "dict-dir",               required_argument, NULL, 'D' },
 	{ "input-file",             required_argument, NULL, 'f' },
 	{ "duration-start-max",     required_argument, NULL, 'L' },
@@ -2842,7 +2843,8 @@ static struct option long_options[] = {
 	{ "timeout",                required_argument, NULL, 't' },
 	{ "packet-trace",           required_argument, NULL, 'P' },
 
-	/* Long options flags are handled automaticaly. */
+	/* Long options flags can be handled automaticaly.
+	 * Note: this requires an "int" as flag variable. A boolean cannot be handled automatically. */
 	{ "debug",                  no_argument, &with_debug_dev, 1 },
 	{ "template",               no_argument, &with_template, 1 },
 	{ "xlat",                   no_argument, &with_xlat, 1 },
@@ -2854,7 +2856,8 @@ typedef enum {
 	/* Careful: numbering here is important.
 	 * It must match long_options order defined above.
 	 */
-	LONGOPT_IDX_RETRANSMIT = 0,
+	LONGOPT_IDX_CONF_FILE = 0,
+	LONGOPT_IDX_RETRANSMIT,
 	LONGOPT_IDX_XLAT_FILE,
 } longopt_index_t;
 
@@ -2928,7 +2931,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'C':
-			file_config = optarg;
+			check_config = true;
 			break;
 
 		case 'D':
@@ -3030,6 +3033,10 @@ static void dpc_options_parse(int argc, char **argv)
 			 *	Option is identified by its index in the option[] array.
 			 */
 			switch (opt_index) {
+			case LONGOPT_IDX_CONF_FILE: // --conf-file
+				file_config = optarg;
+				break;
+
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
 				if (!is_integer(optarg)) ERROR_LONGOPT_VALUE("integer");
 				CONF.retransmit_max = atoi(optarg);
