@@ -3234,7 +3234,7 @@ int main(int argc, char **argv)
 	if (ncc_xlat_register() < 0) exit(EXIT_FAILURE);
 
 	/*
-	 *	Read the configuration files.
+	 *	Read the configuration file (if provided), and parse configuration.
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 

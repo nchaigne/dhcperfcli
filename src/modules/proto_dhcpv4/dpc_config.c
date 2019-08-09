@@ -102,19 +102,18 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 }
 
 /*
- *	Read configuration file.
+ *	Read the configuration file (if provided).
+ *	Parse the configuration (even without a file: this allows to set the default values).
  */
 int dpc_config_init(dpc_config_t *config, char const *conf_file)
 {
 	CONF_SECTION *cs = NULL;
 
-	if (!conf_file) return 0;
-
 	cs = cf_section_alloc(NULL, NULL, "main", NULL);
 	if (!cs) return -1;
 
-	/* Read the configuration file */
-	if (cf_file_read(cs, conf_file) < 0) {
+	/* Read the configuration file (if provided) */
+	if (conf_file && cf_file_read(cs, conf_file) < 0) {
 		ERROR("Failed to read configuration file %s", conf_file);
 		goto failure;
 	}
