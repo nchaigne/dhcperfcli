@@ -343,6 +343,42 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 	}
 }
 
+/*
+ *	Print one attribute and value to a string.
+ *	Similar to FreeRADIUS fr_pair_snprint, but prints 'x' for XLAT, '=' for DATA instead of the operator.
+ *	Also, we don't handle tags here.
+ */
+size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
+{
+	char const *token = NULL;
+	size_t len, freespace = outlen;
+
+	if (!out) return 0;
+
+	*out = '\0';
+	if (!vp || !vp->da) return 0;
+
+	VP_VERIFY(vp);
+
+	if (vp->type == VT_XLAT) {
+		token = "x";
+	} else {
+		token = "=";
+	}
+
+	len = snprintf(out, freespace, "%s %s ", vp->da->name, token);
+	if (is_truncated(len, freespace)) return len;
+
+	out += len;
+	freespace -= len;
+
+	len = fr_pair_value_snprint(out, freespace, vp, '"');
+	if (is_truncated(len, freespace)) return (outlen - freespace) + len;
+	freespace -= len;
+
+	return (outlen - freespace);
+}
+
 
 /*
  *	Read a single value from a buffer, and advance the pointer.
@@ -629,7 +665,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 
 		fr_pair_add(out, vp);
 
-		fr_pair_snprint(buf, sizeof(buf), vp);
+		ncc_pair_snprint(buf, sizeof(buf), vp);
 		cf_log_debug(cs, "%.*s%s", cf_space, parse_spaces, buf);
 	}
 
