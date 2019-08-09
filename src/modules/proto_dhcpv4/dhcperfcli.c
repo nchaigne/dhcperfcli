@@ -2212,6 +2212,11 @@ static bool dpc_input_parse(dpc_input_t *input)
 	VALUE_PAIR *vp;
 	VALUE_PAIR *vp_encoded_data = NULL, *vp_workflow_type = NULL;
 
+	if (!input->vps) {
+		WARN("Empty vps list. Discarding input (id: %u)", input->id);
+		return false;
+	}
+
 #define WARN_ATTR_VALUE(_l) { \
 		PWARN("Invalid value for attribute %s (expected: %s). Discarding input (id: %u)", vp->da->name, _l, input->id); \
 		return false; \
