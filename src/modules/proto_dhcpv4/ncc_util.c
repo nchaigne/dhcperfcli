@@ -584,22 +584,31 @@ VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR 
 	return vp;
 }
 
+static char const parse_spaces[] = "                                                                                                                                                                                                                                              ";
+
 /*
  *	Convert a config section into an attribute list.
  *	Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
+ *	Note: requires libfreeradius-server.
  */
 int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, CONF_SECTION *cs, unsigned int max)
 {
 	CONF_PAIR *cp;
 	CONF_ITEM *ci;
+	char buf[4096];
 
 	unsigned int total = 0;
+
+	int cf_space = 2;
+	cf_log_debug(cs, "%.*s%s {", cf_space, parse_spaces, cf_section_name(cs));
 
 	ci = cf_section_to_item(cs);
 
 	for (ci = cf_item_next(cs, NULL);
 	     ci != NULL;
 	     ci = cf_item_next(cs, ci)) {
+		int cf_space = 4;
+
 		if (total++ == max) {
 			cf_log_err(ci, "Too many attributes (max: %u)", max);
 		error:
@@ -619,7 +628,12 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 		if (!vp) goto error;
 
 		fr_pair_add(out, vp);
+
+		fr_pair_snprint(buf, sizeof(buf), vp);
+		cf_log_debug(cs, "%.*s%s", cf_space, parse_spaces, buf);
 	}
+
+	cf_log_debug(cs, "%.*s}", cf_space, parse_spaces);
 
 	return 0;
 }

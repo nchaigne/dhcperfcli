@@ -13,7 +13,6 @@
  */
 
 static const CONF_PARSER _timing_config[] = {
-
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT32, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
 
@@ -21,7 +20,6 @@ static const CONF_PARSER _timing_config[] = {
 };
 
 static const CONF_PARSER _packet_config[] = {
-
 	{ FR_CONF_OFFSET("trace_elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
 	{ FR_CONF_OFFSET("trace_datetime", FR_TYPE_BOOL, dpc_config_t, packet_trace_datetime), .dflt = "no" },
 
@@ -35,7 +33,6 @@ static const CONF_PARSER _packet_config[] = {
  * A value will be set by the configuration parser only if the parameter is explicitly defined in configuration files.
  */
 static const CONF_PARSER _main_config[] = {
-
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
