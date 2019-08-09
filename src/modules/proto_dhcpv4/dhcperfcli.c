@@ -2827,7 +2827,9 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 #define OPTSTR OPTSTR_BASE OPTSTR_LIBPCAP
 
 static struct option long_options[] = {
-	/* Long options with no short option equivalent. */
+	/* Long options with no short option equivalent.
+	 * Note: these must be defined at the beginning, because they are identified by their index in this array.
+	 */
 	{ "conf-file",              required_argument, NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
 	{ "xlat-file",              required_argument, NULL, 1 },
@@ -2840,13 +2842,14 @@ static struct option long_options[] = {
 	{ "session-max",            required_argument, NULL, 'N' },
 	{ "parallel",               required_argument, NULL, 'p' },
 	{ "rate",                   required_argument, NULL, 'r' },
+	{ "template",               no_argument,       NULL, 'T' },
 	{ "timeout",                required_argument, NULL, 't' },
 	{ "packet-trace",           required_argument, NULL, 'P' },
 
 	/* Long options flags can be handled automaticaly.
-	 * Note: this requires an "int" as flag variable. A boolean cannot be handled automatically. */
+	 * Note: this requires an "int" as flag variable. A boolean cannot be handled automatically.
+	 */
 	{ "debug",                  no_argument, &with_debug_dev, 1 },
-	{ "template",               no_argument, &with_template, 1 },
 	{ "xlat",                   no_argument, &with_xlat, 1 },
 
 	{ 0, 0, 0, 0 }
