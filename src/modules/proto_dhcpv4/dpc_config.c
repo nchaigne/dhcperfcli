@@ -147,3 +147,29 @@ failure:
 	talloc_free(cs);
 	return -1;
 }
+
+/*
+ *	Debug the configuration.
+ */
+void dpc_config_debug(dpc_config_t *config)
+{
+	#define CONF_DEBUG_UINT(_x) \
+		DEBUG("- %s = %u", STRINGIFY(_x), config->_x);
+
+	#define CONF_DEBUG_BOOL(_x) \
+		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
+
+	#define CONF_DEBUG_FLOAT(_x) \
+		DEBUG("- %s = %f", STRINGIFY(_x), config->_x);
+
+	DEBUG("Configuration values:");
+
+	CONF_DEBUG_UINT(debug_level);
+	CONF_DEBUG_BOOL(debug_dev);
+	CONF_DEBUG_BOOL(debug_basename);
+	CONF_DEBUG_BOOL(log_timestamp);
+	CONF_DEBUG_BOOL(packet_trace_elapsed);
+	CONF_DEBUG_BOOL(packet_trace_datetime);
+	CONF_DEBUG_FLOAT(request_timeout);
+	CONF_DEBUG_UINT(retransmit_max);
+}

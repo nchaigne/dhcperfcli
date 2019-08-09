@@ -3238,6 +3238,8 @@ int main(int argc, char **argv)
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
+	dpc_config_debug(dpc_config);
+
 	if (CONF.retransmit_max > 0) {
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);
 	}
