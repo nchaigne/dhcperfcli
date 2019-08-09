@@ -3019,7 +3019,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'X':
-			fr_debug_lvl = dpc_debug_lvl;
+			fr_debug_lvl = rad_debug_lvl = dpc_debug_lvl;
 			break;
 
 		case 0: /* Long option flag set, nothing to do. */
@@ -3172,9 +3172,18 @@ int main(int argc, char **argv)
 	char *p;
 	unsigned int i;
 
-	fr_debug_lvl = 0; /* FreeRADIUS libraries debug. */
+	/* FreeRADIUS libraries debug (defined in src/lib/util/log.c).
+	 * We have our own logging functions so this should be unused.
+	 */
+	fr_debug_lvl = 0;
+
+	/* FreeRADIUS global debug (defined in src/lib/server/log.c).
+	 * Used (among other things) by the config parser (cf. "DEBUG_ENABLED").
+	 */
+	rad_debug_lvl = 0;
+
 	dpc_debug_lvl = 0; /* Our own debug. */
-	fr_log_fp = stdout; /* Both will go there. */
+	fr_log_fp = stdout; /* Everything will go there. */
 
 	global_ctx = talloc_autofree_context();
 
