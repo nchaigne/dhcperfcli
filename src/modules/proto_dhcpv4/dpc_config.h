@@ -60,5 +60,8 @@ do {\
 #define CONF_CHECK_FLOAT(_name, _var, _cond, _expected)\
 	CONF_CHECK_FMT("f", _name, _var, _cond, _expected)
 
+#define CONF_CHECK_UINT(_name, _var, _cond, _expected)\
+	CONF_CHECK_FMT("u", _name, _var, _cond, _expected)
+
 #define CONF_CHECK_UINT64(_name, _var, _cond, _expected)\
 	CONF_CHECK_FMT(PRIu64, _name, _var, _cond, _expected)

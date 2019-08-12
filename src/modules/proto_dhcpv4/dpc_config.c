@@ -164,8 +164,9 @@ int dpc_config_check(dpc_config_t *config)
 {
 	CONF_CHECK_FLOAT("progress_interval", config->progress_interval, config->progress_interval >= 0, ">= 0");
 	CONF_CHECK_FLOAT("request_timeout", config->request_timeout, config->request_timeout >= 0, ">= 0");
-	CONF_CHECK_FLOAT("duration_start_max", config->duration_start_max, config->duration_start_max >= 0, ">= 0");
 	CONF_CHECK_UINT64("base_xid", config->base_xid, config->base_xid <= UINT32_MAX, "<= 0xffffffff");
+	CONF_CHECK_FLOAT("duration_start_max", config->duration_start_max, config->duration_start_max >= 0, ">= 0");
+	CONF_CHECK_UINT("session_max_active", config->session_max_active, config->session_max_active >= 1, ">= 1");
 
 	/*
 	 *	Check and fix absurd values.

@@ -3269,7 +3269,6 @@ int main(int argc, char **argv)
 	}
 	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
-	if (CONF.session_max_active == 0) CONF.session_max_active = 1;
 	if (!with_template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 
 	dpc_event_list_init(global_ctx);
