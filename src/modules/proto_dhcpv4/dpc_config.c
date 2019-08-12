@@ -10,6 +10,10 @@
 
 /* Notes:
  *
+ * - Some parameters may be defined through command-line options and configuration files.
+ *   For these parameters, do *not* provide a default ("dflt") to the configuration parser.
+ *   A value will be set by the config parser only if the parameter is explicitly defined in configuration files.
+ *
  * - Type 'float64' is not supported by FreeRADIUS in configuration files.
  *   Using 'float32' instead, which is good enough for configuration.
  *
@@ -26,18 +30,13 @@ static const CONF_PARSER _timing_config[] = {
 };
 
 static const CONF_PARSER _packet_config[] = {
+	{ FR_CONF_OFFSET("trace_level", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl) }, /* No default */
 	{ FR_CONF_OFFSET("trace_elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
 	{ FR_CONF_OFFSET("trace_timestamp", FR_TYPE_BOOL, dpc_config_t, packet_trace_timestamp), .dflt = "no" },
 
 	CONF_PARSER_TERMINATOR
 };
 
-/*
- * Note:
- * Some parameters may be defined through command-line options and configuration files.
- * For these parameters, do *not* provide a default ("dflt") to the configuration parser.
- * A value will be set by the configuration parser only if the parameter is explicitly defined in configuration files.
- */
 static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
@@ -185,17 +184,23 @@ int dpc_config_check(dpc_config_t *config)
  */
 void dpc_config_debug(dpc_config_t *config)
 {
+	#define CONF_DEBUG_FMT(_fmt, _x) \
+		DEBUG("- %s = %" _fmt, STRINGIFY(_x), config->_x);
+
+	#define CONF_DEBUG_INT(_x)\
+		CONF_DEBUG_FMT("d", _x)
+
 	#define CONF_DEBUG_UINT(_x) \
-		DEBUG("- %s = %u", STRINGIFY(_x), config->_x);
+		CONF_DEBUG_FMT("u", _x)
 
 	#define CONF_DEBUG_UINT64(_x) \
-		DEBUG("- %s = %"PRIu64, STRINGIFY(_x), config->_x);
+		CONF_DEBUG_FMT(PRIu64, _x)
+
+	#define CONF_DEBUG_FLOAT(_x) \
+		CONF_DEBUG_FMT("f", _x)
 
 	#define CONF_DEBUG_BOOL(_x) \
 		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
-
-	#define CONF_DEBUG_FLOAT(_x) \
-		DEBUG("- %s = %f", STRINGIFY(_x), config->_x);
 
 	DEBUG("Configuration values:");
 
@@ -207,6 +212,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_FLOAT(progress_interval);
 
 	CONF_DEBUG_UINT64(base_xid);
+	CONF_DEBUG_INT(packet_trace_lvl);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);
 	CONF_DEBUG_BOOL(packet_trace_timestamp);
 	CONF_DEBUG_FLOAT(request_timeout);

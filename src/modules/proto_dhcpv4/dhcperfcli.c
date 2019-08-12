@@ -47,6 +47,7 @@ dpc_context_t exe_ctx = {
 };
 
 static dpc_config_t default_config = {
+	.packet_trace_lvl = -1, /* If unspecified, figure out something automatically. */
 	.progress_interval = 10.0,
 	.request_timeout = 1.0,
 	.retransmit_max = 2,
@@ -128,7 +129,6 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 };
 
 static char const *file_config; /* Optional configuration file. */
-static int packet_trace_lvl = -1; /* If unspecified, figure out something automatically. */
 
 static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t *event_list;
@@ -863,7 +863,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 			return;
 		}
 
-		if (packet_trace_lvl >= 1) dpc_packet_digest_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
+		if (CONF.packet_trace_lvl >= 1) dpc_packet_digest_fprint(fr_log_fp, session, session->request, DPC_PACKET_TIMEOUT);
 
 		/* Statistics. */
 		STAT_INCR_PACKET_LOST(session->request);
@@ -996,7 +996,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		return -1;
 	}
 
-	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT, packet_trace_lvl); /* Print request packet. */
+	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT, CONF.packet_trace_lvl); /* Print request packet. */
 
 	/* Statistics. */
 	if (session->retransmit == 0) {
@@ -1166,7 +1166,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	session->ftd_rtt = session->reply->timestamp - session->fte_init;
 	DEBUG_TRACE("Packet response time: %.6f", ncc_fr_time_to_float(session->ftd_rtt));
 
-	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, packet_trace_lvl); /* print reply packet. */
+	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, CONF.packet_trace_lvl); /* print reply packet. */
 
 	/* Update statistics. */
 	dpc_statistics_update(session, session->request, session->reply);
@@ -3009,7 +3009,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'P':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			packet_trace_lvl = atoi(optarg);
+			CONF.packet_trace_lvl = atoi(optarg);
 			break;
 
 		case 'r':
@@ -3333,10 +3333,10 @@ int main(int argc, char **argv)
 	/*
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
-	if (packet_trace_lvl == -1) {
+	if (CONF.packet_trace_lvl == -1) {
 		if (ECTX.session_max_num == 1 || (!with_template && input_list.size == 1 && ECTX.input_num_use == 1)) {
 			/* Only one request: full packet print. */
-			packet_trace_lvl = 2;
+			CONF.packet_trace_lvl = 2;
 		} else if (ECTX.session_max_active == 1) {
 			/*
 			 *	Several requests, but no parallelism.
@@ -3344,15 +3344,15 @@ int main(int argc, char **argv)
 			 *	Otherwise: no packet print.
 			 */
 			if (ECTX.session_max_num > 50 || CONF.duration_start_max > 1.0) {
-				packet_trace_lvl = 0;
+				CONF.packet_trace_lvl = 0;
 			} else {
-				packet_trace_lvl = 1;
+				CONF.packet_trace_lvl = 1;
 			}
 		} else {
 			/* Several request in parallel: no packet print. */
-			packet_trace_lvl = 0;
+			CONF.packet_trace_lvl = 0;
 		}
-		DEBUG_TRACE("Packet trace level set to: %d", packet_trace_lvl);
+		DEBUG("Packet trace level set to: %u", CONF.packet_trace_lvl);
 	}
 
 #ifdef HAVE_LIBPCAP
