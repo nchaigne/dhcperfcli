@@ -21,7 +21,7 @@ static const CONF_PARSER _timing_config[] = {
 
 static const CONF_PARSER _packet_config[] = {
 	{ FR_CONF_OFFSET("trace_elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
-	{ FR_CONF_OFFSET("trace_datetime", FR_TYPE_BOOL, dpc_config_t, packet_trace_datetime), .dflt = "no" },
+	{ FR_CONF_OFFSET("trace_timestamp", FR_TYPE_BOOL, dpc_config_t, packet_trace_timestamp), .dflt = "no" },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -37,6 +37,8 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
+
+	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
 
 	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
 	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _timing_config },
@@ -149,6 +151,7 @@ failure:
  */
 int dpc_config_check(dpc_config_t *config)
 {
+	CONF_CHECK_FLOAT("progress_interval", config->progress_interval, config->progress_interval > 0, ">= 0");
 	CONF_CHECK_FLOAT("request_timeout", config->request_timeout, config->request_timeout > 0, ">= 0");
 
 	return 0;
@@ -174,8 +177,9 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_BOOL(debug_dev);
 	CONF_DEBUG_BOOL(debug_basename);
 	CONF_DEBUG_BOOL(log_timestamp);
+	CONF_DEBUG_FLOAT(progress_interval);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);
-	CONF_DEBUG_BOOL(packet_trace_datetime);
+	CONF_DEBUG_BOOL(packet_trace_timestamp);
 	CONF_DEBUG_FLOAT(request_timeout);
 	CONF_DEBUG_UINT(retransmit_max);
 }

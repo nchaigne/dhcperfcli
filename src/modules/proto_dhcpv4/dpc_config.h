@@ -22,8 +22,10 @@ struct dpc_config_s {
 	bool debug_basename;             //!< Print only file base name.
 	bool log_timestamp;              //!< Add timestamp to log messages.
 
+	float progress_interval;         //<! Time interval between periodic progress statistics.
+
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
-	bool packet_trace_datetime;      //<! Prefix packet trace with date/time.
+	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.
 
 	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).

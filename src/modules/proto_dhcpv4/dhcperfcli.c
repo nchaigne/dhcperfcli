@@ -35,7 +35,6 @@ fr_time_t fte_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
-	.progress_interval = 10.0,
 	.session_max_active = 1,
 
 	.pr_stat_per_input = 1,
@@ -48,6 +47,7 @@ dpc_context_t exe_ctx = {
 };
 
 static dpc_config_t default_config = {
+	.progress_interval = 10.0,
 	.request_timeout = 1.0,
 	.retransmit_max = 2,
 };
@@ -3013,9 +3013,9 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 's':
-			if (!ncc_str_to_float(&ECTX.progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
-			if (ECTX.progress_interval < 0.1) ECTX.progress_interval = 0.1; /* Don't allow absurdly low values. */
-			else if (ECTX.progress_interval > 864000) ECTX.progress_interval = 0; /* Just don't. */
+			if (!ncc_str_to_float32(&CONF.progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			if (CONF.progress_interval < 0.1) CONF.progress_interval = 0.1; /* Don't allow absurdly low values. */
+			else if (CONF.progress_interval > 864000) CONF.progress_interval = 0; /* Just don't. */
 			break;
 
 		case 't':
@@ -3120,7 +3120,7 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	if (ECTX.session_max_active == 0) ECTX.session_max_active = 1;
-	ECTX.ftd_progress_interval = ncc_float_to_fr_time(ECTX.progress_interval);
+	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
@@ -3269,8 +3269,8 @@ int main(int argc, char **argv)
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
-	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
+	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 
 	if (CONF.retransmit_max > 0) {
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);

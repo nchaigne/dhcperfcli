@@ -24,7 +24,6 @@ extern dpc_context_t exe_ctx;
 struct dpc_context {
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
-	double progress_interval;        //<! Time interval between periodic progress statistics.
 	fr_time_delta_t ftd_progress_interval;
 
 	fr_time_delta_t ftd_request_timeout;

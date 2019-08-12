@@ -133,7 +133,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	}
 
 	/* Absolute date/time. */
-	if (CONF.packet_trace_datetime) {
+	if (CONF.packet_trace_timestamp) {
 		char datetime_buf[DPC_DATETIME_STRLEN];
 		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, false));
 	}
