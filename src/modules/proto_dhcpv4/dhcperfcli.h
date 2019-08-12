@@ -28,8 +28,6 @@ struct dpc_context {
 
 	fr_time_delta_t ftd_request_timeout;
 
-	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
-
 	double duration_start_max;       //<! Limit duration for starting new input sessions.
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 

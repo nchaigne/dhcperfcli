@@ -24,6 +24,8 @@ struct dpc_config_s {
 
 	float progress_interval;         //<! Time interval between periodic progress statistics.
 
+	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
+
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
 	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.
 

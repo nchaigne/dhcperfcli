@@ -40,6 +40,8 @@ static const CONF_PARSER _main_config[] = {
 
 	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
 
+	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT32, dpc_config_t, base_xid) }, /* No default */
+
 	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
 	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _timing_config },
 
@@ -191,6 +193,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_BOOL(debug_basename);
 	CONF_DEBUG_BOOL(log_timestamp);
 	CONF_DEBUG_FLOAT(progress_interval);
+	CONF_DEBUG_UINT(base_xid);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);
 	CONF_DEBUG_BOOL(packet_trace_timestamp);
 	CONF_DEBUG_FLOAT(request_timeout);

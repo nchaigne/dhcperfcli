@@ -2766,7 +2766,7 @@ static void dpc_event_list_init(TALLOC_CTX *ctx)
  */
 static void dpc_packet_list_init(TALLOC_CTX *ctx)
 {
-	pl = dpc_packet_list_create(ctx, ECTX.base_xid);
+	pl = dpc_packet_list_create(ctx, CONF.base_xid);
 	if (!pl) {
 		ERROR("Failed to create packet list");
 		exit(EXIT_FAILURE);
@@ -2981,7 +2981,7 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-			if (!ncc_str_to_uint32(&ECTX.base_xid, optarg)) ERROR_OPT_VALUE("integer or hex string");
+			if (!ncc_str_to_uint32(&CONF.base_xid, optarg)) ERROR_OPT_VALUE("integer or hex string");
 			break;
 
 		case 'L':
