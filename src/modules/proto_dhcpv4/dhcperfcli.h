@@ -25,10 +25,8 @@ struct dpc_context {
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
 	fr_time_delta_t ftd_progress_interval;
-
 	fr_time_delta_t ftd_request_timeout;
 
-	double duration_start_max;       //<! Limit duration for starting new input sessions.
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 
 	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).

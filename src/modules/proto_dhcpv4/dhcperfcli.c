@@ -408,9 +408,9 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 
 	/* Elapsed time. */
 	fprintf(fp, "t(%s)", ELAPSED);
-	if (ECTX.duration_start_max) {
+	if (CONF.duration_start_max) {
 		/* And percentage of max duration (if set). */
-		double duration_progress = 100 * dpc_job_elapsed_time_get() / ECTX.duration_start_max;
+		double duration_progress = 100 * dpc_job_elapsed_time_get() / CONF.duration_start_max;
 		fprintf(fp, " (%.1f%%)", duration_progress);
 	}
 
@@ -2049,8 +2049,8 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Time limit reached. */
-		if (ECTX.duration_start_max && dpc_job_elapsed_time_get() >= ECTX.duration_start_max) {
-			INFO("Max duration (%.3f s) reached: will not start any new session.", ECTX.duration_start_max);
+		if (CONF.duration_start_max && dpc_job_elapsed_time_get() >= CONF.duration_start_max) {
+			INFO("Max duration (%.3f s) reached: will not start any new session.", CONF.duration_start_max);
 			start_sessions_flag = false;
 			break;
 		}
@@ -2985,7 +2985,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'L':
-			if (!ncc_str_to_float(&ECTX.duration_start_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			if (!ncc_str_to_float32(&CONF.duration_start_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			break;
 
 		case 'M':
@@ -3338,7 +3338,7 @@ int main(int argc, char **argv)
 			 *	If the number of sessions and the max duration are reasonably small, print packets header.
 			 *	Otherwise: no packet print.
 			 */
-			if (ECTX.session_max_num > 50 || ECTX.duration_start_max > 1.0) {
+			if (ECTX.session_max_num > 50 || CONF.duration_start_max > 1.0) {
 				packet_trace_lvl = 0;
 			} else {
 				packet_trace_lvl = 1;
@@ -3361,8 +3361,8 @@ int main(int argc, char **argv)
 
 	fte_job_start = fr_time(); /* Job start timestamp. */
 
-	if (ECTX.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
-		ECTX.fte_start_max = ncc_float_to_fr_time(ECTX.duration_start_max) + fte_job_start;
+	if (CONF.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
+		ECTX.fte_start_max = ncc_float_to_fr_time(CONF.duration_start_max) + fte_job_start;
 	}
 
 	/*

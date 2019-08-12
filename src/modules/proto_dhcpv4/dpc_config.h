@@ -25,12 +25,12 @@ struct dpc_config_s {
 	float progress_interval;         //<! Time interval between periodic progress statistics.
 
 	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
-
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
 	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.
-
 	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
+
+	float duration_start_max;        //<! Limit duration for starting new input sessions.
 };
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
