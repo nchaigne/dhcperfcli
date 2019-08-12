@@ -248,18 +248,17 @@ int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 /*
  * Print a DHCP packet.
  */
-void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet,
-                       dpc_packet_event_t pevent, int trace_lvl)
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
 {
 	VALUE_PAIR *vp_encoded_data = NULL;
 
 	if (!fp || !packet) return;
 
-	if (trace_lvl >= 1) {
+	if (CONF.packet_trace_lvl >= 1) {
 		dpc_packet_digest_fprint(fp, session, packet, pevent);
 	}
 
-	if (trace_lvl >= 2) {
+	if (CONF.packet_trace_lvl >= 2) {
 		if ((vp_encoded_data = ncc_pair_find_by_da(packet->vps, attr_encoded_data)) != NULL) {
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp_encoded_data);
@@ -274,7 +273,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 		}
 	}
 
-	if (trace_lvl >= 3) {
+	if (CONF.packet_trace_lvl >= 3) {
 		fprintf(fp, "DHCP hex data:\n");
 		dpc_packet_data_fprint(fp, packet);
 

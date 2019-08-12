@@ -22,8 +22,7 @@ char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_
 void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);
 int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp);
-void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet,
-                       dpc_packet_event_t pevent, int trace_lvl);
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet);
 void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
                                     bool print_end_pad, uint8_t *overload);

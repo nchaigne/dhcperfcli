@@ -996,7 +996,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		return -1;
 	}
 
-	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT, CONF.packet_trace_lvl); /* Print request packet. */
+	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT); /* Print request packet. */
 
 	/* Statistics. */
 	if (session->retransmit == 0) {
@@ -1166,7 +1166,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	session->ftd_rtt = session->reply->timestamp - session->fte_init;
 	DEBUG_TRACE("Packet response time: %.6f", ncc_fr_time_to_float(session->ftd_rtt));
 
-	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED, CONF.packet_trace_lvl); /* print reply packet. */
+	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED); /* print reply packet. */
 
 	/* Update statistics. */
 	dpc_statistics_update(session, session->request, session->reply);
@@ -3333,7 +3333,7 @@ int main(int argc, char **argv)
 	/*
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
-	if (CONF.packet_trace_lvl == -1) {
+	if (CONF.packet_trace_lvl < 0) {
 		if (ECTX.session_max_num == 1 || (!with_template && input_list.size == 1 && ECTX.input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			CONF.packet_trace_lvl = 2;
