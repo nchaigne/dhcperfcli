@@ -145,6 +145,16 @@ failure:
 }
 
 /*
+ *	Check the configuration.
+ */
+int dpc_config_check(dpc_config_t *config)
+{
+	CONF_CHECK_FLOAT("request_timeout", config->request_timeout, config->request_timeout > 0, ">= 0");
+
+	return 0;
+}
+
+/*
  *	Debug the configuration.
  */
 void dpc_config_debug(dpc_config_t *config)

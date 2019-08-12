@@ -32,4 +32,17 @@ struct dpc_config_s {
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
 dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx);
 int dpc_config_init(dpc_config_t *config, char const *conf_file);
+int dpc_config_check(dpc_config_t *config);
 void dpc_config_debug(dpc_config_t *config);
+
+
+/*
+ *	Configuration checks.
+*/
+#define CONF_CHECK_FLOAT(_name, _var, _cond, _expected)\
+do {\
+	if (!(_cond)) {\
+		ERROR("Invalid configuration \"" _name " = %f\" (expected: " _expected ")", _var);\
+		return 1;\
+	}\
+} while (0)

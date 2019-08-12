@@ -2885,6 +2885,8 @@ typedef enum {
 
 /*
  *	Process command line options and arguments.
+ *	Initialize configuration elements that can be set through command-line options.
+ *	Note: Those may later be overriden with values read from configuration files.
  */
 static void dpc_options_parse(int argc, char **argv)
 {
@@ -3095,11 +3097,7 @@ static void dpc_options_parse(int argc, char **argv)
 		talloc_disable_null_tracking();
 	}
 
-	/*
-	 *	Initialize configuration elements that can be set through command-line options.
-	 *	Note: Those may later be overriden with values read from configuration files.
-	 */
-	dpc_config->debug_level = dpc_debug_lvl;
+	CONF.debug_level = dpc_debug_lvl;
 
 	ncc_log_init(stdout, dpc_debug_lvl); /* Update with actual options. */
 	ncc_default_log.line_number = dpc_config->debug_dev;
@@ -3271,6 +3269,7 @@ int main(int argc, char **argv)
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
+	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
 
 	if (CONF.retransmit_max > 0) {
