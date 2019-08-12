@@ -325,24 +325,12 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 	VALUE_PAIR *vp;
 	fr_cursor_t cursor;
 	char buf[4096];
-	UNUSED size_t len;
 
 	/* Iterate on the value pairs of the list. */
 	int i = 0;
 	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
-		len = fr_pair_snprint(buf, sizeof(buf), vp);
-
-		char *type_info = "";
-		switch (vp->type) {
-			case VT_XLAT:
-				type_info = "XLAT"; break;
-			case VT_DATA:
-				type_info = "DATA"; break;
-			default:
-				type_info = "???";
-		}
-
-		fprintf(fp, "  #%u (%u: %s) %s\n", i, vp->type, type_info, buf);
+		ncc_pair_snprint(buf, sizeof(buf), vp);
+		fprintf(fp, "  #%u %s\n", i, buf);
 		i++;
 	}
 }
