@@ -2981,7 +2981,12 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-			if (!ncc_str_to_uint32(&CONF.base_xid, optarg)) ERROR_OPT_VALUE("integer or hex string");
+		{
+			/* Stored as uint64_t because it is required by the config parser. */
+			uint32_t u32;
+			if (!ncc_str_to_uint32(&u32, optarg)) ERROR_OPT_VALUE("integer or hex string");
+			CONF.base_xid = u32;
+		}
 			break;
 
 		case 'L':

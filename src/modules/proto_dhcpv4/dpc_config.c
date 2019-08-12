@@ -8,8 +8,14 @@
 
 #define MAX_ATTR_INPUT 128
 
-/* Note: Type 'float64' is not supported by FreeRADIUS in configuration files.
- * So we must use 'float32' instead.
+/* Notes:
+ *
+ * - Type 'float64' is not supported by FreeRADIUS in configuration files.
+ *   Using 'float32' instead, which is good enough for configuration.
+ *
+ * - Type 'uint32' is restricted to values 0-INT32_MAX (not 0-UINT32_MAX).
+ *   Cf. function cf_pair_parse_value (cf_parse.c) for rationale.
+ *   We need real UINT32 values, so we'll be using 'uint64'.
  */
 
 static const CONF_PARSER _timing_config[] = {
@@ -39,7 +45,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
 
 	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
-	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT32, dpc_config_t, base_xid) }, /* No default */
+	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
 
 	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
@@ -156,6 +162,7 @@ int dpc_config_check(dpc_config_t *config)
 	CONF_CHECK_FLOAT("progress_interval", config->progress_interval, config->progress_interval >= 0, ">= 0");
 	CONF_CHECK_FLOAT("request_timeout", config->request_timeout, config->request_timeout >= 0, ">= 0");
 	CONF_CHECK_FLOAT("duration_start_max", config->duration_start_max, config->duration_start_max >= 0, ">= 0");
+	CONF_CHECK_UINT64("base_xid", config->base_xid, config->base_xid <= UINT32_MAX, "<= 0xffffffff");
 
 	/*
 	 *	Check and fix absurd values.
@@ -181,6 +188,9 @@ void dpc_config_debug(dpc_config_t *config)
 	#define CONF_DEBUG_UINT(_x) \
 		DEBUG("- %s = %u", STRINGIFY(_x), config->_x);
 
+	#define CONF_DEBUG_UINT64(_x) \
+		DEBUG("- %s = %"PRIu64, STRINGIFY(_x), config->_x);
+
 	#define CONF_DEBUG_BOOL(_x) \
 		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
 
@@ -196,7 +206,7 @@ void dpc_config_debug(dpc_config_t *config)
 
 	CONF_DEBUG_FLOAT(progress_interval);
 
-	CONF_DEBUG_UINT(base_xid);
+	CONF_DEBUG_UINT64(base_xid);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);
 	CONF_DEBUG_BOOL(packet_trace_timestamp);
 	CONF_DEBUG_FLOAT(request_timeout);

@@ -24,7 +24,9 @@ struct dpc_config_s {
 
 	float progress_interval;         //<! Time interval between periodic progress statistics.
 
-	uint32_t base_xid;               //<! Base value for xid generated in DHCP packets.
+	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.
+	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
+
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
 	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.
 	float request_timeout;           //<! Max time waiting for a reply to a request we've sent.
@@ -43,10 +45,16 @@ void dpc_config_debug(dpc_config_t *config);
 /*
  *	Configuration checks.
 */
-#define CONF_CHECK_FLOAT(_name, _var, _cond, _expected)\
+#define CONF_CHECK_FMT(_fmt, _name, _var, _cond, _expected)\
 do {\
 	if (!(_cond)) {\
-		ERROR("Invalid configuration \"" _name " = %f\" (expected: " _expected ")", _var);\
+		ERROR("Invalid configuration \"" _name " = %" _fmt "\" (expected: " _expected ")", _var);\
 		return 1;\
 	}\
 } while (0)
+
+#define CONF_CHECK_FLOAT(_name, _var, _cond, _expected)\
+	CONF_CHECK_FMT("f", _name, _var, _cond, _expected)
+
+#define CONF_CHECK_UINT64(_name, _var, _cond, _expected)\
+	CONF_CHECK_FMT(PRIu64, _name, _var, _cond, _expected)
