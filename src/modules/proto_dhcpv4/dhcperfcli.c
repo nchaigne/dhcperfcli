@@ -133,7 +133,6 @@ static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
-static char const *file_input;
 ncc_list_t input_list;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev; /* In template mode, previous used input item. */
@@ -2559,16 +2558,16 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	/*
 	 *	If an input file is provided, read it.
 	 */
-	if (file_input && strcmp(file_input, "-") != 0) {
-		DEBUG("Reading input from file: %s", file_input);
+	if (CONF.file_input && strcmp(CONF.file_input, "-") != 0) {
+		DEBUG("Reading input from file: %s", CONF.file_input);
 
-		fp = fopen(file_input, "r");
+		fp = fopen(CONF.file_input, "r");
 		if (!fp) {
-			ERROR("Failed to open file \"%s\": %s", file_input, strerror(errno));
+			ERROR("Failed to open file \"%s\": %s", CONF.file_input, strerror(errno));
 			return -1;
 		}
 
-		ret = dpc_input_load_from_fp(ctx, fp, &input_list, file_input);
+		ret = dpc_input_load_from_fp(ctx, fp, &input_list, CONF.file_input);
 		fclose(fp);
 		if (ret < 0) return -1;
 	}
@@ -2961,7 +2960,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'f':
-			file_input = optarg;
+			CONF.file_input = optarg;
 			break;
 
 		case 'g':

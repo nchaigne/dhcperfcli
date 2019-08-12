@@ -44,6 +44,12 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
 
 	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
+
+	//{ FR_CONF_OFFSET("file_input", FR_TYPE_FILE_INPUT, dpc_config_t, file_input) },
+	/* FR_TYPE_FILE_INPUT (or FR_TYPE_STRING) does not seem to work with "no .dflt".
+	   We get a null pointer. TODO: find out why.
+	*/
+
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
 
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
@@ -204,6 +210,9 @@ void dpc_config_debug(dpc_config_t *config)
 	#define CONF_DEBUG_FLOAT(_x) \
 		CONF_DEBUG_FMT("f", _x)
 
+	#define CONF_DEBUG_STR(_x) \
+		CONF_DEBUG_FMT("s", _x)
+
 	#define CONF_DEBUG_BOOL(_x) \
 		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
 
@@ -217,6 +226,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_FLOAT(progress_interval);
 
 	CONF_DEBUG_BOOL(template);
+	CONF_DEBUG_STR(file_input);
 	CONF_DEBUG_UINT64(base_xid);
 
 	CONF_DEBUG_INT(packet_trace_lvl);
