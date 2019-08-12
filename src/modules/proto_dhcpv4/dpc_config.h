@@ -24,6 +24,7 @@ struct dpc_config_s {
 
 	float progress_interval;         //<! Time interval between periodic progress statistics.
 
+	bool template;                   //<! Template mode.
 	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.
 	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
 

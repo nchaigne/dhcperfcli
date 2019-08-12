@@ -135,7 +135,6 @@ static fr_event_list_t *event_list;
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 static char const *file_input;
 ncc_list_t input_list;
-static int with_template = 0;
 static int with_xlat = 0;
 static ncc_list_item_t *template_input_prev; /* In template mode, previous used input item. */
 
@@ -362,7 +361,7 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
-	if (!ECTX.pr_stat_per_input || !with_template || input_list.size < 2) return;
+	if (!ECTX.pr_stat_per_input || !CONF.template || input_list.size < 2) return;
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
@@ -1765,7 +1764,7 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
  */
 static dpc_input_t *dpc_get_input()
 {
-	if (!with_template) {
+	if (!CONF.template) {
 		return NCC_LIST_DEQUEUE(&input_list);
 	} else {
 		return dpc_get_input_from_template(global_ctx);
@@ -1817,7 +1816,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	/*
 	 *	If not using a template, copy this input item if it has to be used again.
 	 */
-	if (!with_template && input->num_use < input->max_use) {
+	if (!CONF.template && input->num_use < input->max_use) {
 		DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)",
 		            input->id, input->num_use, input->max_use);
 		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
@@ -2056,7 +2055,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* No more input. */
-		if (!with_template && input_list.size == 0) {
+		if (!CONF.template && input_list.size == 0) {
 			start_sessions_flag = false;
 			break;
 		}
@@ -2427,7 +2426,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 	 *	Pre-allocate the socket for this input item.
 	 *	Unless: in template mode *and* with gateway(s) (in which case we already have the sockets allocated).
 	 */
-	if (!with_template || !gateway_list) {
+	if (!CONF.template || !gateway_list) {
 		dpc_input_socket_allocate(input);
 	}
 
@@ -2530,7 +2529,7 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, c
 		dpc_input_handle(input, list);
 
 		/* Stop reading if we know we won't need it. */
-		if (!with_template && CONF.session_max_num && list->size >= CONF.session_max_num) break;
+		if (!CONF.template && CONF.session_max_num && list->size >= CONF.session_max_num) break;
 
 	} while (!file_done);
 
@@ -3032,7 +3031,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'T':
-			with_template = 1;
+			CONF.template = true;
 			break;
 
 		case 'v':
@@ -3118,7 +3117,7 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	/* Xlat is automatically enabled in template mode. */
-	if (with_template) with_xlat = 1;
+	if (CONF.template) with_xlat = 1;
 }
 
 /*
@@ -3270,7 +3269,7 @@ int main(int argc, char **argv)
 	}
 	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
-	if (!with_template && CONF.input_num_use == 0) CONF.input_num_use = 1;
+	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 
 	dpc_event_list_init(global_ctx);
 	dpc_packet_list_init(global_ctx);
@@ -3331,7 +3330,7 @@ int main(int argc, char **argv)
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (CONF.packet_trace_lvl < 0) {
-		if (CONF.session_max_num == 1 || (!with_template && input_list.size == 1 && CONF.input_num_use == 1)) {
+		if (CONF.session_max_num == 1 || (!CONF.template && input_list.size == 1 && CONF.input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			CONF.packet_trace_lvl = 2;
 		} else if (CONF.session_max_active == 1) {

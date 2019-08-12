@@ -216,7 +216,9 @@ void dpc_config_debug(dpc_config_t *config)
 
 	CONF_DEBUG_FLOAT(progress_interval);
 
+	CONF_DEBUG_BOOL(template);
 	CONF_DEBUG_UINT64(base_xid);
+
 	CONF_DEBUG_INT(packet_trace_lvl);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);
 	CONF_DEBUG_BOOL(packet_trace_timestamp);
