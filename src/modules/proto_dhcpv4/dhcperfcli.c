@@ -3014,8 +3014,6 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 's':
 			if (!ncc_str_to_float32(&CONF.progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
-			if (CONF.progress_interval < 0.1) CONF.progress_interval = 0.1; /* Don't allow absurdly low values. */
-			else if (CONF.progress_interval > 864000) CONF.progress_interval = 0; /* Just don't. */
 			break;
 
 		case 't':
@@ -3026,11 +3024,6 @@ static void dpc_options_parse(int argc, char **argv)
 			 * - we won't have rtt statistics
 			 * - and we probably will have "unexpected replies" (if the server is responsive)
 			 */
-			if (CONF.request_timeout) {
-				/* Don't allow absurd values. */
-				if (CONF.request_timeout < 0.01) CONF.request_timeout = 0.01;
-				else if (CONF.request_timeout > 3600) CONF.request_timeout = 3600;
-			}
 			break;
 
 		case 'T':
@@ -3269,8 +3262,8 @@ int main(int argc, char **argv)
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
 
-	dpc_config_debug(dpc_config);
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
+	dpc_config_debug(dpc_config);
 
 	if (CONF.retransmit_max > 0) {
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);

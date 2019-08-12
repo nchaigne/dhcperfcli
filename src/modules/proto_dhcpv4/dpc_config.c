@@ -154,6 +154,19 @@ int dpc_config_check(dpc_config_t *config)
 	CONF_CHECK_FLOAT("progress_interval", config->progress_interval, config->progress_interval > 0, ">= 0");
 	CONF_CHECK_FLOAT("request_timeout", config->request_timeout, config->request_timeout > 0, ">= 0");
 
+	/*
+	 *	Check and fix absurd values.
+	 */
+	if (CONF.progress_interval) {
+		if (CONF.progress_interval < 0.1) CONF.progress_interval = 0.1;
+		else if (CONF.progress_interval > 864000) CONF.progress_interval = 0;
+	}
+
+	if (CONF.request_timeout) {
+		if (CONF.request_timeout < 0.01) CONF.request_timeout = 0.01;
+		else if (CONF.request_timeout > 3600) CONF.request_timeout = 3600;
+	}
+
 	return 0;
 }
 
