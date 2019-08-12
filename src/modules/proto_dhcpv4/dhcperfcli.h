@@ -29,10 +29,6 @@ struct dpc_context {
 
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 
-	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).
-	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
-	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
-
 	float rate_limit;                //<! Limit rate/s of sessions initialized from input (all transactions combined).
 
 	int pr_stat_per_input;           //<! Print per-input progress statistics (if multiple input).

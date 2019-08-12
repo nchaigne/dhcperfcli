@@ -34,6 +34,9 @@ struct dpc_config_s {
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 
 	float duration_start_max;        //<! Limit duration for starting new input sessions.
+	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).
+	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
+	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
 };
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);

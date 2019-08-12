@@ -45,7 +45,11 @@ static const CONF_PARSER _main_config[] = {
 
 	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
+
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
+	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use) }, /* No default */
+	{ FR_CONF_OFFSET("session_max_num", FR_TYPE_UINT32, dpc_config_t, session_max_num) }, /* No default */
+	{ FR_CONF_OFFSET("session_max_active", FR_TYPE_UINT32, dpc_config_t, session_max_active) }, /* No default */
 
 	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
 	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _timing_config },
@@ -219,4 +223,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_UINT(retransmit_max);
 
 	CONF_DEBUG_FLOAT(duration_start_max);
+	CONF_DEBUG_UINT(input_num_use);
+	CONF_DEBUG_UINT(session_max_num);
+	CONF_DEBUG_UINT(session_max_active);
 }

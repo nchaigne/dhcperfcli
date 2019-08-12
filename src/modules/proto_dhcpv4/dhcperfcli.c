@@ -35,8 +35,6 @@ fr_time_t fte_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
-	.session_max_active = 1,
-
 	.pr_stat_per_input = 1,
 	.pr_stat_per_input_max = 20,
 
@@ -47,6 +45,7 @@ dpc_context_t exe_ctx = {
 };
 
 static dpc_config_t default_config = {
+	.session_max_active = 1,
 	.packet_trace_lvl = -1, /* If unspecified, figure out something automatically. */
 	.progress_interval = 10.0,
 	.request_timeout = 1.0,
@@ -419,8 +418,8 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 		fprintf(fp, " sessions: [in: %u", session_num_in);
 
 		/* And percentage of max number of sessions (if set). Unless we're done starting new sessions. */
-		if (ECTX.session_max_num && start_sessions_flag) {
-			double session_progress = 100 * (double)session_num_in / ECTX.session_max_num;
+		if (CONF.session_max_num && start_sessions_flag) {
+			double session_progress = 100 * (double)session_num_in / CONF.session_max_num;
 			fprintf(fp, " (%.1f%%)", session_progress);
 		}
 
@@ -1935,7 +1934,7 @@ static void dpc_loop_recv(void)
 		fr_time_t now, when;
 		fr_time_delta_t wait_max = 0;
 
-		if (session_num_active >= ECTX.session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
+		if (session_num_active >= CONF.session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
 			now = fr_time();
 			if (when > now) wait_max = when - now; /* No negative. */
 		}
@@ -2042,8 +2041,8 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Max session limit reached. */
-		if (ECTX.session_max_num && session_num >= ECTX.session_max_num) {
-			INFO("Max number of sessions (%u) reached: will not start any new session.", ECTX.session_max_num);
+		if (CONF.session_max_num && session_num >= CONF.session_max_num) {
+			INFO("Max number of sessions (%u) reached: will not start any new session.", CONF.session_max_num);
 			start_sessions_flag = false;
 			break;
 		}
@@ -2064,7 +2063,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		/* Max active session reached. Try again later when we've finished some ongoing sessions.
 		 * Note: this does not include sessions handling requests past the initial one (e.g. DORA).
 		 */
-		if (session_num_parallel >= ECTX.session_max_active) break;
+		if (session_num_parallel >= CONF.session_max_active) break;
 
 		/* Rate limit enforced and we've already started as many sessions as allowed for now. */
 		if (do_limit && num_started >= limit_new_sessions) break;
@@ -2225,7 +2224,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 	input->ext.code = FR_CODE_UNDEFINED;
 
 	/* Default: global option -c, can be overriden through Max-Use attr. */
-	input->max_use = ECTX.input_num_use;
+	input->max_use = CONF.input_num_use;
 
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
@@ -2530,7 +2529,7 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, c
 		dpc_input_handle(input, list);
 
 		/* Stop reading if we know we won't need it. */
-		if (!with_template && ECTX.session_max_num && list->size >= ECTX.session_max_num) break;
+		if (!with_template && CONF.session_max_num && list->size >= CONF.session_max_num) break;
 
 	} while (!file_done);
 
@@ -2950,7 +2949,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'c':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			ECTX.input_num_use = atoi(optarg);
+			CONF.input_num_use = atoi(optarg);
 			break;
 
 		case 'C':
@@ -2999,12 +2998,12 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'N':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			ECTX.session_max_num = atoi(optarg);
+			CONF.session_max_num = atoi(optarg);
 			break;
 
 		case 'p':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			ECTX.session_max_active = atoi(optarg);
+			CONF.session_max_active = atoi(optarg);
 			break;
 
 		case 'P':
@@ -3117,13 +3116,8 @@ static void dpc_options_parse(int argc, char **argv)
 		}
 	}
 
-	if (ECTX.session_max_active == 0) ECTX.session_max_active = 1;
-	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
-
 	/* Xlat is automatically enabled in template mode. */
 	if (with_template) with_xlat = 1;
-
-	if (!with_template && ECTX.input_num_use == 0) ECTX.input_num_use = 1;
 }
 
 /*
@@ -3273,7 +3267,10 @@ int main(int argc, char **argv)
 	if (CONF.retransmit_max > 0) {
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);
 	}
+	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
+	if (CONF.session_max_active == 0) CONF.session_max_active = 1;
+	if (!with_template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 
 	dpc_event_list_init(global_ctx);
 	dpc_packet_list_init(global_ctx);
@@ -3334,16 +3331,16 @@ int main(int argc, char **argv)
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (CONF.packet_trace_lvl < 0) {
-		if (ECTX.session_max_num == 1 || (!with_template && input_list.size == 1 && ECTX.input_num_use == 1)) {
+		if (CONF.session_max_num == 1 || (!with_template && input_list.size == 1 && CONF.input_num_use == 1)) {
 			/* Only one request: full packet print. */
 			CONF.packet_trace_lvl = 2;
-		} else if (ECTX.session_max_active == 1) {
+		} else if (CONF.session_max_active == 1) {
 			/*
 			 *	Several requests, but no parallelism.
 			 *	If the number of sessions and the max duration are reasonably small, print packets header.
 			 *	Otherwise: no packet print.
 			 */
-			if (ECTX.session_max_num > 50 || CONF.duration_start_max > 1.0) {
+			if (CONF.session_max_num > 50 || CONF.duration_start_max > 1.0) {
 				CONF.packet_trace_lvl = 0;
 			} else {
 				CONF.packet_trace_lvl = 1;
