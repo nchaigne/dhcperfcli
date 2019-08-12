@@ -2506,6 +2506,9 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, c
 	 *	Loop until the file is done.
 	 */
 	do {
+		/* Stop reading if we know we won't need it. */
+		if (!CONF.template && CONF.session_max_num && list->size >= CONF.session_max_num) break;
+
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
 		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
@@ -2526,9 +2529,6 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, c
 		*/
 
 		dpc_input_handle(input, list);
-
-		/* Stop reading if we know we won't need it. */
-		if (!CONF.template && CONF.session_max_num && list->size >= CONF.session_max_num) break;
 
 	} while (!file_done);
 
