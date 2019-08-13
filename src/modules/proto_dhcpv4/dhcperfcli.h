@@ -29,8 +29,6 @@ struct dpc_context {
 
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 
-	float rate_limit;                //<! Limit rate/s of sessions initialized from input (all transactions combined).
-
 	int pr_stat_per_input;           //<! Print per-input progress statistics (if multiple input).
 	int pr_stat_per_input_max;       //<! Max number of input items shown in progress statistics.
 

@@ -54,6 +54,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
 
+	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT32, dpc_config_t, rate_limit) }, /* No default */
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
 	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use) }, /* No default */
 	{ FR_CONF_OFFSET("session_max_num", FR_TYPE_UINT32, dpc_config_t, session_max_num) }, /* No default */
@@ -254,6 +255,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_FLOAT(request_timeout);
 	CONF_DEBUG_UINT(retransmit_max);
 
+	CONF_DEBUG_FLOAT(rate_limit);
 	CONF_DEBUG_FLOAT(duration_start_max);
 	CONF_DEBUG_UINT(input_num_use);
 	CONF_DEBUG_UINT(session_max_num);

@@ -443,7 +443,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	if (session_num_in >= ECTX.min_session_for_rps
 	    && dpc_job_elapsed_time_get() >= ECTX.min_session_time_for_rps
 		&& start_sessions_flag) {
-		bool per_input = ECTX.rate_limit ? false : true;
+		bool per_input = CONF.rate_limit ? false : true;
 		fprintf(fp, ", session rate (/s): %.3f", dpc_get_session_in_rate(per_input));
 	}
 
@@ -1980,10 +1980,10 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
-	if (!ECTX.rate_limit) return false;
+	if (!CONF.rate_limit) return false;
 
 	float elapsed_ref = dpc_start_sessions_elapsed_time_get();
-	return dpc_rate_limit_calc_gen(max_new_sessions, ECTX.rate_limit, elapsed_ref, session_num);
+	return dpc_rate_limit_calc_gen(max_new_sessions, CONF.rate_limit, elapsed_ref, session_num);
 }
 
 
@@ -3012,7 +3012,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'r':
 			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			ECTX.rate_limit = atoi(optarg);
+			CONF.rate_limit = atoi(optarg);
 			break;
 
 		case 's':
