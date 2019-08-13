@@ -286,3 +286,55 @@ static inline bool is_integer_n(char const *value, ssize_t len)
 	} \
 }
 
+
+/*
+ *	Chained list using FreeRADIUS "dlist.h"
+ */
+typedef struct ncc_dlist {
+	fr_dlist_head_t head;
+	uint32_t size;
+} ncc_dlist_t;
+
+#define NCC_DLIST_SIZE(_ncc_dlist) (_ncc_dlist.size)
+
+#define NCC_DLIST_INIT(_ncc_dlist, _item_struct_t) { \
+	fr_dlist_init(&(_ncc_dlist.head), _item_struct_t, dlist); \
+	_ncc_dlist.size = 0; \
+}
+
+#define NCC_DLIST_ENQUEUE(_ncc_dlist, _item) { \
+	fr_dlist_insert_tail(&(_ncc_dlist.head), _item); \
+	_ncc_dlist.size++; \
+}
+
+#define NCC_DLIST_DEQUEUE(_ncc_dlist, _item) { \
+	_item = fr_dlist_head(&(_ncc_dlist.head)); \
+	if (_item) { \
+		fr_dlist_remove(&(_ncc_dlist.head), _item); \
+		_ncc_dlist.size--; \
+	} \
+}
+
+/*
+ *	Get reference on a list item from its index (position in the list, starting at 0).
+ *	Item is not removed from the list.
+ */
+#define NCC_DLIST_INDEX(_ncc_dlist, _index, _item) { \
+	_item = NULL; \
+	if (_index < _ncc_dlist.size) { \
+		int _i; \
+		_item = fr_dlist_head(&(_ncc_dlist.head)); \
+		for (_i = 0; _i < _index; _i++) { \
+			void *_next = fr_dlist_next(&(_ncc_dlist.head), _item); \
+			_item = _next; \
+		} \
+	} \
+}
+
+#define NCC_DLIST_DRAW(_ncc_dlist, _item) { \
+	if (_item) { \
+		fr_dlist_remove(&(_ncc_dlist.head), _item); \
+		_ncc_dlist.size--; \
+	} \
+}
+
