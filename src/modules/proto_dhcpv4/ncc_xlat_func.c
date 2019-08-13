@@ -96,8 +96,7 @@ static TALLOC_CTX *xlat_ctx;
 static ncc_list_t *ncc_xlat_frame_list; /* This is an array of lists. */
 static uint32_t num_xlat_frame_list = 0;
 
-static ncc_xlat_file_t *ncc_xlat_file_list;
-static uint32_t num_xlat_file = 0;
+static ncc_xlat_file_t *ncc_xlat_files;
 
 static fr_dict_t *dict_freeradius;
 
@@ -196,8 +195,8 @@ void ncc_xlat_set_num(uint64_t num)
 
 	/* Free previously stored values for xlat file. */
 	int i;
-	for (i = 0; i < num_xlat_file; i++) {
-		ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[i];
+	for (i = 0; i < talloc_array_length(ncc_xlat_files); i++) {
+		ncc_xlat_file_t *xlat_file = &ncc_xlat_files[i];
 		TALLOC_FREE(xlat_file->value);
 		fr_pair_list_free(&xlat_file->vps);
 		xlat_file->is_read = false;
@@ -223,12 +222,14 @@ int ncc_xlat_file_add(char const *filename)
 		return -1;
 	}
 
-	TALLOC_REALLOC_ZERO(xlat_ctx, ncc_xlat_file_list, ncc_xlat_file_t, num_xlat_file, num_xlat_file + 1);
-	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[num_xlat_file];
-	xlat_file->idx_file = num_xlat_file;
-	xlat_file->fp = fp;
+	size_t num = talloc_array_length(ncc_xlat_files);
 
-	num_xlat_file++;
+	DEBUG("Adding xlat file [%zd]: %s", num, filename);
+
+	TALLOC_REALLOC_ZERO(xlat_ctx, ncc_xlat_files, ncc_xlat_file_t, num, num + 1);
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_files[num];
+	xlat_file->idx_file = num;
+	xlat_file->fp = fp;
 
 	return 0;
 }
@@ -378,7 +379,7 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 		*idx_file = vb.vb_uint32;
 	}
 
-	if (*idx_file >= num_xlat_file) { /* Not a valid file. */
+	if (*idx_file >= talloc_array_length(ncc_xlat_files)) { /* Not a valid file. */
 		fr_strerror_printf("Not a valid file index: %u", *idx_file);
 		return -1;
 	}
@@ -422,7 +423,7 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 		xlat_frame->type = NCC_CTX_TYPE_FILE_CSV;
 	}
 
-	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file_csv.idx_file];
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_files[xlat_frame->file_csv.idx_file];
 
 	/* Read the requested value from CSV file. */
 	VALUE_PAIR *vp = ncc_xlat_get_value_from_csv_file(ctx, xlat_file, xlat_frame->file_csv.idx_value);
@@ -455,7 +456,7 @@ int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
 		*idx_file = vb.vb_uint32;
 	}
 
-	if (*idx_file >= num_xlat_file) { /* Not a valid file. */
+	if (*idx_file >= talloc_array_length(ncc_xlat_files)) { /* Not a valid file. */
 		fr_strerror_printf("Not a valid file index: %u", *idx_file);
 		return -1;
 	}
@@ -486,7 +487,7 @@ static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 		xlat_frame->type = NCC_CTX_TYPE_FILE;
 	}
 
-	ncc_xlat_file_t *xlat_file = &ncc_xlat_file_list[xlat_frame->file.idx_file];
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_files[xlat_frame->file.idx_file];
 
 	if (xlat_file->is_read && !xlat_file->value) {
 		fr_strerror_printf("Cannot read raw value (file #%u): inconsistent usage", xlat_file->idx_file);
