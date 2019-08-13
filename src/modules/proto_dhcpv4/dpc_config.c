@@ -51,7 +51,7 @@ static const CONF_PARSER _main_config[] = {
 
 	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
 	// Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
-
+	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
 
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
@@ -226,6 +226,14 @@ void dpc_config_debug(dpc_config_t *config)
 	#define CONF_DEBUG_BOOL(_x) \
 		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
 
+	#define CONF_DEBUG_STR_MULTI(_x) \
+	{ \
+		int i; \
+		for (i = 0; i < talloc_array_length(config->_x); i++) { \
+			DEBUG("- %s[%u] = %s", STRINGIFY(_x), i, config->_x[i]); \
+		} \
+	}
+
 	DEBUG("Configuration values:");
 
 	CONF_DEBUG_UINT(debug_level);
@@ -237,6 +245,7 @@ void dpc_config_debug(dpc_config_t *config)
 
 	CONF_DEBUG_BOOL(template);
 	CONF_DEBUG_STR(file_input);
+	CONF_DEBUG_STR_MULTI(xlat_files);
 	CONF_DEBUG_UINT64(base_xid);
 
 	CONF_DEBUG_INT(packet_trace_lvl);

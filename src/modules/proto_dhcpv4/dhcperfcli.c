@@ -3263,9 +3263,19 @@ int main(int argc, char **argv)
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
 
+	/*
+	 *	Perform configuration-related initializations.
+	 */
+	for (i = 0; i < talloc_array_length(CONF.xlat_files); i++) {
+		if (ncc_xlat_file_add(CONF.xlat_files[i]) != 0) {
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	if (CONF.retransmit_max > 0) {
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);
 	}
+
 	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;

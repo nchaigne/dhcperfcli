@@ -219,7 +219,7 @@ int ncc_xlat_file_add(char const *filename)
 {
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
-		ERROR("Error opening %s: %s", filename, strerror(errno));
+		ERROR("Failed to open file \"%s\": %s", filename, strerror(errno));
 		return -1;
 	}
 

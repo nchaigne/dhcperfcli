@@ -26,6 +26,7 @@ struct dpc_config_s {
 
 	bool template;                   //<! Template mode.
 	char const *file_input;          //<! Read input items from provided file.
+	char const **xlat_files;         //<! Files containing values for xlat "file" expansions.
 	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.
 	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
 
