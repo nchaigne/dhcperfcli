@@ -93,9 +93,7 @@ static bool done_init = false;
 
 static TALLOC_CTX *xlat_ctx;
 
-static ncc_list_t *ncc_xlat_frame_list; /* This is an array of lists. */
-static uint32_t num_xlat_frame_list = 0;
-
+static ncc_list_t *ncc_xlat_frames; /* This is an array of lists. */
 static ncc_xlat_file_t *ncc_xlat_files;
 
 static fr_dict_t *dict_freeradius;
@@ -251,16 +249,13 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 	uint32_t id_item = FX_request->child_number;
 
 	/* Get the list for this input item. If it doesn't exist yet, allocate a new one. */
-	ncc_list_t *list;
-	if (id_list >= num_xlat_frame_list) {
-		uint32_t num_xlat_frame_list_pre = num_xlat_frame_list;
-		num_xlat_frame_list = id_list + 1;
-
+	size_t num_pre = talloc_array_length(ncc_xlat_frames);
+	if (id_list >= num_pre) {
 		/* Allocate lists to all input items, even if they don't need xlat'ing. This is simpler. */
-		TALLOC_REALLOC_ZERO(ctx, ncc_xlat_frame_list, ncc_list_t,
-		                    num_xlat_frame_list_pre, num_xlat_frame_list);
+		size_t num = id_list + 1;
+		TALLOC_REALLOC_ZERO(ctx, ncc_xlat_frames, ncc_list_t, num_pre, num);
 	}
-	list = &ncc_xlat_frame_list[id_list];
+	ncc_list_t *list = &ncc_xlat_frames[id_list];
 
 	/* Now get the xlat context. If it doesn't exist yet, allocate a new one and add it to the list. */
 	xlat_frame = NCC_LIST_INDEX(list, id_item);
