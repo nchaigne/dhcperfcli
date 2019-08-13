@@ -20,6 +20,10 @@
  * - Type 'uint32' is restricted to values 0-INT32_MAX (not 0-UINT32_MAX).
  *   Cf. function cf_pair_parse_value (cf_parse.c) for rationale.
  *   We need real UINT32 values, so we'll be using 'uint64'.
+ *
+ * - Type 'string' with no configuration and no default ("dflt") will result in a NULL pointer,
+ *   even if we had a value in target variable.
+ *   Probably because the value pointer dynamically allocated - so we'll have to handle this.
  */
 
 static const CONF_PARSER _timing_config[] = {
@@ -45,10 +49,8 @@ static const CONF_PARSER _main_config[] = {
 
 	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
 
-	//{ FR_CONF_OFFSET("file_input", FR_TYPE_FILE_INPUT, dpc_config_t, file_input) },
-	/* FR_TYPE_FILE_INPUT (or FR_TYPE_STRING) does not seem to work with "no .dflt".
-	   We get a null pointer. TODO: find out why.
-	*/
+	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
+	// Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
 
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
 
@@ -137,10 +139,18 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 		goto failure;
 	}
 
+	/* Backup initial configuration before parsing. */
+	dpc_config_t old_config = *config;
+
 	if (cf_section_rules_push(cs, _main_config) < 0) goto failure;
 
 	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
+
+	/* Restore strings for which we didn't parse anything. */
+	if (!config->file_input && old_config.file_input) {
+		config->file_input = old_config.file_input;
+	}
 
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
