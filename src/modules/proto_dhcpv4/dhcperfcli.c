@@ -35,9 +35,6 @@ fr_time_t fte_start; /* Program execution start timestamp. */
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
-	.pr_stat_per_input = 1,
-	.pr_stat_per_input_max = 20,
-
 	.min_session_for_rps = 50,
 	.min_session_time_for_rps = 0.9,
 	.min_ref_time_rate_limit = 0.2,
@@ -360,7 +357,7 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
-	if (!ECTX.pr_stat_per_input || !CONF.template || input_list.size < 2) return;
+	if (!CONF.pr_stat_per_input || !CONF.template || input_list.size < 2) return;
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
@@ -386,7 +383,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 		}
 
 		i++;
-		if (i >= ECTX.pr_stat_per_input_max) break;
+		if (CONF.pr_stat_per_input_max && i >= CONF.pr_stat_per_input_max) break;
 
 		list_item = list_item->next;
 	}

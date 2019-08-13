@@ -23,6 +23,8 @@ struct dpc_config_s {
 	bool log_timestamp;              //!< Add timestamp to log messages.
 
 	float progress_interval;         //<! Time interval between periodic progress statistics.
+	bool pr_stat_per_input;          //<! Print per-input progress statistics (if multiple input).
+	uint32_t pr_stat_per_input_max;  //<! Max number of input items shown in progress statistics.
 
 	bool template;                   //<! Template mode.
 	char const *file_input;          //<! Read input items from provided file.
