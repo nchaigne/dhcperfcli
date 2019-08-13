@@ -79,50 +79,6 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
  *	Trace / logging.
  */
 
-/*
-	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
-
-	Sample output:
-
-	Fri Apr  5 10:00:44 2019 : Debug : DEBUG test
-	Fri Apr  5 10:00:44 2019 : Info  : INFO test
-	Fri Apr  5 10:00:44 2019 : Warn  : WARN test
-	Fri Apr  5 10:00:44 2019 : Error : ERROR test
-	Fri Apr  5 10:01:59 2019 : Warn  : PWARN test: fr_strerror_printf
-	Fri Apr  5 10:01:59 2019 : Error : PERROR test: fr_strerror_printf
-
-	We'll redefine our own, so we get exactly what we want.
-
-	We don't support the push/pop mechanism of FreeRADIUS which allows to have multiple error messages
-	logged in a single call of PERROR (cf. fr_strerror_printf_push / fr_log_perror).
-*/
-#undef DEBUG
-#define DEBUG(_f, ...)  NCC_DEBUG(1, _f, ## __VA_ARGS__)
-
-#undef DEBUG2
-#define DEBUG2(_f, ...) NCC_DEBUG(2, _f, ## __VA_ARGS__)
-
-#undef DEBUG3
-#define DEBUG3(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
-
-#undef DEBUG4
-#define DEBUG4(_f, ...) NCC_DEBUG(4, _f, ## __VA_ARGS__)
-
-#undef INFO
-#define INFO(_f, ...) NCC_LOG("Info : " _f, ## __VA_ARGS__)
-
-#undef WARN
-#define WARN(_f, ...) NCC_LOG("Warn : " _f, ## __VA_ARGS__)
-
-#undef ERROR
-#define ERROR(_f, ...) NCC_LOG("Error : " _f, ## __VA_ARGS__)
-
-#undef PWARN
-#define PWARN(_f, ...) NCC_LOG("Warn : " _f ": %s", ## __VA_ARGS__, fr_strerror())
-
-#undef PERROR
-#define PERROR(_f, ...) NCC_LOG("Error : " _f ": %s", ## __VA_ARGS__, fr_strerror())
-
 /* Trace macros with prefixed session id. */
 #define DPC_SDEBUG(_p, _f, ...) if (NCC_DEBUG_ENABLED(_p)) NCC_LOG("(%u) " _f, session->id, ## __VA_ARGS__)
 
@@ -134,8 +90,6 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 #define SWARN(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f, session->id, ## __VA_ARGS__)
 #define SPWARN(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
 
-/* Reuse of nifty FreeRADIUS functions in util/proto.c */
-#define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 /*
  *	Note: we want these even if not built with --enable-developer. This option has a daunting performance cost.
