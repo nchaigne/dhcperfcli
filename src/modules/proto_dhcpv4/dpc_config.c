@@ -56,6 +56,8 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
 
+	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
+
 	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT32, dpc_config_t, rate_limit) }, /* No default */
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
 	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use) }, /* No default */
@@ -253,6 +255,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_STR(file_input);
 	CONF_DEBUG_STR_MULTI(xlat_files);
 	CONF_DEBUG_UINT64(base_xid);
+	CONF_DEBUG_STR_MULTI(gateways);
 
 	CONF_DEBUG_INT(packet_trace_lvl);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);

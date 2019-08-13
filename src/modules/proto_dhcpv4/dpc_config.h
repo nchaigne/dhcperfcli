@@ -32,6 +32,8 @@ struct dpc_config_s {
 	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.
 	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
 
+	char const **gateways;           //<! Gateways simulated for sending DHCP packets.
+
 	int32_t packet_trace_lvl;        //<! Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
 	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.

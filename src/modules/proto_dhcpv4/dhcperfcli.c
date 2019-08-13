@@ -310,6 +310,7 @@ static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
 static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
                                                 ncc_endpoint_t *default_ep);
+static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in);
 static void dpc_options_parse(int argc, char **argv);
 
 static void dpc_signal(int sig);
@@ -2829,6 +2830,15 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 	return *ep_list;
 }
 
+/*
+ *	Parse and handle a configured "gateway".
+ */
+static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in)
+{
+	DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", in);
+	dpc_addr_list_parse(global_ctx, &gateway_list, in, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
+}
+
 
 /* Short options. */
 #define OPTSTR_BASE "a:c:CD:f:g:hI:L:MN:p:P:r:s:t:TvxX"
@@ -2961,8 +2971,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", optarg);
-			dpc_addr_list_parse(global_ctx, &gateway_list, optarg, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
+			dpc_gateway_parse(global_ctx, optarg);
 			break;
 
 		case 'h':
@@ -3267,6 +3276,10 @@ int main(int argc, char **argv)
 		if (ncc_xlat_file_add(CONF.xlat_files[i]) != 0) {
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	for (i = 0; i < talloc_array_length(CONF.gateways); i++) {
+		dpc_gateway_parse(global_ctx, CONF.gateways[i]);
 	}
 
 	if (CONF.retransmit_max > 0) {
