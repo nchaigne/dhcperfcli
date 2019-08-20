@@ -288,29 +288,44 @@ static inline bool is_integer_n(char const *value, ssize_t len)
 
 
 /*
- *	Chained list using FreeRADIUS "dlist.h"
+ *	Chained list using FreeRADIUS "dlist.h" (which do not require the chaining data to be stored first).
+ *	Handle current list size.
+ *	Provides utility macros.
  */
 typedef struct ncc_dlist {
 	fr_dlist_head_t head;
 	uint32_t size;
 } ncc_dlist_t;
 
+/*
+ *	Get list current size.
+ */
 #define NCC_DLIST_SIZE(_ncc_dlist) (_ncc_dlist.size)
 
+/*
+ *	Initialize a list of "_item_struct_t" containing a chaining struct "fr_dlist_t dlist".
+ */
 #define NCC_DLIST_INIT(_ncc_dlist, _item_struct_t) { \
-	fr_dlist_init(&(_ncc_dlist.head), _item_struct_t, dlist); \
+	fr_dlist_init(&_ncc_dlist.head, _item_struct_t, dlist); \
 	_ncc_dlist.size = 0; \
 }
 
+/*
+ *	Add an item to the tail of the list.
+ */
 #define NCC_DLIST_ENQUEUE(_ncc_dlist, _item) { \
-	fr_dlist_insert_tail(&(_ncc_dlist.head), _item); \
+	fr_dlist_insert_tail(&_ncc_dlist.head, _item); \
 	_ncc_dlist.size++; \
 }
 
+/*
+ *	Get the head item from a list.
+ */
 #define NCC_DLIST_DEQUEUE(_ncc_dlist, _item) { \
-	_item = fr_dlist_head(&(_ncc_dlist.head)); \
+	fr_dlist_head_t *list_head = &_ncc_dlist.head; \
+	_item = fr_dlist_head(list_head); \
 	if (_item) { \
-		fr_dlist_remove(&(_ncc_dlist.head), _item); \
+		fr_dlist_remove(list_head, _item); \
 		_ncc_dlist.size--; \
 	} \
 }
@@ -320,21 +335,28 @@ typedef struct ncc_dlist {
  *	Item is not removed from the list.
  */
 #define NCC_DLIST_INDEX(_ncc_dlist, _index, _item) { \
+	fr_dlist_head_t *list_head = &_ncc_dlist.head; \
 	_item = NULL; \
 	if (_index < _ncc_dlist.size) { \
 		int _i; \
-		_item = fr_dlist_head(&(_ncc_dlist.head)); \
-		for (_i = 0; _i < _index; _i++) { \
-			void *_next = fr_dlist_next(&(_ncc_dlist.head), _item); \
-			_item = _next; \
+		for (_i = 0, _item = fr_dlist_head(list_head); \
+		     _i < _index && _item != NULL;  \
+		     _i++, _item = fr_dlist_next(list_head, _item)) { \
 		} \
 	} \
 }
 
+/*
+ *	Remove an item from its list.
+ *	Does nothing if it's not in the list.
+ */
 #define NCC_DLIST_DRAW(_ncc_dlist, _item) { \
 	if (_item) { \
-		fr_dlist_remove(&(_ncc_dlist.head), _item); \
-		_ncc_dlist.size--; \
+		fr_dlist_head_t *list_head = &_ncc_dlist.head; \
+		fr_dlist_t *entry = (fr_dlist_t *) (((uint8_t *) _item) + list_head->offset); \
+		if (entry->next) { \
+			fr_dlist_remove(list_head, _item); \
+			_ncc_dlist.size--; \
+		} \
 	} \
 }
-
