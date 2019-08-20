@@ -295,6 +295,7 @@ static inline bool is_integer_n(char const *value, ssize_t len)
 typedef struct ncc_dlist {
 	fr_dlist_head_t head;
 	uint32_t size;
+	bool init;
 } ncc_dlist_t;
 
 /*
@@ -303,11 +304,20 @@ typedef struct ncc_dlist {
 #define NCC_DLIST_SIZE(_ncc_dlist) (_ncc_dlist.size)
 
 /*
+ *	Iterate on a list, starting from head.
+ */
+#define NCC_DLIST_HEAD(_ncc_dlist) fr_dlist_head(&_ncc_dlist.head);
+#define NCC_DLIST_NEXT(_ncc_dlist, _item) fr_dlist_next(&_ncc_dlist.head, _item);
+
+/*
  *	Initialize a list of "_item_struct_t" containing a chaining struct "fr_dlist_t dlist".
  */
 #define NCC_DLIST_INIT(_ncc_dlist, _item_struct_t) { \
-	fr_dlist_init(&_ncc_dlist.head, _item_struct_t, dlist); \
-	_ncc_dlist.size = 0; \
+	if (!_ncc_dlist.init) { \
+		fr_dlist_init(&_ncc_dlist.head, _item_struct_t, dlist); \
+		_ncc_dlist.size = 0; \
+		_ncc_dlist.init = true; \
+	} \
 }
 
 /*
@@ -319,7 +329,7 @@ typedef struct ncc_dlist {
 }
 
 /*
- *	Get the head item from a list.
+ *	Get (and remove) the head item from a list.
  */
 #define NCC_DLIST_DEQUEUE(_ncc_dlist, _item) { \
 	fr_dlist_head_t *list_head = &_ncc_dlist.head; \

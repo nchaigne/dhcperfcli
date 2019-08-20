@@ -884,7 +884,7 @@ void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry)
 }
 
 /*
- *	Remove an input entry from its list.
+ *	Remove an item entry from its list.
  */
 ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry)
 {
@@ -927,7 +927,7 @@ ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry)
 }
 
 /*
- *	Get the head input entry from a list.
+ *	Get the head item entry from a list.
  */
 ncc_list_item_t *ncc_list_get_head(ncc_list_t *list)
 {
