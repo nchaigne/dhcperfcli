@@ -3350,6 +3350,7 @@ int main(int argc, char **argv)
 		WARN("No valid input loaded, nothing to do");
 		exit(0);
 	}
+	//dpc_input_list_fprint(stdout, &input_list);
 
 	/*
 	 *	If packet trace level is unspecified, figure out something automatically.

@@ -39,6 +39,6 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp);
 uint32_t dpc_xid_extract(VALUE_PAIR *vp);
 
 dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in);
-void dpc_input_list_fprint(FILE *fp, ncc_list_t *list);
+void dpc_input_list_fprint(FILE *fp, ncc_dlist_t *list);
 
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
