@@ -301,22 +301,22 @@ typedef struct ncc_dlist {
 /*
  *	Get list current size.
  */
-#define NCC_DLIST_SIZE(_ncc_dlist) (_ncc_dlist.size)
+#define NCC_DLIST_SIZE(_ncc_dlist) ((*_ncc_dlist).size)
 
 /*
  *	Iterate on a list, starting from head.
  */
-#define NCC_DLIST_HEAD(_ncc_dlist) fr_dlist_head(&_ncc_dlist.head);
-#define NCC_DLIST_NEXT(_ncc_dlist, _item) fr_dlist_next(&_ncc_dlist.head, _item);
+#define NCC_DLIST_HEAD(_ncc_dlist) fr_dlist_head(&(*_ncc_dlist).head);
+#define NCC_DLIST_NEXT(_ncc_dlist, _item) fr_dlist_next(&(*_ncc_dlist).head, _item);
 
 /*
  *	Initialize a list of "_item_struct_t" containing a chaining struct "fr_dlist_t dlist".
  */
 #define NCC_DLIST_INIT(_ncc_dlist, _item_struct_t) { \
-	if (!_ncc_dlist.init) { \
-		fr_dlist_init(&_ncc_dlist.head, _item_struct_t, dlist); \
-		_ncc_dlist.size = 0; \
-		_ncc_dlist.init = true; \
+	if (!(*_ncc_dlist).init) { \
+		fr_dlist_init(&(*_ncc_dlist.head), _item_struct_t, dlist); \
+		(*_ncc_dlist).size = 0; \
+		(*_ncc_dlist).init = true; \
 	} \
 }
 
@@ -324,19 +324,19 @@ typedef struct ncc_dlist {
  *	Add an item to the tail of the list.
  */
 #define NCC_DLIST_ENQUEUE(_ncc_dlist, _item) { \
-	fr_dlist_insert_tail(&_ncc_dlist.head, _item); \
-	_ncc_dlist.size++; \
+	fr_dlist_insert_tail(&(*_ncc_dlist).head, _item); \
+	(*_ncc_dlist).size++; \
 }
 
 /*
  *	Get (and remove) the head item from a list.
  */
 #define NCC_DLIST_DEQUEUE(_ncc_dlist, _item) { \
-	fr_dlist_head_t *list_head = &_ncc_dlist.head; \
+	fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
 	_item = fr_dlist_head(list_head); \
 	if (_item) { \
 		fr_dlist_remove(list_head, _item); \
-		_ncc_dlist.size--; \
+		(*_ncc_dlist).size--; \
 	} \
 }
 
@@ -345,9 +345,9 @@ typedef struct ncc_dlist {
  *	Item is not removed from the list.
  */
 #define NCC_DLIST_INDEX(_ncc_dlist, _index, _item) { \
-	fr_dlist_head_t *list_head = &_ncc_dlist.head; \
+	fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
 	_item = NULL; \
-	if (_index < _ncc_dlist.size) { \
+	if (_index < (*_ncc_dlist).size) { \
 		int _i; \
 		for (_i = 0, _item = fr_dlist_head(list_head); \
 		     _i < _index && _item != NULL;  \
@@ -362,11 +362,11 @@ typedef struct ncc_dlist {
  */
 #define NCC_DLIST_DRAW(_ncc_dlist, _item) { \
 	if (_item) { \
-		fr_dlist_head_t *list_head = &_ncc_dlist.head; \
+		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
 		fr_dlist_t *entry = (fr_dlist_t *) (((uint8_t *) _item) + list_head->offset); \
 		if (entry->next) { \
 			fr_dlist_remove(list_head, _item); \
-			_ncc_dlist.size--; \
+			(*_ncc_dlist).size--; \
 		} \
 	} \
 }
