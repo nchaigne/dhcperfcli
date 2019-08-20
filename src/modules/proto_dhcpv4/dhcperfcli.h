@@ -51,7 +51,7 @@ struct dpc_context {
 
 extern int dpc_debug_lvl;
 extern fr_time_t fte_start;
-extern ncc_list_t input_list;
+extern ncc_dlist_t input_list;
 extern fr_dict_attr_t const *attr_encoded_data;
 extern fr_dict_attr_t const *attr_dhcp_message_type;
 
@@ -259,6 +259,9 @@ struct dpc_input {
 	ncc_list_item_t *prev;
 	ncc_list_item_t *next;
 
+	/* Generic chaining */
+	fr_dlist_t dlist;          //!< Our entry into the linked list.
+
 	/* Specific item data */
 	uint32_t id;              //!< Id of input (0 for the first one).
 	bool done;                //!< Is this input done ? (i.e. no session can be started from it).
@@ -312,4 +315,4 @@ struct dpc_session_ctx {
 };
 
 
-void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
+void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);

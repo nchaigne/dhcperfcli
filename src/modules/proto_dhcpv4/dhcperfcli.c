@@ -130,9 +130,9 @@ static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
-ncc_list_t input_list;
+ncc_dlist_t input_list;
 static int with_xlat = 0;
-static ncc_list_item_t *template_input_prev; /* In template mode, previous used input item. */
+static dpc_input_t *template_input_prev; /* In template mode, previous used input item. */
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
@@ -298,8 +298,8 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_input_parse(dpc_input_t *input);
-void dpc_input_handle(dpc_input_t *input, ncc_list_t *list);
-static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, char const *filename);
+void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
+static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
@@ -358,16 +358,16 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
-	if (!CONF.pr_stat_per_input || !CONF.template || input_list.size < 2) return;
+	if (!CONF.pr_stat_per_input || !CONF.template || NCC_DLIST_SIZE(&input_list) < 2) return;
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
 	fprintf(fp, " └─ per-input rate (/s): ");
 
-	ncc_list_item_t *list_item = input_list.head;
+	dpc_input_t *input = NCC_DLIST_HEAD(&input_list);
 	int i = 0;
-	while (list_item) {
-		dpc_input_t *input = (dpc_input_t *)list_item;
+
+	while (input) {
 		if (i) fprintf(fp, ", ");
 
 		/* also print status: W = waiting, A = active, T = terminated. */
@@ -386,7 +386,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 		i++;
 		if (CONF.pr_stat_per_input_max && i >= CONF.pr_stat_per_input_max) break;
 
-		list_item = list_item->next;
+		input = NCC_DLIST_NEXT(&input_list, input);
 	}
 	fprintf(fp, "\n");
 }
@@ -546,17 +546,15 @@ static double dpc_get_session_in_rate(bool per_input)
 
 	} else {
 		/* Compute the rate per input, and sum them. */
-		ncc_list_item_t *list_item = input_list.head;
-		while (list_item) {
-			dpc_input_t *input = (dpc_input_t *)list_item;
-
+		dpc_input_t *input = NCC_DLIST_HEAD(&input_list);
+		while (input) {
 			if (!input->done) { /* Ignore item if we're done with it. */
 				double input_rate = 0;
 				if (dpc_item_get_rate(&input_rate, input)) {
 					rate += input_rate;
 				}
 			}
-			list_item = list_item->next;
+			input = NCC_DLIST_NEXT(&input_list, input);
 		}
 	}
 
@@ -1716,11 +1714,11 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 	uint32_t checked = 0, not_done = 0;
 	fr_time_t now = fr_time();
 
-	while (checked < input_list.size) {
-		if (!template_input_prev) template_input_prev = input_list.head;
+	while (checked < NCC_DLIST_SIZE(&input_list)) {
+		if (!template_input_prev) template_input_prev = NCC_DLIST_HEAD(&input_list);
 
 		dpc_input_t *input = (dpc_input_t *)template_input_prev; /* No need for a copy (read-only). This is faster. */
-		template_input_prev = template_input_prev->next;
+		template_input_prev = NCC_DLIST_NEXT(&input_list, template_input_prev);
 
 		checked++;
 
@@ -1761,11 +1759,13 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
  */
 static dpc_input_t *dpc_get_input()
 {
+	dpc_input_t *input = NULL;
 	if (!CONF.template) {
-		return NCC_LIST_DEQUEUE(&input_list);
+		NCC_DLIST_DEQUEUE(&input_list, input);
 	} else {
-		return dpc_get_input_from_template(global_ctx);
+		input = dpc_get_input_from_template(global_ctx);
 	}
+	return input;
 }
 
 /*
@@ -1821,7 +1821,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 			/*
 			 *	Add it to the list of input items.
 			 */
-			NCC_LIST_ENQUEUE(&input_list, input_dup);
+			NCC_DLIST_ENQUEUE(&input_list, input_dup);
 		}
 	}
 
@@ -1842,7 +1842,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		talloc_free(session);
 
 		/* Remove item from list before freeing. */
-		NCC_LIST_DRAW(input);
+		NCC_DLIST_DRAW(&input_list, input);
 		talloc_free(input);
 		return NULL;
 	}
@@ -1995,13 +1995,12 @@ static void dpc_end_start_sessions(void)
 		fte_sessions_ini_end = fr_time();
 
 		/* Also mark all input as done. */
-		ncc_list_item_t *list_item = input_list.head;
-		while (list_item) {
-			dpc_input_t *input = (dpc_input_t *)list_item;
+		dpc_input_t *input = NCC_DLIST_HEAD(&input_list);
+		while (input) {
 			input->done = true;
 			input->fte_end = fte_sessions_ini_end;
 
-			list_item = list_item->next;
+			input = NCC_DLIST_NEXT(&input_list, input);
 		}
 	}
 }
@@ -2470,7 +2469,7 @@ static void dpc_input_debug(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-void dpc_input_handle(dpc_input_t *input, ncc_list_t *list)
+void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 {
 	input->id = input_num ++;
 	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
@@ -2489,13 +2488,13 @@ void dpc_input_handle(dpc_input_t *input, ncc_list_t *list)
 	/*
 	 *	Add it to the list of input items.
 	 */
-	NCC_LIST_ENQUEUE(list, input);
+	NCC_DLIST_ENQUEUE(list, input);
 }
 
 /*
  *	Load input vps from the provided file pointer.
  */
-static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_list_t *list, char const *filename)
+static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename)
 {
 	bool file_done = false;
 	dpc_input_t *input;
@@ -3239,7 +3238,14 @@ int main(int argc, char **argv)
 	}
 	dpc_config_name_set_default(dpc_config, progname, false);
 
-	/* Parse the command line options. */
+	/*
+	 *	Initialize the chained list of input items.
+	 */
+	NCC_DLIST_INIT(&input_list, dpc_input_t);
+
+	/*
+	 *	Parse the command line options.
+	 */
 	dpc_options_parse(argc, argv);
 
 	/*
