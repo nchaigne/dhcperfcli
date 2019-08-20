@@ -255,11 +255,6 @@ typedef struct dpc_input_ext {
  */
 struct dpc_input {
 	/* Generic chaining */
-	ncc_list_t *list;        //!< The list to which this entry belongs (NULL for an unchained entry).
-	ncc_list_item_t *prev;
-	ncc_list_item_t *next;
-
-	/* Generic chaining */
 	fr_dlist_t dlist;          //!< Our entry into the linked list.
 
 	/* Specific item data */

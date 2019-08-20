@@ -721,9 +721,7 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 	memcpy(out, in, sizeof(*out));
 
 	out->vps = NULL;
-	out->list = NULL;
-	out->prev = NULL;
-	out->next = NULL;
+	out->dlist = (fr_dlist_t){};
 
 	MEM(fr_pair_list_copy(out, &out->vps, in->vps) >= 0);
 
@@ -733,11 +731,11 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 /*
  *	Print the contents of a list of dpc_input_t items.
  */
-void dpc_input_list_fprint(FILE *fp, ncc_list_t *list)
+void dpc_input_list_fprint(FILE *fp, ncc_dlist_t *list)
 {
-	dpc_input_t *item = (dpc_input_t *)list->head;
+	fprintf(fp, "List contains %u element(s)\n", NCC_DLIST_SIZE(list));
 
-	fprintf(fp, "List contains %u element(s)\n", list->size);
+	dpc_input_t *item = NCC_DLIST_HEAD(list);
 	int i = 0;
 	while (item) {
 		fprintf(fp, " - Element #%u:\n", i);
@@ -750,7 +748,7 @@ void dpc_input_list_fprint(FILE *fp, ncc_list_t *list)
 			fr_pair_fprint(fp, vp);
 		}
 
-		item = (dpc_input_t *)item->next;
+		item = NCC_DLIST_NEXT(&input_list, item);
 		i++;
 	}
 }
