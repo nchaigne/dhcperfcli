@@ -171,6 +171,10 @@ typedef struct ncc_endpoint {
 	uint16_t port;
 } ncc_endpoint_t;
 
+#define NCC_EP_MAKE(_ep, _ipaddr, _port) \
+	ncc_endpoint_t _ep; \
+	_ep.ipaddr = _ipaddr; _ep.port = _port;
+
 /*
  *	List of endpoints (used in round-robin fashion).
  */

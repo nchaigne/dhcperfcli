@@ -401,6 +401,12 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	/* Prefix to easily distinguish these ongoing statistics from packet traces and other logs. */
 	fprintf(fp, "(*) ");
 
+	/* Absolute date/time. */
+	if (CONF.pr_stat_timestamp) {
+		char datetime_buf[DPC_DATETIME_STRLEN];
+		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, false));
+	}
+
 	/* Elapsed time. */
 	fprintf(fp, "t(%s)", ELAPSED);
 	if (CONF.duration_start_max) {

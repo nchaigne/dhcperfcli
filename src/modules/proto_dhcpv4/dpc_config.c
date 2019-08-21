@@ -48,6 +48,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
 
 	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
+	{ FR_CONF_OFFSET("pr_stat_timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("pr_stat_per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("pr_stat_per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
 
@@ -248,6 +249,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_BOOL(log_timestamp);
 
 	CONF_DEBUG_FLOAT(progress_interval);
+	CONF_DEBUG_BOOL(pr_stat_timestamp);
 	CONF_DEBUG_BOOL(pr_stat_per_input);
 	CONF_DEBUG_UINT(pr_stat_per_input_max);
 
