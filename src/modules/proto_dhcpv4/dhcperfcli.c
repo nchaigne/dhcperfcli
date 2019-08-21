@@ -298,6 +298,7 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_input_parse(dpc_input_t *input);
+static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
@@ -2474,7 +2475,7 @@ static void dpc_input_debug(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
+static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 {
 	input->id = input_num ++;
 	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
@@ -3277,6 +3278,7 @@ int main(int argc, char **argv)
 	 *	Read the configuration file (if provided), and parse configuration.
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
+	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);

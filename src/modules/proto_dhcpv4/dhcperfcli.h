@@ -308,6 +308,3 @@ struct dpc_session_ctx {
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
-
-
-int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);

@@ -75,7 +75,7 @@ static const CONF_PARSER _main_config[] = {
 /*
  *	Iterates over all input definitions in the specified section, adding them to the list.
  */
-int dpc_input_list_parse_section(CONF_SECTION *section)
+int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle)
 {
 	CONF_SECTION *cs = NULL;
 	dpc_input_t *input;
@@ -92,7 +92,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section)
 			return -1;
 		}
 
-		dpc_input_handle(input, &input_list);
+		if (fn_input_handle) (*fn_input_handle)(input, &input_list);
 	}
 	return 0;
 }
@@ -166,17 +166,32 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 	ncc_default_log.line_number = config->debug_dev;
 	ncc_default_log.basename = config->debug_basename;
 
-	DEBUG2("%s: #### Loading 'input' entries ####", config->name);
-	if (dpc_input_list_parse_section(cs) != 0) {
-		ERROR("Failed to load 'input' entries from configuration file");
-		goto failure;
-	}
+	config->root_cs = cs;
+
+	/* Clear any unprocessed configuration errors */
+	(void) fr_strerror();
 
 	return 0;
 
 failure:
 	talloc_free(cs);
 	return -1;
+}
+
+/*
+ * Load configured 'input' sections.
+ */
+int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handle)
+{
+	CONF_SECTION *cs = config->root_cs;
+
+	DEBUG2("%s: #### Loading 'input' entries ####", config->name);
+	if (dpc_input_list_parse_section(cs, fn_input_handle) != 0) {
+		ERROR("Failed to load 'input' entries from configuration file");
+		return -1;
+	}
+
+	return 0;
 }
 
 /*
