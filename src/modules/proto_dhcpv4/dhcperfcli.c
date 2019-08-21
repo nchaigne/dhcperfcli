@@ -298,7 +298,6 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_input_parse(dpc_input_t *input);
-void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
@@ -2475,7 +2474,7 @@ static void dpc_input_debug(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
+int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 {
 	input->id = input_num ++;
 	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
@@ -2485,7 +2484,7 @@ void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 		 *	Invalid item. Discard.
 		 */
 		talloc_free(input);
-		return;
+		return -1;
 	}
 
 	/* Trace what we've read. */
@@ -2495,6 +2494,7 @@ void dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 	 *	Add it to the list of input items.
 	 */
 	NCC_DLIST_ENQUEUE(list, input);
+	return 0;
 }
 
 /*
