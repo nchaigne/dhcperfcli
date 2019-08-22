@@ -2914,6 +2914,13 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(1); \
 	}
 
+#define ERROR_PARSE_OPT { \
+		ERROR("Invalid value for option \"-%c\": %s", argval, fr_strerror()); \
+		usage(1); \
+	}
+
+#define PARSE_OPT(_to, _type) if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
+
 	/* Parse options: first pass.
 	 * Get debug level, and set logging accordingly.
 	 */
@@ -3018,8 +3025,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'P':
-			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			CONF.packet_trace_lvl = atoi(optarg);
+			PARSE_OPT(CONF.packet_trace_lvl, FR_TYPE_INT32);
 			break;
 
 		case 'r':
@@ -3027,7 +3033,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 's':
-			if (!ncc_str_to_float32(&CONF.progress_interval, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			PARSE_OPT(CONF.progress_interval, FR_TYPE_FLOAT32);
 			break;
 
 		case 't':

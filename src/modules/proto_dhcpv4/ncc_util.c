@@ -804,7 +804,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	}
 
 	/*
-	 *	Again, for all. Integers are already parsed and now just need assignment.
+	 *	Second pass for all. Integers are already parsed and now just need assignment.
 	 */
 	switch (type) {
 	case FR_TYPE_BOOL:
