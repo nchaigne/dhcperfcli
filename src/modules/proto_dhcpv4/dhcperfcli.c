@@ -3023,8 +3023,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'r':
-			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			CONF.rate_limit = atoi(optarg);
+			if (!ncc_str_to_float32(&CONF.rate_limit, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
 			break;
 
 		case 's':
