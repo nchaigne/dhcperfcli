@@ -758,7 +758,7 @@ int ncc_strtof(float *out, char const *value)
 {
 	char *p = NULL;
 
-	if ((value[0] == '0') && (value[1] == 'x')) {
+	if ((value[0] == '0') && (value[1] == 'x' || value[1] == 'X')) {
 	error:
 		fr_strerror_printf("Invalid value \"%s\" for floating point number", value);
 		return -1;
@@ -778,7 +778,7 @@ int ncc_strtod(double *out, char const *value)
 {
 	char *p = NULL;
 
-	if ((value[0] == '0') && (value[1] == 'x')) {
+	if ((value[0] == '0') && (value[1] == 'x' || value[1] == 'X')) {
 	error:
 		fr_strerror_printf("Invalid value \"%s\" for floating point number", value);
 		return -1;
