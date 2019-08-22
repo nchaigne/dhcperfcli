@@ -718,6 +718,175 @@ int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
 
 
 /*
+ *	Parse a string value into a C data type.
+  *	Similar to cf_pair_parse_value / fr_value_box_from_integer_str
+ *	... but with values provided from command-line options.
+ */
+int ncc_parse_type_value(void *out, uint32_t type, char const *value)
+{
+	bool cant_be_empty;
+	uint64_t uinteger = 0;
+	int64_t sinteger = 0;
+	char *p = NULL;
+
+	cant_be_empty = (type & FR_TYPE_NOT_EMPTY);
+
+	type = FR_BASE_TYPE(type);
+
+	/*
+	 *	Check for zero length strings
+	 */
+	if ((value[0] == '\0') && cant_be_empty) {
+		fr_strerror_printf("Invalid empty value");
+		return -1;
+	}
+
+#define INVALID_TYPE_VALUE \
+	do { \
+		fr_strerror_printf("Invalid value \"%s\" for type '%s'", value, \
+			fr_int2str(fr_value_box_type_table, type, "<INVALID>")); \
+		return -1; \
+	} while (0)
+
+#define IN_RANGE_UNSIGNED(_type) \
+	do { \
+		if (uinteger > _type ## _MAX) { \
+			fr_strerror_printf("Invalid value %" PRIu64 " for type '%s' (allowed range: " \
+					   "0..%" PRIu64 ")", \
+					   uinteger, fr_int2str(fr_value_box_type_table, type, "<INVALID>"), \
+					   (uint64_t) _type ## _MAX); \
+			return -1; \
+		} \
+	} while (0)
+
+#define IN_RANGE_SIGNED(_type) \
+	do { \
+		if ((sinteger > _type ## _MAX) || (sinteger < _type ## _MIN)) { \
+			fr_strerror_printf("Invalid value %" PRId64 " for type '%s' (allowed range: " \
+					   "%" PRId64 "..%" PRId64 ")", \
+					   sinteger, fr_int2str(fr_value_box_type_table, type, "<INVALID>"), \
+					   (int64_t) _type ## _MIN, (int64_t) _type ## _MAX); \
+			return -1; \
+		} \
+	} while (0)
+
+	/*
+	 *	First pass for integers.
+	 */
+	switch (type) {
+	case FR_TYPE_UINT8:
+	case FR_TYPE_UINT16:
+	case FR_TYPE_UINT32:
+	case FR_TYPE_UINT64:
+		if (*value == '-') INVALID_TYPE_VALUE;
+
+		/*
+		 *	fr_strtoull checks for overflows and calls fr_strerror_printf to set an error.
+		 */
+		if (fr_strtoull(&uinteger, &p, value) < 0) return -1;
+		if (*p != '\0') INVALID_TYPE_VALUE;
+		break;
+
+	case FR_TYPE_INT8:
+	case FR_TYPE_INT16:
+	case FR_TYPE_INT32:
+	case FR_TYPE_INT64:
+		/*
+		 *	fr_strtoll checks for overflows and calls fr_strerror_printf to set an error.
+		 */
+		if (fr_strtoll(&sinteger, &p, value) < 0) return -1;
+		if (*p != '\0') INVALID_TYPE_VALUE;
+		break;
+
+	default:
+		/* Non-integers are not handled here. */
+		break;
+	}
+
+	/*
+	 *	Again, for all. Integers are already parsed and now just need assignment.
+	 */
+	switch (type) {
+	case FR_TYPE_BOOL:
+		/*
+		 *	Allow yes/no, true/false, and on/off
+		 */
+		if ((strcasecmp(value, "yes") == 0) ||
+		    (strcasecmp(value, "true") == 0) ||
+		    (strcasecmp(value, "on") == 0)) {
+			*(bool *)out = true;
+		} else if ((strcasecmp(value, "no") == 0) ||
+			   (strcasecmp(value, "false") == 0) ||
+			   (strcasecmp(value, "off") == 0)) {
+			*(bool *)out = false;
+		} else INVALID_TYPE_VALUE;
+		break;
+
+	case FR_TYPE_FLOAT32:
+	{
+		float num;
+		if (sscanf(value, "%f", &num) != 1) INVALID_TYPE_VALUE;
+		memcpy(out, &num, sizeof(num));
+	}
+		break;
+
+	case FR_TYPE_FLOAT64:
+	{
+		double num;
+		if (sscanf(value, "%lf", &num) != 1) INVALID_TYPE_VALUE;
+		memcpy(out, &num, sizeof(num));
+	}
+		break;
+
+	case FR_TYPE_UINT8:
+		IN_RANGE_UNSIGNED(UINT8);
+		*(uint8_t *)out = uinteger;
+		break;
+
+	case FR_TYPE_UINT16:
+		IN_RANGE_UNSIGNED(UINT16);
+		*(uint16_t *)out = uinteger;
+		break;
+
+	case FR_TYPE_UINT32:
+		IN_RANGE_UNSIGNED(UINT32);
+		*(uint32_t *)out = uinteger;
+		break;
+
+	case FR_TYPE_UINT64:
+		/* IN_RANGE_UNSIGNED doesn't work here */
+		*(uint64_t *)out = uinteger;
+		break;
+
+	case FR_TYPE_INT8:
+		IN_RANGE_SIGNED(INT8);
+		*(int8_t *)out = sinteger;
+		break;
+
+	case FR_TYPE_INT16:
+		IN_RANGE_SIGNED(INT16);
+		*(int16_t *)out = sinteger;
+		break;
+
+	case FR_TYPE_INT32:
+		IN_RANGE_SIGNED(INT32);
+		*(int32_t *)out = sinteger;
+		break;
+
+	case FR_TYPE_INT64:
+		IN_RANGE_SIGNED(INT64);
+		*(int64_t *)out = sinteger;
+		break;
+
+	default:
+		fr_strerror_printf("Invalid type '%s' (%i)", fr_int2str(fr_value_box_type_table, type, "?Unknown?"), type);
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
  *	Convert a struct timeval to float.
  */
 double ncc_timeval_to_float(struct timeval *in)

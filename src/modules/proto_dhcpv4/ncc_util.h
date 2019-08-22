@@ -232,6 +232,7 @@ char *ncc_absolute_time_sprint(char *out, bool with_date);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 
+int ncc_parse_type_value(void *out, uint32_t type, char const *value);
 double ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *tv, double in);
 double ncc_fr_time_to_float(fr_time_delta_t in);
