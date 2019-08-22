@@ -2928,7 +2928,7 @@ static void dpc_options_parse(int argc, char **argv)
 	opterr = 0; /* No error messages. */
 	while (1)
 	{
-		argval = getopt_long(argc, argv, "-x", long_options, &opt_index);
+		argval = getopt_long(argc, argv, "-hvx", long_options, &opt_index);
 		/*
 		 * "If the first character of optstring is '-', then each nonoption argv-element is handled
 		 *  as if it were the argument of an option with character code 1."
@@ -2938,6 +2938,13 @@ static void dpc_options_parse(int argc, char **argv)
 		if (argval == -1) break;
 
 		switch (argval) {
+		case 'h':
+			usage(EXIT_SUCCESS);
+
+		case 'v':
+			version_print();
+			exit(EXIT_SUCCESS);
+
 		case 'x':
 			dpc_debug_lvl ++;
 			break;
@@ -2984,10 +2991,6 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'g':
 			dpc_gateway_parse(global_ctx, optarg);
-			break;
-
-		case 'h':
-			usage(0);
 			break;
 
 #ifdef HAVE_LIBPCAP
@@ -3046,10 +3049,6 @@ static void dpc_options_parse(int argc, char **argv)
 		case 'T':
 			CONF.template = true;
 			break;
-
-		case 'v':
-			version_print();
-			exit(EXIT_SUCCESS);
 
 		case 'x': /* Handled in first pass. */
 			break;
@@ -3442,6 +3441,7 @@ static void NEVER_RETURNS usage(int status)
 {
 	FILE *fp = status ? stderr : stdout;
 
+	fprintf(fp, "\n");
 	fprintf(fp, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
 	fprintf(fp, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
 	fprintf(fp, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
