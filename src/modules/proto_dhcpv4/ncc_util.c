@@ -718,6 +718,38 @@ int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
 
 
 /*
+ *	Wrapper to fr_strtoull (which in turn is a wrapper to strtoull).
+ *	This also checks we don't have trailing garbage at the end of the input string.
+ */
+int ncc_strtoull(uint64_t *out, char const *value)
+{
+	char *p = NULL;
+
+	if (fr_strtoull(out, &p, value) < 0) return -1;
+	if (*p != '\0') {
+		fr_strerror_printf("Invalid value \"%s\" for unsigned integer", value);
+		return -1;
+	}
+	return 0;
+}
+
+/*
+ *	Wrapper to fr_strtoll (which in turn is a wrapper to strtoll).
+ *	This also checks we don't have trailing garbage at the end of the input string.
+ */
+int ncc_strtoll(int64_t *out, char const *value)
+{
+	char *p = NULL;
+
+	if (fr_strtoll(out, &p, value) < 0) return -1;
+	if (*p != '\0') {
+		fr_strerror_printf("Invalid value \"%s\" for integer", value);
+		return -1;
+	}
+	return 0;
+}
+
+/*
  *	Parse a string value into a C data type.
   *	Similar to cf_pair_parse_value / fr_value_box_from_integer_str
  *	... but with values provided from command-line options.
@@ -781,10 +813,9 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 		if (*value == '-') INVALID_TYPE_VALUE;
 
 		/*
-		 *	fr_strtoull checks for overflows and calls fr_strerror_printf to set an error.
+		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
-		if (fr_strtoull(&uinteger, &p, value) < 0) return -1;
-		if (*p != '\0') INVALID_TYPE_VALUE;
+		if (ncc_strtoull(&uinteger, value) < 0) return -1;
 		break;
 
 	case FR_TYPE_INT8:
@@ -792,10 +823,9 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	case FR_TYPE_INT32:
 	case FR_TYPE_INT64:
 		/*
-		 *	fr_strtoll checks for overflows and calls fr_strerror_printf to set an error.
+		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
-		if (fr_strtoll(&sinteger, &p, value) < 0) return -1;
-		if (*p != '\0') INVALID_TYPE_VALUE;
+		if (ncc_strtoll(&sinteger, value) < 0) return -1;
 		break;
 
 	default:
