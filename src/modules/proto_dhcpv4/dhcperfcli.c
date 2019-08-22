@@ -2906,17 +2906,17 @@ static void dpc_options_parse(int argc, char **argv)
 
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
-		usage(1); \
+		usage(EXIT_FAILURE); \
 	}
 
 #define ERROR_LONGOPT_VALUE(_l) { \
 		ERROR("Invalid value for option --%s (expected: %s)", long_options[opt_index].name, _l); \
-		usage(1); \
+		usage(EXIT_FAILURE); \
 	}
 
 #define ERROR_PARSE_OPT { \
 		ERROR("Invalid value for option \"-%c\": %s", argval, fr_strerror()); \
-		usage(1); \
+		usage(EXIT_FAILURE); \
 	}
 
 #define PARSE_OPT(_to, _type) if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
@@ -3086,13 +3086,13 @@ static void dpc_options_parse(int argc, char **argv)
 
 			default:
 				printf("Error: Unexpected 'option index': %d\n", opt_index);
-				usage(1);
+				usage(EXIT_FAILURE);
 				break;
 			}
 			break;
 
 		default:
-			usage(1);
+			usage(EXIT_FAILURE);
 			break;
 		}
 	}
@@ -3124,7 +3124,7 @@ static void dpc_options_parse(int argc, char **argv)
 	if (argc - 1 >= 2) {
 		if (dpc_command_parse(argv[2]) != 0) {
 			ERROR("Unrecognised command \"%s\"", argv[2]);
-			usage(1);
+			usage(EXIT_FAILURE);
 		}
 	}
 
@@ -3354,7 +3354,7 @@ int main(int argc, char **argv)
 	 *	Ensure we have something to work with.
 	 */
 	if (input_list.size == 0) {
-		if (!with_stdin_input && argc < 2) usage(0); /* If no input nor arguments, show usage. */
+		if (!with_stdin_input && argc < 2) usage(EXIT_SUCCESS); /* If no input nor arguments, show usage. */
 
 		WARN("No valid input loaded, nothing to do");
 		exit(0);
