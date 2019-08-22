@@ -750,6 +750,46 @@ int ncc_strtoll(int64_t *out, char const *value)
 }
 
 /*
+ *	Wrapper to strtof.
+ *	Don't allow hex, it's confusing for floating point numbers.
+ *	This also checks we don't have trailing garbage at the end of the input string.
+ */
+int ncc_strtof(float *out, char const *value)
+{
+	char *p = NULL;
+
+	if ((value[0] == '0') && (value[1] == 'x')) {
+	error:
+		fr_strerror_printf("Invalid value \"%s\" for floating point number", value);
+		return -1;
+	}
+
+	*out = strtof(value, &p);
+	if (*p != '\0') goto error;
+	return 0;
+}
+
+/*
+ *	Wrapper to strtod.
+ *	Don't allow hex, it's confusing for floating point numbers.
+ *	This also checks we don't have trailing garbage at the end of the input string.
+ */
+int ncc_strtod(double *out, char const *value)
+{
+	char *p = NULL;
+
+	if ((value[0] == '0') && (value[1] == 'x')) {
+	error:
+		fr_strerror_printf("Invalid value \"%s\" for floating point number", value);
+		return -1;
+	}
+
+	*out = strtod(value, &p);
+	if (*p != '\0') goto error;
+	return 0;
+}
+
+/*
  *	Parse a string value into a C data type.
   *	Similar to cf_pair_parse_value / fr_value_box_from_integer_str
  *	... but with values provided from command-line options.
@@ -855,7 +895,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	case FR_TYPE_FLOAT32:
 	{
 		float num;
-		if (sscanf(value, "%f", &num) != 1) INVALID_TYPE_VALUE;
+		if (ncc_strtof(&num, value) < 0) return -1;
 		memcpy(out, &num, sizeof(num));
 	}
 		break;
@@ -863,7 +903,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	case FR_TYPE_FLOAT64:
 	{
 		double num;
-		if (sscanf(value, "%lf", &num) != 1) INVALID_TYPE_VALUE;
+		if (ncc_strtod(&num, value) < 0) return -1;
 		memcpy(out, &num, sizeof(num));
 	}
 		break;
