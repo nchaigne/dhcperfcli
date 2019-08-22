@@ -2967,8 +2967,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'c':
-			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			CONF.input_num_use = atoi(optarg);
+			PARSE_OPT(CONF.input_num_use, FR_TYPE_UINT32);
 			break;
 
 		case 'C':
@@ -3001,13 +3000,13 @@ static void dpc_options_parse(int argc, char **argv)
 		{
 			/* Stored as uint64_t because it is required by the config parser. */
 			uint32_t u32;
-			if (!ncc_str_to_uint32(&u32, optarg)) ERROR_OPT_VALUE("integer or hex string");
+			PARSE_OPT(u32, FR_TYPE_UINT32);
 			CONF.base_xid = u32;
 		}
 			break;
 
 		case 'L':
-			if (!ncc_str_to_float32(&CONF.duration_start_max, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			PARSE_OPT(CONF.duration_start_max, FR_TYPE_FLOAT32);
 			break;
 
 		case 'M':
@@ -3015,13 +3014,11 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'N':
-			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			CONF.session_max_num = atoi(optarg);
+			PARSE_OPT(CONF.session_max_num, FR_TYPE_UINT32);
 			break;
 
 		case 'p':
-			if (!is_integer(optarg)) ERROR_OPT_VALUE("integer");
-			CONF.session_max_active = atoi(optarg);
+			PARSE_OPT(CONF.session_max_active, FR_TYPE_UINT32);
 			break;
 
 		case 'P':
@@ -3029,7 +3026,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'r':
-			if (!ncc_str_to_float32(&CONF.rate_limit, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			PARSE_OPT(CONF.rate_limit, FR_TYPE_FLOAT32);
 			break;
 
 		case 's':
@@ -3037,7 +3034,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 't':
-			if (!ncc_str_to_float32(&CONF.request_timeout, optarg, false)) ERROR_OPT_VALUE("positive floating point number");
+			PARSE_OPT(CONF.request_timeout, FR_TYPE_FLOAT32);
 			/* 0 is allowed, it means we don't wait for replies, ever.
 			 * This entails that:
 			 * - we won't have "timed out" requests
