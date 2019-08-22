@@ -2919,7 +2919,22 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(EXIT_FAILURE); \
 	}
 
+#define ERROR_PARSE_LONGOPT { \
+		ERROR("Invalid value for option \"--%s\": %s", long_options[opt_index].name, fr_strerror()); \
+		usage(EXIT_FAILURE); \
+	}
+
 #define PARSE_OPT(_to, _type) if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
+
+#define PARSE_LONGOPT(_to, _type) if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_LONGOPT;
+
+#define PARSE_OPT_COND(_to, _type, _cond, _expected) { \
+		if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_OPT; \
+		if (!(_cond)) { \
+			ERROR("Invalid value for option \"-%c\" (expected: " _expected ")", argval); \
+			usage(EXIT_FAILURE); \
+		} \
+	}
 
 	/* Parse options: first pass.
 	 * Get debug level, and set logging accordingly.
@@ -3009,7 +3024,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'L':
-			PARSE_OPT(CONF.duration_start_max, FR_TYPE_FLOAT32);
+			PARSE_OPT_COND(CONF.duration_start_max, FR_TYPE_FLOAT32, (CONF.duration_start_max >= 0), ">= 0");
 			break;
 
 		case 'M':
@@ -3029,15 +3044,15 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'r':
-			PARSE_OPT(CONF.rate_limit, FR_TYPE_FLOAT32);
+			PARSE_OPT_COND(CONF.rate_limit, FR_TYPE_FLOAT32, (CONF.rate_limit >= 0), ">= 0");
 			break;
 
 		case 's':
-			PARSE_OPT(CONF.progress_interval, FR_TYPE_FLOAT32);
+			PARSE_OPT_COND(CONF.progress_interval, FR_TYPE_FLOAT32, (CONF.progress_interval >= 0), ">= 0");
 			break;
 
 		case 't':
-			PARSE_OPT(CONF.request_timeout, FR_TYPE_FLOAT32);
+			PARSE_OPT_COND(CONF.request_timeout, FR_TYPE_FLOAT32, (CONF.request_timeout >= 0), ">= 0");
 			/* 0 is allowed, it means we don't wait for replies, ever.
 			 * This entails that:
 			 * - we won't have "timed out" requests
@@ -3074,8 +3089,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
-				if (!is_integer(optarg)) ERROR_LONGOPT_VALUE("integer");
-				CONF.retransmit_max = atoi(optarg);
+				PARSE_LONGOPT(CONF.retransmit_max, FR_TYPE_UINT32);
 				break;
 
 			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
