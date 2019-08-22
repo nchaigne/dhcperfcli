@@ -799,7 +799,6 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	bool cant_be_empty;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
-	char *p = NULL;
 
 	cant_be_empty = (type & FR_TYPE_NOT_EMPTY);
 
