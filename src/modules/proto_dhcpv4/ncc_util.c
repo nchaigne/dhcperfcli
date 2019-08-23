@@ -864,6 +864,26 @@ int ncc_strtod(double *out, char const *value)
 }
 
 /*
+ *	Parse a boolean value.
+ *	Allow yes/no, true/false, and on/off.
+ */
+int ncc_strtobool(bool *out, char const *value)
+{
+	if ((strcasecmp(value, "yes") == 0) || (strcasecmp(value, "true") == 0) || (strcasecmp(value, "on") == 0)) {
+		*(bool *)out = true;
+		return 0;
+	}
+
+	if ((strcasecmp(value, "no") == 0) || (strcasecmp(value, "false") == 0) || (strcasecmp(value, "off") == 0)) {
+		*(bool *)out = false;
+		return 0;
+	}
+
+	fr_strerror_printf("Invalid value \"%s\" for boolean", value);
+	return -1;
+}
+
+/*
  *	Parse a string value into a C data type.
   *	Similar to cf_pair_parse_value / fr_value_box_from_integer_str
  *	... but with values provided from command-line options.
@@ -951,18 +971,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	 */
 	switch (type) {
 	case FR_TYPE_BOOL:
-		/*
-		 *	Allow yes/no, true/false, and on/off
-		 */
-		if ((strcasecmp(value, "yes") == 0) ||
-		    (strcasecmp(value, "true") == 0) ||
-		    (strcasecmp(value, "on") == 0)) {
-			*(bool *)out = true;
-		} else if ((strcasecmp(value, "no") == 0) ||
-			   (strcasecmp(value, "false") == 0) ||
-			   (strcasecmp(value, "off") == 0)) {
-			*(bool *)out = false;
-		} else INVALID_TYPE_VALUE;
+		if (ncc_strtobool(out, value) < 0) return -1;
 		break;
 
 	case FR_TYPE_FLOAT32:
@@ -1029,6 +1038,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 
 	return 0;
 }
+
 
 /*
  *	Convert a struct timeval to float.
