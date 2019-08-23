@@ -66,16 +66,8 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 /*
  *	Print a log message.
  */
-void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
+void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 {
-	va_list ap;
-
-	va_start(ap, fmt);
-	if (!ncc_log_fp) {
-		va_end(ap);
-		return;
-	}
-
 	/* Print absolute date/time. */
 	if (log->timestamp == L_TIMESTAMP_ON) {
 		char datetime_buf[NCC_DATETIME_STRLEN];
@@ -83,28 +75,41 @@ void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
 	}
 
 	vfprintf(ncc_log_fp, fmt, ap);
-	va_end(ap);
+}
+void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
+{
+	va_list ap;
 
+	if (!ncc_log_fp) return;
+
+	va_start(ap, fmt);
+	vfprintf(ncc_log_fp, fmt, ap);
+	va_end(ap);
 	return;
 }
 
 /*
  *	Print a log message and also pop all stacked FreeRADIUS error messages.
  */
-void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
+void ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 {
-	va_list ap;
 	char const *error;
 
-	va_start(ap, fmt);
-	ncc_log_printf(log, fmt, ap);
-	va_end(ap);
+	ncc_vlog_printf(log, fmt, ap);
 
 	while ((error = fr_strerror_pop())) {
 		if (error && (error[0] != '\0')) {
 			fprintf(ncc_log_fp, "  %s\n", error);
 		}
 	}
+}
+void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	ncc_vlog_perror(log, fmt, ap);
+	va_end(ap);
 }
 
 /*
