@@ -766,6 +766,10 @@ int ncc_strtof(float *out, char const *value)
 
 	*out = strtof(value, &p);
 	if (*p != '\0') goto error;
+
+	/* Do not allow "NaN" or "Infinity" */
+	if (!isfinite(*out)) goto error;
+
 	return 0;
 }
 
@@ -786,6 +790,10 @@ int ncc_strtod(double *out, char const *value)
 
 	*out = strtod(value, &p);
 	if (*p != '\0') goto error;
+
+	/* Do not allow "NaN" or "Infinity" */
+	if (!isfinite(*out)) goto error;
+
 	return 0;
 }
 
