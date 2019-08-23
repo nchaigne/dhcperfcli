@@ -83,7 +83,7 @@ void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
 	if (!ncc_log_fp) return;
 
 	va_start(ap, fmt);
-	vfprintf(ncc_log_fp, fmt, ap);
+	ncc_vlog_printf(log, fmt, ap);
 	va_end(ap);
 	return;
 }
@@ -106,6 +106,8 @@ void ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
 {
 	va_list ap;
+
+	if (!ncc_log_fp) return;
 
 	va_start(ap, fmt);
 	ncc_vlog_perror(log, fmt, ap);
