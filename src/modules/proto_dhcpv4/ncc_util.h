@@ -41,7 +41,7 @@ extern int ncc_debug_lvl;
 #define NCC_LOG_ENABLED          (ncc_log_fp)
 #define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
 #define NCC_DEBUG(_p, _f, ...)   do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_printf_log(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
+#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
 #define NCC_LOG_STACK(_f, ...)   do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
 
 /*
@@ -204,7 +204,7 @@ typedef struct ncc_fr_event_list {
 int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when);
 
 void ncc_log_init(FILE *log_fp, int debug_lvl);
-void ncc_printf_log(ncc_log_t const *log, char const *fmt, ...);
+void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...);
 

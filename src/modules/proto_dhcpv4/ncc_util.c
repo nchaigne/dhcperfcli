@@ -66,7 +66,7 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 /*
  *	Print a log message.
  */
-void ncc_printf_log(ncc_log_t const *log, char const *fmt, ...)
+void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
 {
 	va_list ap;
 
@@ -97,7 +97,7 @@ void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
 	char const *error;
 
 	va_start(ap, fmt);
-	ncc_printf_log(log, fmt, ap);
+	ncc_log_printf(log, fmt, ap);
 	va_end(ap);
 
 	while ((error = fr_strerror_pop())) {
