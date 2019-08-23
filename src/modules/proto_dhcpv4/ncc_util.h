@@ -42,6 +42,7 @@ extern int ncc_debug_lvl;
 #define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
 #define NCC_DEBUG(_p, _f, ...)   do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
 #define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_printf_log(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
+#define NCC_LOG_STACK(_f, ...)   do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
 
 /*
 	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
@@ -85,7 +86,8 @@ extern int ncc_debug_lvl;
 #define PWARN(_f, ...) NCC_LOG("Warn : " _f ": %s", ## __VA_ARGS__, fr_strerror())
 
 #undef PERROR
-#define PERROR(_f, ...) NCC_LOG("Error : " _f ": %s", ## __VA_ARGS__, fr_strerror())
+//#define PERROR(_f, ...) NCC_LOG("Error : " _f ": %s", ## __VA_ARGS__, fr_strerror())
+#define PERROR(_f, ...) NCC_LOG_STACK("Error : " _f, ## __VA_ARGS__)
 
 #define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
@@ -203,6 +205,7 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when);
 
 void ncc_log_init(FILE *log_fp, int debug_lvl);
 void ncc_printf_log(ncc_log_t const *log, char const *fmt, ...);
+void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...);
 
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);

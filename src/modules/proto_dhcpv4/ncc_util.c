@@ -89,6 +89,25 @@ void ncc_printf_log(ncc_log_t const *log, char const *fmt, ...)
 }
 
 /*
+ *	Print a log message and also pop all stacked FreeRADIUS error messages.
+ */
+void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
+{
+	va_list ap;
+	char const *error;
+
+	va_start(ap, fmt);
+	ncc_printf_log(log, fmt, ap);
+	va_end(ap);
+
+	while ((error = fr_strerror_pop())) {
+		if (error && (error[0] != '\0')) {
+			fprintf(ncc_log_fp, "  %s\n", error);
+		}
+	}
+}
+
+/*
  *	Print a debug log message.
  *	Add extra information (file, line) if developper print is enabled.
  *
