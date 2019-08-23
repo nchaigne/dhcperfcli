@@ -41,8 +41,8 @@ extern int ncc_debug_lvl;
 #define NCC_LOG_ENABLED          (ncc_log_fp)
 #define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
 #define NCC_DEBUG(_p, _f, ...)   do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
-#define NCC_LOG_STACK(_f, ...)   do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _f "\n", ## __VA_ARGS__); } while(0)
+#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _f, ## __VA_ARGS__); } while(0)
+#define NCC_LOG_STACK(_f, ...)   do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _f, ## __VA_ARGS__); } while(0)
 
 /*
 	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
@@ -83,7 +83,8 @@ extern int ncc_debug_lvl;
 #define ERROR(_f, ...) NCC_LOG("Error : " _f, ## __VA_ARGS__)
 
 #undef PWARN
-#define PWARN(_f, ...) NCC_LOG("Warn : " _f ": %s", ## __VA_ARGS__, fr_strerror())
+//#define PWARN(_f, ...) NCC_LOG("Warn : " _f ": %s", ## __VA_ARGS__, fr_strerror())
+#define PWARN(_f, ...) NCC_LOG_STACK("Warn : " _f, ## __VA_ARGS__)
 
 #undef PERROR
 //#define PERROR(_f, ...) NCC_LOG("Error : " _f ": %s", ## __VA_ARGS__, fr_strerror())

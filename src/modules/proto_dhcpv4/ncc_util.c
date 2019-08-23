@@ -75,12 +75,13 @@ void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 	}
 
 	vfprintf(ncc_log_fp, fmt, ap);
+	fprintf(ncc_log_fp, "\n");
 }
 void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
 {
 	va_list ap;
 
-	if (!ncc_log_fp) return;
+	if (!ncc_log_fp || !fmt) return;
 
 	va_start(ap, fmt);
 	ncc_vlog_printf(log, fmt, ap);
@@ -91,17 +92,39 @@ void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
 /*
  *	Print a log message and also pop all stacked FreeRADIUS error messages.
  */
-void ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
+int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 {
-	char const *error;
+	char const *strerror;
 
-	ncc_vlog_printf(log, fmt, ap);
+	strerror = fr_strerror_pop();
+	if (!strerror) {
+		if (!fmt) return 0; /* No "fmt" and no error stack */
 
-	while ((error = fr_strerror_pop())) {
-		if (error && (error[0] != '\0')) {
-			fprintf(ncc_log_fp, "  %s\n", error);
-		}
+		ncc_vlog_printf(log, fmt, ap);
+		return 0;
 	}
+
+	/*
+	 *	Concatenate "fmt" with the first error
+	 */
+	if (fmt) {
+		char *tmp = talloc_vasprintf(NULL, fmt, ap);
+		if (!tmp) return -1;
+
+		ncc_log_printf(log, "%s: %s", tmp, strerror);
+		talloc_free(tmp);
+	} else {
+		ncc_log_printf(log, "%s", strerror);
+	}
+
+	/*
+	 *	Only the first message gets the prefix
+	 */
+	while ((strerror = fr_strerror_pop())) {
+		ncc_log_printf(log, "  %s", strerror);
+	}
+
+	return 0;
 }
 void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
 {
