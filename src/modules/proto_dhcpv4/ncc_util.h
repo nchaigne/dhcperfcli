@@ -33,6 +33,8 @@ typedef struct {
 	bool line_number;              //!< Log source file and line number.
 	bool basename;                 //<! Print only source file base name.
 
+	bool multiline;                //<! If more than one error in the stack, print them on separate lines.
+
 } ncc_log_t;
 
 extern ncc_log_t ncc_default_log;

@@ -94,36 +94,53 @@ void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
  */
 int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 {
+	char *tmp = NULL;
 	char const *strerror;
 
 	strerror = fr_strerror_pop();
 	if (!strerror) {
-		if (!fmt) return 0; /* No "fmt" and no error stack */
+		if (!fmt) return 0; /* No "fmt" and no error stack. */
 
 		ncc_vlog_printf(log, fmt, ap);
 		return 0;
 	}
 
-	/*
-	 *	Concatenate "fmt" with the first error
-	 */
+	/* If we have "fmt", use it as prefix. */
 	if (fmt) {
-		char *tmp = talloc_vasprintf(NULL, fmt, ap);
-		if (!tmp) return -1;
+		tmp = talloc_vasprintf(NULL, fmt, ap);
+	}
 
-		ncc_log_printf(log, "%s: %s", tmp, strerror);
-		talloc_free(tmp);
+	if (log->multiline) {
+		/*
+		 * Print the first error.
+		 * If we have "fmt", concatenate it with the first error.
+		 */
+		if (fmt) {
+			ncc_log_printf(log, "%s: %s", tmp, strerror);
+		} else {
+			ncc_log_printf(log, "%s", strerror);
+		}
+
+		/*
+		 * Then print all other errors (without the "fmt" prefix) on separate lines.
+		 */
+		while ((strerror = fr_strerror_pop())) {
+			ncc_log_printf(log, "  %s", strerror);
+		}
+
 	} else {
-		ncc_log_printf(log, "%s", strerror);
+		/*
+		 * Append all errors on the same line, separated with ": ".
+		 */
+		while (strerror) {
+			tmp = talloc_asprintf_append(tmp, "%s%s", (tmp ? ": " : ""), strerror);
+			strerror = fr_strerror_pop();
+		}
+
+		ncc_log_printf(log, "%s", tmp);
 	}
 
-	/*
-	 *	Only the first message gets the prefix
-	 */
-	while ((strerror = fr_strerror_pop())) {
-		ncc_log_printf(log, "  %s", strerror);
-	}
-
+	if (tmp) talloc_free(tmp);
 	return 0;
 }
 void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
