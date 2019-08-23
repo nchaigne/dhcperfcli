@@ -202,24 +202,24 @@ char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE] = {
 	"Lease-Query-Done"
 };
 
-static const FR_NAME_NUMBER request_types[] = {
-	{ "discover",    FR_DHCP_DISCOVER },
-	{ "request",     FR_DHCP_REQUEST },
+static fr_table_num_sorted_t const request_types[] = {
+	{ "-",           FR_CODE_UNDEFINED },
+	{ "auto",        FR_CODE_UNDEFINED },
 	{ "decline",     FR_DHCP_DECLINE },
-	{ "release",     FR_DHCP_RELEASE },
+	{ "discover",    FR_DHCP_DISCOVER },
 	{ "inform",      FR_DHCP_INFORM },
 	{ "lease_query", FR_DHCP_LEASE_QUERY },
-	{ "auto",        FR_CODE_UNDEFINED },
-	{ "-",           FR_CODE_UNDEFINED },
-	{ NULL, 0}
+	{ "release",     FR_DHCP_RELEASE },
+	{ "request",     FR_DHCP_REQUEST }
 };
+static size_t request_types_len = NUM_ELEMENTS(request_types);
 
-static const FR_NAME_NUMBER workflow_types[] = {
+static fr_table_num_sorted_t const workflow_types[] = {
 	{ "dora",        DPC_WORKFLOW_DORA },
 	{ "doradec",     DPC_WORKFLOW_DORA_DECLINE },
-	{ "dorarel",     DPC_WORKFLOW_DORA_RELEASE },
-	{ NULL, 0}
+	{ "dorarel",     DPC_WORKFLOW_DORA_RELEASE }
 };
+static size_t workflow_types_len = NUM_ELEMENTS(workflow_types);
 
 /* Transaction type labels. */
 static char const *transaction_types[DPC_TR_MAX] = {
@@ -2789,11 +2789,11 @@ static int dpc_command_parse(char const *command)
 	}
 
 	/* Maybe it's a workflow. */
-	workflow_code = fr_str2int(workflow_types, command, DPC_WORKFLOW_NONE);
+	workflow_code = fr_table_value_by_str(workflow_types, command, DPC_WORKFLOW_NONE);
 	if (workflow_code != DPC_WORKFLOW_NONE) return 0;
 
 	/* Or a packet type. */
-	packet_code = fr_str2int(request_types, command, -1);
+	packet_code = fr_table_value_by_str(request_types, command, -1);
 	if (packet_code != -1) return 0;
 
 	/* Nothing goes. */

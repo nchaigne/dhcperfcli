@@ -5,7 +5,7 @@
 
 Building *dhcperfcli* requires recent sources of FreeRADIUS version 4.0.x (`master` branch). Note that this version is currently in development. It's alright. We're using FreeRADIUS libraries. They just work fine.
 
-That said, changes made by the FreeRADIUS team may break *dhcperfcli* at any time. Although I try to keep up with these changes, I cannot guarantee responsiveness. Consequently, it is recommended to build a specific FreeRADIUS commit (with which *dhcpercli* will work) rather than the HEAD: [5e523501fb9b90f13e5f901f81fbf3e65c9d85a0](https://github.com/FreeRADIUS/freeradius-server/tree/5e523501fb9b90f13e5f901f81fbf3e65c9d85a0) (August 12, 2019).
+That said, changes made by the FreeRADIUS team may break *dhcperfcli* at any time. Although I try to keep up with these changes, I cannot guarantee responsiveness. Consequently, it is recommended to build a specific FreeRADIUS commit (with which *dhcpercli* will work) rather than the HEAD: [d99816b47efc58b2d5733f1911aee178cfa19298](https://github.com/FreeRADIUS/freeradius-server/tree/d99816b47efc58b2d5733f1911aee178cfa19298) (August 23, 2019).
 
 Instructions on how to build FreeRADIUS is available on their wiki :
 https://wiki.freeradius.org/building/home

@@ -823,7 +823,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 #define INVALID_TYPE_VALUE \
 	do { \
 		fr_strerror_printf("Invalid value \"%s\" for type '%s'", value, \
-			fr_int2str(fr_value_box_type_table, type, "<INVALID>")); \
+			fr_table_str_by_value(fr_value_box_type_table, type, "<INVALID>")); \
 		return -1; \
 	} while (0)
 
@@ -832,7 +832,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 		if (uinteger > _type ## _MAX) { \
 			fr_strerror_printf("Invalid value %" PRIu64 " for type '%s' (allowed range: " \
 					   "0..%" PRIu64 ")", \
-					   uinteger, fr_int2str(fr_value_box_type_table, type, "<INVALID>"), \
+					   uinteger, fr_table_str_by_value(fr_value_box_type_table, type, "<INVALID>"), \
 					   (uint64_t) _type ## _MAX); \
 			return -1; \
 		} \
@@ -843,7 +843,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 		if ((sinteger > _type ## _MAX) || (sinteger < _type ## _MIN)) { \
 			fr_strerror_printf("Invalid value %" PRId64 " for type '%s' (allowed range: " \
 					   "%" PRId64 "..%" PRId64 ")", \
-					   sinteger, fr_int2str(fr_value_box_type_table, type, "<INVALID>"), \
+					   sinteger, fr_table_str_by_value(fr_value_box_type_table, type, "<INVALID>"), \
 					   (int64_t) _type ## _MIN, (int64_t) _type ## _MAX); \
 			return -1; \
 		} \
@@ -956,7 +956,8 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 		break;
 
 	default:
-		fr_strerror_printf("Invalid type '%s' (%i)", fr_int2str(fr_value_box_type_table, type, "?Unknown?"), type);
+		fr_strerror_printf("Invalid type '%s' (%i)",
+		                   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type);
 		return -1;
 	}
 
