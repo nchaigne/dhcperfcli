@@ -4,7 +4,7 @@
 #
 
 # we need a "virtual protocol" because only "freeradius" dictionary is loaded as internal
-PROTOCOL	dhcperfcli		501
+PROTOCOL	dhcperfcli		255
 BEGIN-PROTOCOL	dhcperfcli
 
 $INCLUDE dictionary.dhcperfcli.internal
