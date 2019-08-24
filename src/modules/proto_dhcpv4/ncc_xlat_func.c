@@ -411,7 +411,7 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		if (ncc_parse_file_csv(&xlat_frame->file_csv.idx_file, &xlat_frame->file_csv.idx_value, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat file.csv: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat file.csv");
 			XLAT_ERR_RETURN;
 		}
 
@@ -475,7 +475,7 @@ static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	if (!xlat_frame->type) {
 		/* Not yet parsed. */
 		if (ncc_parse_file_raw(&xlat_frame->file.idx_file, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat file.raw: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat file.raw");
 			XLAT_ERR_RETURN;
 		}
 
@@ -600,7 +600,7 @@ static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t ou
 		/* Not yet parsed. */
 		uint64_t num1, num2;
 		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat num range: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat num.range");
 			XLAT_ERR_RETURN;
 		}
 
@@ -648,7 +648,7 @@ static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 		/* Not yet parsed. */
 		uint64_t num1, num2;
 		if (ncc_parse_num_range(&num1, &num2, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat num range: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat num.rand");
 			XLAT_ERR_RETURN;
 		}
 
@@ -753,7 +753,7 @@ static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t
 		/* Not yet parsed. */
 		fr_ipaddr_t ipaddr1, ipaddr2;
 		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat ipaddr range: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat ipaddr.range");
 			XLAT_ERR_RETURN;
 		}
 
@@ -812,7 +812,7 @@ static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t 
 		/* Not yet parsed. */
 		fr_ipaddr_t ipaddr1, ipaddr2;
 		if (ncc_parse_ipaddr_range(&ipaddr1, &ipaddr2, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat ipaddr range: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat ipaddr.rand");
 			XLAT_ERR_RETURN;
 		}
 
@@ -936,7 +936,7 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 		/* Not yet parsed. */
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat ethaddr range: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat ethaddr.range");
 			XLAT_ERR_RETURN;
 		}
 
@@ -997,7 +997,7 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 		/* Not yet parsed. */
 		uint8_t ethaddr1[6], ethaddr2[6];
 		if (ncc_parse_ethaddr_range(ethaddr1, ethaddr2, fmt) < 0) {
-			fr_strerror_printf("Failed to parse xlat ethaddr range: %s", fr_strerror());
+			fr_strerror_printf_push("Failed to parse xlat ethaddr.rand");
 			XLAT_ERR_RETURN;
 		}
 
