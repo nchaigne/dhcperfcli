@@ -313,8 +313,8 @@ int ncc_xlat_get_vps_from_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file)
 	return 0;
 
 error:
-	fr_strerror_printf("Failed to read CSV values (file #%u, line %u): %s",
-	                   xlat_file->idx_file, xlat_file->num_line, fr_strerror());
+	fr_strerror_printf_push("Failed to read CSV values (file #%u, line %u)",
+	                        xlat_file->idx_file, xlat_file->num_line);
 	return -1;
 }
 

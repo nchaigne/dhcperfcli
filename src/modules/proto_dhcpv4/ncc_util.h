@@ -64,6 +64,9 @@ extern int ncc_debug_lvl;
 	Note: The push/pop mechanism of FreeRADIUS allows to have multiple error messages
 	logged in a single call of PERROR (cf. fr_strerror_printf_push / fr_log_perror).
 	The most recently pushed error is displayed on the same line as the log prefix.
+
+	So there is really no need anymore for something like: ERROR("Something: %s", fr_strerror());
+	Instead do: PERROR("Something");
 */
 #undef DEBUG
 #define DEBUG(_f, ...)  NCC_DEBUG(1, _f, ## __VA_ARGS__)

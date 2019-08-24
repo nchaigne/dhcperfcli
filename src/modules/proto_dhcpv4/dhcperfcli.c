@@ -2609,7 +2609,7 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
 
 			len = dpc_xlat_eval_compiled(buffer, sizeof(buffer), xlat, packet);
 			if (len <= 0) { /* Consider empty string as failed expansion. */
-				fr_strerror_printf("Failed to expand xlat '%s': %s", vp->da->name, fr_strerror());
+				fr_strerror_printf_push("Failed to expand xlat '%s'", vp->da->name);
 				return -1;
 			}
 
@@ -2915,12 +2915,12 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 #define ERROR_PARSE_OPT { \
-		ERROR("Invalid value for option \"-%c\": %s", argval, fr_strerror()); \
+		PERROR("Invalid value for option \"-%c\"", argval); \
 		usage(EXIT_FAILURE); \
 	}
 
 #define ERROR_PARSE_LONGOPT { \
-		ERROR("Invalid value for option \"--%s\": %s", long_options[opt_index].name, fr_strerror()); \
+		PERROR("Invalid value for option \"--%s\"", long_options[opt_index].name); \
 		usage(EXIT_FAILURE); \
 	}
 

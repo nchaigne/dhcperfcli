@@ -141,6 +141,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 
 	/* Read the configuration file (if provided) */
 	if (conf_file && cf_file_read(cs, conf_file) < 0) {
+		/* Note: FreeRADIUS cf_* functions directly call "ERROR", so we have nothing to pop from the error stack. */
 		ERROR("Failed to read configuration file %s", conf_file);
 		goto failure;
 	}
@@ -168,8 +169,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 
 	config->root_cs = cs;
 
-	/* Clear any unprocessed configuration errors */
-	(void) fr_strerror();
+	fr_strerror(); /* Clear the error buffer */
 
 	return 0;
 
