@@ -49,19 +49,21 @@ extern int ncc_debug_lvl;
 /*
 	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
 
-	Sample output:
+	Sample output (which depends on the logger configuration - here with timestamp):
 
-	Fri Apr  5 10:00:44 2019 : Debug : DEBUG test
-	Fri Apr  5 10:00:44 2019 : Info  : INFO test
-	Fri Apr  5 10:00:44 2019 : Warn  : WARN test
-	Fri Apr  5 10:00:44 2019 : Error : ERROR test
-	Fri Apr  5 10:01:59 2019 : Warn  : PWARN test: fr_strerror_printf
-	Fri Apr  5 10:01:59 2019 : Error : PERROR test: fr_strerror_printf
+	Fri Apr  5 10:00:44 2019 : Debug : Calling DEBUG
+	Fri Apr  5 10:00:44 2019 : Info  : Calling INFO
+	Fri Apr  5 10:00:44 2019 : Warn  : Calling WARN
+	Fri Apr  5 10:00:44 2019 : Error : Calling ERROR
+	Fri Apr  5 10:01:59 2019 : Error : Calling PERROR: Pushing error(2)
+	Fri Apr  5 10:01:59 2019 : Error : Pushing error(1)
+	Fri Apr  5 10:01:59 2019 : Error : Pushing error(0)
 
 	We'll redefine our own, so we get exactly what we want.
 
-	We don't support the push/pop mechanism of FreeRADIUS which allows to have multiple error messages
+	Note: The push/pop mechanism of FreeRADIUS allows to have multiple error messages
 	logged in a single call of PERROR (cf. fr_strerror_printf_push / fr_log_perror).
+	The most recently pushed error is displayed on the same line as the log prefix.
 */
 #undef DEBUG
 #define DEBUG(_f, ...)  NCC_DEBUG(1, _f, ## __VA_ARGS__)
