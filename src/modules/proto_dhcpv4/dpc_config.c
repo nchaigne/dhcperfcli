@@ -27,7 +27,7 @@
  */
 
 static const CONF_PARSER _timing_config[] = {
-	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT32, dpc_config_t, request_timeout) }, /* No default */
+	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
 
 	CONF_PARSER_TERMINATOR
@@ -47,7 +47,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
 
-	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT32, dpc_config_t, progress_interval) }, /* No default */
+	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval) }, /* No default */
 	{ FR_CONF_OFFSET("pr_stat_timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("pr_stat_per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("pr_stat_per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
@@ -59,8 +59,8 @@ static const CONF_PARSER _main_config[] = {
 
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 
-	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT32, dpc_config_t, rate_limit) }, /* No default */
-	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT32, dpc_config_t, duration_start_max) }, /* No default */
+	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT64, dpc_config_t, rate_limit) }, /* No default */
+	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max) }, /* No default */
 	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use) }, /* No default */
 	{ FR_CONF_OFFSET("session_max_num", FR_TYPE_UINT32, dpc_config_t, session_max_num) }, /* No default */
 	{ FR_CONF_OFFSET("session_max_active", FR_TYPE_UINT32, dpc_config_t, session_max_active) }, /* No default */

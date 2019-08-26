@@ -3024,7 +3024,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'L':
-			PARSE_OPT_COND(CONF.duration_start_max, FR_TYPE_FLOAT32, (CONF.duration_start_max >= 0), ">= 0");
+			PARSE_OPT_COND(CONF.duration_start_max, FR_TYPE_FLOAT64, (CONF.duration_start_max >= 0), ">= 0");
 			break;
 
 		case 'M':
@@ -3044,15 +3044,15 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'r':
-			PARSE_OPT_COND(CONF.rate_limit, FR_TYPE_FLOAT32, (CONF.rate_limit >= 0), ">= 0");
+			PARSE_OPT_COND(CONF.rate_limit, FR_TYPE_FLOAT64, (CONF.rate_limit >= 0), ">= 0");
 			break;
 
 		case 's':
-			PARSE_OPT_COND(CONF.progress_interval, FR_TYPE_FLOAT32, (CONF.progress_interval >= 0), ">= 0");
+			PARSE_OPT_COND(CONF.progress_interval, FR_TYPE_FLOAT64, (CONF.progress_interval >= 0), ">= 0");
 			break;
 
 		case 't':
-			PARSE_OPT_COND(CONF.request_timeout, FR_TYPE_FLOAT32, (CONF.request_timeout >= 0), ">= 0");
+			PARSE_OPT_COND(CONF.request_timeout, FR_TYPE_FLOAT64, (CONF.request_timeout >= 0), ">= 0");
 			/* 0 is allowed, it means we don't wait for replies, ever.
 			 * This entails that:
 			 * - we won't have "timed out" requests
