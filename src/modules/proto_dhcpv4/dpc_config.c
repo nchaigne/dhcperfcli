@@ -52,6 +52,8 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("pr_stat_per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("pr_stat_per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
 
+	{ FR_CONF_OFFSET("template", FR_TYPE_BOOL, dpc_config_t, template) }, /* No default */
+	{ FR_CONF_OFFSET("xlat", FR_TYPE_BOOL, dpc_config_t, xlat) }, /* No default */
 	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
 	// Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
 	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
@@ -269,6 +271,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_UINT(pr_stat_per_input_max);
 
 	CONF_DEBUG_BOOL(template);
+	CONF_DEBUG_BOOL(xlat);
 	CONF_DEBUG_STR(file_input);
 	CONF_DEBUG_STR_MULTI(xlat_files);
 	CONF_DEBUG_UINT64(base_xid);

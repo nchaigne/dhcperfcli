@@ -28,6 +28,7 @@ struct dpc_config_s {
 	uint32_t pr_stat_per_input_max;  //<! Max number of input items shown in progress statistics.
 
 	bool template;                   //<! Template mode.
+	bool xlat;                       //<! Xlat enabled on input items.
 	char const *file_input;          //<! Read input items from provided file.
 	char const **xlat_files;         //<! Files containing values for xlat "file" expansions.
 	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.

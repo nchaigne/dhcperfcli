@@ -42,6 +42,7 @@ dpc_context_t exe_ctx = {
 };
 
 static dpc_config_t default_config = {
+	.xlat = true,
 	.session_max_active = 1,
 	.packet_trace_lvl = -1, /* If unspecified, figure out something automatically. */
 	.progress_interval = 10.0,
@@ -131,7 +132,6 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 ncc_dlist_t input_list;
-static int with_xlat = 0;
 static dpc_input_t *template_input_prev; /* In template mode, previous used input item. */
 
 static ncc_endpoint_t server_ep = {
@@ -935,7 +935,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		packet->id = session->input->ext.xid;
 
 		/* An xlat expression may have been provided. Go look in packet vps. */
-		if (packet->id == DPC_PACKET_ID_UNASSIGNED && with_xlat) {
+		if (packet->id == DPC_PACKET_ID_UNASSIGNED && CONF.xlat) {
 			VALUE_PAIR *vp_xid = ncc_pair_find_by_da(packet->vps, attr_dhcp_transaction_id);
 			if (vp_xid) packet->id = vp_xid->vp_uint32;
 		}
@@ -2272,7 +2272,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 		 */
 		if (vp->type == VT_XLAT) {
 
-			if (with_xlat) {
+			if (CONF.xlat) {
 				input->do_xlat = true;
 
 				xlat_exp_t *xlat = NULL;
@@ -2862,6 +2862,7 @@ static struct option long_options[] = {
 	{ "conf-file",              required_argument, NULL, 1 },
 	{ "debug",                  no_argument,       NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
+	{ "xlat",                   optional_argument, NULL, 1 },
 	{ "xlat-file",              required_argument, NULL, 1 },
 
 	/* Long options with short option equivalent. */
@@ -2879,7 +2880,7 @@ static struct option long_options[] = {
 	/* Long options flags can be handled automaticaly.
 	 * Note: this requires an "int" as flag variable. A boolean cannot be handled automatically.
 	 */
-	{ "xlat",                   no_argument, &with_xlat, 1 },
+	//{ "xlat",                   no_argument, &with_xlat, 1 },
 
 	{ 0, 0, 0, 0 }
 };
@@ -2891,6 +2892,7 @@ typedef enum {
 	LONGOPT_IDX_CONF_FILE = 0,
 	LONGOPT_IDX_DEBUG,
 	LONGOPT_IDX_RETRANSMIT,
+	LONGOPT_IDX_XLAT,
 	LONGOPT_IDX_XLAT_FILE,
 } longopt_index_t;
 
@@ -2948,8 +2950,10 @@ static void dpc_options_parse(int argc, char **argv)
 	 * Note: if non-option arguments immediately follow an optional argument with no value, then they must be
 	 * explicitely separated with "--".
 	 */
-#define OPTIONAL_ARG \
-	if (!optarg && argv[optind] && argv[optind][0] != '-') optarg = argv[optind++];
+#define OPTIONAL_ARG(_dflt) { \
+		if (!optarg && argv[optind] && argv[optind][0] != '-') optarg = argv[optind++]; \
+		if (!optarg && _dflt) optarg = _dflt; \
+	}
 
 	/* Parse options: first pass.
 	 * Get debug level, and set logging accordingly.
@@ -3107,6 +3111,11 @@ static void dpc_options_parse(int argc, char **argv)
 				PARSE_LONGOPT(CONF.retransmit_max, FR_TYPE_UINT32);
 				break;
 
+			case LONGOPT_IDX_XLAT: // --xlat
+				OPTIONAL_ARG("yes");
+				PARSE_LONGOPT(CONF.xlat, FR_TYPE_BOOL);
+				break;
+
 			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
 				if (ncc_xlat_file_add(optarg) != 0) {
 					exit(EXIT_FAILURE);
@@ -3160,9 +3169,6 @@ static void dpc_options_parse(int argc, char **argv)
 			usage(EXIT_FAILURE);
 		}
 	}
-
-	/* Xlat is automatically enabled in template mode. */
-	if (CONF.template) with_xlat = 1;
 }
 
 /*

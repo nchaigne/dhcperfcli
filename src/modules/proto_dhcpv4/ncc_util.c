@@ -894,6 +894,8 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
 
+	if (!value) return -1;
+
 	cant_be_empty = (type & FR_TYPE_NOT_EMPTY);
 
 	type = FR_BASE_TYPE(type);
