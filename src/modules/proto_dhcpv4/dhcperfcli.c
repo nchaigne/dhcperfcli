@@ -2903,6 +2903,7 @@ static void dpc_options_parse(int argc, char **argv)
 {
 	int argval;
 	int opt_index = -1; /* Stores the option index for long options. */
+	int i, num_arg;
 
 #define ERROR_OPT_VALUE(_l) { \
 		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
@@ -2935,6 +2936,20 @@ static void dpc_options_parse(int argc, char **argv)
 			usage(EXIT_FAILURE); \
 		} \
 	}
+
+	/* The getopt API allows for an option with has_arg = "optional_argument"
+	 * to be passed as "--arg" or "--arg=val", but not "--arg val".
+	 * We have to handle this case ourselves: look at the next argument if there is one.
+	 * If it's not an option, then consider it is our value.
+	 *
+	 * Likewise for short options with an optional value ("a::"), the API allows for "-a" or "-av", but not "-a v".
+	 * This can be handled the same way.
+	 *
+	 * Note: if non-option arguments immediately follow an optional argument with no value, then they must be
+	 * explicitely separated with "--".
+	 */
+#define OPTIONAL_ARG \
+	if (!optarg && argv[optind] && argv[optind][0] != '-') optarg = argv[optind++];
 
 	/* Parse options: first pass.
 	 * Get debug level, and set logging accordingly.
@@ -3125,17 +3140,21 @@ static void dpc_options_parse(int argc, char **argv)
 	ncc_log_init(stdout, dpc_debug_lvl); /* Update with actual options. */
 	ncc_default_log.line_number = dpc_config->debug_dev;
 
+	/* Trace remaining (non-option) arguments, which start at argv[1] at this point. */
+	num_arg = argc - 1;
+	for (i = 1; i < argc; i++) DEBUG2("argv[%u]: %s", i, argv[i]);
+
 	/*
 	 *	Resolve server host address and port.
 	 */
-	if (argc - 1 >= 1 && strcmp(argv[1], "-") != 0) {
+	if (num_arg >= 1 && strcmp(argv[1], "-") != 0) {
 		ncc_host_addr_resolve(&server_ep, argv[1]);
 	}
 
 	/*
 	 *	See what kind of request we want to send.
 	 */
-	if (argc - 1 >= 2) {
+	if (num_arg >= 2) {
 		if (dpc_command_parse(argv[2]) != 0) {
 			ERROR("Unrecognised command \"%s\"", argv[2]);
 			usage(EXIT_FAILURE);
