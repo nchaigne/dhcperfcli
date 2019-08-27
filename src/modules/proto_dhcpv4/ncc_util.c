@@ -988,6 +988,13 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 		if (ncc_strtod(out, value) < 0) return -1;
 		break;
 
+	case FR_TYPE_TIME_DELTA:
+		/* Allowed formats:
+		 * "42.123" (seconds), "42.123s", "42123ms", "50us", "01:30" (min:sec)
+		 */
+		if (fr_time_delta_from_str(out, value, FR_TIME_RES_SEC) < 0) INVALID_TYPE_VALUE;
+		break;
+
 	case FR_TYPE_UINT8:
 		IN_RANGE_UNSIGNED(UINT8);
 		*(uint8_t *)out = uinteger;
