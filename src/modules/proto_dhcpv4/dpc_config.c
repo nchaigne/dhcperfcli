@@ -14,9 +14,6 @@
  *   For these parameters, do *not* provide a default ("dflt") to the configuration parser.
  *   A value will be set by the config parser only if the parameter is explicitly defined in configuration files.
  *
- * - Type 'float64' is not supported by FreeRADIUS in configuration files.
- *   Using 'float32' instead, which is good enough for configuration.
- *
  * - Type 'uint32' is restricted to values 0-INT32_MAX (not 0-UINT32_MAX).
  *   Cf. function cf_pair_parse_value (cf_parse.c) for rationale.
  *   We need real UINT32 values, so we'll be using 'uint64'.

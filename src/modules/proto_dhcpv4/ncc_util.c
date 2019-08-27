@@ -791,11 +791,15 @@ int ncc_strtoull(uint64_t *out, char const *value)
 {
 	char *p = NULL;
 
-	if (fr_strtoull(out, &p, value) < 0) return -1;
-	if (*p != '\0') {
+	if (*value == '-') { /* Don't let strtoull happily process negative values. */
+	error:
 		fr_strerror_printf("Invalid value \"%s\" for unsigned integer", value);
 		return -1;
 	}
+
+	if (fr_strtoull(out, &p, value) < 0) return -1;
+	if (*p != '\0') goto error;
+
 	return 0;
 }
 
