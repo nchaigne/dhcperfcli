@@ -981,19 +981,11 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 		break;
 
 	case FR_TYPE_FLOAT32:
-	{
-		float num;
-		if (ncc_strtof(&num, value) < 0) return -1;
-		memcpy(out, &num, sizeof(num));
-	}
+		if (ncc_strtof(out, value) < 0) return -1;
 		break;
 
 	case FR_TYPE_FLOAT64:
-	{
-		double num;
-		if (ncc_strtod(&num, value) < 0) return -1;
-		memcpy(out, &num, sizeof(num));
-	}
+		if (ncc_strtod(out, value) < 0) return -1;
 		break;
 
 	case FR_TYPE_UINT8:
