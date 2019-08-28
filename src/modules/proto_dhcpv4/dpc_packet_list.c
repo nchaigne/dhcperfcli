@@ -231,10 +231,9 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 	int i;
 	dpc_packet_socket_t *ps;
 
-	if (!pl || !src_ipaddr || (src_ipaddr->af == AF_UNSPEC)) {
-		fr_strerror_printf("Invalid argument");
-		return -1;
-	}
+	FN_ARG_CHECK(pl);
+	FN_ARG_CHECK(src_ipaddr);
+	FN_ARG_CHECK(src_ipaddr->af != AF_UNSPEC);
 
 	for (i = 0; i<pl->num_sockets; i++) {
 		ps = &pl->sockets[i];

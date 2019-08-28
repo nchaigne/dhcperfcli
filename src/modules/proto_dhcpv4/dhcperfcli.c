@@ -3315,6 +3315,12 @@ int main(int argc, char **argv)
 	if (ncc_xlat_register() < 0) exit(EXIT_FAILURE);
 
 	/*
+	 *	Initialize event list and packet list.
+	 */
+	dpc_event_list_init(global_ctx);
+	dpc_packet_list_init(global_ctx);
+
+	/*
 	 *	Read the configuration file (if provided), and parse configuration.
 	 */
 	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
@@ -3343,9 +3349,6 @@ int main(int argc, char **argv)
 	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
-
-	dpc_event_list_init(global_ctx);
-	dpc_packet_list_init(global_ctx);
 
 	/*
 	 *	Allocate sockets for gateways.

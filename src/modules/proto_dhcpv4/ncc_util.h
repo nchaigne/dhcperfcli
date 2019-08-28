@@ -100,6 +100,14 @@ extern int ncc_debug_lvl;
 #define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 
+#define FN_ARG_CHECK(_cond) { \
+	if (!(_cond)) { \
+		fr_strerror_printf("Invalid argument '%s'", STRINGIFY(_cond)); \
+		return -1; \
+	} \
+}
+
+
 /*	After a call to snprintf and similar functions, check if we have enough remaining buffer space.
  *
  *	These functions return the number of characters printed (excluding the null byte used to end output to strings).
