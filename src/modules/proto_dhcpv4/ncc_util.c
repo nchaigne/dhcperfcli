@@ -791,6 +791,8 @@ int ncc_strtoull(uint64_t *out, char const *value)
 {
 	char *p = NULL;
 
+	fr_skip_spaces(value);
+
 	if (*value == '-') { /* Don't let strtoull happily process negative values. */
 	error:
 		fr_strerror_printf("Invalid value \"%s\" for unsigned integer", value);
@@ -828,6 +830,8 @@ int ncc_strtof(float *out, char const *value)
 {
 	char *p = NULL;
 
+	fr_skip_spaces(value);
+
 	if ((value[0] == '0') && (value[1] == 'x' || value[1] == 'X')) {
 	error:
 		fr_strerror_printf("Invalid value \"%s\" for floating point number", value);
@@ -852,6 +856,8 @@ int ncc_strtod(double *out, char const *value)
 {
 	char *p = NULL;
 
+	fr_skip_spaces(value);
+
 	if ((value[0] == '0') && (value[1] == 'x' || value[1] == 'X')) {
 	error:
 		fr_strerror_printf("Invalid value \"%s\" for floating point number", value);
@@ -873,6 +879,8 @@ int ncc_strtod(double *out, char const *value)
  */
 int ncc_strtobool(bool *out, char const *value)
 {
+	fr_skip_spaces(value);
+
 	if ((strcasecmp(value, "yes") == 0) || (strcasecmp(value, "true") == 0) || (strcasecmp(value, "on") == 0)) {
 		*(bool *)out = true;
 		return 0;
@@ -899,6 +907,7 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	int64_t sinteger = 0;
 
 	if (!value) return -1;
+	fr_skip_spaces(value);
 
 	cant_be_empty = (type & FR_TYPE_NOT_EMPTY);
 
@@ -949,8 +958,6 @@ int ncc_parse_type_value(void *out, uint32_t type, char const *value)
 	case FR_TYPE_UINT16:
 	case FR_TYPE_UINT32:
 	case FR_TYPE_UINT64:
-		if (*value == '-') INVALID_TYPE_VALUE;
-
 		/*
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
