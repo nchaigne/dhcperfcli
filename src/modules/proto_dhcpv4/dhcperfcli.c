@@ -3395,7 +3395,7 @@ int main(int argc, char **argv)
 	/*
 	 *	Ensure we have something to work with.
 	 */
-	if (input_list.size == 0) {
+	if (NCC_DLIST_SIZE(&input_list) == 0) {
 		if (!with_stdin_input && argc < 2) usage(EXIT_SUCCESS); /* If no input nor arguments, show usage. */
 
 		WARN("No valid input loaded, nothing to do");
