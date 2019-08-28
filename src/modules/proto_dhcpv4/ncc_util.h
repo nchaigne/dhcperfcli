@@ -264,7 +264,6 @@ double ncc_fr_time_to_float(fr_time_delta_t in);
 fr_time_t ncc_float_to_fr_time(double in);
 bool ncc_str_to_float(double *out, char const *in, bool allow_negative);
 bool ncc_str_to_float32(float *out, char const *in, bool allow_negative);
-bool ncc_str_to_uint32(uint32_t *out, char const *in);
 size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 
 void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry);

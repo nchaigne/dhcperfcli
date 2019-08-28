@@ -1144,25 +1144,6 @@ bool ncc_str_to_float32(float *out, char const *in, bool allow_negative)
 }
 
 /*
- *	Check that a string represents either an integer or a valid hex string.
- *	If so convert it to uint32.
- */
-bool ncc_str_to_uint32(uint32_t *out, char const *in)
-{
-	uint64_t uinteger = 0;
-	char *p = NULL;
-
-	if (!in || in[0] == '\0') return false;
-
-	/* Allows integer or hex string. */
-	if (fr_strtoull(&uinteger, &p, in) < 0) return false;
-	if (*p != '\0' || uinteger > UINT32_MAX) return false;
-
-	*out = (uint32_t) uinteger;
-	return true;
-}
-
-/*
  *	Trim a string from spaces (left and right), while complying with an input length limit.
  *	Output buffer must be large enough to store the resulting string.
  *	Returns the number of characters printed, excluding the terminating '\0'.
