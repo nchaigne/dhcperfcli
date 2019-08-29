@@ -244,6 +244,12 @@ void dpc_config_debug(dpc_config_t *config)
 	#define CONF_DEBUG_STR(_x) \
 		CONF_DEBUG_FMT("s", _x)
 
+	#define CONF_DEBUG_IPADDR(_x) { \
+		char ipaddr_buf[FR_IPADDR_STRLEN] = ""; \
+		if (fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &config->_x)) \
+			DEBUG("- %s = %s", STRINGIFY(_x), ipaddr_buf); \
+	}
+
 	#define CONF_DEBUG_BOOL(_x) \
 		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
 
@@ -273,6 +279,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_STR_MULTI(xlat_files);
 	CONF_DEBUG_UINT64(base_xid);
 	CONF_DEBUG_STR_MULTI(gateways);
+	CONF_DEBUG_IPADDR(allowed_server);
 
 	CONF_DEBUG_INT(packet_trace_lvl);
 	CONF_DEBUG_BOOL(packet_trace_elapsed);
