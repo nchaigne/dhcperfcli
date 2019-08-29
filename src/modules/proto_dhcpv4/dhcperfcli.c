@@ -2861,6 +2861,7 @@ static struct option long_options[] = {
 	 */
 	{ "conf-file",              required_argument, NULL, 1 },
 	{ "debug",                  no_argument,       NULL, 1 },
+	{ "input-rate",             required_argument, NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
 	{ "xlat",                   optional_argument, NULL, 1 },
 	{ "xlat-file",              required_argument, NULL, 1 },
@@ -2891,6 +2892,7 @@ typedef enum {
 	 */
 	LONGOPT_IDX_CONF_FILE = 0,
 	LONGOPT_IDX_DEBUG,
+	LONGOPT_IDX_INPUT_RATE,
 	LONGOPT_IDX_RETRANSMIT,
 	LONGOPT_IDX_XLAT,
 	LONGOPT_IDX_XLAT_FILE,
@@ -2931,13 +2933,25 @@ static void dpc_options_parse(int argc, char **argv)
 
 #define PARSE_LONGOPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_LONGOPT;
 
-#define PARSE_OPT_COND(_to, _type, _cond, _expected) { \
-		if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_OPT; \
+#define CHECK_OPT(_cond, _expected) \
 		if (!(_cond)) { \
 			ERROR("Invalid value for option \"-%c\" (expected: " _expected ")", argval); \
 			usage(EXIT_FAILURE); \
-		} \
-	}
+		}
+
+#define CHECK_LONGOPT(_cond, _expected) \
+		if (!(_cond)) { \
+			ERROR("Invalid value for option \"--%s\" (expected: " _expected ")", long_options[opt_index].name); \
+			usage(EXIT_FAILURE); \
+		}
+
+#define PARSE_OPT_COND(_to, _type, _cond, _expected) \
+		PARSE_OPT(_to, _type); \
+		CHECK_OPT(_cond, _expected);
+
+#define PARSE_LONGOPT_COND(_to, _type, _cond, _expected) \
+		PARSE_LONGOPT(_to, _type); \
+		CHECK_LONGOPT(_cond, _expected);
 
 	/* The getopt API allows for an option with has_arg = "optional_argument"
 	 * to be passed as "--arg" or "--arg=val", but not "--arg val".
@@ -3105,6 +3119,10 @@ static void dpc_options_parse(int argc, char **argv)
 
 			case LONGOPT_IDX_DEBUG: // --debug
 				CONF.debug_dev = true;
+				break;
+
+			case LONGOPT_IDX_INPUT_RATE: // --input-rate
+				PARSE_LONGOPT_COND(CONF.rate_limit_input, FR_TYPE_FLOAT64, (CONF.rate_limit_input >= 0), ">= 0");
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit

@@ -102,9 +102,14 @@ extern int ncc_debug_lvl;
 
 #define FN_ARG_CHECK(_cond) { \
 	if (!(_cond)) { \
-		fr_strerror_printf("Invalid argument '%s'", STRINGIFY(_cond)); \
+		fr_strerror_printf("Failed argument check '%s'", STRINGIFY(_cond)); \
 		return -1; \
 	} \
+}
+
+#define FN_ERROR_PRINTF(_f, ...) { \
+	fr_strerror_printf(_f, ## __VA_ARGS__); \
+	return -1; \
 }
 
 

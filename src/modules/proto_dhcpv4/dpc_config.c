@@ -281,6 +281,7 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_UINT(retransmit_max);
 
 	CONF_DEBUG_FLOAT(rate_limit);
+	CONF_DEBUG_FLOAT(rate_limit_input);
 	CONF_DEBUG_FLOAT(duration_start_max);
 	CONF_DEBUG_UINT(input_num_use);
 	CONF_DEBUG_UINT(session_max_num);

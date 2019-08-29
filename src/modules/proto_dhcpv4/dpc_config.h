@@ -42,7 +42,8 @@ struct dpc_config_s {
 	double request_timeout;          //<! Max time waiting for a reply to a request we've sent.
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 
-	double rate_limit;               //<! Limit rate/s of sessions initialized from input (all transactions combined).
+	double rate_limit;               //<! Limit rate/s of sessions initialized from input (global - all transactions combined).
+	double rate_limit_input;         //<! Limit rate/s of sessions initialized from each input item.
 	double duration_start_max;       //<! Limit duration for starting new input sessions.
 	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).
 	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
