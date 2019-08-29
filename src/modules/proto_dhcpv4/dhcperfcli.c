@@ -2899,6 +2899,7 @@ typedef enum {
 	LONGOPT_IDX_RETRANSMIT,
 	LONGOPT_IDX_XLAT,
 	LONGOPT_IDX_XLAT_FILE,
+	LONGOPT_IDX_MAX
 } longopt_index_t;
 
 /*
@@ -2917,44 +2918,22 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(EXIT_FAILURE); \
 	}
 
-#define ERROR_LONGOPT_VALUE(_l) { \
-		ERROR("Invalid value for option --%s (expected: %s)", long_options[opt_index].name, _l); \
-		usage(EXIT_FAILURE); \
-	}
-
 #define ERROR_PARSE_OPT { \
-		PERROR("Invalid value for option \"-%c\"", argval); \
-		usage(EXIT_FAILURE); \
-	}
-
-#define ERROR_PARSE_LONGOPT { \
-		PERROR("Invalid value for option \"--%s\"", long_options[opt_index].name); \
+		PERROR("Invalid value for option \"%s\"", opt_buf); \
 		usage(EXIT_FAILURE); \
 	}
 
 #define PARSE_OPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
 
-#define PARSE_LONGOPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_LONGOPT;
-
 #define CHECK_OPT(_cond, _expected) \
 		if (!(_cond)) { \
-			ERROR("Invalid value for option \"-%c\" (expected: " _expected ")", argval); \
-			usage(EXIT_FAILURE); \
-		}
-
-#define CHECK_LONGOPT(_cond, _expected) \
-		if (!(_cond)) { \
-			ERROR("Invalid value for option \"--%s\" (expected: " _expected ")", long_options[opt_index].name); \
+			ERROR("Invalid value for option \"%s\" (expected: " _expected ")", opt_buf); \
 			usage(EXIT_FAILURE); \
 		}
 
 #define PARSE_OPT_COND(_to, _type, _cond, _expected) \
 		PARSE_OPT(_to, _type); \
 		CHECK_OPT(_cond, _expected);
-
-#define PARSE_LONGOPT_COND(_to, _type, _cond, _expected) \
-		PARSE_LONGOPT(_to, _type); \
-		CHECK_LONGOPT(_cond, _expected);
 
 	/* The getopt API allows for an option with has_arg = "optional_argument"
 	 * to be passed as "--arg" or "--arg=val", but not "--arg val".
@@ -3013,6 +2992,17 @@ static void dpc_options_parse(int argc, char **argv)
 		opt_index = -1;
 		argval = getopt_long(argc, argv, OPTSTR, long_options, &opt_index);
 		if (argval == -1) break;
+
+		/* Reformat current option in case we need to print it.
+		 * Note: "opt_index" is set only if the long version was actually used.
+		 */
+		char opt_buf[64] = "";
+		if (opt_index >= 0) {
+			sprintf(opt_buf, "--%s", long_options[opt_index].name);
+		} else {
+			sprintf(opt_buf, "-%c", argval);
+			/* If the option is not recognized we will have "-?", but this won't be used. */
+		}
 
 		switch (argval) {
 		case 'a':
@@ -3125,16 +3115,16 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_INPUT_RATE: // --input-rate
-				PARSE_LONGOPT_COND(CONF.input_rate_limit, FR_TYPE_FLOAT64, (CONF.input_rate_limit >= 0), ">= 0");
+				PARSE_OPT_COND(CONF.input_rate_limit, FR_TYPE_FLOAT64, (CONF.input_rate_limit >= 0), ">= 0");
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
-				PARSE_LONGOPT(CONF.retransmit_max, FR_TYPE_UINT32);
+				PARSE_OPT(CONF.retransmit_max, FR_TYPE_UINT32);
 				break;
 
 			case LONGOPT_IDX_XLAT: // --xlat
 				OPTIONAL_ARG("yes");
-				PARSE_LONGOPT(CONF.xlat, FR_TYPE_BOOL);
+				PARSE_OPT(CONF.xlat, FR_TYPE_BOOL);
 				break;
 
 			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
