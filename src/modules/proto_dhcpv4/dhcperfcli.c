@@ -2228,6 +2228,9 @@ static bool dpc_input_parse(dpc_input_t *input)
 	/* Default: global option -c, can be overriden through Max-Use attr. */
 	input->max_use = CONF.input_num_use;
 
+	/* Default: global option --input-rate, can be overriden through Rate-Limit attr. */
+	input->rate_limit = CONF.input_rate_limit;
+
 	/*
 	 *	Check if we are provided with pre-encoded DHCP data.
 	 *	If so, extract (if there is one) the message type and the xid.
@@ -3122,7 +3125,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_INPUT_RATE: // --input-rate
-				PARSE_LONGOPT_COND(CONF.rate_limit_input, FR_TYPE_FLOAT64, (CONF.rate_limit_input >= 0), ">= 0");
+				PARSE_LONGOPT_COND(CONF.input_rate_limit, FR_TYPE_FLOAT64, (CONF.input_rate_limit >= 0), ">= 0");
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
