@@ -900,7 +900,7 @@ int ncc_strtobool(bool *out, char const *value)
   *	Similar to cf_pair_parse_value / fr_value_box_from_integer_str
  *	... but with values provided from command-line options.
  */
-int ncc_parse_type_value(void *out, uint32_t type, char const *value)
+int ncc_value_from_str(void *out, uint32_t type, char const *value)
 {
 	bool cant_be_empty;
 	uint64_t uinteger = 0;

@@ -2927,12 +2927,12 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(EXIT_FAILURE); \
 	}
 
-#define PARSE_OPT(_to, _type) if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
+#define PARSE_OPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
 
-#define PARSE_LONGOPT(_to, _type) if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_LONGOPT;
+#define PARSE_LONGOPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_LONGOPT;
 
 #define PARSE_OPT_COND(_to, _type, _cond, _expected) { \
-		if (ncc_parse_type_value(&_to, _type, optarg) < 0) ERROR_PARSE_OPT; \
+		if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_OPT; \
 		if (!(_cond)) { \
 			ERROR("Invalid value for option \"-%c\" (expected: " _expected ")", argval); \
 			usage(EXIT_FAILURE); \
