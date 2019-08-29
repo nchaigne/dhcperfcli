@@ -144,7 +144,6 @@ static ncc_endpoint_t client_ep = {
 };
 
 static ncc_endpoint_list_t *gateway_list; /* List of gateways. */
-static fr_ipaddr_t allowed_server; /* Only allow replies from a specific server. */
 
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
@@ -1054,11 +1053,11 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
 	            dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
 
-	if (is_ipaddr_defined(allowed_server)) {
+	if (is_ipaddr_defined(CONF.allowed_server)) {
 		/*
 		 *	Only allow replies from a specific server (overall policy set through option -a).
 		 */
-		if (fr_ipaddr_cmp(&packet->src_ipaddr, &allowed_server) != 0) {
+		if (fr_ipaddr_cmp(&packet->src_ipaddr, &CONF.allowed_server) != 0) {
 			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
 			      packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
 			fr_radius_packet_free(&packet);
@@ -2913,11 +2912,6 @@ static void dpc_options_parse(int argc, char **argv)
 	int opt_index = -1; /* Stores the option index for long options. */
 	int i, num_arg;
 
-#define ERROR_OPT_VALUE(_l) { \
-		ERROR("Invalid value for option -%c (expected: %s)", argval, _l); \
-		usage(EXIT_FAILURE); \
-	}
-
 #define ERROR_PARSE_OPT { \
 		PERROR("Invalid value for option \"%s\"", opt_buf); \
 		usage(EXIT_FAILURE); \
@@ -3006,8 +3000,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		switch (argval) {
 		case 'a':
-			if (fr_inet_pton(&allowed_server, optarg, strlen(optarg), AF_INET, false, false) < 0)
-				ERROR_OPT_VALUE("ip addr");
+			PARSE_OPT(CONF.allowed_server, FR_TYPE_IPV4_ADDR);
 			break;
 
 		case 'A':

@@ -1002,6 +1002,10 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 		if (fr_time_delta_from_str(out, value, FR_TIME_RES_SEC) < 0) INVALID_TYPE_VALUE;
 		break;
 
+	case FR_TYPE_IPV4_ADDR:
+		if (fr_inet_pton4(out, value, -1, false, false, false) < 0) INVALID_TYPE_VALUE;
+		break;
+
 	case FR_TYPE_UINT8:
 		IN_RANGE_UNSIGNED(UINT8);
 		*(uint8_t *)out = uinteger;

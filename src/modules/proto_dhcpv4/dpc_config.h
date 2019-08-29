@@ -36,6 +36,8 @@ struct dpc_config_s {
 
 	char const **gateways;           //<! Gateways simulated for sending DHCP packets.
 
+	fr_ipaddr_t allowed_server;      //<! Only allow replies from a specific server.
+
 	int32_t packet_trace_lvl;        //<! Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
 	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.
