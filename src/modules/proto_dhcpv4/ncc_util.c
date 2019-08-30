@@ -1127,37 +1127,13 @@ fr_time_t ncc_float_to_fr_time(double in)
  */
 bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 {
-	if (!in || in[0] == '\0') return false;
+	double num;
+	uint32_t type = FR_TYPE_FLOAT64;
+	if (!allow_negative) type |= NCC_TYPE_NOT_NEGATIVE;
 
-	char const *p = in;
+	if (ncc_value_from_str(&num, type, in) < 0) return false;
 
-	if (*p == '-') {
-		if (!allow_negative) return false; /* Negative numbers not allowed. */
-		p++;
-	}
-
-	while (*p != '\0') {
-		if (isdigit(*p)) {
-			p++;
-			continue;
-		}
-		if (*p == '.') {
-			p++;
-			if (*p == '\0') return false; /* Do not allow a dot without any following digit. */
-			break;
-		}
-		return false; /* Not a digit or dot. */
-	}
-
-	while (*p != '\0') { /* Everything after the dot must be a digit. */
-		if (!isdigit(*p)) return false;
-		p++;
-	}
-
-	/* Format is correct. */
-	if (out) {
-		*out = atof(in);
-	}
+	if (out) *out = num;
 	return true;
 }
 

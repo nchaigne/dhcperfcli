@@ -2216,8 +2216,8 @@ static bool dpc_input_parse(dpc_input_t *input)
 		return false;
 	}
 
-#define WARN_ATTR_VALUE(_l) { \
-		PWARN("Invalid value for attribute %s (expected: %s). Discarding input (id: %u)", vp->da->name, _l, input->id); \
+#define WARN_ATTR_VALUE { \
+		PWARN("Invalid value for attribute %s. Discarding input (id: %u)", vp->da->name, input->id); \
 		return false; \
 	}
 
@@ -2367,13 +2367,13 @@ static bool dpc_input_parse(dpc_input_t *input)
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
 
 		} else if (vp->da == attr_start_delay) { /* Start-Delay = <n> */
-			if (!ncc_str_to_float(&input->start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
+			if (!ncc_str_to_float(&input->start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
 
 		} else if (vp->da == attr_rate_limit) { /* Rate-Limit = <n> */
-			if (!ncc_str_to_float(&input->rate_limit, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
+			if (!ncc_str_to_float(&input->rate_limit, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
 
 		} else if (vp->da == attr_max_duration) { /* Max-Duration = <n> */
-			if (!ncc_str_to_float(&input->max_duration, vp->vp_strvalue, false)) WARN_ATTR_VALUE("positive floating point number");
+			if (!ncc_str_to_float(&input->max_duration, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
 
 		} else if (vp->da == attr_max_use) { /* Max-Use = <n> */
 			input->max_use = vp->vp_uint32;
