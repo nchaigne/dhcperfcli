@@ -149,8 +149,8 @@ do { \
 
 /* custom flags that can be passed within "type" to ncc_value_from_str */
 #define NCC_TYPE_NOT_EMPTY     (1 << 10)
-#define NCC_TYPE_NOT_NEGATIVE  (2 << 10)
-#define NCC_TYPE_NOT_ZERO      (3 << 10)
+#define NCC_TYPE_NOT_NEGATIVE  (1 << 11)
+#define NCC_TYPE_NOT_ZERO      (1 << 12)
 
 
 /* Check that endpoint is not undefined. */
