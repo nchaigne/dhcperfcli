@@ -1122,8 +1122,8 @@ fr_time_t ncc_float_to_fr_time(double in)
 
 /*
  *	Check that a string represents a valid floating point number (e.g. 3, 2.5, .542).
- *	If so convert it to float.
- *	Note: not using strtof because we want to be more restrictive.
+ *	If so convert it to float64.
+ *	"out" may be NULL, in which case this is just a format check.
  */
 bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 {
@@ -1140,9 +1140,10 @@ bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 /* Wrapper to ncc_str_to_float, using float32 instead of float64 */
 bool ncc_str_to_float32(float *out, char const *in, bool allow_negative)
 {
-	double value;
-	bool ret = ncc_str_to_float(&value, in, allow_negative);
-	if (ret) *out = value;
+	double num;
+	bool ret = ncc_str_to_float(&num, in, allow_negative);
+
+	if (out && ret) *out = num;
 	return ret;
 }
 
