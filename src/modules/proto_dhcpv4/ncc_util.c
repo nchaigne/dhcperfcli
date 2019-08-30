@@ -215,6 +215,7 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 /*
  *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
+// now redundant with fr_pair_find_by_da: TODO: remove this.
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
 {
 	if (!da) return NULL;
@@ -242,6 +243,8 @@ VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da)
 {
 	VALUE_PAIR *vp;
+
+	FN_ARG_CHECK(NULL, da);
 
 	MEM(vp = fr_pair_afrom_da(ctx, da));
 	if (vps) fr_pair_add(vps, vp);
@@ -438,10 +441,18 @@ size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
 }
 
 
-/*
- *	Read a single value from a buffer, and advance the pointer.
- *	(Without attribute name and operator.)
- *	Inspired from FreeRADIUS function fr_pair_raw_from_str
+/**
+ * Read a single value from a buffer, and advance the pointer.
+ * (Without attribute name and operator.)
+ * Inspired from FreeRADIUS function fr_pair_raw_from_str
+ *
+ * @param[in,out] ptr  pointer to read from and update.
+ * @param[out]    raw  the struct to write the raw value to.
+ *
+ * @return
+ * 	T_INVALID = error.
+ * 	T_EOL = end of line was encountered.
+ * 	the last token read otherwise (should be T_COMMA).
  */
 FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
 {
@@ -449,10 +460,9 @@ FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
 	FR_TOKEN ret = T_INVALID, next, quote;
 	char buf[8];
 
-	if (!ptr || !*ptr || !raw) {
-		fr_strerror_printf("Invalid arguments");
-		return T_INVALID;
-	}
+	FN_ARG_CHECK(T_INVALID, ptr);
+	FN_ARG_CHECK(T_INVALID, *ptr);
+	FN_ARG_CHECK(T_INVALID, raw);
 
 	/*
 	 *	Skip leading spaces
@@ -895,21 +905,28 @@ int ncc_strtobool(bool *out, char const *value)
 	return -1;
 }
 
-/*
- *	Parse a string value into a C data type.
-  *	Similar to cf_pair_parse_value / fr_value_box_from_integer_str
- *	... but with values provided from command-line options.
+
+/**
+ * Parse a string value into a given FreeRADIUS data type (FR_TYPE_...).
+ * Note: not all FreeRADIUS types are supported.
+ *
+ * @param[out] out    where to write the parsed value (size depends on the type).
+ * @param[in]  type   type of value being parsed (base type | optional qualifiers).
+ * @param[in]  value  string which contains the value to parse.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_value_from_str(void *out, uint32_t type, char const *value)
 {
-	bool cant_be_empty, not_negative, not_zero;
+	bool not_empty, not_negative, not_zero;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
 
 	if (!value) return -1;
 	fr_skip_spaces(value);
 
-	cant_be_empty = (type & NCC_TYPE_NOT_EMPTY);
+	/* Optional qualifiers. */
+	not_empty = (type & NCC_TYPE_NOT_EMPTY);
 	not_negative = (type & NCC_TYPE_NOT_NEGATIVE);
 	not_zero = (type & NCC_TYPE_NOT_ZERO);
 
@@ -918,7 +935,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 	/*
 	 *	Check for zero length strings
 	 */
-	if ((value[0] == '\0') && cant_be_empty) {
+	if ((value[0] == '\0') && not_empty) {
 		fr_strerror_printf("Value cannot be empty");
 		return -1;
 	}
