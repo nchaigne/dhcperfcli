@@ -100,16 +100,18 @@ extern int ncc_debug_lvl;
 #define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 
-#define FN_ARG_CHECK(_cond) { \
+/* Generic function argument check. Return error value if condition is not verified. */
+#define FN_ARG_CHECK(_ret, _cond) { \
 	if (!(_cond)) { \
 		fr_strerror_printf("Failed argument check '%s'", STRINGIFY(_cond)); \
-		return -1; \
+		return _ret; \
 	} \
 }
 
-#define FN_ERROR_PRINTF(_f, ...) { \
+/* Print an error and return error value. */
+#define FN_ERROR_PRINTF(_ret, _f, ...) { \
 	fr_strerror_printf(_f, ## __VA_ARGS__); \
-	return -1; \
+	return _ret; \
 }
 
 
