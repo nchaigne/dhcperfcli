@@ -147,6 +147,12 @@ do { \
 } while (0)
 
 
+/* custom flags that can be passed within "type" to ncc_value_from_str */
+#define NCC_TYPE_NOT_EMPTY     (1 << 10)
+#define NCC_TYPE_NOT_NEGATIVE  (2 << 10)
+#define NCC_TYPE_NOT_ZERO      (3 << 10)
+
+
 /* Check that endpoint is not undefined. */
 #define is_ipaddr_defined(_x) (_x.af != AF_UNSPEC)
 #define is_endpoint_defined(_e) (is_ipaddr_defined(_e.ipaddr) && _e.port)

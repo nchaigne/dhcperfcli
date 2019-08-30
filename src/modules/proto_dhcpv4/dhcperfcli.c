@@ -3042,7 +3042,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'L':
-			PARSE_OPT_COND(CONF.duration_start_max, FR_TYPE_FLOAT64, (CONF.duration_start_max >= 0), ">= 0");
+			PARSE_OPT(CONF.duration_start_max, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
 			break;
 
 		case 'M':
@@ -3062,15 +3062,15 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'r':
-			PARSE_OPT_COND(CONF.rate_limit, FR_TYPE_FLOAT64, (CONF.rate_limit >= 0), ">= 0");
+			PARSE_OPT(CONF.rate_limit, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
 			break;
 
 		case 's':
-			PARSE_OPT_COND(CONF.progress_interval, FR_TYPE_FLOAT64, (CONF.progress_interval >= 0), ">= 0");
+			PARSE_OPT(CONF.progress_interval, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
 			break;
 
 		case 't':
-			PARSE_OPT_COND(CONF.request_timeout, FR_TYPE_FLOAT64, (CONF.request_timeout >= 0), ">= 0");
+			PARSE_OPT(CONF.request_timeout, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
 			/* 0 is allowed, it means we don't wait for replies, ever.
 			 * This entails that:
 			 * - we won't have "timed out" requests
@@ -3107,7 +3107,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_INPUT_RATE: // --input-rate
-				PARSE_OPT_COND(CONF.input_rate_limit, FR_TYPE_FLOAT64, (CONF.input_rate_limit >= 0), ">= 0");
+				PARSE_OPT(CONF.input_rate_limit, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit

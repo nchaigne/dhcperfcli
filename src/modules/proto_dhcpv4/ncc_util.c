@@ -902,14 +902,16 @@ int ncc_strtobool(bool *out, char const *value)
  */
 int ncc_value_from_str(void *out, uint32_t type, char const *value)
 {
-	bool cant_be_empty;
+	bool cant_be_empty, not_negative, not_zero;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
 
 	if (!value) return -1;
 	fr_skip_spaces(value);
 
-	cant_be_empty = (type & FR_TYPE_NOT_EMPTY);
+	cant_be_empty = (type & NCC_TYPE_NOT_EMPTY);
+	not_negative = (type & NCC_TYPE_NOT_NEGATIVE);
+	not_zero = (type & NCC_TYPE_NOT_ZERO);
 
 	type = FR_BASE_TYPE(type);
 
@@ -917,7 +919,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 	 *	Check for zero length strings
 	 */
 	if ((value[0] == '\0') && cant_be_empty) {
-		fr_strerror_printf("Invalid empty value");
+		fr_strerror_printf("Value cannot be empty");
 		return -1;
 	}
 
@@ -950,6 +952,18 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 		} \
 	} while (0)
 
+#define CHECK_NOT_ZERO(_v) \
+		if (not_zero && _v == 0) { \
+			fr_strerror_printf("Value cannot be zero"); \
+			return -1; \
+		}
+
+#define CHECK_NOT_NEGATIVE(_v) \
+		if (not_negative && _v < 0) { \
+			fr_strerror_printf("Value cannot be negative"); \
+			return -1; \
+		}
+
 	/*
 	 *	First pass for integers.
 	 */
@@ -962,6 +976,8 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
 		if (ncc_strtoull(&uinteger, value) < 0) return -1;
+
+		CHECK_NOT_ZERO(uinteger);
 		break;
 
 	case FR_TYPE_INT8:
@@ -972,6 +988,9 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
 		if (ncc_strtoll(&sinteger, value) < 0) return -1;
+
+		CHECK_NOT_ZERO(sinteger);
+		CHECK_NOT_NEGATIVE(sinteger);
 		break;
 
 	default:
@@ -989,10 +1008,14 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 
 	case FR_TYPE_FLOAT32:
 		if (ncc_strtof(out, value) < 0) return -1;
+		CHECK_NOT_ZERO(*(float *)out);
+		CHECK_NOT_NEGATIVE(*(float *)out);
 		break;
 
 	case FR_TYPE_FLOAT64:
 		if (ncc_strtod(out, value) < 0) return -1;
+		CHECK_NOT_ZERO(*(double *)out);
+		CHECK_NOT_NEGATIVE(*(double *)out);
 		break;
 
 	case FR_TYPE_TIME_DELTA:
