@@ -242,7 +242,7 @@ void dpc_config_debug(dpc_config_t *config)
 		CONF_DEBUG_FMT("f", _x)
 
 	#define CONF_DEBUG_STR(_x) \
-		CONF_DEBUG_FMT("s", _x)
+		if (config->_x) CONF_DEBUG_FMT("s", _x)
 
 	#define CONF_DEBUG_IPADDR(_x) { \
 		char ipaddr_buf[FR_IPADDR_STRLEN] = ""; \
@@ -278,6 +278,8 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_STR(file_input);
 	CONF_DEBUG_STR_MULTI(xlat_files);
 	CONF_DEBUG_UINT64(base_xid);
+
+	CONF_DEBUG_STR(iface);
 	CONF_DEBUG_STR_MULTI(gateways);
 	CONF_DEBUG_IPADDR(allowed_server);
 

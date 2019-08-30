@@ -175,7 +175,6 @@ static fr_time_delta_t ftd_loop_max_time = 50 * 1000 * 1000; /* Max time spent i
 static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
 static fr_pcap_t *pcap;
-static char *iface;
 #endif
 
 /*
@@ -2172,7 +2171,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	if (!is_ipaddr_defined(input->ext.src.ipaddr)) return;
 
 #ifdef HAVE_LIBPCAP
-	if (iface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
+	if (CONF.iface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
 	    && (dpc_ipaddr_is_broadcast(&input->ext.dst.ipaddr) == 1)
 	   ) {
 		DEBUG_TRACE("Input (id: %u) involves broadcast using pcap raw socket", input->id);
@@ -2636,7 +2635,7 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 {
 	char pcap_filter[255];
 
-	pcap = fr_pcap_init(ctx, iface, PCAP_INTERFACE_IN_OUT);
+	pcap = fr_pcap_init(ctx, CONF.iface, PCAP_INTERFACE_IN_OUT);
 	if (!pcap) {
 		PERROR("Failed to initialize pcap");
 		exit(EXIT_FAILURE);
@@ -3029,7 +3028,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 #ifdef HAVE_LIBPCAP
 		case 'i':
-			iface = optarg;
+			CONF.iface = optarg;
 			break;
 #endif
 
@@ -3375,7 +3374,7 @@ int main(int argc, char **argv)
 	 *	And a pcap raw socket (if we need one).
 	 */
 #ifdef HAVE_LIBPCAP
-	if (iface) {
+	if (CONF.iface) {
 		dpc_pcap_init(global_ctx);
 	}
 #endif
@@ -3433,7 +3432,7 @@ int main(int argc, char **argv)
 	}
 
 #ifdef HAVE_LIBPCAP
-	if (iface) {
+	if (CONF.iface) {
 		/*
 		 *	Now that we've opened all the sockets we need, build the pcap filter.
 		 */
