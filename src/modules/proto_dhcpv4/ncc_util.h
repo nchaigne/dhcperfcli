@@ -435,6 +435,9 @@ static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_
 	entry = (fr_dlist_t *) (((uint8_t *) ptr) + list_head->offset);
 	head = &(list_head->entry);
 
+	if (!fr_cond_assert(head->next != NULL)) return;
+	if (!fr_cond_assert(head->prev != NULL)) return;
+
 	entry->next = entry_ref;
 	entry->prev = entry_ref->prev;
 
