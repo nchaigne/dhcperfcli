@@ -356,7 +356,7 @@ typedef struct ncc_dlist {
  */
 #define NCC_DLIST_INIT(_ncc_dlist, _item_struct_t) { \
 	if (!(*_ncc_dlist).init) { \
-		fr_dlist_init(&(*_ncc_dlist.head), _item_struct_t, dlist); \
+		fr_dlist_init(&((*_ncc_dlist).head), _item_struct_t, dlist); \
 		(*_ncc_dlist).size = 0; \
 		(*_ncc_dlist).init = true; \
 	} \
