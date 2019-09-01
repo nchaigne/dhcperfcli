@@ -351,11 +351,13 @@ typedef struct ncc_dlist {
 #define NCC_DLIST_HEAD(_ncc_dlist) fr_dlist_head(&(*_ncc_dlist).head);
 #define NCC_DLIST_NEXT(_ncc_dlist, _item) fr_dlist_next(&(*_ncc_dlist).head, _item);
 
+#define NCC_DLIST_IS_INIT(_ncc_dlist) (*_ncc_dlist).init
+
 /*
  *	Initialize a list of "_item_struct_t" containing a chaining struct "fr_dlist_t dlist".
  */
 #define NCC_DLIST_INIT(_ncc_dlist, _item_struct_t) { \
-	if (!(*_ncc_dlist).init) { \
+	if (!NCC_DLIST_IS_INIT(_ncc_dlist)) { \
 		fr_dlist_init(&((*_ncc_dlist).head), _item_struct_t, dlist); \
 		(*_ncc_dlist).size = 0; \
 		(*_ncc_dlist).init = true; \
@@ -411,4 +413,35 @@ typedef struct ncc_dlist {
 			(*_ncc_dlist).size--; \
 		} \
 	} \
+}
+
+/** Insert an item before an existing (reference) item of a list.
+ */
+static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_ref, void *ptr)
+{
+	fr_dlist_t *entry_ref, *entry;
+	fr_dlist_t *head;
+
+	if (!ptr) return;
+	if (!ptr_ref) return;
+
+#ifndef TALLOC_GET_TYPE_ABORT_NOOP
+	if (list_head->type) ptr = _talloc_get_type_abort(ptr, list_head->type, __location__);
+#endif
+
+	entry_ref = (fr_dlist_t *) (((uint8_t *) ptr_ref) + list_head->offset);
+	entry = (fr_dlist_t *) (((uint8_t *) ptr) + list_head->offset);
+	head = &(list_head->entry);
+
+	entry->next = entry_ref;
+	entry->prev = entry_ref->prev;
+
+	entry_ref->prev->next = entry;
+	entry_ref->prev = entry;
+}
+
+#define NCC_DLIST_INSERT_BEFORE(_ncc_dlist, _item_ref, _item) { \
+	fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
+	fr_dlist_insert_before(list_head, _item_ref, _item); \
+	(*_ncc_dlist).size++; \
 }
