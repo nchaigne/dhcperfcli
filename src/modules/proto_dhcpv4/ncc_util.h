@@ -442,6 +442,8 @@ static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_
 
 #define NCC_DLIST_INSERT_BEFORE(_ncc_dlist, _item_ref, _item) { \
 	fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
-	fr_dlist_insert_before(list_head, _item_ref, _item); \
-	(*_ncc_dlist).size++; \
+	if (_item_ref) { \
+		fr_dlist_insert_before(list_head, _item_ref, _item); \
+		(*_ncc_dlist).size++; \
+	} \
 }
