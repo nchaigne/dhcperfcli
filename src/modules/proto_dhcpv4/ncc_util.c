@@ -913,16 +913,32 @@ int ncc_strtobool(bool *out, char const *value)
  * @param[out] out    where to write the parsed value (size depends on the type).
  * @param[in]  type   type of value being parsed (base type | optional qualifiers).
  * @param[in]  value  string which contains the value to parse.
+ * @param[in]  inlen  length of value, if value is \0 terminated inlen may be -1.
  *
  * @return -1 = error, 0 = success.
  */
-int ncc_value_from_str(void *out, uint32_t type, char const *value)
+int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen)
 {
 	bool not_empty, not_negative, not_zero;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
+	char buffer[4096];
 
 	if (!value) return -1;
+
+	/*
+	 *	Copy to intermediary buffer if we were given a length
+	 */
+	if (inlen >= 0) {
+		if (inlen >= (ssize_t)sizeof(buffer)) {
+			fr_strerror_printf("Value is too long for parsing");
+			return -1;
+		}
+		memcpy(buffer, value, inlen);
+		buffer[inlen] = '\0';
+		value = buffer;
+	}
+
 	fr_skip_whitespace(value);
 
 	/* Optional qualifiers. */
@@ -1148,7 +1164,7 @@ bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 	uint32_t type = FR_TYPE_FLOAT64;
 	if (!allow_negative) type |= NCC_TYPE_NOT_NEGATIVE;
 
-	if (ncc_value_from_str(&num, type, in) < 0) return false;
+	if (ncc_value_from_str(&num, type, in, -1) < 0) return false;
 
 	if (out) *out = num;
 	return true;

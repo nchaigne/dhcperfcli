@@ -2916,7 +2916,7 @@ static void dpc_options_parse(int argc, char **argv)
 		usage(EXIT_FAILURE); \
 	}
 
-#define PARSE_OPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg) < 0) ERROR_PARSE_OPT;
+#define PARSE_OPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg, -1) < 0) ERROR_PARSE_OPT;
 
 #define CHECK_OPT(_cond, _expected) \
 		if (!(_cond)) { \

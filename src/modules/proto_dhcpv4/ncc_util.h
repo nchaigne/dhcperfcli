@@ -269,7 +269,7 @@ int ncc_strtoll(int64_t *out, char const *value);
 int ncc_strtof(float *out, char const *value);
 int ncc_strtod(double *out, char const *value);
 int ncc_strtobool(bool *out, char const *value);
-int ncc_value_from_str(void *out, uint32_t type, char const *value);
+int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
 
 double ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *tv, double in);
