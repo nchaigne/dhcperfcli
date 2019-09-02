@@ -801,7 +801,7 @@ int ncc_strtoull(uint64_t *out, char const *value)
 {
 	char *p = NULL;
 
-	fr_skip_spaces(value);
+	fr_skip_whitespace(value);
 
 	if (*value == '-') { /* Don't let strtoull happily process negative values. */
 	error:
@@ -840,7 +840,7 @@ int ncc_strtof(float *out, char const *value)
 {
 	char *p = NULL;
 
-	fr_skip_spaces(value);
+	fr_skip_whitespace(value);
 
 	if ((value[0] == '0') && (value[1] == 'x' || value[1] == 'X')) {
 	error:
@@ -866,7 +866,7 @@ int ncc_strtod(double *out, char const *value)
 {
 	char *p = NULL;
 
-	fr_skip_spaces(value);
+	fr_skip_whitespace(value);
 
 	if ((value[0] == '0') && (value[1] == 'x' || value[1] == 'X')) {
 	error:
@@ -889,7 +889,7 @@ int ncc_strtod(double *out, char const *value)
  */
 int ncc_strtobool(bool *out, char const *value)
 {
-	fr_skip_spaces(value);
+	fr_skip_whitespace(value);
 
 	if ((strcasecmp(value, "yes") == 0) || (strcasecmp(value, "true") == 0) || (strcasecmp(value, "on") == 0)) {
 		*(bool *)out = true;
@@ -923,7 +923,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value)
 	int64_t sinteger = 0;
 
 	if (!value) return -1;
-	fr_skip_spaces(value);
+	fr_skip_whitespace(value);
 
 	/* Optional qualifiers. */
 	not_empty = (type & NCC_TYPE_NOT_EMPTY);
