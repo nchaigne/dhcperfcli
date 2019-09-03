@@ -387,6 +387,18 @@ typedef struct ncc_dlist {
 }
 
 /*
+ *	Remove all items from list.
+ */
+#define NCC_DLIST_CLEAR(_ncc_dlist, _item) { \
+	fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
+	_item = NULL; \
+	while ((_item = fr_dlist_next(list_head, _item))) { \
+		_item = fr_dlist_remove(list_head, _item); \
+	} \
+	(*_ncc_dlist).size = 0; \
+}
+
+/*
  *	Get reference on a list item from its index (position in the list, starting at 0).
  *	Item is not removed from the list.
  */
