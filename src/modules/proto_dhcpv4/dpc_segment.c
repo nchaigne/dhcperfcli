@@ -31,6 +31,42 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 }
 
 /**
+ * Parse a segment specified from a string.
+ */
+int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
+{
+	FN_ARG_CHECK(-1, in);
+	FN_ARG_CHECK(-1, in[0] != '\0');
+
+	char const *p = NULL;
+
+	p = strchr(in, ';');
+	if (!p) {
+		fr_strerror_printf("Invalid segment: [%s]", in);
+		return -1;
+	}
+
+	double start, end;
+	fr_time_delta_t ftd_start, ftd_end;
+
+	if (ncc_value_from_str(&start, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, in, p - in) < 0
+	   || ncc_value_from_str(&end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, p + 1, -1) < 0) {
+		fr_strerror_printf_push("Failed to parse segment [%s]", in);
+		return -1;
+	}
+
+	ftd_start = ncc_float_to_fr_time(start);
+	ftd_end = ncc_float_to_fr_time(end);
+
+	if (!dpc_segment_add(ctx, dlist, ftd_start, ftd_end)) {
+		fr_strerror_printf_push("Failed to add segment to list");
+		return -1;
+	}
+
+	return 0;
+}
+
+/**
  * Attempt to add a specified time segment to a list. Segments cannot overlap.
  * After being added, start = 0 means "from the beginning", end = 0 means "until the end".
  *
@@ -74,7 +110,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 	/* If list is empty, just insert new segment. */
 	if (NCC_DLIST_SIZE(dlist) == 0) {
 		DEBUG2("Inserting first segment (%f - %f)",
-		      ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
+		       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
 
 		NCC_DLIST_ENQUEUE(dlist, segment_new);
 		return segment_new;
@@ -144,7 +180,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 	}
 
 	/* Insert new segment at the tail. */
-	DEBUG2("Inserting (%f - %f) at the tail",
+	DEBUG2("Inserting segment (%f - %f) at the tail",
 	       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
 
 	NCC_DLIST_ENQUEUE(dlist, segment_new);
