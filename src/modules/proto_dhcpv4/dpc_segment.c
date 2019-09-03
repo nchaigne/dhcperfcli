@@ -3,6 +3,41 @@
 
 
 /**
+ * For a given elapsed time, find matching segment (if any) from the list.
+ *
+ * @param[in] dlist        segment list.
+ * @param[in] segment      previous segment (NULL if none).
+ * @param[in] ftd_elapsed  elapsed time.
+ *
+ * @return segment matching elapsed time (NULL if no match).
+ */
+dpc_segment_t *dpc_segment_from_elapsed_time(ncc_dlist_t *dlist, dpc_segment_t *segment, fr_time_delta_t ftd_elapsed)
+{
+	if (!NCC_DLIST_IS_INIT(dlist)) return NULL;
+
+	/* If there was no current segment, start searching from the head. */
+	if (!segment) segment = NCC_DLIST_HEAD(dlist);
+
+	while (segment) {
+		if ( (!segment->ftd_start || (segment->ftd_start && ftd_elapsed >= segment->ftd_start))
+		  && (!segment->ftd_end || (segment->ftd_end && ftd_elapsed < segment->ftd_end)) ) {
+
+			/* This segment matches current elapsed time. */
+			DEBUG("Found matching segment (%f - %f) for elapsed time %f",
+			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+			      ncc_fr_time_to_float(ftd_elapsed));
+
+			return segment;
+		}
+
+		segment = NCC_DLIST_NEXT(dlist, segment);
+	}
+
+	/* No matching segment found. */
+	return NULL;
+}
+
+/**
  * Print the whole list of segments.
  *
  * @param[in] fp     where to print.
