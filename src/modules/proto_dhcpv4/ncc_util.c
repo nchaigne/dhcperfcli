@@ -793,9 +793,16 @@ int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
 }
 
 
-/*
- *	Wrapper to fr_strtoull (which in turn is a wrapper to strtoull).
- *	This also checks we don't have trailing garbage at the end of the input string.
+/**
+ * Parse a uint64 value from a string.
+ * Wrapper to fr_strtoull (which in turn is a wrapper to strtoull), with restrictions:
+ * - Ensure the provided input is not a negative value (strtoull dubiously allows this).
+ * - Check we don't have trailing garbage at the end of the input string.
+ *
+ * @param[out] out    where to write the parsed value.
+ * @param[in]  value  string which contains the value to parse.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_strtoull(uint64_t *out, char const *value)
 {
@@ -815,9 +822,15 @@ int ncc_strtoull(uint64_t *out, char const *value)
 	return 0;
 }
 
-/*
- *	Wrapper to fr_strtoll (which in turn is a wrapper to strtoll).
- *	This also checks we don't have trailing garbage at the end of the input string.
+/**
+ * Parse a int64 value from a string.
+ * Wrapper to fr_strtoll (which in turn is a wrapper to strtoll), with restrictions:
+ * - Check we don't have trailing garbage at the end of the input string.
+ *
+ * @param[out] out    where to write the parsed value.
+ * @param[in]  value  string which contains the value to parse.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_strtoll(int64_t *out, char const *value)
 {
@@ -831,10 +844,17 @@ int ncc_strtoll(int64_t *out, char const *value)
 	return 0;
 }
 
-/*
- *	Wrapper to strtof.
- *	Don't allow hex, it's confusing for floating point numbers.
- *	This also checks we don't have trailing garbage at the end of the input string.
+/**
+ * Parse a float32 (float) value from a string.
+ * Wrapper to strtof, with restrictions:
+ * - Don't allow hex (confusing for floating point numbers).
+ * - Check we don't have trailing garbage at the end of the input string.
+ * - Don't allow "NaN" or "Infinity".
+ *
+ * @param[out] out    where to write the parsed value.
+ * @param[in]  value  string which contains the value to parse.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_strtof(float *out, char const *value)
 {
@@ -857,10 +877,17 @@ int ncc_strtof(float *out, char const *value)
 	return 0;
 }
 
-/*
- *	Wrapper to strtod.
- *	Don't allow hex, it's confusing for floating point numbers.
- *	This also checks we don't have trailing garbage at the end of the input string.
+/**
+ * Parse a float64 (double) value from a string.
+ * Wrapper to strtod, with restrictions:
+ * - Don't allow hex (confusing for floating point numbers).
+ * - Check we don't have trailing garbage at the end of the input string.
+ * - Don't allow "NaN" or "Infinity".
+ *
+ * @param[out] out    where to write the parsed value.
+ * @param[in]  value  string which contains the value to parse.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_strtod(double *out, char const *value)
 {
@@ -883,9 +910,14 @@ int ncc_strtod(double *out, char const *value)
 	return 0;
 }
 
-/*
- *	Parse a boolean value.
- *	Allow yes/no, true/false, and on/off.
+/**
+ * Parse a boolean value from a string.
+ * Allow yes/no, true/false, and on/off.
+ *
+ * @param[out] out    where to write the parsed value.
+ * @param[in]  value  string which contains the value to parse.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_strtobool(bool *out, char const *value)
 {
