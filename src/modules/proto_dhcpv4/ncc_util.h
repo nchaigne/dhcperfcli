@@ -319,6 +319,23 @@ static inline bool is_integer_n(char const *value, ssize_t len)
 	return true;
 }
 
+/** Get the last non whitespace character of a string.
+ *
+ * @param[in] value  string to process.
+ *
+ * @return pointer on last non whitespace char (NULL if none found).
+ */
+static inline char const *ncc_strr_notspace(char const *value)
+{
+	char const *p = NULL;
+
+	while (*value) {
+		if (!isspace(*value)) p = value;
+		value++;
+	}
+	return p;
+}
+
 /* talloc_realloc doesn't zero-initialize the new memory. */
 #define TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, _count_pre, _count) \
 { \

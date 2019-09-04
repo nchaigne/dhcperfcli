@@ -536,6 +536,8 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
 	FR_TOKEN last_token = T_INVALID;
 	VALUE_PAIR_RAW raw;
 
+	FN_ARG_CHECK(T_INVALID, buffer);
+
 	/*
 	 *	We allow an empty line.
 	 */
@@ -923,16 +925,25 @@ int ncc_strtobool(bool *out, char const *value)
 {
 	fr_skip_whitespace(value);
 
-	if ((strcasecmp(value, "yes") == 0) || (strcasecmp(value, "true") == 0) || (strcasecmp(value, "on") == 0)) {
+	char const *end = ncc_strr_notspace(value);
+	if (!end) goto error;
+	size_t len = end - value + 1;
+
+	if (   (strncasecmp(value, "yes", len) == 0)
+	    || (strncasecmp(value, "true", len) == 0)
+	    || (strncasecmp(value, "on", len) == 0) ) {
 		*(bool *)out = true;
 		return 0;
 	}
 
-	if ((strcasecmp(value, "no") == 0) || (strcasecmp(value, "false") == 0) || (strcasecmp(value, "off") == 0)) {
+	if (   (strncasecmp(value, "no", len) == 0)
+	    || (strncasecmp(value, "false", len) == 0)
+	    || (strncasecmp(value, "off", len) == 0) ) {
 		*(bool *)out = false;
 		return 0;
 	}
 
+error:
 	fr_strerror_printf("Invalid value \"%s\" for boolean", value);
 	return -1;
 }
