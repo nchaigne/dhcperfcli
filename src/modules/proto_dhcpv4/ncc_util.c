@@ -951,9 +951,12 @@ error:
 
 /**
  * Parse a string value into a given FreeRADIUS data type (FR_TYPE_...).
+ * Check that value is valid for the data type, and obtain converted value.
+ *
  * Note: not all FreeRADIUS types are supported.
  *
  * @param[out] out    where to write the parsed value (size depends on the type).
+ *                    NULL allows to discard output (validity check only).
  * @param[in]  type   type of value being parsed (base type | optional qualifiers).
  * @param[in]  value  string which contains the value to parse.
  * @param[in]  inlen  length of value, if value is \0 terminated inlen may be -1.
@@ -1079,70 +1082,90 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	 */
 	switch (type) {
 	case FR_TYPE_BOOL:
-		if (ncc_strtobool(out, value) < 0) return -1;
+	{
+		bool v;
+		if (ncc_strtobool(&v, value) < 0) return -1;
+		if (out) *(bool *)out = v;
+	}
 		break;
 
 	case FR_TYPE_FLOAT32:
-		if (ncc_strtof(out, value) < 0) return -1;
-		CHECK_NOT_ZERO(*(float *)out);
-		CHECK_NOT_NEGATIVE(*(float *)out);
+	{
+		float v;
+		if (ncc_strtof(&v, value) < 0) return -1;
+		CHECK_NOT_ZERO(v);
+		CHECK_NOT_NEGATIVE(v);
+		if (out) *(float *)out = v;
+	}
 		break;
 
 	case FR_TYPE_FLOAT64:
-		if (ncc_strtod(out, value) < 0) return -1;
-		CHECK_NOT_ZERO(*(double *)out);
-		CHECK_NOT_NEGATIVE(*(double *)out);
+	{
+		double v;
+		if (ncc_strtod(&v, value) < 0) return -1;
+		CHECK_NOT_ZERO(v);
+		CHECK_NOT_NEGATIVE(v);
+		if (out) *(double *)out = v;
+	}
 		break;
 
 	case FR_TYPE_TIME_DELTA:
+	{
 		/* Allowed formats:
 		 * "42.123" (seconds), "42.123s", "42123ms", "50us", "01:30" (min:sec)
 		 */
-		if (fr_time_delta_from_str(out, value, FR_TIME_RES_SEC) < 0) INVALID_TYPE_VALUE;
+		fr_time_delta_t v;
+		if (fr_time_delta_from_str(&v, value, FR_TIME_RES_SEC) < 0) INVALID_TYPE_VALUE;
+		if (out) *(fr_time_delta_t *)out = v;
+	}
 		break;
 
 	case FR_TYPE_IPV4_ADDR:
-		if (fr_inet_pton4(out, value, -1, false, false, false) < 0) INVALID_TYPE_VALUE;
+	{
+		fr_ipaddr_t v;
+		if (fr_inet_pton4(&v, value, -1, false, false, false) < 0) INVALID_TYPE_VALUE;
+		if (out) *(fr_ipaddr_t *)out = v;
+	}
 		break;
 
 	case FR_TYPE_UINT8:
 		IN_RANGE_UNSIGNED(UINT8);
-		*(uint8_t *)out = uinteger;
+		if (out) *(uint8_t *)out = uinteger;
 		break;
 
 	case FR_TYPE_UINT16:
 		IN_RANGE_UNSIGNED(UINT16);
-		*(uint16_t *)out = uinteger;
+		if (out) *(uint16_t *)out = uinteger;
 		break;
 
 	case FR_TYPE_UINT32:
 		IN_RANGE_UNSIGNED(UINT32);
-		*(uint32_t *)out = uinteger;
+		if (out) *(uint32_t *)out = uinteger;
 		break;
 
 	case FR_TYPE_UINT64:
 		/* IN_RANGE_UNSIGNED doesn't work here */
-		*(uint64_t *)out = uinteger;
+		if (out) *(uint64_t *)out = uinteger;
 		break;
 
 	case FR_TYPE_INT8:
 		IN_RANGE_SIGNED(INT8);
-		*(int8_t *)out = sinteger;
+		if (out) *(int8_t *)out = sinteger;
 		break;
 
 	case FR_TYPE_INT16:
 		IN_RANGE_SIGNED(INT16);
-		*(int16_t *)out = sinteger;
+		if (out) *(int16_t *)out = sinteger;
 		break;
 
 	case FR_TYPE_INT32:
 		IN_RANGE_SIGNED(INT32);
-		*(int32_t *)out = sinteger;
+		if (out) *(int32_t *)out = sinteger;
 		break;
 
 	case FR_TYPE_INT64:
 		IN_RANGE_SIGNED(INT64);
-		*(int64_t *)out = sinteger;
+		if (out) *(int64_t *)out = sinteger;
 		break;
 
 	default:
