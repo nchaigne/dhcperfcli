@@ -128,14 +128,14 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 
 	/* Elapsed time. */
 	if (CONF.packet_trace_elapsed) {
-		char time_buf[DPC_TIME_STRLEN];
+		char time_buf[NCC_TIME_STRLEN];
 		fprintf(fp, "t(%s) ", ncc_fr_delta_time_sprint(time_buf, &fte_start, NULL, DPC_DELTA_TIME_DECIMALS));
 	}
 
 	/* Absolute date/time. */
 	if (CONF.packet_trace_timestamp) {
-		char datetime_buf[DPC_DATETIME_STRLEN];
-		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, false));
+		char datetime_buf[NCC_DATETIME_STRLEN];
+		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, sizeof(datetime_buf), NCC_DATE_FMT));
 	}
 
 	switch (pevent) {

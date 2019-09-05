@@ -401,8 +401,8 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 
 	/* Absolute date/time. */
 	if (CONF.pr_stat_timestamp) {
-		char datetime_buf[DPC_DATETIME_STRLEN];
-		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, false));
+		char datetime_buf[NCC_DATETIME_STRLEN];
+		fprintf(fp, "%s ", ncc_absolute_time_sprint(datetime_buf, sizeof(datetime_buf), NCC_DATE_FMT));
 	}
 
 	/* Elapsed time. */

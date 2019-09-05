@@ -7,8 +7,6 @@
 
 
 #define DPC_FROM_TO_STRLEN       (21 + (FR_IPADDR_STRLEN * 2) + 5 + IFNAMSIZ + 1)
-#define DPC_TIME_STRLEN          (15 + 1)
-#define DPC_DATETIME_STRLEN      (19 + 1)
 
 #define DPC_MSG_NUM_STRLEN       ((16 + 2) * (DHCP_MAX_MESSAGE_TYPE - 2) + 1)
 

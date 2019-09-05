@@ -71,7 +71,7 @@ void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 	/* Print absolute date/time. */
 	if (log->timestamp == L_TIMESTAMP_ON) {
 		char datetime_buf[NCC_DATETIME_STRLEN];
-		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, true));
+		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
 	}
 
 	vfprintf(ncc_log_fp, fmt, ap);
@@ -199,7 +199,7 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 		/* Print absolute date/time. */
 		if (log->timestamp == L_TIMESTAMP_ON) {
 			char datetime_buf[NCC_DATETIME_STRLEN];
-			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, true));
+			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
 		}
 	}
 
@@ -877,17 +877,28 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
 	return out;
 }
 
-/*
- *	Print absolute date/time, in format: [YYYY-MM-DD ]HH:MI:SS
+/** Print to a string buffer the current absolute date/time, with specified format for strftime.
+ *
+ * @param[out] out       where to write the output string.
+ * @param[in]  outlen    size of output buffer, which should be consistent with the specified time format.
+ *                       NCC_DATETIME_STRLEN is sufficient for NCC_DATE_FMT, NCC_TIME_FMT, and NCC_DATETIME_FMT.
+ * @param[in]  fmt       time format for strftime.
+ *
+ * @return pointer to the output buffer, or NULL on error.
  */
-char *ncc_absolute_time_sprint(char *out, bool with_date)
-{
-	time_t t;
-	struct tm s_tm;
 
-	time(&t);
-	strftime(out, NCC_DATETIME_STRLEN, (with_date ? NCC_DATETIME_FMT : NCC_TIME_FMT),
-	         localtime_r(&t, &s_tm));
+char *ncc_absolute_time_sprint(char *out, size_t outlen, const char *fmt)
+{
+	time_t date;
+	struct tm tminfo;
+
+	FN_ARG_CHECK(NULL, out);
+
+	time(&date);
+	if (localtime_r(&date, &tminfo) == NULL || strftime(out, outlen, fmt, &tminfo) == 0) {
+		fr_strerror_printf("Failed to format current date and time");
+		return NULL;
+	}
 
 	return out;
 }
