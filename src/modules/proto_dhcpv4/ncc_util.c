@@ -71,7 +71,7 @@ void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 	/* Print absolute date/time. */
 	if (log->timestamp == L_TIMESTAMP_ON) {
 		char datetime_buf[NCC_DATETIME_STRLEN];
-		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
+		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
 	}
 
 	vfprintf(ncc_log_fp, fmt, ap);
@@ -199,7 +199,7 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 		/* Print absolute date/time. */
 		if (log->timestamp == L_TIMESTAMP_ON) {
 			char datetime_buf[NCC_DATETIME_STRLEN];
-			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_sprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
+			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
 		}
 	}
 
@@ -887,7 +887,7 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
  * @return pointer to the output buffer, or NULL on error.
  */
 
-char *ncc_absolute_time_sprint(char *out, size_t outlen, const char *fmt)
+char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt)
 {
 	time_t date;
 	struct tm tminfo;
