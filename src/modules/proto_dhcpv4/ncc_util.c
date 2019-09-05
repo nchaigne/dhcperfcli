@@ -657,9 +657,11 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 	ssize_t needed;
 
 	FN_ARG_CHECK(NULL, out);
+	FN_ARG_CHECK(NULL, outlen > 0);
 	FN_ARG_CHECK(NULL, line_max_len > 0);
 
 	*out = '\0';
+	if (!in || in_len <= 0) return out; /* Nothing to print. */
 
 	if (sep) sep_len = strlen(sep);
 
@@ -677,7 +679,7 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 		+ 1; /* terminating \0 */
 
 	/* Account for separators space between each octet, except at end of each line. */
-	needed +=  (sep_len * (in_len - 1 - (num_line - 1)));
+	needed += (sep_len * (in_len - 1 - (num_line - 1)));
 
 	DEBUG_TRACE("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
 	            outlen, in_len, num_line, prefix_len, needed);
@@ -693,7 +695,7 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 			out += sprintf(out, "%s", sep);
 		}
 		out += sprintf(out, "%02x", in[i]);
-		k ++;
+		k++;
 	}
 	*out = '\0';
 	return out;
