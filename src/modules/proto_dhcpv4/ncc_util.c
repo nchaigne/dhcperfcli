@@ -646,6 +646,8 @@ error:
  * @param[in]  sep           optional separator string (typically one space) printed between two octets.
  * @param[in]  prefix        optional prefix string printed at the start of the first output line.
  * @param[in]  line_max_len  start on a new output line after this many octets.
+ *
+ * @return pointer to the output buffer, or NULL on error.
  */
 char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
                            char const *prefix, int line_max_len)
@@ -708,6 +710,8 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
  * @param[in]  in_len        how many octets of data we want to print.
  * @param[in]  sep           optional separator string (typically one space) printed between two octets.
  * @param[in]  line_max_len  start on a new output line after this many octets.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep,
                         int line_max_len)
@@ -735,8 +739,12 @@ int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep
 }
 
 
-/*
- *	Print endpoint: <IP>:<port>.
+/** Print to a string buffer an endpoint: <IP>:<port>.
+ *
+ * @param[out] out  where to write the output string.
+ * @param[in]  ep   pointer on endpoint to write.
+ *
+ * @return pointer to the output buffer, or NULL on error.
  */
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
@@ -747,8 +755,12 @@ char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 	return out;
 }
 
-/*
- *	Print an ethernet address in a buffer.
+/** Print to a string buffer an ethernet address.
+ *
+ * @param[out] out  where to write the output string.
+ * @param[in]  ep   pointer on buffer which contains the 6 octets of the ethernet address.
+ *
+ * @return pointer to the output buffer.
  */
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
 {
