@@ -772,16 +772,52 @@ char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
 	return out;
 }
 
+
 /*
- *	Print a time difference, in format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
- *	Hour and minute printed only if relevant, decimals optional.
- *	If when is NULL, now is used instead.
+ *	Print a difference between two timestamps (pre-parsed as hour / min / sec / usec).
+ */
+static void _ncc_delta_time_sprint(char *out, uint8_t decimals, uint32_t hour, uint32_t min, uint32_t sec, uint32_t usec)
+{
+	if (hour > 0) {
+		sprintf(out, "%u:%.02u:%.02u", hour, min, sec);
+	} else if (min > 0) {
+		sprintf(out, "%u:%.02u", min, sec);
+	} else {
+		sprintf(out, "%u", sec);
+	}
+
+	if (decimals) {
+		char buffer[8];
+		sprintf(buffer, ".%06u", usec);
+		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
+	}
+}
+
+/** Print to a string buffer a difference between two timestamps (struct timeval).
+ *  Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
+ *
+ * @param[out] out       where to write the output string.
+ *                       (size should be at least NCC_TIME_STRLEN, which is sufficient for HH < 100 with 6 decimals)
+ * @param[in]  from      pointer on oldest timestamp.
+ * @param[in]  when      pointer on most recent timestamp (or NULL to use current time).
+ * @param[in]  decimals  number of decimals to print in output (0-6).
+ *
+ * @return pointer to the output buffer.
  */
 char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals)
 {
 	struct timeval delta, to;
-	uint32_t sec, min, hour;
+	uint32_t hour, min, sec, usec;
 
+	FN_ARG_CHECK(NULL, out);
+	FN_ARG_CHECK(NULL, from);
+
+	if (when && timercmp(when, from, <)) {
+		fr_strerror_printf("Cannot have a negative time difference");
+		return NULL;
+	}
+
+	/* If second timestamp is not specified, use current time. */
 	if (!when) {
 		gettimeofday(&to, NULL);
 		when = &to;
@@ -792,21 +828,9 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 	hour = (uint32_t)(delta.tv_sec / 3600);
 	min = (uint32_t)(delta.tv_sec % 3600) / 60;
 	sec = (uint32_t)(delta.tv_sec % 3600) % 60;
+	usec = delta.tv_usec;
 
-	if (hour > 0) {
-		sprintf(out, "%d:%.02d:%.02d", hour, min, sec);
-	} else if (min > 0) {
-		sprintf(out, "%d:%.02d", min, sec);
-	} else {
-		sprintf(out, "%d", sec);
-	}
-
-	if (decimals) {
-		char buffer[32] = "";
-		sprintf(buffer, ".%06ld", delta.tv_usec);
-		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
-	}
-
+	_ncc_delta_time_sprint(out, decimals, hour, min, sec, usec);
 	return out;
 }
 
@@ -823,9 +847,9 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
  */
 char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint8_t decimals)
 {
-	fr_time_delta_t delta;
 	fr_time_t to;
-	uint32_t sec, min, hour, delta_sec;
+	fr_time_delta_t delta;
+	uint32_t delta_sec, hour, min, sec, usec;
 
 	FN_ARG_CHECK(NULL, out);
 	FN_ARG_CHECK(NULL, from);
@@ -847,22 +871,9 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
 	hour = delta_sec / 3600;
 	min = (delta_sec % 3600) / 60;
 	sec = (delta_sec % 3600) % 60;
+	usec = (delta / 1000) % USEC;
 
-	if (hour > 0) {
-		sprintf(out, "%u:%.02u:%.02u", hour, min, sec);
-	} else if (min > 0) {
-		sprintf(out, "%u:%.02u", min, sec);
-	} else {
-		sprintf(out, "%u", sec);
-	}
-
-	if (decimals) {
-		char buffer[8];
-		uint32_t usec = (delta / 1000) % USEC;
-		sprintf(buffer, ".%06u", usec);
-		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
-	}
-
+	_ncc_delta_time_sprint(out, decimals, hour, min, sec, usec);
 	return out;
 }
 
