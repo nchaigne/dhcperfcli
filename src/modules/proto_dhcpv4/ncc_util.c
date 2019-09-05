@@ -637,7 +637,7 @@ error:
 }
 
 
-/** Print a data buffer in hexadecimal representation.
+/** Print to a string buffer the hexadecimal representation of a data buffer.
  *
  * @param[out] out           where to write the hexadecimal representation of data.
  * @param[in]  outlen        size of output buffer.
@@ -700,6 +700,40 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 	*out = '\0';
 	return out;
 }
+
+/** Print to file the hexadecimal representation of a data buffer.
+ *
+ * @param[out] fp            where to write the hexadecimal representation of data.
+ * @param[in]  in            binary data to print.
+ * @param[in]  in_len        how many octets of data we want to print.
+ * @param[in]  sep           optional separator string (typically one space) printed between two octets.
+ * @param[in]  line_max_len  start on a new output line after this many octets.
+ */
+int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep,
+                        int line_max_len)
+{
+	const uint8_t *p = in;
+	char buf[385];
+	/* Allows for lines of up to 128 octets, with one char separator.
+	 * Typically we will want 16 octets printed per line so this should be more than enough.
+	 */
+
+	if (!in || in_len <= 0) return 0; /* Nothing to print. */
+
+	while (in_len > 0) {
+		int len = (in_len > line_max_len ? line_max_len : in_len);
+		if (!ncc_hex_data_snprint(buf, sizeof(buf), p, len, sep, "", line_max_len)) {
+			return -1;
+		}
+
+		fprintf(fp, "%04x: %s\n", (int)(p - in), buf);
+		in_len -= len;
+		p += len;
+	}
+
+	return 0;
+}
+
 
 /*
  *	Print endpoint: <IP>:<port>.
