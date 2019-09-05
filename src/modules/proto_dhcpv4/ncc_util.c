@@ -757,13 +757,16 @@ char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 
 /** Print to a string buffer an ethernet address.
  *
- * @param[out] out  where to write the output string.
+ * @param[out] out  where to write the output string (size must be at least NCC_ETHADDR_STRLEN).
  * @param[in]  ep   pointer on buffer which contains the 6 octets of the ethernet address.
  *
  * @return pointer to the output buffer.
  */
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
 {
+	FN_ARG_CHECK(NULL, out);
+	FN_ARG_CHECK(NULL, addr);
+
 	sprintf(out, "%02x:%02x:%02x:%02x:%02x:%02x",
 	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return out;
@@ -807,12 +810,24 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 	return out;
 }
 
-// same as ncc_delta_time_sprint but using fr_time_t
+/** Print to a string buffer a difference between two timestamps (fr_time_t).
+ *  Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
+ *
+ * @param[out] out       where to write the output string (size must be at least NCC_TIME_STRLEN).
+ * @param[in]  from      pointer on oldest timestamp.
+ * @param[in]  when      pointer on most recent timestamp (or NULL to use current time).
+ * @param[in]  decimals  number of decimals to print in output (0-6).
+ *
+ * @return pointer to the output buffer.
+ */
 char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint8_t decimals)
 {
 	fr_time_delta_t delta;
 	fr_time_t to;
 	uint32_t sec, min, hour, delta_sec;
+
+	FN_ARG_CHECK(NULL, out);
+	FN_ARG_CHECK(NULL, from);
 
 	if (!when) {
 		to = fr_time();
