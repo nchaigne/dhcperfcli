@@ -813,7 +813,8 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 /** Print to a string buffer a difference between two timestamps (fr_time_t).
  *  Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
  *
- * @param[out] out       where to write the output string (size must be at least NCC_TIME_STRLEN).
+ * @param[out] out       where to write the output string.
+ *                       (size should be at least NCC_TIME_STRLEN, which is sufficient for HH < 100 with 6 decimals)
  * @param[in]  from      pointer on oldest timestamp.
  * @param[in]  when      pointer on most recent timestamp (or NULL to use current time).
  * @param[in]  decimals  number of decimals to print in output (0-6).
@@ -829,6 +830,12 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
 	FN_ARG_CHECK(NULL, out);
 	FN_ARG_CHECK(NULL, from);
 
+	if (when && *when < *from) {
+		fr_strerror_printf("Cannot have a negative time difference");
+		return NULL;
+	}
+
+	/* If second timestamp is not specified, use current time. */
 	if (!when) {
 		to = fr_time();
 		when = &to;
@@ -842,17 +849,17 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
 	sec = (delta_sec % 3600) % 60;
 
 	if (hour > 0) {
-		sprintf(out, "%d:%.02d:%.02d", hour, min, sec);
+		sprintf(out, "%u:%.02u:%.02u", hour, min, sec);
 	} else if (min > 0) {
-		sprintf(out, "%d:%.02d", min, sec);
+		sprintf(out, "%u:%.02u", min, sec);
 	} else {
-		sprintf(out, "%d", sec);
+		sprintf(out, "%u", sec);
 	}
 
 	if (decimals) {
-		char buffer[32] = "";
+		char buffer[8];
 		uint32_t usec = (delta / 1000) % USEC;
-		sprintf(buffer, ".%06d", usec);
+		sprintf(buffer, ".%06u", usec);
 		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
 	}
 
