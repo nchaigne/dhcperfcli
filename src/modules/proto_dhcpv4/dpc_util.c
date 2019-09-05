@@ -321,7 +321,7 @@ void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 			int remain = packet->data_len - cur_pos;
 			if (remain > 0) {
 				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
-				dpc_hex_data_sprint(buf, sizeof(buf), p, remain, " ", header, 16);
+				ncc_hex_data_snprint(buf, sizeof(buf), p, remain, " ", header, 16);
 				fprintf(fp, "%s\n", buf);
 			}
 			return;
@@ -329,7 +329,7 @@ void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 
 		/* One valid field to print. */
 		sprintf(header, "  %04x  %10s: ", cur_pos, dpc_dhcp_headers[i].name);
-		dpc_hex_data_sprint(buf, sizeof(buf), p, dpc_dhcp_headers[i].size, " ", header, 16);
+		ncc_hex_data_snprint(buf, sizeof(buf), p, dpc_dhcp_headers[i].size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
 
 		p += dpc_dhcp_headers[i].size;
@@ -384,7 +384,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 			continue;
 		} else if (pad_p) { /* We're done with padding octets: print them. */
 			sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
-			dpc_hex_data_sprint(buf, sizeof(buf), pad_p, pad_size, " ", header, 16);
+			ncc_hex_data_snprint(buf, sizeof(buf), pad_p, pad_size, " ", header, 16);
 			fprintf(fp, "%s\n", buf);
 
 			cur_pos += pad_size;
@@ -394,7 +394,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 		if (*p == 255) { /* End Option. */
 			sprintf(header, "  %04x  %10s: ", cur_pos, "end");
-			dpc_hex_data_sprint(buf, sizeof(buf), p, 1, " ", header, 16);
+			ncc_hex_data_snprint(buf, sizeof(buf), p, 1, " ", header, 16);
 			fprintf(fp, "%s\n", buf);
 
 			p ++;
@@ -413,7 +413,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 			int remain = data_end - p + 1;
 			if (remain > 0) {
 				sprintf(header, "  %04x  %10s: ", cur_pos, "remainder");
-				dpc_hex_data_sprint(buf, sizeof(buf), p, remain, " ", header, 16);
+				ncc_hex_data_snprint(buf, sizeof(buf), p, remain, " ", header, 16);
 				fprintf(fp, "%s\n", buf);
 			}
 			return;
@@ -423,7 +423,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 		int opt_size = p[1] + 2;
 		if (overload && p[0] == FR_DHCP_OVERLOAD) *overload = p[2];
 		sprintf(header, "  %04x  %10d: ", cur_pos, p[0]);
-		dpc_hex_data_sprint(buf, sizeof(buf), p, opt_size, " ", header, 16);
+		ncc_hex_data_snprint(buf, sizeof(buf), p, opt_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
 		p += opt_size;
 		cur_pos += opt_size;
@@ -431,51 +431,9 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 	if (print_end_pad && pad_p) { /* There may be more padding after End Option. */
 		sprintf(header, "  %04x  %10s: ", cur_pos, "pad");
-		dpc_hex_data_sprint(buf, sizeof(buf), pad_p, pad_size, " ", header, 16);
+		ncc_hex_data_snprint(buf, sizeof(buf), pad_p, pad_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
 	}
-}
-
-/*
- *	Print a data buffer in hexadecimal representation.
- */
-char *dpc_hex_data_sprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
-                          char const *prefix, int line_max_len)
-{
-	int i;
-	int k = 0; /* Position in the current line. */
-	int prefix_len = 0;
-
-	*out = '\0';
-
-	if (prefix) {
-		prefix_len = strlen(prefix);
-		out += sprintf(out, "%s", prefix);
-	}
-
-	/* Compute needed space, ensure we have enough. */
-	int num_line = (in_len - 1) / line_max_len + 1;
-	ssize_t needed = (num_line * (prefix_len + 1))
-		+ (2 + strlen(sep)) * in_len + 1;
-
-	DEBUG_TRACE("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
-	            outlen, in_len, num_line, prefix_len, needed);
-
-	CHECK_BUFFER_SIZE(NULL, needed, outlen, "hex data");
-
-	for (i = 0; i < in_len; i++) {
-		if (line_max_len && (k == line_max_len)) { /* Start a new line. */
-			out += sprintf(out, "\n%*s", prefix_len, "");
-			k = 0;
-		}
-		if (k && sep) {
-			out += sprintf(out, "%s", sep);
-		}
-		out += sprintf(out, "%02x", in[i]);
-		k ++;
-	}
-	*out = '\0';
-	return out;
 }
 
 /*

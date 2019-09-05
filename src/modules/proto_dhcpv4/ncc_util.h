@@ -256,6 +256,8 @@ int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_P
 VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
 int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, CONF_SECTION *cs, unsigned int max);
 
+char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
+                           char const *prefix, int line_max_len);
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_sprint(char *out, const uint8_t *addr);
 char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *when, uint8_t decimals);

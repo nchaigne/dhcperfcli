@@ -637,6 +637,68 @@ error:
 }
 
 
+/** Print a data buffer in hexadecimal representation.
+ *
+ * @param[out] out           where to write the hexadecimal representation of data.
+ * @param[in]  outlen        size of output buffer.
+ * @param[in]  in            binary data to print.
+ * @param[in]  in_len        how many octets of data we want to print.
+ * @param[in]  sep           optional separator string (typically one space) printed between two octets.
+ * @param[in]  prefix        optional prefix string printed at the start of the first output line.
+ * @param[in]  line_max_len  start on a new output line after this many octets.
+ */
+char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
+                           char const *prefix, int line_max_len)
+{
+	int i;
+	int k = 0; /* Position in the current line. */
+	int prefix_len = 0, sep_len = 0;
+	int num_line;
+	ssize_t needed;
+
+	FN_ARG_CHECK(NULL, out);
+	FN_ARG_CHECK(NULL, line_max_len > 0);
+
+	*out = '\0';
+
+	if (sep) sep_len = strlen(sep);
+
+	if (prefix) {
+		prefix_len = strlen(prefix);
+		out += sprintf(out, "%s", prefix);
+	}
+
+	/* Compute needed space, ensure we have enough. */
+	num_line = (in_len - 1) / line_max_len + 1;
+
+	needed = (num_line * prefix_len) /* prefix len for each line */
+		+ (num_line - 1) /* "\n" between lines */
+		+ (2 * in_len) /* each printed octet */
+		+ 1; /* terminating \0 */
+
+	/* Account for separators space between each octet, except at end of each line. */
+	needed +=  (sep_len * (in_len - 1 - (num_line - 1)));
+
+	DEBUG_TRACE("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
+	            outlen, in_len, num_line, prefix_len, needed);
+
+	CHECK_BUFFER_SIZE(NULL, needed, outlen, "output");
+
+	for (i = 0; i < in_len; i++) {
+		if (line_max_len && (k == line_max_len)) { /* Start a new line. */
+			out += sprintf(out, "\n%*s", prefix_len, "");
+			k = 0;
+		}
+		if (k && sep) {
+			out += sprintf(out, "%s", sep);
+		}
+		out += sprintf(out, "%02x", in[i]);
+		k ++;
+	}
+	*out = '\0';
+	return out;
+}
+
 /*
  *	Print endpoint: <IP>:<port>.
  */

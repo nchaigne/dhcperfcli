@@ -27,8 +27,6 @@ void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet);
 void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
                                     bool print_end_pad, uint8_t *overload);
 
-char *dpc_hex_data_sprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
-                          char const *prefix, int line_max_len);
 char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra);
 
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp);
