@@ -44,9 +44,7 @@ typedef enum {
 
 typedef struct ncc_xlat_frame {
 	/* Generic chaining */
-	ncc_list_t *list;       //!< The list to which this entry belongs (NULL for an unchained entry).
-	ncc_list_item_t *prev;
-	ncc_list_item_t *next;
+	fr_dlist_t dlist;       //!< Our entry into the linked list.
 
 	/* Specific item data */
 	uint32_t num;
@@ -93,7 +91,7 @@ static bool done_init = false;
 
 static TALLOC_CTX *xlat_ctx;
 
-static ncc_list_t *ncc_xlat_frames; /* This is an array of lists. */
+static ncc_dlist_t *ncc_xlat_frames; /* This is an array of lists. */
 static ncc_xlat_file_t *ncc_xlat_files;
 
 static fr_dict_t *dict_freeradius;
@@ -253,19 +251,20 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 	if (id_list >= num_pre) {
 		/* Allocate lists to all input items, even if they don't need xlat'ing. This is simpler. */
 		size_t num = id_list + 1;
-		TALLOC_REALLOC_ZERO(ctx, ncc_xlat_frames, ncc_list_t, num_pre, num);
+		TALLOC_REALLOC_ZERO(ctx, ncc_xlat_frames, ncc_dlist_t, num_pre, num);
 	}
-	ncc_list_t *list = &ncc_xlat_frames[id_list];
+	ncc_dlist_t *list = &ncc_xlat_frames[id_list];
+	NCC_DLIST_INIT(list, ncc_xlat_frame_t);
 
 	/* Now get the xlat context. If it doesn't exist yet, allocate a new one and add it to the list. */
-	xlat_frame = NCC_LIST_INDEX(list, id_item);
+	NCC_DLIST_INDEX(list, id_item, xlat_frame);
 	if (!xlat_frame) {
 		/* We don't have a context element yet, need to add a new one. */
 		MEM(xlat_frame = talloc_zero(ctx, ncc_xlat_frame_t));
 
 		xlat_frame->num = id_item;
 
-		NCC_LIST_ENQUEUE(list, xlat_frame);
+		NCC_DLIST_ENQUEUE(list, xlat_frame);
 	}
 
 	FX_request->child_number ++; /* Prepare next xlat context. */
