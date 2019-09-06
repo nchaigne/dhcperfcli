@@ -6,7 +6,7 @@
 #include <freeradius-devel/server/base.h>
 #include <math.h>
 
-#define NCC_ENDPOINT_STRLEN       (FR_IPADDR_STRLEN + 5)
+#define NCC_ENDPOINT_STRLEN       (FR_IPADDR_STRLEN + 1 + 5)
 #define NCC_ETHADDR_STRLEN        (17 + 1)
 #define NCC_UINT32_STRLEN         (10 + 1)
 #define NCC_UINT64_STRLEN         (20 + 1)

@@ -748,7 +748,9 @@ int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep
  */
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
-	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	FN_ARG_CHECK(NULL, out);
+
+	char ipaddr_buf[FR_IPADDR_STRLEN];
 	if (!fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr)) return NULL;
 
 	sprintf(out, "%s:%u", ipaddr_buf, ep->port);
