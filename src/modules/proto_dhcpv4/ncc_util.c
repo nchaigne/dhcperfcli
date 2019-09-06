@@ -637,7 +637,8 @@ error:
 }
 
 
-/** Print to a string buffer the hexadecimal representation of a data buffer.
+/**
+ * Print to a string buffer the hexadecimal representation of a data buffer.
  *
  * @param[out] out           where to write the hexadecimal representation of data.
  * @param[in]  outlen        size of output buffer.
@@ -703,7 +704,8 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 	return out;
 }
 
-/** Print to file the hexadecimal representation of a data buffer.
+/**
+ * Print to file the hexadecimal representation of a data buffer.
  *
  * @param[out] fp            where to write the hexadecimal representation of data.
  * @param[in]  in            binary data to print.
@@ -739,7 +741,8 @@ int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep
 }
 
 
-/** Print to a string buffer an endpoint: <IP>:<port>.
+/**
+ * Print to a string buffer an endpoint: <IP>:<port>.
  *
  * @param[out] out  where to write the output string.
  * @param[in]  ep   pointer on endpoint to write.
@@ -757,7 +760,8 @@ char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 	return out;
 }
 
-/** Print to a string buffer an ethernet address.
+/**
+ * Print to a string buffer an ethernet address.
  *
  * @param[out] out  where to write the output string (size must be at least NCC_ETHADDR_STRLEN).
  * @param[in]  ep   pointer on buffer which contains the 6 octets of the ethernet address.
@@ -795,8 +799,9 @@ static void _ncc_delta_time_sprint(char *out, uint8_t decimals, uint32_t hour, u
 	}
 }
 
-/** Print to a string buffer a difference between two timestamps (struct timeval).
- *  Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
+/**
+ * Print to a string buffer a difference between two timestamps (struct timeval).
+ * Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
  *
  * @param[out] out       where to write the output string.
  *                       (size should be at least NCC_TIME_STRLEN, which is sufficient for HH < 100 with 6 decimals)
@@ -836,8 +841,9 @@ char *ncc_delta_time_sprint(char *out, struct timeval *from, struct timeval *whe
 	return out;
 }
 
-/** Print to a string buffer a difference between two timestamps (fr_time_t).
- *  Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
+/**
+ * Print to a string buffer a difference between two timestamps (fr_time_t).
+ * Output format: [[<HH>:]<MI>:]<SS>[.<d{1,6}>]
  *
  * @param[out] out       where to write the output string.
  *                       (size should be at least NCC_TIME_STRLEN, which is sufficient for HH < 100 with 6 decimals)
@@ -906,19 +912,28 @@ char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt)
 }
 
 
-/*
- *	Resolve host address and port.
+/**
+ * Parse host address and port from a string: <addr>:<port>.
+ * <addr> can be an IPv4 address, or a hostname to resolve.
+ * Either address or port can be omitted (at least one must be provided), in which
+ * case the input default is retained.
+ *
+ * @param[out] ep        output endpoint.
+ * @param[in]  host_arg  string to parse with host adress and port.
+ *
+ * @return -1 = error, 0 = success.
  */
-int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
+int ncc_host_addr_resolve(ncc_endpoint_t *ep, char const *host_arg)
 {
-	if (!host_arg || !host_ep) return -1;
+	FN_ARG_CHECK(-1, ep);
+	FN_ARG_CHECK(-1, host_arg);
 
 	unsigned long port;
 	uint16_t port_fr;
 	char const *p = host_arg, *q;
 
 	/*
-	 *	Allow to just have [:]<port> (i.e. no IP address specified).
+	 *	Allow to just have [:]<port> (no host address specified).
 	 */
 	if (*p == ':') p++; /* Port start */
 	q = p;
@@ -932,24 +947,23 @@ int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg)
 			fr_strerror_printf("Port %lu outside valid port range 1-%u", port, UINT16_MAX);
 			return -1;
 		}
-		host_ep->port = port;
+		ep->port = port;
 		return 0;
 	}
 
 	/*
 	 *	Otherwise delegate parsing to fr_inet_pton_port.
 	 */
-	if (fr_inet_pton_port(&host_ep->ipaddr, &port_fr, host_arg, -1, AF_INET, true, true) < 0) {
+	if (fr_inet_pton_port(&ep->ipaddr, &port_fr, host_arg, -1, AF_INET, true, true) < 0) {
 		return -1;
 	}
 
-	if (port_fr != 0) { /* If a port is specified, use it. Otherwise, keep default. */
-		host_ep->port = port_fr;
+	if (port_fr != 0) { /* If a port is specified, use it. Otherwise, keep default input value. */
+		ep->port = port_fr;
 	}
 
 	return 0;
 }
-
 
 /**
  * Parse a uint64 value from a string.
