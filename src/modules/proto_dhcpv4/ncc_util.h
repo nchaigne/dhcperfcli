@@ -370,9 +370,16 @@ typedef struct ncc_dlist {
  *	Iterate on a list, starting from head.
  */
 #define NCC_DLIST_HEAD(_ncc_dlist) fr_dlist_head(&(*_ncc_dlist).head);
+#define NCC_DLIST_TAIL(_ncc_dlist) fr_dlist_tail(&(*_ncc_dlist).head);
 #define NCC_DLIST_NEXT(_ncc_dlist, _item) fr_dlist_next(&(*_ncc_dlist).head, _item);
 
 #define NCC_DLIST_IS_INIT(_ncc_dlist) (*_ncc_dlist).init
+
+/*
+ *	An item does not belong to a list if it's linked to itself.
+ */
+#define NCC_IS_LONE_ITEM(_item) \
+	(_item->dlist.prev == &(_item->dlist) && _item->dlist.next == &(_item->dlist))
 
 /*
  *	Initialize a list of "_item_struct_t" containing a chaining struct "fr_dlist_t dlist".
