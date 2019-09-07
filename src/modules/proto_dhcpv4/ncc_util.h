@@ -393,6 +393,17 @@ typedef struct ncc_dlist {
 }
 
 /*
+ *	Remove an item from its list.
+ */
+#define NCC_DLIST_REMOVE(_ncc_dlist, _item) { \
+	if (_item && !NCC_IS_LONE_ITEM(_item)) { \
+		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
+		fr_dlist_remove(list_head, _item); \
+		(*_ncc_dlist).size--; \
+	} \
+}
+
+/*
  *	Allocate a new list item and properly initialize it.
  *	An item *must* be initialized ("prev == item && next == item")
  *	because "prev == NULL && next == NULL" means the item is (alone) in a list.
