@@ -451,6 +451,7 @@ typedef struct ncc_dlist {
 		_item = fr_dlist_remove(list_head, _item); \
 	} \
 	(*_ncc_dlist).size = 0; \
+	(*_ncc_dlist).last_used = NULL; \
 }
 
 /*
