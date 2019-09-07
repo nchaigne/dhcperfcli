@@ -359,6 +359,8 @@ typedef struct ncc_dlist {
 	fr_dlist_head_t head;
 	uint32_t size;
 	bool init;
+
+	void *last_used;        //< Last item used with "NCC_DLIST_USE_NEXT".
 } ncc_dlist_t;
 
 /*
@@ -393,17 +395,6 @@ typedef struct ncc_dlist {
 }
 
 /*
- *	Remove an item from its list.
- */
-#define NCC_DLIST_REMOVE(_ncc_dlist, _item) { \
-	if (_item && !NCC_IS_LONE_ITEM(_item)) { \
-		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
-		fr_dlist_remove(list_head, _item); \
-		(*_ncc_dlist).size--; \
-	} \
-}
-
-/*
  *	Allocate a new list item and properly initialize it.
  *	An item should be initialized ("prev == item && next == item")
  *	... although it doesn't really matter if the item is immediately inserted in the list.
@@ -412,6 +403,22 @@ typedef struct ncc_dlist {
 	_item = talloc_zero(_ctx, _item_struct_t); \
 	if (_item) fr_dlist_entry_init(&(_item->dlist)); \
 }
+
+/*
+ *	Remove an item from its list.
+ *	Does nothing if it's not in list.
+ */
+#define NCC_DLIST_REMOVE(_ncc_dlist, _item) { \
+	if (_item && !NCC_IS_LONE_ITEM(_item)) { \
+		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
+		if (_item == (*_ncc_dlist).last_used) (*_ncc_dlist).last_used = NULL; \
+		fr_dlist_remove(list_head, _item); \
+		(*_ncc_dlist).size--; \
+	} \
+}
+
+// this is now just the same so...
+#define NCC_DLIST_DRAW(_ncc_dlist, _item) NCC_DLIST_REMOVE(_ncc_dlist, _item)
 
 /*
  *	Add an item to the tail of the list.
@@ -462,20 +469,6 @@ typedef struct ncc_dlist {
 	} \
 }
 
-/*
- *	Remove an item from its list.
- *	Does nothing if it's not in the list.
- */
-#define NCC_DLIST_DRAW(_ncc_dlist, _item) { \
-	if (_item) { \
-		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
-		fr_dlist_t *entry = (fr_dlist_t *) (((uint8_t *) _item) + list_head->offset); \
-		if (entry->next) { \
-			NCC_DLIST_REMOVE(_ncc_dlist, _item); \
-		} \
-	} \
-}
-
 /** Insert an item before an existing (reference) item of a list.
  */
 static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_ref, void *ptr)
@@ -510,4 +503,19 @@ static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_
 		fr_dlist_insert_before(list_head, _item_ref, _item); \
 		(*_ncc_dlist).size++; \
 	} \
+}
+
+/* Use items from a list in a sequential circular fashion, starting from head.
+ * Remember the last item used.
+ * If the last item used is removed from the list then start over from head.
+ */
+#define NCC_DLIST_USE_NEXT(_ncc_dlist, _item) { \
+	_item = (*_ncc_dlist).last_used; \
+	if (!_item || NCC_IS_LONE_ITEM(_item)) { \
+		_item = NCC_DLIST_HEAD(_ncc_dlist); \
+	} else { \
+		_item = NCC_DLIST_NEXT(_ncc_dlist, (*_ncc_dlist).last_used); \
+		if (!_item) _item = NCC_DLIST_HEAD(_ncc_dlist); \
+	} \
+	(*_ncc_dlist).last_used = _item; \
 }
