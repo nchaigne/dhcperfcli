@@ -430,8 +430,7 @@ typedef struct ncc_dlist {
 	fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
 	_item = fr_dlist_head(list_head); \
 	if (_item) { \
-		fr_dlist_remove(list_head, _item); \
-		(*_ncc_dlist).size--; \
+		NCC_DLIST_REMOVE(_ncc_dlist, _item); \
 	} \
 }
 
@@ -472,8 +471,7 @@ typedef struct ncc_dlist {
 		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
 		fr_dlist_t *entry = (fr_dlist_t *) (((uint8_t *) _item) + list_head->offset); \
 		if (entry->next) { \
-			fr_dlist_remove(list_head, _item); \
-			(*_ncc_dlist).size--; \
+			NCC_DLIST_REMOVE(_ncc_dlist, _item); \
 		} \
 	} \
 }
