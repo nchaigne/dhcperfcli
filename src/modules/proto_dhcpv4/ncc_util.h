@@ -393,6 +393,16 @@ typedef struct ncc_dlist {
 }
 
 /*
+ *	Allocate a new list item and properly initialize it.
+ *	An item *must* be initialized ("prev == item && next == item")
+ *	because "prev == NULL && next == NULL" means the item is (alone) in a list.
+ */
+#define NCC_DLIST_ALLOC_ITEM(_ctx, _item, _item_struct_t) { \
+	_item = talloc_zero(_ctx, _item_struct_t); \
+	if (_item) fr_dlist_entry_init(&(_item->dlist)); \
+}
+
+/*
  *	Add an item to the tail of the list.
  */
 #define NCC_DLIST_ENQUEUE(_ncc_dlist, _item) { \
