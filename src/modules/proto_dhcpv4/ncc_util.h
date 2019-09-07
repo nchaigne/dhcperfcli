@@ -405,8 +405,8 @@ typedef struct ncc_dlist {
 
 /*
  *	Allocate a new list item and properly initialize it.
- *	An item *must* be initialized ("prev == item && next == item")
- *	because "prev == NULL && next == NULL" means the item is (alone) in a list.
+ *	An item should be initialized ("prev == item && next == item")
+ *	... although it doesn't really matter if the item is immediately inserted in the list.
  */
 #define NCC_DLIST_ALLOC_ITEM(_ctx, _item, _item_struct_t) { \
 	_item = talloc_zero(_ctx, _item_struct_t); \
