@@ -132,7 +132,6 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 ncc_dlist_t input_list;
-static dpc_input_t *template_input_prev; /* In template mode, previous used input item. */
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
@@ -1719,10 +1718,8 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 	fr_time_t now = fr_time();
 
 	while (checked < NCC_DLIST_SIZE(&input_list)) {
-		if (!template_input_prev) template_input_prev = NCC_DLIST_HEAD(&input_list);
-
-		dpc_input_t *input = (dpc_input_t *)template_input_prev; /* No need for a copy (read-only). This is faster. */
-		template_input_prev = NCC_DLIST_NEXT(&input_list, template_input_prev);
+		dpc_input_t *input;
+		NCC_DLIST_USE_NEXT(&input_list, input);
 
 		checked++;
 
