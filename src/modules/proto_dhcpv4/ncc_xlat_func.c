@@ -232,7 +232,7 @@ int ncc_xlat_file_add(char const *filename)
 
 
 #define XLAT_ERR_RETURN \
-	request->rcode = -1; \
+	if (request) request->rcode = -1; \
 	return -1;
 
 
@@ -1211,6 +1211,11 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 
 	*out = buff;
 	return strlen(*out);
+}
+
+ssize_t ncc_xlat_randstr(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_randstr(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
 

@@ -40,4 +40,6 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
 ssize_t ncc_xlat_ethaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
 ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
 
+ssize_t ncc_xlat_randstr(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
+
 int ncc_xlat_register(void);
