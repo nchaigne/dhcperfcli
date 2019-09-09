@@ -1115,6 +1115,11 @@ static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outl
 				reps = REPETITION_MAX;
 			}
 			p = endptr;
+			if (!*p) {
+				fr_strerror_printf("No character class specified after repetition number");
+				talloc_free(buff);
+				XLAT_ERR_RETURN;
+			}
 		} else {
 			reps = 1;
 		}
