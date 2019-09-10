@@ -5,6 +5,7 @@
 
 #include "dhcperfcli.h"
 #include "ncc_util.h"
+#include "ncc_xlat.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 #include "dpc_config.h"
@@ -727,4 +728,29 @@ int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr)
 	}
 
 	return 0;
+}
+
+
+/*
+ *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
+ *	which allows access to "control" and "packet" lists of value pairs
+ */
+ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet)
+{
+	VALUE_PAIR *vps = NULL;
+	if (packet) vps = packet->vps;
+
+	return ncc_xlat_eval(out, outlen, fmt, vps);
+}
+
+/*
+ *	Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
+ *	which allows access to "control" and "packet" lists of value pairs
+ */
+ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, DHCP_PACKET *packet)
+{
+	VALUE_PAIR *vps = NULL;
+	if (packet) vps = packet->vps;
+
+	return ncc_xlat_eval_compiled(out, outlen, xlat, vps);
 }

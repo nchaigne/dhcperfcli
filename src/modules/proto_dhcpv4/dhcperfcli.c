@@ -7,7 +7,6 @@
 #include "ncc_xlat.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
-#include "dpc_xlat.h"
 #include "dpc_config.h"
 
 #include <getopt.h>

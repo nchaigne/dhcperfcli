@@ -12,6 +12,8 @@
 
 #define DPC_DELTA_TIME_DECIMALS  3
 
+#define DPC_XLAT_MAX_LEN 4096
+
 
 char *dpc_session_transaction_sprint(char *out, size_t outlen, dpc_session_ctx_t *session);
 char *dpc_message_type_sprint(char *out, int code);
@@ -38,3 +40,6 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in);
 void dpc_input_list_fprint(FILE *fp, ncc_dlist_t *list);
 
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
+
+ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet);
+ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, DHCP_PACKET *packet);

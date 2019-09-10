@@ -211,7 +211,8 @@ void ncc_xlat_core_free(void)
 
 
 /*
- *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided.
+ *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
+ *	which allows access to "control" and "packet" lists of value pairs
  */
 ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps)
 {
@@ -226,6 +227,10 @@ ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps
 	return len;
 }
 
+/*
+ *	Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
+ *	which allows access to "control" and "packet" lists of value pairs
+ */
 ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, VALUE_PAIR *vps)
 {
 	ncc_xlat_init_request(vps);
