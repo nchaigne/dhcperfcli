@@ -570,7 +570,7 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 		*num2 = vb.vb_uint64;
 
 	} else {
-		/* No first number: use 0 as lower bound. */
+		/* No second number: use UINT64_MAX as upper bound. */
 		*num2 = UINT64_MAX;
 	}
 

@@ -17,6 +17,9 @@ int ncc_xlat_core_register(void *mod_inst, char const *name,
 int ncc_xlat_core_init(void);
 void ncc_xlat_core_free(void);
 
+ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps);
+ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, VALUE_PAIR *vps);
+
 
 /*
  *	Functions in ncc_xlat_func.c
