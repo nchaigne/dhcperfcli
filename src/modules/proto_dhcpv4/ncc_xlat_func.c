@@ -172,11 +172,14 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 		FX_request = request_alloc(xlat_ctx);
 		FX_request->packet = fr_radius_alloc(FX_request, false);
 
-		/* Set a logger for FreeRADIUS calls to log_request through macros such as REMARKER. */
+		/* Set a logger for FreeRADIUS calls to log_request through macros such as REMARKER.
+		 * We're only interested in errors, which are of type "L_DBG_ERR".
+		 */
 		FX_request->log.dst = talloc_zero(FX_request, log_dst_t);
 		FX_request->log.dst->func = ncc_vlog_request;
 		FX_request->log.dst->uctx = &default_log;
-		FX_request->log.lvl = fr_debug_lvl;
+		//FX_request->log.lvl = fr_debug_lvl;
+		FX_request->log.lvl = L_DBG_LVL_OFF;
 	}
 
 	FX_request->control = vps; /* Allow to use %{control:Attr} */

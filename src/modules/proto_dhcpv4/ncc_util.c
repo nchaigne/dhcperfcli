@@ -218,6 +218,9 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 		  char const *file, int line,
 		  char const *fmt, va_list ap, void *uctx)
 {
+	/* We want L_DBG_ERR even if debugging is not enabled. */
+	if (!(type == L_DBG_ERR) && lvl > request->log.lvl) return;
+
 	ncc_vlog_printf(&ncc_default_log, fmt, ap);
 	// for now. TODO.
 }
