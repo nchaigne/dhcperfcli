@@ -544,8 +544,6 @@ static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t out
  */
 int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 {
-	fr_type_t type = FR_TYPE_UINT64;
-	fr_value_box_t vb = { 0 };
 	ssize_t len;
 	size_t inlen = 0;
 	char const *p = NULL;
@@ -559,11 +557,10 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 		len = (p ? p - in : -1);
 
 		/* Convert the first number. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		if (ncc_value_from_str(num1, FR_TYPE_UINT64, in, len) < 0) {
 			fr_strerror_printf("Invalid first number, in: [%s]", in);
 			return -1;
 		}
-		*num1 = vb.vb_uint64;
 
 	} else {
 		/* No first number: use 0 as lower bound. */
@@ -572,11 +569,10 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 
 	if (p && p < in + inlen - 1) {
 		/* Convert the second number. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		if (ncc_value_from_str(num2, FR_TYPE_UINT64, (p + 1), -1) < 0) {
 			fr_strerror_printf("Invalid second number, in: [%s]", in);
 			return -1;
 		}
-		*num2 = vb.vb_uint64;
 
 	} else {
 		/* No second number: use UINT64_MAX as upper bound. */
