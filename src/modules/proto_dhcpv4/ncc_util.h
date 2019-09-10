@@ -239,6 +239,10 @@ void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...);
 
+void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
+		  char const *file, int line,
+		  char const *fmt, va_list ap, void *uctx);
+
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 			                unsigned int attribute, unsigned int vendor);

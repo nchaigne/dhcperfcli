@@ -171,10 +171,16 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 	if (!FX_request) {
 		FX_request = request_alloc(xlat_ctx);
 		FX_request->packet = fr_radius_alloc(FX_request, false);
+
+		/* Set a logger for FreeRADIUS calls to log_request through macros such as REMARKER. */
+		FX_request->log.dst = talloc_zero(FX_request, log_dst_t);
+		FX_request->log.dst->func = ncc_vlog_request;
+		FX_request->log.dst->uctx = &default_log;
+		FX_request->log.lvl = fr_debug_lvl;
 	}
 
 	FX_request->control = vps; /* Allow to use %{control:Attr} */
-	FX_request->packet->vps = vps; /* Allow to use %{packet:Attr} or directly %{Attr} */
+	FX_request->packet->vps = vps; /* Allow to use %{request:Attr} or directly %{Attr} */
 	FX_request->rcode = 0;
 }
 

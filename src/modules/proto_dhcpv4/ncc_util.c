@@ -211,6 +211,17 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 	fflush(ncc_log_fp);
 }
 
+/*
+ *	Provide our own version of "vlog_request" so we can handle FreeRADIUS "REQUEST" logs.
+ */
+void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
+		  char const *file, int line,
+		  char const *fmt, va_list ap, void *uctx)
+{
+	ncc_vlog_printf(&ncc_default_log, fmt, ap);
+	// for now. TODO.
+}
+
 
 /*
  *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
