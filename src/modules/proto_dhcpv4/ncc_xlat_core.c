@@ -212,7 +212,12 @@ void ncc_xlat_core_free(void)
 
 /*
  *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
- *	which allows access to "control" and "packet" lists of value pairs
+ *	which allows access to "control" and "packet" lists of value pairs.
+ *
+ *	In case of parsing error, xlat_eval consumes the error (by calling REMARKER) and returns -1,
+ *	which is all we got (no error message we can print).
+ *	It's always better to pre-compile the xlat expression with xlat_tokenize, in this case we
+ *	get error messages that we can handle ourselves.
  */
 ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps)
 {
@@ -229,7 +234,8 @@ ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps
 
 /*
  *	Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
- *	which allows access to "control" and "packet" lists of value pairs
+ *	which allows access to "control" and "packet" lists of value pairs.
+ *	The xlat expression must have been compiled beforehand with xlat_tokenize.
  */
 ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, VALUE_PAIR *vps)
 {
