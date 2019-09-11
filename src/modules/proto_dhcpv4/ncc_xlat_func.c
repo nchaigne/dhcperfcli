@@ -455,22 +455,19 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
  */
 int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
 {
-	fr_type_t type = FR_TYPE_UINT32;
-	fr_value_box_t vb = { 0 };
-
 	*idx_file = 0; /* Default. */
 
 	if (in) {
 		/* Convert the file index. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, -1, '\0', false) < 0) {
+		if (ncc_value_from_str(idx_file, FR_TYPE_UINT32, in, -1) < 0) {
 			fr_strerror_printf("Invalid index, in: [%s]", in);
 			return -1;
 		}
-		*idx_file = vb.vb_uint32;
 	}
 
-	if (*idx_file >= talloc_array_length(ncc_xlat_files)) { /* Not a valid file. */
-		fr_strerror_printf("Not a valid file index: %u", *idx_file);
+	int num = talloc_array_length(ncc_xlat_files); /* Number of managed files. */
+	if (*idx_file >= num) {
+		fr_strerror_printf("Not a valid file index: %u (managed files: %u)", *idx_file, num);
 		return -1;
 	}
 	return 0;
