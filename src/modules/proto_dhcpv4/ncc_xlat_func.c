@@ -554,9 +554,8 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 	}
 
 	if ((inlen > 0) && (!p || p > in)) {
-		len = (p ? p - in : -1);
-
 		/* Convert the first number. */
+		len = (p ? p - in : -1);
 		if (ncc_value_from_str(num1, FR_TYPE_UINT64, in, len) < 0) {
 			fr_strerror_printf("Invalid first number, in: [%s]", in);
 			return -1;
@@ -567,7 +566,7 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 		*num1 = 0;
 	}
 
-	if (p && p < in + inlen - 1) {
+	if (p && *(p + 1) != '\0' && !is_whitespace(p + 1)) {
 		/* Convert the second number. */
 		if (ncc_value_from_str(num2, FR_TYPE_UINT64, (p + 1), -1) < 0) {
 			fr_strerror_printf("Invalid second number, in: [%s]", in);
