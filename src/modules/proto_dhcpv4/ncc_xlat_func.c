@@ -545,34 +545,39 @@ static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 {
 	ssize_t len;
-	size_t inlen = 0;
 	char const *p = NULL;
+	char const *q = NULL;
 
 	if (in) {
-		inlen = strlen(in);
 		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
+
+		/* Get start and length of first value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, in, p ? (p - in) : -1);
 	}
 
-	if ((inlen > 0) && (!p || p > in)) {
+	if (q) {
 		/* Convert the first number. */
-		len = (p ? p - in : -1);
-		if (ncc_value_from_str(num1, FR_TYPE_UINT64, in, len) < 0) {
+		if (ncc_value_from_str(num1, FR_TYPE_UINT64, q, len) < 0) {
 			fr_strerror_printf("Invalid first number, in: [%s]", in);
 			return -1;
 		}
-
 	} else {
 		/* No first number: use 0 as lower bound. */
 		*num1 = 0;
 	}
 
-	if (p && *(p + 1) != '\0' && !is_whitespace(p + 1)) {
+	q = NULL;
+	if (p) {
+		/* Get start and length of second value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, p + 1, -1);
+	}
+
+	if (q) {
 		/* Convert the second number. */
-		if (ncc_value_from_str(num2, FR_TYPE_UINT64, (p + 1), -1) < 0) {
+		if (ncc_value_from_str(num2, FR_TYPE_UINT64, q, len) < 0) {
 			fr_strerror_printf("Invalid second number, in: [%s]", in);
 			return -1;
 		}
-
 	} else {
 		/* No second number: use UINT64_MAX as upper bound. */
 		*num2 = UINT64_MAX;
@@ -701,7 +706,6 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
 			fr_strerror_printf("Invalid first ipaddr, in: [%s]", in);
 			return -1;
 		}
-
 	} else {
 		/* No first IPv4 address: use 0.0.0.1 as lower bound. */
 		fr_ipaddr_t ipaddr_min = { .af = AF_INET, .prefix = 32, .addr.v4.s_addr = htonl(0x00000001) };
@@ -720,7 +724,6 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
 			fr_strerror_printf("Invalid second ipaddr, in: [%s]", in);
 			return -1;
 		}
-
 	} else {
 		/* No second IPv4 address: use 255.255.255.254 as upper bound. */
 		fr_ipaddr_t ipaddr_max = { .af = AF_INET, .prefix = 32, .addr.v4.s_addr = htonl(0xfffffffe) };
