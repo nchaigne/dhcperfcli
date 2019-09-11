@@ -1109,7 +1109,7 @@ int ncc_strtobool(bool *out, char const *value)
 {
 	fr_skip_whitespace(value);
 
-	char const *end = ncc_strr_notspace(value);
+	char const *end = ncc_strr_notspace(value, -1);
 	if (!end) goto error;
 	size_t len = end - value + 1;
 
@@ -1170,6 +1170,10 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	}
 
 	fr_skip_whitespace(value);
+
+	/* Get last non whitespace character and according value length. */
+	char const *end = ncc_strr_notspace(value, -1);
+	ssize_t len = end ? (end - value + 1) : 0;
 
 	/* Optional qualifiers. */
 	not_empty = (type & NCC_TYPE_NOT_EMPTY);
@@ -1307,7 +1311,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	case FR_TYPE_IPV4_ADDR:
 	{
 		fr_ipaddr_t v;
-		if (fr_inet_pton4(&v, value, -1, false, false, false) < 0) INVALID_TYPE_VALUE;
+		if (fr_inet_pton4(&v, value, len, false, false, false) < 0) INVALID_TYPE_VALUE;
 		if (out) *(fr_ipaddr_t *)out = v;
 	}
 		break;
@@ -1460,6 +1464,41 @@ size_t ncc_str_trim(char *out, char const *in, size_t inlen)
 	memcpy(out, p, outsize);
 	out[outsize] = '\0';
 	return outsize;
+}
+
+/**
+ * Parse an input string and get:
+ * - a pointer on the first non whitespace character
+ * - the length of the string from the first non whitespace up to the last non whitespace
+ *
+ * A length limit can be provided, in which case the parsing is restricted to that many characters.
+ * -1 to parse the entire input string.
+ */
+int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_t inlen)
+{
+	char const *p = in;
+
+	if (!in || inlen == 0) return -1;
+
+	/* Output defaults. */
+	*out_p = NULL;
+	*outlen = 0;
+
+	fr_skip_whitespace(p);
+
+	/* If an input length is provided, check we're not already beyond that limit. */
+	ssize_t len = inlen;
+	if (inlen > 0) {
+		len -= (p - in);
+		if (len <= 0) return -1; /* Nothing left to parse. */
+	}
+
+	char const *q = ncc_strr_notspace(p, len);
+	if (!q) return -1; /* Cannot happen (*p is not whitespace). */
+
+	*out_p = p;
+	*outlen = (q - p + 1);
+	return 0;
 }
 
 

@@ -288,6 +288,7 @@ fr_time_t ncc_float_to_fr_time(double in);
 bool ncc_str_to_float(double *out, char const *in, bool allow_negative);
 bool ncc_str_to_float32(float *out, char const *in, bool allow_negative);
 size_t ncc_str_trim(char *out, char const *in, size_t inlen);
+int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_t inlen);
 
 void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry);
 ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry);
@@ -335,15 +336,16 @@ static inline bool is_integer_n(char const *value, ssize_t len)
  *
  * @return pointer on last non whitespace char (NULL if none found).
  */
-static inline char const *ncc_strr_notspace(char const *value)
+static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 {
-	char const *p = NULL;
+	char const *p = value, *q = NULL;;
+	while (*p) {
+		if (!isspace(*p)) q = p;
+		p++;
 
-	while (*value) {
-		if (!isspace(*value)) p = value;
-		value++;
+		if (len > 0 && (p >= value + len)) break;
 	}
-	return p;
+	return q;
 }
 
 /* talloc_realloc doesn't zero-initialize the new memory. */
