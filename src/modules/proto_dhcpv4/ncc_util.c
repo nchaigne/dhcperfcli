@@ -1055,7 +1055,7 @@ int ncc_strtof(float *out, char const *value)
 	}
 
 	*out = strtof(value, &p);
-	if (*p != '\0') goto error;
+	if (*p != '\0' && !is_whitespace(p)) goto error;
 
 	/* Do not allow "NaN" or "Infinity" */
 	if (!isfinite(*out)) goto error;
@@ -1088,7 +1088,7 @@ int ncc_strtod(double *out, char const *value)
 	}
 
 	*out = strtod(value, &p);
-	if (*p != '\0') goto error;
+	if (*p != '\0' && !is_whitespace(p)) goto error;
 
 	/* Do not allow "NaN" or "Infinity" */
 	if (!isfinite(*out)) goto error;
