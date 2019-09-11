@@ -369,10 +369,9 @@ VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *x
  */
 int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 {
-	fr_type_t type = FR_TYPE_UINT32;
-	fr_value_box_t vb = { 0 };
 	ssize_t len;
 	char const *p = NULL;
+	char const *q = NULL;
 
 	if (!in || in[0] == '\0') {
 		fr_strerror_printf("No input format provided");
@@ -383,27 +382,31 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 
 	p = strchr(in, '.');
 	if (p) {
-		/* Convert the file index. */
-		len = p - in;
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
-			fr_strerror_printf("Invalid file index, in: [%s]", in);
-			return -1;
+		/* Get start and length of first value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, in, p - in);
+		if (q) {
+			/* Convert the file index. */
+			if (ncc_value_from_str(idx_file, FR_TYPE_UINT32, q, len) < 0) {
+				fr_strerror_printf("Invalid file index, in: [%s]", in);
+				return -1;
+			}
 		}
-		*idx_file = vb.vb_uint32;
 	}
 
-	if (*idx_file >= talloc_array_length(ncc_xlat_files)) { /* Not a valid file. */
-		fr_strerror_printf("Not a valid file index: %u", *idx_file);
+	int num = talloc_array_length(ncc_xlat_files); /* Number of managed files. */
+	if (*idx_file >= num) {
+		fr_strerror_printf("Not a valid file index: %u (managed files: %u)", *idx_file, num);
 		return -1;
 	}
 
+	/* Get start and length of second value, trimmed of whitespace. */
+	ncc_str_trim_ptr(&q, &len, p ? (p + 1) : in, -1);
+
 	/* Convert the value index. */
-	p = (p ? p + 1 : in);
-	if (fr_value_box_from_str(NULL, &vb, &type, NULL, p, -1, '\0', false) < 0) {
+	if (!q || ncc_value_from_str(idx_value, FR_TYPE_UINT32, q, len) < 0) {
 		fr_strerror_printf("Invalid value index, in: [%s]", in);
 		return -1;
 	}
-	*idx_value = vb.vb_uint32;
 
 	/* Note: value index cannot be checked at parsing time. */
 
