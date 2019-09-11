@@ -684,26 +684,23 @@ ssize_t ncc_xlat_num_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, cha
  */
 int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char const *in)
 {
-	fr_type_t type = FR_TYPE_IPV4_ADDR;
-	fr_value_box_t vb = { 0 };
 	ssize_t len;
-	size_t inlen = 0;
 	char const *p = NULL;
+	char const *q = NULL;
 
 	if (in) {
-		inlen = strlen(in);
 		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
+
+		/* Get start and length of first value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, in, p ? (p - in) : -1);
 	}
 
-	if ((inlen > 0) && (!p || p > in)) {
-		len = (p ? p - in : -1);
-
+	if (q) {
 		/* Convert the first IPv4 address. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		if (ncc_value_from_str(ipaddr1, FR_TYPE_IPV4_ADDR, q, len) < 0) {
 			fr_strerror_printf("Invalid first ipaddr, in: [%s]", in);
 			return -1;
 		}
-		*ipaddr1 = vb.vb_ip;
 
 	} else {
 		/* No first IPv4 address: use 0.0.0.1 as lower bound. */
@@ -711,13 +708,18 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
 		*ipaddr1 = ipaddr_min;
 	}
 
-	if (p && p < in + inlen - 1) {
+	q = NULL;
+	if (p) {
+		/* Get start and length of second value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, p + 1, -1);
+	}
+
+	if (q) {
 		/* Convert the second IPv4 address. */
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		if (ncc_value_from_str(ipaddr2, FR_TYPE_IPV4_ADDR, q, len) < 0) {
 			fr_strerror_printf("Invalid second ipaddr, in: [%s]", in);
 			return -1;
 		}
-		*ipaddr2 = vb.vb_ip;
 
 	} else {
 		/* No second IPv4 address: use 255.255.255.254 as upper bound. */
