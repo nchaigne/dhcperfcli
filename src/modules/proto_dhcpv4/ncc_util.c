@@ -1316,6 +1316,15 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	}
 		break;
 
+	case FR_TYPE_ETHERNET:
+	{
+		fr_type_t type = FR_TYPE_ETHERNET;
+		fr_value_box_t vb = { 0 };
+		if (fr_value_box_from_str(NULL, &vb, &type, NULL, value, len, '\0', false) < 0) INVALID_TYPE_VALUE;
+		if (out) memcpy(out, &vb.vb_ether, 6);
+	}
+		break;
+
 	case FR_TYPE_UINT8:
 		IN_RANGE_UNSIGNED(UINT8);
 		if (out) *(uint8_t *)out = uinteger;
