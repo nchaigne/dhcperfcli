@@ -861,49 +861,41 @@ ssize_t ncc_xlat_ipaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, 
  */
 int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const *in)
 {
-	fr_type_t type = FR_TYPE_ETHERNET;
-	fr_value_box_t vb = { 0 };
 	ssize_t len;
-	size_t inlen = 0;
 	char const *p = NULL;
+	char const *q = NULL;
 
 	if (in) {
-		inlen = strlen(in);
 		p = strchr(in, '-'); /* Range delimiter can be omitted (only lower bound is provided). */
+
+		/* Get start and length of first value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, in, p ? (p - in) : -1);
 	}
 
-	/* FreeRADIUS bug when handling just an int, cf. fr_value_box_from_str (src\lib\util\value.c)
-	 * https://github.com/FreeRADIUS/freeradius-server/issues/2596
-	 * => Now fixed, so we can allow int values once again.
-	 */
-	if ((inlen > 0) && (!p || p > in)) {
-		len = (p ? p - in : -1);
-
+	if (q) {
 		/* Convert the first Ethernet address. */
-		//if (is_integer_n(in, len)
-		//    || fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, in, len, '\0', false) < 0) {
+		if (ncc_value_from_str(ethaddr1, FR_TYPE_ETHERNET, q, len) < 0) {
 			fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
 			return -1;
 		}
-		memcpy(ethaddr1, &vb.vb_ether, 6);
-
 	} else {
 		/* No first Ethernet address: use 00:00:00:00:00:01 as lower bound. */
 		uint8_t ethaddr_min[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 		memcpy(ethaddr1, &ethaddr_min, 6);
 	}
 
-	if (p && p < in + inlen - 1) {
+	q = NULL;
+	if (p) {
+		/* Get start and length of second value, trimmed of whitespace. */
+		ncc_str_trim_ptr(&q, &len, p + 1, -1);
+	}
+
+	if (q) {
 		/* Convert the second Ethernet address. */
-		//if (is_integer_n(p + 1, -1)
-		//    || fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
-		if (fr_value_box_from_str(NULL, &vb, &type, NULL, (p + 1), -1, '\0', false) < 0) {
+		if (ncc_value_from_str(ethaddr2, FR_TYPE_ETHERNET, q, len) < 0) {
 			fr_strerror_printf("Invalid second ethaddr, in: [%s]", in);
 			return -1;
 		}
-		memcpy(ethaddr2, &vb.vb_ether, 6);
-
 	} else {
 		/* No second Ethernet address: use ff:ff:ff:ff:ff:fe as upper bound. */
 		uint8_t ethaddr_max[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
