@@ -32,6 +32,8 @@ int ncc_xlat_get_rcode(void);
 int ncc_xlat_file_add_fp(FILE *fp);
 int ncc_xlat_file_add(char const *filename);
 
+int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in);
+ssize_t ncc_xlat_file_csv(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
 int ncc_parse_file_raw(uint32_t *idx_file, char const *in);
 ssize_t ncc_xlat_file_raw(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
 

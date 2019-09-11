@@ -450,6 +450,11 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	return strlen(*out);
 }
 
+ssize_t ncc_xlat_file_csv(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_file_csv(ctx, out, outlen, NULL, NULL, NULL, fmt);
+}
+
 /*
  *	Parse file "<index>". Default: <index> = 0 (first file).
  */
