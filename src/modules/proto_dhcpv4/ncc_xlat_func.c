@@ -217,6 +217,22 @@ int ncc_xlat_get_rcode()
 }
 
 /*
+ *	Add an xlat file from its fp.
+ *	Returns the number of managed xlat files.
+ */
+int ncc_xlat_file_add_fp(FILE *fp)
+{
+	size_t num = talloc_array_length(ncc_xlat_files);
+
+	TALLOC_REALLOC_ZERO(xlat_ctx, ncc_xlat_files, ncc_xlat_file_t, num, num + 1);
+	ncc_xlat_file_t *xlat_file = &ncc_xlat_files[num];
+	xlat_file->idx_file = num;
+	xlat_file->fp = fp;
+
+	return num + 1;
+}
+
+/*
  *	Add a xlat file from which values will be read sequentially.
  */
 int ncc_xlat_file_add(char const *filename)
@@ -227,15 +243,9 @@ int ncc_xlat_file_add(char const *filename)
 		return -1;
 	}
 
-	size_t num = talloc_array_length(ncc_xlat_files);
+	int num = ncc_xlat_file_add_fp(fp);
 
-	DEBUG("Adding xlat file [%zd]: %s", num, filename);
-
-	TALLOC_REALLOC_ZERO(xlat_ctx, ncc_xlat_files, ncc_xlat_file_t, num, num + 1);
-	ncc_xlat_file_t *xlat_file = &ncc_xlat_files[num];
-	xlat_file->idx_file = num;
-	xlat_file->fp = fp;
-
+	DEBUG("Added xlat file [%zd]: %s", num, filename);
 	return 0;
 }
 
@@ -542,6 +552,7 @@ ssize_t ncc_xlat_file_raw(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, cha
 {
 	return _ncc_xlat_file_raw(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
+
 
 /*
  *	Parse a num range "<num1>-<num2>" and extract <num1> / <num2> as uint64_t.

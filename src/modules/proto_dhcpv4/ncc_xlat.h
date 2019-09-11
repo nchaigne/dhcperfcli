@@ -29,6 +29,7 @@ void ncc_xlat_free(void);
 void ncc_xlat_init_request(VALUE_PAIR *vps);
 void ncc_xlat_set_num(uint64_t num);
 int ncc_xlat_get_rcode(void);
+int ncc_xlat_file_add_fp(FILE *fp);
 int ncc_xlat_file_add(char const *filename);
 
 int ncc_parse_file_raw(uint32_t *idx_file, char const *in);
