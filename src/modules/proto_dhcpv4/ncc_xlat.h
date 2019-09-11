@@ -31,6 +31,9 @@ void ncc_xlat_set_num(uint64_t num);
 int ncc_xlat_get_rcode(void);
 int ncc_xlat_file_add(char const *filename);
 
+int ncc_parse_file_raw(uint32_t *idx_file, char const *in);
+ssize_t ncc_xlat_file_raw(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
+
 int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in);
 ssize_t ncc_xlat_num_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);
 ssize_t ncc_xlat_num_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt);

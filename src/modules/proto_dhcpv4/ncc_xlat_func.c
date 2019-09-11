@@ -538,6 +538,10 @@ static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	return strlen(*out);
 }
 
+ssize_t ncc_xlat_file_raw(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char const *fmt)
+{
+	return _ncc_xlat_file_raw(ctx, out, outlen, NULL, NULL, NULL, fmt);
+}
 
 /*
  *	Parse a num range "<num1>-<num2>" and extract <num1> / <num2> as uint64_t.
