@@ -96,6 +96,10 @@ Copy *dhcpercli* files into FreeRADIUS source tree:
 
 Note: file `all.mk` will be overwritten. This is necessary so FreeRADIUS knows that it has to build *dhcperfcli*.
 
+It is also necessary to add `dhcperfcli` to the `PROTOCOLS` list in FreeRADIUS Makefile (so that the dictionaries are included during install). This can be achieved as follows:
+
+>__`sed -i '/^PROTOCOLS.*/a\\tdhcperfcli \\' <FreeRADIUS sources>/Makefile`__<br>
+
 Then build FreeRADIUS again:
 >__`make`__<br>
 >__`make install`__
