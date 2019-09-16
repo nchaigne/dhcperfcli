@@ -50,6 +50,11 @@ int ncc_debug_lvl = 0;
 ncc_log_t ncc_default_log = {
 	.timestamp = L_TIMESTAMP_AUTO
 };
+ncc_log_t ncc_multiline_log = {
+	.timestamp = L_TIMESTAMP_AUTO,
+	.multiline = true,
+	.prefix_all = true
+};
 
 /*
  *	Initialize debug logging.
@@ -125,7 +130,14 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 		 * Then print all other errors (without the "fmt" prefix) on separate lines.
 		 */
 		while ((strerror = fr_strerror_pop())) {
-			ncc_log_printf(log, "  %s", strerror);
+			if (fmt && log->prefix_all) {
+				/* Repeat the prefix on each line - it is useful for aligned errors.
+				 * (cf. fr_canonicalize_error)
+				 */
+				ncc_log_printf(log, "%s: %s", tmp, strerror);
+			} else {
+				ncc_log_printf(log, "%s", strerror);
+			}
 		}
 
 	} else {
@@ -221,8 +233,31 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 	/* We want L_DBG_ERR even if debugging is not enabled. */
 	if (!(type == L_DBG_ERR) && lvl > request->log.lvl) return;
 
-	ncc_vlog_printf(&ncc_default_log, fmt, ap);
-	// for now. TODO.
+	//ncc_vlog_printf(&ncc_default_log, fmt, ap);
+
+	/* Expand the log message and push it back to fr_strerror_printf. */
+	if (fmt) {
+		char buf[256];
+		va_list aq;
+
+		va_copy(aq, ap);
+		vsnprintf(buf, sizeof(buf), fmt, ap);
+		va_end(aq);
+
+		fr_strerror_printf_push(buf);
+	}
+
+	// not sure about the va_copy, here's what FreeRADIUS team wrote in log.c
+
+	/*
+	 *  If we don't copy the original ap we get a segfault from vasprintf. This is apparently
+	 *  due to ap sometimes being implemented with a stack offset which is invalidated if
+	 *  ap is passed into another function. See here:
+	 *  http://julipedia.meroh.net/2011/09/using-vacopy-to-safely-pass-ap.html
+	 *
+	 *  I don't buy that explanation, but doing a va_copy here does prevent SEGVs seen when
+	 *  running unit tests which generate errors under CI.
+	 */
 }
 
 

@@ -36,17 +36,21 @@ typedef struct {
 	bool basename;                 //<! Print only source file base name.
 
 	bool multiline;                //<! If more than one error in the stack, print them on separate lines.
+	bool prefix_all;               //<! Repeat prefix on all of the lines.
 
 } ncc_log_t;
 
 extern ncc_log_t ncc_default_log;
+extern ncc_log_t ncc_multiline_log;
 extern FILE *ncc_log_fp;
 extern int ncc_debug_lvl;
-#define NCC_LOG_ENABLED          (ncc_log_fp)
-#define NCC_DEBUG_ENABLED(_p)    (ncc_log_fp && ncc_debug_lvl >= _p)
-#define NCC_DEBUG(_p, _f, ...)   do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG(_f, ...)         do { if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG_STACK(_f, ...)   do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _f, ## __VA_ARGS__); } while(0)
+
+#define NCC_LOG_ENABLED           (ncc_log_fp)
+#define NCC_DEBUG_ENABLED(_p)     (ncc_log_fp && ncc_debug_lvl >= _p)
+#define NCC_DEBUG(_p, _f, ...)    do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
+#define NCC_LOG(_f, ...)          do { if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _f, ## __VA_ARGS__); } while(0)
+#define NCC_LOG_STACK(_f, ...)    do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _f, ## __VA_ARGS__); } while(0)
+#define NCC_LOG_STACK_ML(_f, ...) do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_multiline_log, _f, ## __VA_ARGS__); } while(0)
 
 /*
 	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
@@ -98,6 +102,7 @@ extern int ncc_debug_lvl;
 #undef PERROR
 //#define PERROR(_f, ...) NCC_LOG("Error : " _f ": %s", ## __VA_ARGS__, fr_strerror())
 #define PERROR(_f, ...) NCC_LOG_STACK("Error : " _f, ## __VA_ARGS__)
+#define PERROR_ML(_f, ...) NCC_LOG_STACK_ML("Error : " _f, ## __VA_ARGS__)
 
 #define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
