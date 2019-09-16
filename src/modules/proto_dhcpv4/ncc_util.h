@@ -240,6 +240,7 @@ typedef struct ncc_fr_event_list {
 int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when);
 
 void ncc_log_init(FILE *log_fp, int debug_lvl);
+void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap);
 void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...);
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...);

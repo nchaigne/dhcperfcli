@@ -79,7 +79,10 @@ void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
 	}
 
-	vfprintf(ncc_log_fp, fmt, ap);
+	va_list aq; /* Safe usage requires a va_copy (caller may not expect the va_list to be consumed). */
+	va_copy(aq, ap);
+	vfprintf(ncc_log_fp, fmt, aq);
+	va_end(aq);
 	fprintf(ncc_log_fp, "\n");
 }
 void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
@@ -91,7 +94,6 @@ void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
 	va_start(ap, fmt);
 	ncc_vlog_printf(log, fmt, ap);
 	va_end(ap);
-	return;
 }
 
 /*
@@ -238,26 +240,14 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 	/* Expand the log message and push it back to fr_strerror_printf. */
 	if (fmt) {
 		char buf[256];
-		va_list aq;
 
+		va_list aq; /* Safe usage requires a va_copy (caller may not expect the va_list to be consumed). */
 		va_copy(aq, ap);
 		vsnprintf(buf, sizeof(buf), fmt, ap);
 		va_end(aq);
 
 		fr_strerror_printf_push(buf);
 	}
-
-	// not sure about the va_copy, here's what FreeRADIUS team wrote in log.c
-
-	/*
-	 *  If we don't copy the original ap we get a segfault from vasprintf. This is apparently
-	 *  due to ap sometimes being implemented with a stack offset which is invalidated if
-	 *  ap is passed into another function. See here:
-	 *  http://julipedia.meroh.net/2011/09/using-vacopy-to-safely-pass-ap.html
-	 *
-	 *  I don't buy that explanation, but doing a va_copy here does prevent SEGVs seen when
-	 *  running unit tests which generate errors under CI.
-	 */
 }
 
 
