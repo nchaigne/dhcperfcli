@@ -79,10 +79,7 @@ void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
 	}
 
-	va_list aq; /* Safe usage requires a va_copy (caller may not expect the va_list to be consumed). */
-	va_copy(aq, ap);
-	vfprintf(ncc_log_fp, fmt, aq);
-	va_end(aq);
+	vfprintf(ncc_log_fp, fmt, ap);
 	fprintf(ncc_log_fp, "\n");
 }
 void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
@@ -241,7 +238,13 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 	if (fmt) {
 		char buf[256];
 
-		va_list aq; /* Safe usage requires a va_copy (caller may not expect the va_list to be consumed). */
+		/* Using va_copy is necessary because FreeRADIUS may use the same va_list more than once
+		 * (to call multiple logging functions). See function log_request (src/lib/server/log.c).
+		 *
+		 * This has nothing to do with Julio Merino's dubious explanation.
+		 * It is perfectly safe to pass around a va_list between functions, as long as it is used only once.
+		 */
+		va_list aq;
 		va_copy(aq, ap);
 		vsnprintf(buf, sizeof(buf), fmt, ap);
 		va_end(aq);
