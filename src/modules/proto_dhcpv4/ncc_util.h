@@ -87,13 +87,13 @@ extern int ncc_debug_lvl;
 #define DEBUG4(_f, ...) NCC_DEBUG(4, _f, ## __VA_ARGS__)
 
 #undef INFO
-#define INFO(_f, ...) NCC_LOG(L_INFO, "Info : " _f, ## __VA_ARGS__)
+#define INFO(_f, ...) NCC_LOG(L_INFO, _f, ## __VA_ARGS__)
 
 #undef WARN
-#define WARN(_f, ...) NCC_LOG(L_WARN, "Warn : " _f, ## __VA_ARGS__)
+#define WARN(_f, ...) NCC_LOG(L_WARN, _f, ## __VA_ARGS__)
 
 #undef ERROR
-#define ERROR(_f, ...) NCC_LOG(L_ERR, "Error : " _f, ## __VA_ARGS__)
+#define ERROR(_f, ...) NCC_LOG(L_ERR, _f, ## __VA_ARGS__)
 
 #undef PWARN
 #define PWARN(_f, ...) NCC_LOG_STACK("Warn : " _f, ## __VA_ARGS__)
