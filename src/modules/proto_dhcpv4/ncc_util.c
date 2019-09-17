@@ -46,6 +46,7 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
 FILE *ncc_log_fp = NULL;
 fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
+fr_thread_local_setup(TALLOC_CTX *, ncc_vlog_pool)
 
 ncc_log_t ncc_default_log = {
 	.timestamp = L_TIMESTAMP_AUTO
@@ -56,8 +57,17 @@ ncc_log_t ncc_multiline_log = {
 	.prefix_all = true
 };
 
-/*
- *	Initialize debug logging.
+/**
+ * Free the memory pool.
+ */
+static void _ncc_vlog_pool_free(void *arg)
+{
+	talloc_free(arg);
+	ncc_vlog_pool = NULL;
+}
+
+/**
+ * Initialize logging.
  */
 void ncc_log_init(FILE *log_fp, int debug_lvl)
 {
@@ -68,19 +78,55 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 	ncc_debug_lvl = debug_lvl;
 }
 
-/*
- *	Print a log message.
+/**
+ * Print a log message.
  */
 void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, va_list ap)
 {
-	/* Print absolute date/time. */
-	if (log->timestamp == L_TIMESTAMP_ON) {
-		char datetime_buf[NCC_DATETIME_STRLEN];
-		fprintf(ncc_log_fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
+	TALLOC_CTX *pool;
+	char fmt_time[NCC_DATETIME_STRLEN];
+	char const *fmt_facility = "";
+	char *fmt_msg;
+
+	fmt_time[0] = '\0';
+
+	/*
+	 * Use a memory pool to avoid constantly rellocating memory on the heap.
+	 */
+	pool = ncc_vlog_pool;
+	if (!pool) {
+		pool = talloc_pool(NULL, 4096);
+		if (!pool) {
+			fr_perror("Failed allocating memory pool");
+			exit(EXIT_FAILURE);
+		}
+		fr_thread_local_set_destructor(ncc_vlog_pool, _ncc_vlog_pool_free, pool);
 	}
 
-	vfprintf(ncc_log_fp, fmt, ap);
-	fprintf(ncc_log_fp, "\n");
+	/* Print absolute date/time. */
+	if (log->timestamp == L_TIMESTAMP_ON) {
+		ncc_absolute_time_snprint(fmt_time, sizeof(fmt_time), NCC_DATETIME_FMT);
+	}
+
+	if (type) {
+		fmt_facility = fr_table_str_by_value(fr_log_levels, type, ": ");
+	}
+
+	fmt_msg = fr_vasprintf(pool, fmt, ap);
+
+	fprintf(ncc_log_fp,
+			"%s"	/* time */
+			"%s"	/* time sep */
+			"%s"	/* facility */
+			"%s"	/* message */
+			"\n",
+			fmt_time,
+			fmt_time[0] ? " " : "",
+			fmt_facility,
+			fmt_msg
+		);
+
+	talloc_free(fmt_msg);
 }
 void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, ...)
 {
@@ -93,8 +139,8 @@ void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, .
 	va_end(ap);
 }
 
-/*
- *	Print a log message and also pop all stacked FreeRADIUS error messages.
+/**
+ * Print a log message and also pop all stacked FreeRADIUS error messages.
  */
 int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 {
