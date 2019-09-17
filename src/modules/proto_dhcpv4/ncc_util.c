@@ -47,6 +47,8 @@ FILE *ncc_log_fp = NULL;
 fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
 fr_thread_local_setup(TALLOC_CTX *, ncc_vlog_pool)
+static uint32_t location_indent = 30;
+static char spaces[] = "                                                 ";
 
 ncc_log_t ncc_default_log = {
 	.timestamp = L_TIMESTAMP_AUTO,
@@ -82,9 +84,10 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 /**
  * Print a log message.
  */
-void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, va_list ap)
+void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, int line, char const *fmt, va_list ap)
 {
 	TALLOC_CTX *pool;
+	char const *fmt_location = "";
 	char fmt_time[NCC_DATETIME_STRLEN];
 	char const *fmt_facility = "";
 	char *fmt_msg;
@@ -104,11 +107,45 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, 
 		fr_thread_local_set_destructor(ncc_vlog_pool, _ncc_vlog_pool_free, pool);
 	}
 
-	/* Print absolute date/time. */
+	/* Only for Debug: allow to print file/line number. */
+	if (type == L_DBG) {
+		if (log->line_number) {
+			char const *filename = file;
+			size_t len;
+			int	pad = 0;
+			char *str;
+
+			if (log->basename) {
+				/* file is __FILE__ which is set at build time by gcc.
+				 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
+				 * Extract the file base name to have leaner traces.
+				 */
+				char *p = strrchr(file, FR_DIR_SEP);
+				if (p) filename = p + 1;
+			}
+
+			str = talloc_asprintf(pool, " )%s:%i", filename, line);
+			len = talloc_array_length(str) - 1;
+
+			/*
+			 *	Only increase the indent
+			 */
+			if (len > location_indent) {
+				location_indent = len;
+			} else {
+				pad = location_indent - len;
+			}
+
+			fmt_location = talloc_asprintf_append_buffer(str, "%.*s: ", pad, spaces);
+		}
+	}
+
+	/* Absolute date/time. */
 	if (log->timestamp == L_TIMESTAMP_ON) {
 		ncc_absolute_time_snprint(fmt_time, sizeof(fmt_time), NCC_DATETIME_FMT);
 	}
 
+	/* Facility, e.g. "Error : " for L_ERR. */
 	if (type) {
 		fmt_facility = fr_table_str_by_value(fr_log_levels, type, ": ");
 	}
@@ -116,11 +153,13 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, 
 	fmt_msg = fr_vasprintf(pool, fmt, ap);
 
 	fprintf(ncc_log_fp,
+			"%s"	/* location */
 			"%s"	/* time */
 			"%s"	/* time sep */
 			"%s"	/* facility */
 			"%s"	/* message */
 			"\n",
+			fmt_location,
 			fmt_time,
 			fmt_time[0] ? " " : "",
 			fmt_facility,
@@ -129,14 +168,14 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, 
 
 	talloc_free(fmt_msg);
 }
-void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, ...)
+void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, int line, char const *fmt, ...)
 {
 	va_list ap;
 
 	if (!ncc_log_fp || !fmt) return;
 
 	va_start(ap, fmt);
-	ncc_vlog_printf(log, type, fmt, ap);
+	ncc_vlog_printf(log, type, file, line, fmt, ap);
 	va_end(ap);
 }
 
@@ -152,7 +191,7 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 	if (!strerror) {
 		if (!fmt) return 0; /* No "fmt" and no error stack. */
 
-		ncc_vlog_printf(log, 0, fmt, ap);
+		ncc_vlog_printf(log, 0, NULL, 0, fmt, ap);
 		return 0;
 	}
 
@@ -167,9 +206,9 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 		 * If we have "fmt", concatenate it with the first error.
 		 */
 		if (fmt) {
-			ncc_log_printf(log, 0, "%s: %s", tmp, strerror);
+			ncc_log_printf(log, 0, NULL, 0, "%s: %s", tmp, strerror);
 		} else {
-			ncc_log_printf(log, 0, "%s", strerror);
+			ncc_log_printf(log, 0, NULL, 0, "%s", strerror);
 		}
 
 		/*
@@ -180,9 +219,9 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 				/* Repeat the prefix on each line - it is useful for aligned errors.
 				 * (cf. fr_canonicalize_error)
 				 */
-				ncc_log_printf(log, 0, "%s: %s", tmp, strerror);
+				ncc_log_printf(log, 0, NULL, 0, "%s: %s", tmp, strerror);
 			} else {
-				ncc_log_printf(log, 0, "%s", strerror);
+				ncc_log_printf(log, 0, NULL, 0, "%s", strerror);
 			}
 		}
 
@@ -195,7 +234,7 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 			strerror = fr_strerror_pop();
 		}
 
-		ncc_log_printf(log, 0, "%s", tmp);
+		ncc_log_printf(log, 0, NULL, 0, "%s", tmp);
 	}
 
 	if (tmp) talloc_free(tmp);
@@ -219,7 +258,6 @@ void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
  *	(ref: function fr_proto_print from lib/util/proto.c)
  */
 static unsigned int dev_log_indent = 30;
-static char spaces[] = "                                                 ";
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...)
 {
 	va_list ap;
