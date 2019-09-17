@@ -75,15 +75,15 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
  */
 
 /* Trace macros with prefixed session id. */
-#define DPC_SDEBUG(_p, _f, ...) if (NCC_DEBUG_ENABLED(_p)) NCC_LOG("(%u) " _f, session->id, ## __VA_ARGS__)
+#define DPC_SDEBUG(_p, _f, ...) if (NCC_DEBUG_ENABLED(_p)) NCC_LOG(0, "(%u) " _f, session->id, ## __VA_ARGS__)
 
 #define SDEBUG(_f, ...)  DPC_SDEBUG(1, _f, ## __VA_ARGS__)
 #define SDEBUG2(_f, ...) DPC_SDEBUG(2, _f, ## __VA_ARGS__)
-#define SERROR(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG("(%u) Error : " _f, session->id, ## __VA_ARGS__)
-#define SPERROR(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Error : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
+#define SERROR(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG(0, "(%u) Error : " _f, session->id, ## __VA_ARGS__)
+#define SPERROR(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG(0, "(%u) Error : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
 
-#define SWARN(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f, session->id, ## __VA_ARGS__)
-#define SPWARN(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG("(%u) Warn : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
+#define SWARN(_f, ...)  if (NCC_LOG_ENABLED) NCC_LOG(0, "(%u) Warn : " _f, session->id, ## __VA_ARGS__)
+#define SPWARN(_f, ...) if (NCC_LOG_ENABLED) NCC_LOG(0, "(%u) Warn : " _f ": %s", session->id, ## __VA_ARGS__, fr_strerror())
 
 
 /*

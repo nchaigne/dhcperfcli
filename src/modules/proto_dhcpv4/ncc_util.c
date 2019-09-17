@@ -71,7 +71,7 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 /*
  *	Print a log message.
  */
-void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
+void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, va_list ap)
 {
 	/* Print absolute date/time. */
 	if (log->timestamp == L_TIMESTAMP_ON) {
@@ -82,14 +82,14 @@ void ncc_vlog_printf(ncc_log_t const *log, char const *fmt, va_list ap)
 	vfprintf(ncc_log_fp, fmt, ap);
 	fprintf(ncc_log_fp, "\n");
 }
-void ncc_log_printf(ncc_log_t const *log, char const *fmt, ...)
+void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *fmt, ...)
 {
 	va_list ap;
 
 	if (!ncc_log_fp || !fmt) return;
 
 	va_start(ap, fmt);
-	ncc_vlog_printf(log, fmt, ap);
+	ncc_vlog_printf(log, type, fmt, ap);
 	va_end(ap);
 }
 
@@ -105,7 +105,7 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 	if (!strerror) {
 		if (!fmt) return 0; /* No "fmt" and no error stack. */
 
-		ncc_vlog_printf(log, fmt, ap);
+		ncc_vlog_printf(log, 0, fmt, ap);
 		return 0;
 	}
 
@@ -120,9 +120,9 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 		 * If we have "fmt", concatenate it with the first error.
 		 */
 		if (fmt) {
-			ncc_log_printf(log, "%s: %s", tmp, strerror);
+			ncc_log_printf(log, 0, "%s: %s", tmp, strerror);
 		} else {
-			ncc_log_printf(log, "%s", strerror);
+			ncc_log_printf(log, 0, "%s", strerror);
 		}
 
 		/*
@@ -133,9 +133,9 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 				/* Repeat the prefix on each line - it is useful for aligned errors.
 				 * (cf. fr_canonicalize_error)
 				 */
-				ncc_log_printf(log, "%s: %s", tmp, strerror);
+				ncc_log_printf(log, 0, "%s: %s", tmp, strerror);
 			} else {
-				ncc_log_printf(log, "%s", strerror);
+				ncc_log_printf(log, 0, "%s", strerror);
 			}
 		}
 
@@ -148,7 +148,7 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 			strerror = fr_strerror_pop();
 		}
 
-		ncc_log_printf(log, "%s", tmp);
+		ncc_log_printf(log, 0, "%s", tmp);
 	}
 
 	if (tmp) talloc_free(tmp);
@@ -232,7 +232,7 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 	/* We want L_DBG_ERR even if debugging is not enabled. */
 	if (!(type == L_DBG_ERR) && lvl > request->log.lvl) return;
 
-	//ncc_vlog_printf(&ncc_default_log, fmt, ap);
+	//ncc_vlog_printf(&ncc_default_log, 0, fmt, ap);
 
 	/* Expand the log message and push it back to fr_strerror_printf. */
 	if (fmt) {
