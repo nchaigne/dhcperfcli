@@ -246,7 +246,7 @@ void dpc_config_debug(dpc_config_t *config)
 
 	#define CONF_DEBUG_IPADDR(_x) { \
 		char ipaddr_buf[FR_IPADDR_STRLEN] = ""; \
-		if (fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &config->_x)) \
+		if ((config->_x.af == AF_INET) && fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &config->_x)) \
 			DEBUG("- %s = %s", STRINGIFY(_x), ipaddr_buf); \
 	}
 
