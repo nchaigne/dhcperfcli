@@ -113,7 +113,7 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file,
 	 * e.g. " )dhcperfcli.c:2556           : "
 	 *      " )src/modules/proto_dhcpv4/dhcperfcli.c:2556: "
 	 */
-	if (type == L_DBG && log->line_number) debug_location = true;
+	if (type == L_DBG && log->line_number && file) debug_location = true;
 	if (debug_location) {
 		char const *filename = file;
 		size_t len;
