@@ -49,7 +49,8 @@ int ncc_debug_lvl = 0;
 fr_thread_local_setup(TALLOC_CTX *, ncc_vlog_pool)
 
 ncc_log_t ncc_default_log = {
-	.timestamp = L_TIMESTAMP_AUTO
+	.timestamp = L_TIMESTAMP_AUTO,
+	.basename = true
 };
 ncc_log_t ncc_multiline_log = {
 	.timestamp = L_TIMESTAMP_AUTO,
