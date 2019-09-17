@@ -108,12 +108,16 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file,
 		fr_thread_local_set_destructor(ncc_vlog_pool, _ncc_vlog_pool_free, pool);
 	}
 
-	/* Only for Debug: allow to print file/line number. */
+	/* Only for Debug: print file/line number.
+	 * Try to keep messages aligned, allowing to increase indentation if needed (up to a limit determined by "spaces").
+	 * e.g. " )dhcperfcli.c:2556           : "
+	 *      " )src/modules/proto_dhcpv4/dhcperfcli.c:2556: "
+	 */
 	if (type == L_DBG && log->line_number) debug_location = true;
 	if (debug_location) {
 		char const *filename = file;
 		size_t len;
-		int	pad = 0;
+		int pad = 0;
 		char *str;
 
 		if (log->basename) {
@@ -129,7 +133,7 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file,
 		len = talloc_array_length(str) - 1;
 
 		/*
-		 *	Only increase the indent
+		 * Only increase the indent
 		 */
 		if (len > location_indent) {
 			location_indent = len;
@@ -174,7 +178,7 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file,
 			fmt_msg
 		);
 
-	talloc_free(fmt_msg);
+	talloc_free_children(pool); /* free all temporary allocations */
 }
 void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, int line, char const *fmt, ...)
 {
