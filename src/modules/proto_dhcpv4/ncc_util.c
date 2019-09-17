@@ -87,6 +87,7 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, int line, char const *fmt, va_list ap)
 {
 	TALLOC_CTX *pool;
+	bool debug_location = false;
 	char const *fmt_location = "";
 	char fmt_time[NCC_DATETIME_STRLEN];
 	char const *fmt_facility = "";
@@ -108,45 +109,52 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file,
 	}
 
 	/* Only for Debug: allow to print file/line number. */
-	if (type == L_DBG) {
-		if (log->line_number) {
-			char const *filename = file;
-			size_t len;
-			int	pad = 0;
-			char *str;
+	if (type == L_DBG && log->line_number) debug_location = true;
+	if (debug_location) {
+		char const *filename = file;
+		size_t len;
+		int	pad = 0;
+		char *str;
 
-			if (log->basename) {
-				/* file is __FILE__ which is set at build time by gcc.
-				 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
-				 * Extract the file base name to have leaner traces.
-				 */
-				char *p = strrchr(file, FR_DIR_SEP);
-				if (p) filename = p + 1;
-			}
-
-			str = talloc_asprintf(pool, " )%s:%i", filename, line);
-			len = talloc_array_length(str) - 1;
-
-			/*
-			 *	Only increase the indent
+		if (log->basename) {
+			/* file is __FILE__ which is set at build time by gcc.
+			 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
+			 * Extract the file base name to have leaner traces.
 			 */
-			if (len > location_indent) {
-				location_indent = len;
-			} else {
-				pad = location_indent - len;
-			}
-
-			fmt_location = talloc_asprintf_append_buffer(str, "%.*s: ", pad, spaces);
+			char *p = strrchr(file, FR_DIR_SEP);
+			if (p) filename = p + 1;
 		}
+
+		str = talloc_asprintf(pool, " )%s:%i", filename, line);
+		len = talloc_array_length(str) - 1;
+
+		/*
+		 *	Only increase the indent
+		 */
+		if (len > location_indent) {
+			location_indent = len;
+		} else {
+			pad = location_indent - len;
+		}
+
+		fmt_location = talloc_asprintf_append_buffer(str, "%.*s: ", pad, spaces);
+
+		/* Print elapsed time, e.g. "t(0.001)". */
+		char time_buf[NCC_TIME_STRLEN];
+		snprintf(fmt_time, sizeof(fmt_time), "t(%s)",
+		         ncc_fr_delta_time_sprint(time_buf, &fte_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
+		// ncc_fr_delta_time_sprint should take sizeof(fmt_time): TODO.
 	}
 
 	/* Absolute date/time. */
-	if (log->timestamp == L_TIMESTAMP_ON) {
+	if (!fmt_time[0] && log->timestamp == L_TIMESTAMP_ON) {
 		ncc_absolute_time_snprint(fmt_time, sizeof(fmt_time), NCC_DATETIME_FMT);
 	}
 
-	/* Facility, e.g. "Error : " for L_ERR. */
-	if (type) {
+	/* Facility, e.g. "Error : " for L_ERR.
+	 * ... except for Debug with location printed (in which case this is obvious this is debug)
+	 */
+	if (type && !debug_location) {
 		fmt_facility = fr_table_str_by_value(fr_log_levels, type, ": ");
 	}
 
