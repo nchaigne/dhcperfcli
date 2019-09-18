@@ -194,7 +194,7 @@ void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, 
 /**
  * Print a log message and also pop all stacked FreeRADIUS error messages.
  */
-int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
+int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, va_list ap)
 {
 	char *tmp = NULL;
 	char const *strerror;
@@ -252,14 +252,14 @@ int ncc_vlog_perror(ncc_log_t const *log, char const *fmt, va_list ap)
 	if (tmp) talloc_free(tmp);
 	return 0;
 }
-void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
+void ncc_log_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, ...)
 {
 	va_list ap;
 
 	if (!ncc_log_fp) return;
 
 	va_start(ap, fmt);
-	ncc_vlog_perror(log, fmt, ap);
+	ncc_vlog_perror(log, type, fmt, ap);
 	va_end(ap);
 }
 
