@@ -265,58 +265,19 @@ void ncc_log_perror(ncc_log_t const *log, char const *fmt, ...)
 
 /*
  *	Print a debug log message.
- *	Add extra information (file, line) if developper print is enabled.
- *
- *	(ref: function fr_proto_print from lib/util/proto.c)
+ *	Now merely invoke ncc_vlog_printf which does the real work.
  */
-static unsigned int dev_log_indent = 30;
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...)
 {
 	va_list ap;
-	size_t len;
-	char prefix[256];
-	char const *filename = file;
+
+	if (!ncc_log_fp || !fmt) return;
 
 	va_start(ap, fmt);
-	if (!ncc_log_fp) {
-		va_end(ap);
-		return;
-	}
-
-	if (log->line_number) {
-		if (log->basename) {
-			/* file is __FILE__ which is set at build time by gcc.
-			 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
-			 * Extract the file base name to have leaner traces.
-			 */
-			char *p = strrchr(file, FR_DIR_SEP);
-			if (p) filename = p + 1;
-		}
-
-		len = snprintf(prefix, sizeof(prefix), " )%s:%i", filename, line);
-		if (len > dev_log_indent) dev_log_indent = len;
-
-		fprintf(ncc_log_fp, "%s%.*s: ", prefix, (int)(dev_log_indent - len), spaces);
-
-		/* Print elapsed time. */
-		char time_buf[NCC_TIME_STRLEN];
-		fprintf(ncc_log_fp, "t(%s) ",
-		        ncc_fr_delta_time_sprint(time_buf, &fte_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
-
-	} else {
-		/* Print absolute date/time. */
-		if (log->timestamp == L_TIMESTAMP_ON) {
-			char datetime_buf[NCC_DATETIME_STRLEN];
-			fprintf(ncc_log_fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATETIME_FMT));
-		}
-	}
-
-	/* And then the actual log message. */
-	vfprintf(ncc_log_fp, fmt, ap);
+	ncc_vlog_printf(log, L_DBG, file, line, fmt, ap);
 	va_end(ap);
 
-	fprintf(ncc_log_fp, "\n");
-	fflush(ncc_log_fp);
+	fflush(ncc_log_fp); // is this needed ?
 }
 
 /*
