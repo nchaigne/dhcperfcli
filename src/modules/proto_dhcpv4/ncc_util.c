@@ -203,7 +203,7 @@ int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, v
 	if (!strerror) {
 		if (!fmt) return 0; /* No "fmt" and no error stack. */
 
-		ncc_vlog_printf(log, 0, NULL, 0, fmt, ap);
+		ncc_vlog_printf(log, type, NULL, type, fmt, ap);
 		return 0;
 	}
 
@@ -218,9 +218,9 @@ int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, v
 		 * If we have "fmt", concatenate it with the first error.
 		 */
 		if (fmt) {
-			ncc_log_printf(log, 0, NULL, 0, "%s: %s", tmp, strerror);
+			ncc_log_printf(log, type, NULL, 0, "%s: %s", tmp, strerror);
 		} else {
-			ncc_log_printf(log, 0, NULL, 0, "%s", strerror);
+			ncc_log_printf(log, type, NULL, 0, "%s", strerror);
 		}
 
 		/*
@@ -231,9 +231,9 @@ int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, v
 				/* Repeat the prefix on each line - it is useful for aligned errors.
 				 * (cf. fr_canonicalize_error)
 				 */
-				ncc_log_printf(log, 0, NULL, 0, "%s: %s", tmp, strerror);
+				ncc_log_printf(log, type, NULL, 0, "%s: %s", tmp, strerror);
 			} else {
-				ncc_log_printf(log, 0, NULL, 0, "%s", strerror);
+				ncc_log_printf(log, type, NULL, 0, "%s", strerror);
 			}
 		}
 
@@ -246,7 +246,7 @@ int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, v
 			strerror = fr_strerror_pop();
 		}
 
-		ncc_log_printf(log, 0, NULL, 0, "%s", tmp);
+		ncc_log_printf(log, type, NULL, 0, "%s", tmp);
 	}
 
 	if (tmp) talloc_free(tmp);
