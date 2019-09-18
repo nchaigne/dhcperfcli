@@ -96,11 +96,11 @@ extern int ncc_debug_lvl;
 #define ERROR(_f, ...) NCC_LOG(L_ERR, _f, ## __VA_ARGS__)
 
 #undef PWARN
-#define PWARN(_f, ...) NCC_LOG_STACK(L_WARN, "Warn : " _f, ## __VA_ARGS__)
+#define PWARN(_f, ...) NCC_LOG_STACK(L_WARN, _f, ## __VA_ARGS__)
 
 #undef PERROR
-#define PERROR(_f, ...) NCC_LOG_STACK(L_ERR, "Error : " _f, ## __VA_ARGS__)
-#define PERROR_ML(_f, ...) NCC_LOG_STACK_ML(L_ERR, "Error : " _f, ## __VA_ARGS__)
+#define PERROR(_f, ...) NCC_LOG_STACK(L_ERR, _f, ## __VA_ARGS__)
+#define PERROR_ML(_f, ...) NCC_LOG_STACK_ML(L_ERR, _f, ## __VA_ARGS__)
 
 #define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
