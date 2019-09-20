@@ -49,7 +49,7 @@ int ncc_debug_lvl = 0;
 fr_thread_local_setup(TALLOC_CTX *, ncc_vlog_pool)
 static uint32_t location_indent = 30;
 static char const spaces_location[] = "                                                 ";
-static char const spaces_marker[] = "                                                                                                    ";
+static char const spaces_marker[] = "                                                                                "; // 80
 
 ncc_log_t ncc_default_log = {
 	.timestamp = L_TIMESTAMP_AUTO,
@@ -200,6 +200,7 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
                    char const *str, size_t idx, char const *fmt, ...)
 {
 	char const *prefix = "";
+	char const *suffix = "";
 	va_list ap;
 	char *errstr;
 
@@ -208,6 +209,11 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 		return -1;
 	}
 
+	va_start(ap, fmt);
+	errstr = fr_vasprintf(NULL, fmt, ap);
+	va_end(ap);
+
+	/* If marker position would exceed spaces buffer, skip characters at the beginning of string. */
 	if (idx >= sizeof(spaces_marker)) {
 		size_t offset = (idx - (sizeof(spaces_marker) - 1)) + (sizeof(spaces_marker) * 0.75);
 		idx -= offset;
@@ -216,11 +222,18 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 		prefix = "... ";
 	}
 
-	ncc_log_printf(log, type, file, line, "%s%s", prefix, str);
+	int len_str = strlen(str); // length of the input string (possibly shortened).
+	int len_err = strlen(prefix) + idx + 2 + strlen(errstr); // length of the marker string with the error message.
 
-	va_start(ap, fmt);
-	errstr = fr_vasprintf(NULL, fmt, ap);
-	va_end(ap);
+	/* If marker error string is long, and input string is even longer, skip characters at the end of string.
+	 * Align the end of the two strings.
+	 */
+	if (len_err > 100 && len_str > len_err) {
+		suffix = " ...";
+		len_str = len_err - strlen(prefix) - strlen(suffix);
+	}
+	ncc_log_printf(log, type, file, line, "%s%.*s%s", prefix, len_str, str, suffix);
+
 	ncc_log_printf(log, type, file, line, "%s%.*s^ %s", prefix, (int) idx, spaces_marker, errstr);
 	talloc_free(errstr);
 
