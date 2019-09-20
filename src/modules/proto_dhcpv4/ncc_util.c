@@ -48,7 +48,8 @@ fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
 fr_thread_local_setup(TALLOC_CTX *, ncc_vlog_pool)
 static uint32_t location_indent = 30;
-static char spaces[] = "                                                 ";
+static char const spaces_location[] = "                                                 ";
+static char const spaces_marker[] = "                                                                                                    ";
 
 ncc_log_t ncc_default_log = {
 	.timestamp = L_TIMESTAMP_AUTO,
@@ -141,7 +142,7 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file,
 			pad = location_indent - len;
 		}
 
-		fmt_location = talloc_asprintf_append_buffer(str, "%.*s: ", pad, spaces);
+		fmt_location = talloc_asprintf_append_buffer(str, "%.*s: ", pad, spaces_location);
 
 		/* Print elapsed time, e.g. "t(0.001)". */
 		char time_buf[NCC_TIME_STRLEN];
@@ -189,6 +190,34 @@ void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, 
 	va_start(ap, fmt);
 	ncc_vlog_printf(log, type, file, line, fmt, ap);
 	va_end(ap);
+}
+
+/**
+ * Write the string being parsed, and a marker showing where the parse error occurred.
+ * Similar to log_request_marker (fr_canonicalize_error doesn't seem to work as expected).
+ */
+void ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, int line,
+                    char const *str, size_t idx, char const *fmt, ...)
+{
+	char const *prefix = "";
+	va_list ap;
+	char *errstr;
+
+	if (idx >= sizeof(spaces_marker)) {
+		size_t offset = (idx - (sizeof(spaces_marker) - 1)) + (sizeof(spaces_marker) * 0.75);
+		idx -= offset;
+		str += offset;
+
+		prefix = "... ";
+	}
+
+	ncc_log_printf(log, type, file, line, "%s%s", prefix, str);
+
+	va_start(ap, fmt);
+	errstr = fr_vasprintf(NULL, fmt, ap);
+	va_end(ap);
+	ncc_log_printf(log, type, file, line, "%s%.*s^ %s", prefix, (int) idx, spaces_marker, errstr);
+	talloc_free(errstr);
 }
 
 /**
