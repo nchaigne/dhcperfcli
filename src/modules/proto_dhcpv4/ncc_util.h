@@ -47,12 +47,26 @@ extern int ncc_debug_lvl;
 
 #define NCC_LOG_ENABLED           (ncc_log_fp)
 #define NCC_DEBUG_ENABLED(_p)     (ncc_log_fp && ncc_debug_lvl >= _p)
-#define NCC_DEBUG(_p, _f, ...)    do { if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG(_lvl, _f, ...)    do { if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _lvl, __FILE__, __LINE__, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG_STACK(_lvl, _f, ...) do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _lvl, _f, ## __VA_ARGS__); } while(0)
-#define NCC_LOG_STACK_ML(_lvl, _f, ...) do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_multiline_log, _lvl, _f, ## __VA_ARGS__); } while(0)
 
-#define NCC_LOG_MARKER(_lvl, _str, _idx, _f, ...) do { if (NCC_LOG_ENABLED) ncc_log_marker(&ncc_default_log, _lvl, __FILE__, __LINE__, _str, _idx, _f, ## __VA_ARGS__); } while(0)
+#define NCC_DEBUG(_p, _f, ...) do { \
+	if (NCC_DEBUG_ENABLED(_p)) ncc_log_dev_printf(&ncc_default_log, __FILE__, __LINE__, _f, ## __VA_ARGS__); \
+} while (0)
+
+#define NCC_LOG(_lvl, _f, ...) do { \
+	if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _lvl, __FILE__, __LINE__, _f, ## __VA_ARGS__); \
+} while (0)
+
+#define NCC_LOG_STACK(_lvl, _f, ...) do { \
+	if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _lvl, _f, ## __VA_ARGS__); \
+} while (0)
+
+#define NCC_LOG_STACK_ML(_lvl, _f, ...) do { \
+	if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_multiline_log, _lvl, _f, ## __VA_ARGS__); \
+} while (0)
+
+#define NCC_LOG_MARKER(_lvl, _str, _idx, _f, ...) do { \
+	if (NCC_LOG_ENABLED) ncc_log_marker(&ncc_default_log, _lvl, __FILE__, __LINE__, _str, _idx, _f, ## __VA_ARGS__); \
+} while (0)
 
 
 /*
@@ -147,8 +161,7 @@ extern int ncc_debug_lvl;
 /* Check if we have enough remaining buffer space. If not push an error and return NULL.
  * Otherwise, update the current char pointer.
  */
-#define ERR_IF_TRUNCATED(_p, _ret, _max) \
-do { \
+#define ERR_IF_TRUNCATED(_p, _ret, _max) do { \
 	if (is_truncated(_ret, _max)) { \
 		ERR_BUFFER_SIZE(_ret, _max, ""); \
 		return NULL; \
