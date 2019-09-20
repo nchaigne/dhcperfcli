@@ -196,12 +196,17 @@ void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, 
  * Write the string being parsed, and a marker showing where the parse error occurred.
  * Similar to log_request_marker (fr_canonicalize_error doesn't seem to work as expected).
  */
-void ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, int line,
-                    char const *str, size_t idx, char const *fmt, ...)
+int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, int line,
+                   char const *str, size_t idx, char const *fmt, ...)
 {
 	char const *prefix = "";
 	va_list ap;
 	char *errstr;
+
+	if (idx >= strlen(str)) {
+		/* Marked character does not exist. */
+		return -1;
+	}
 
 	if (idx >= sizeof(spaces_marker)) {
 		size_t offset = (idx - (sizeof(spaces_marker) - 1)) + (sizeof(spaces_marker) * 0.75);
@@ -218,6 +223,8 @@ void ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, 
 	va_end(ap);
 	ncc_log_printf(log, type, file, line, "%s%.*s^ %s", prefix, (int) idx, spaces_marker, errstr);
 	talloc_free(errstr);
+
+	return 0;
 }
 
 /**
