@@ -2288,15 +2288,9 @@ static bool dpc_input_parse(dpc_input_t *input)
 				 */
 
 				if (slen < 0) {
-					char *spaces, *text;
-					fr_canonicalize_error(input, &spaces, &text, slen, vp->xlat);
-
 					WARN("Failed to parse '%s' expansion string. Discarding input (id: %u)", vp->da->name, input->id);
-					INFO("%s", text);
-					INFO("%s^ %s", spaces, fr_strerror());
+					NCC_LOG_MARKER(L_INFO, vp->xlat, (-slen), "%s", fr_strerror());
 
-					talloc_free(spaces);
-					talloc_free(text);
 					talloc_free(value);
 					talloc_free(xlat);
 

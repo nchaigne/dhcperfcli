@@ -52,6 +52,9 @@ extern int ncc_debug_lvl;
 #define NCC_LOG_STACK(_lvl, _f, ...) do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _lvl, _f, ## __VA_ARGS__); } while(0)
 #define NCC_LOG_STACK_ML(_lvl, _f, ...) do { if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_multiline_log, _lvl, _f, ## __VA_ARGS__); } while(0)
 
+#define NCC_LOG_MARKER(_lvl, _str, _idx, _f, ...) do { if (NCC_LOG_ENABLED) ncc_log_marker(&ncc_default_log, _lvl, __FILE__, __LINE__, _str, _idx, _f, ## __VA_ARGS__); } while(0)
+
+
 /*
 	Note: FreeRADIUS logs macros are defined in src/lib/server/log.h
 
