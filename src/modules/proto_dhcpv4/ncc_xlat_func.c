@@ -198,6 +198,11 @@ void ncc_xlat_set_num(uint64_t num)
 	FX_request->child_number = 0; /* The index of the xlat context for this input. */
 	FX_request->rcode = 0; /* Stores xlat error code. */
 
+	/* Allow to use the one-letter "request time" expansions, such as %S (YYYYY-MM-DD HH:MI:SS).
+	 * Cf. function xlat_eval_one_letter (src/lib/server/xlat_eval.c).
+	 */
+	FX_request->packet->timestamp = fr_time();
+
 	/* Free previously stored values for xlat file. */
 	int i;
 	for (i = 0; i < talloc_array_length(ncc_xlat_files); i++) {
