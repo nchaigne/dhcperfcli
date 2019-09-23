@@ -194,17 +194,28 @@ void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, 
 
 /**
  * Write the string being parsed, and a marker showing where the parse error occurred.
- * Similar to log_request_marker (fr_canonicalize_error doesn't seem to work as expected).
+ * Similar to fr_canonicalize_error / fr_canonicalize_error.
  */
 int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, int line,
                    char const *str, size_t idx, char const *fmt, ...)
 {
-	char const *prefix = "";
-	char const *suffix = "";
 	va_list ap;
 	char *errstr;
+	size_t offset, prefix, suffix;
+	char *p;
+	char const *start;
+	char *value;
+	size_t inlen;
 
-	if (idx >= strlen(str)) {
+	offset = idx;
+
+	inlen = strlen(str);
+	start = str;
+	prefix = suffix = 0;
+
+	TALLOC_CTX *ctx = NULL;
+
+	if (idx >= inlen) {
 		/* Marked character does not exist. */
 		return -1;
 	}
@@ -213,28 +224,57 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 	errstr = fr_vasprintf(NULL, fmt, ap);
 	va_end(ap);
 
-	/* If marker position would exceed spaces buffer, skip characters at the beginning of string. */
-	if (idx >= sizeof(spaces_marker)) {
-		size_t offset = (idx - (sizeof(spaces_marker) - 1)) + (sizeof(spaces_marker) * 0.75);
-		idx -= offset;
-		str += offset;
-
-		prefix = "... ";
-	}
-
-	int len_str = strlen(str); // length of the input string (possibly shortened).
-	int len_err = strlen(prefix) + idx + 2 + strlen(errstr); // length of the marker string with the error message.
-
-	/* If marker error string is long, and input string is even longer, skip characters at the end of string.
-	 * Align the end of the two strings.
+	/*
+	 * Too many characters before the inflection point. Skip leading text.
 	 */
-	if (len_err > 100 && len_str > len_err) {
-		suffix = " ...";
-		len_str = len_err - strlen(prefix) - strlen(suffix);
-	}
-	ncc_log_printf(log, type, file, line, "%s%.*s%s", prefix, len_str, str, suffix);
+	if (offset > 30) {
+		size_t skip = offset - 30;
 
-	ncc_log_printf(log, type, file, line, "%s%.*s^ %s", prefix, (int) idx, spaces_marker, errstr);
+		start += skip;
+		inlen -= skip;
+		offset -= skip;
+		prefix = 4;
+	}
+
+	int len_err = prefix + offset + 2 + strlen(errstr); /* [... ]<spaces>^ <error> */
+
+	/*
+	 * Too many characters after the inflection point. Truncate end of text.
+	 * Do not truncate before the end of the error string though.
+	 */
+	int end_limit = offset + 40;
+	if (inlen > end_limit && inlen > len_err) {
+
+		if (end_limit >= len_err) inlen = end_limit; /* Allow truncation to extend past the error string. */
+		else inlen = len_err; /* Truncate to align with the error string. */
+
+		suffix = 4;
+	}
+
+	/*
+	 * Allocate an array to hold just the text we need.
+	 */
+	value = talloc_array(ctx, char, prefix + inlen + 1 + suffix);
+	if (prefix) {
+		memcpy(value, "... ", 4);
+	}
+	memcpy(value + prefix, start, inlen);
+	if (suffix) {
+		memcpy(value + prefix + inlen, " ...", 4);
+	}
+	value[prefix + inlen + suffix] = '\0';
+
+	/*
+	 * Smash tabs to spaces for the input string.
+	 */
+	for (p = value; *p != '\0'; p++) {
+		if (*p == '\t') *p = ' ';
+	}
+
+	ncc_log_printf(log, type, file, line, "%s", value);
+	ncc_log_printf(log, type, file, line, "%.*s^ %s", prefix + offset, spaces_marker, errstr);
+
+	talloc_free(value);
 	talloc_free(errstr);
 
 	return 0;
