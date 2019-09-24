@@ -2852,6 +2852,7 @@ static struct option long_options[] = {
 	 * Note: these must be defined at the beginning, because they are identified by their index in this array.
 	 */
 	{ "conf-file",              required_argument, NULL, 1 },
+	{ "conf-inline",            required_argument, NULL, 1 },
 	{ "debug",                  no_argument,       NULL, 1 },
 	{ "input-rate",             required_argument, NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
@@ -2883,6 +2884,7 @@ typedef enum {
 	 * It must match long_options order defined above.
 	 */
 	LONGOPT_IDX_CONF_FILE = 0,
+	LONGOPT_IDX_CONF_INLINE,
 	LONGOPT_IDX_DEBUG,
 	LONGOPT_IDX_INPUT_RATE,
 	LONGOPT_IDX_RETRANSMIT,
@@ -3091,6 +3093,10 @@ static void dpc_options_parse(int argc, char **argv)
 			switch (opt_index) {
 			case LONGOPT_IDX_CONF_FILE: // --conf-file
 				file_config = optarg;
+				break;
+
+			case LONGOPT_IDX_CONF_INLINE: // --conf-inline
+				conf_inline = optarg;
 				break;
 
 			case LONGOPT_IDX_DEBUG: // --debug
