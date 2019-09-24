@@ -56,7 +56,7 @@ typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
 dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx);
-int dpc_config_init(dpc_config_t *config, char const *conf_file);
+int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *conf_inline);
 int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handle);
 int dpc_config_check(dpc_config_t *config);
 void dpc_config_debug(dpc_config_t *config);

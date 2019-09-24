@@ -131,12 +131,35 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
  *	Read the configuration file (if provided).
  *	Parse the configuration (even without a file: this allows to set the default values).
  */
-int dpc_config_init(dpc_config_t *config, char const *conf_file)
+int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *conf_inline)
 {
 	CONF_SECTION *cs = NULL;
 
 	cs = cf_section_alloc(NULL, NULL, "main", NULL);
 	if (!cs) return -1;
+
+	char *tmp_file = NULL;
+	if (conf_inline) {
+		/* Create a temporary configuration file so FreeRADIUS can read from it. */
+		tmp_file = tempnam(".", "_dpc_");
+
+		FILE *fp_tmp = fopen(tmp_file, "w");
+		if (!fp_tmp) {
+			ERROR("Failed to open temporary file %s", tmp_file);
+			goto failure;
+		}
+
+		/* Write inline configuration. */
+		fprintf(fp_tmp, "%s", conf_inline);
+
+		/* If a configuration file is provided, include it. */
+		if (conf_file) {
+			fprintf(fp_tmp, "\n$INCLUDE %s\n", conf_file);
+		}
+		fclose(fp_tmp);
+
+		conf_file = tmp_file;
+	}
 
 	/* Read the configuration file (if provided) */
 	if (conf_file && cf_file_read(cs, conf_file) < 0) {
@@ -170,10 +193,12 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file)
 
 	fr_strerror(); /* Clear the error buffer */
 
+	if (tmp_file) unlink(tmp_file);
 	return 0;
 
 failure:
 	talloc_free(cs);
+	if (tmp_file) unlink(tmp_file);
 	return -1;
 }
 

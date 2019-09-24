@@ -125,6 +125,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 };
 
 static char const *file_config; /* Optional configuration file. */
+static char const *conf_inline;
 
 static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t *event_list;
@@ -3310,7 +3311,7 @@ int main(int argc, char **argv)
 	/*
 	 *	Read the configuration file (if provided), and parse configuration.
 	 */
-	if (dpc_config_init(dpc_config, file_config) < 0) exit(EXIT_FAILURE);
+	if (dpc_config_init(dpc_config, file_config, conf_inline) < 0) exit(EXIT_FAILURE);
 	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
