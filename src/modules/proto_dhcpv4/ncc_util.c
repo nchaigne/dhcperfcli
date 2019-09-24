@@ -201,17 +201,18 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 {
 	va_list ap;
 	char *errstr;
-	size_t offset, prefix, suffix;
+	size_t offset, prefix_len, suffix_len;
+	char const *prefix = "... ";
+	char const *suffix = " ...";
 	char *p;
 	char const *start;
 	char *value;
 	size_t inlen;
 
 	offset = idx;
-
 	inlen = strlen(str);
 	start = str;
-	prefix = suffix = 0;
+	prefix_len = suffix_len = 0;
 
 	TALLOC_CTX *ctx = NULL;
 
@@ -228,15 +229,17 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 	 * Too many characters before the inflection point. Skip leading text.
 	 */
 	if (offset > 30) {
-		size_t skip = offset - 30;
+		prefix_len = strlen(prefix);
+
+		/* Ensure the resulting string (with prefix) is actually shorter than the original. */
+		size_t skip = offset - (30 - prefix_len);
 
 		start += skip;
 		inlen -= skip;
 		offset -= skip;
-		prefix = 4;
 	}
 
-	int len_err = prefix + offset + 2 + strlen(errstr); /* [... ]<spaces>^ <error> */
+	int len_err = prefix_len + offset + 2 + strlen(errstr); /* [... ]<spaces>^ <error> */
 
 	/*
 	 * Too many characters after the inflection point. Truncate end of text.
@@ -244,25 +247,24 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 	 */
 	int end_limit = offset + 40;
 	if (inlen > end_limit && inlen > len_err) {
+		suffix_len = strlen(suffix);
 
 		if (end_limit >= len_err) inlen = end_limit; /* Allow truncation to extend past the error string. */
 		else inlen = len_err; /* Truncate to align with the error string. */
-
-		suffix = 4;
 	}
 
 	/*
 	 * Allocate an array to hold just the text we need.
 	 */
-	value = talloc_array(ctx, char, prefix + inlen + 1 + suffix);
-	if (prefix) {
-		memcpy(value, "... ", 4);
+	value = talloc_array(ctx, char, prefix_len + inlen + 1 + suffix_len);
+	if (prefix_len) {
+		memcpy(value, prefix, prefix_len);
 	}
-	memcpy(value + prefix, start, inlen);
-	if (suffix) {
-		memcpy(value + prefix + inlen, " ...", 4);
+	memcpy(value + prefix_len, start, inlen);
+	if (suffix_len) {
+		memcpy(value + prefix_len + inlen, suffix, suffix_len);
 	}
-	value[prefix + inlen + suffix] = '\0';
+	value[prefix_len + inlen + suffix_len] = '\0';
 
 	/*
 	 * Smash tabs to spaces for the input string.
@@ -272,7 +274,7 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 	}
 
 	ncc_log_printf(log, type, file, line, "%s", value);
-	ncc_log_printf(log, type, file, line, "%.*s^ %s", prefix + offset, spaces_marker, errstr);
+	ncc_log_printf(log, type, file, line, "%.*s^ %s", prefix_len + offset, spaces_marker, errstr);
 
 	talloc_free(value);
 	talloc_free(errstr);
