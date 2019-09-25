@@ -140,12 +140,21 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 
 	char *tmp_file = NULL;
 	if (conf_inline) {
-		/* Create a temporary configuration file so FreeRADIUS can read from it. */
-		tmp_file = tempnam(".", "_dpc_");
+		/* Create a temporary configuration file so FreeRADIUS can read from it.
+		 * It is created in current directory so that include works with relative path.
+		 *
+		 * Note: "If mktemp cannot find a unique file name, it makes template an empty string and returns that."
+		 */
+		char template[] = "./dhcperfcli.conf.tmp_XXXXXX"; /* must end with "XXXXXX". */
+		tmp_file = mktemp(template);
+		if (!tmp_file || tmp_file[0] == '\0') {
+			ERROR("Failed to generate temporary file name");
+			goto failure;
+		}
 
 		FILE *fp_tmp = fopen(tmp_file, "w");
 		if (!fp_tmp) {
-			ERROR("Failed to open temporary file %s", tmp_file);
+			ERROR("Failed to open temporary file %s: %s", tmp_file, fr_syserror(errno));
 			goto failure;
 		}
 
