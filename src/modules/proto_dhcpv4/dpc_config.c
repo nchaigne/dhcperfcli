@@ -32,6 +32,15 @@ static const CONF_PARSER _log_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
+static const CONF_PARSER _progress_config[] = {
+	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval) }, /* No default */
+	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
+	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
+	{ FR_CONF_OFFSET("per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
+
+	CONF_PARSER_TERMINATOR
+};
+
 static const CONF_PARSER _timing_config[] = {
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
@@ -48,11 +57,6 @@ static const CONF_PARSER _packet_config[] = {
 };
 
 static const CONF_PARSER _main_config[] = {
-	{ FR_CONF_OFFSET("progress_interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval) }, /* No default */
-	{ FR_CONF_OFFSET("pr_stat_timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
-	{ FR_CONF_OFFSET("pr_stat_per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
-	{ FR_CONF_OFFSET("pr_stat_per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
-
 	{ FR_CONF_OFFSET("template", FR_TYPE_BOOL, dpc_config_t, template) }, /* No default */
 	{ FR_CONF_OFFSET("xlat", FR_TYPE_BOOL, dpc_config_t, xlat) }, /* No default */
 	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
@@ -69,6 +73,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("session_max_active", FR_TYPE_UINT32, dpc_config_t, session_max_active) }, /* No default */
 
 	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },
+	{ FR_CONF_POINTER("progress", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _progress_config },
 	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
 	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _timing_config },
 
