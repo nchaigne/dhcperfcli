@@ -136,7 +136,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	/* Absolute date/time. */
 	if (CONF.packet_trace_timestamp) {
 		char datetime_buf[NCC_DATETIME_STRLEN];
-		fprintf(fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_DATE_FMT));
+		fprintf(fp, "%s ", ncc_absolute_time_snprint(datetime_buf, sizeof(datetime_buf), NCC_TIME_FMT));
 	}
 
 	switch (pevent) {
