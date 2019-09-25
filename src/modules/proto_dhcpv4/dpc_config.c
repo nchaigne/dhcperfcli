@@ -32,6 +32,14 @@ static const CONF_PARSER _log_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
+static const CONF_PARSER _packet_trace_config[] = {
+	{ FR_CONF_OFFSET("level", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl) }, /* No default */
+	{ FR_CONF_OFFSET("elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
+	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, packet_trace_timestamp), .dflt = "no" },
+
+	CONF_PARSER_TERMINATOR
+};
+
 static const CONF_PARSER _progress_config[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval) }, /* No default */
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
@@ -44,14 +52,6 @@ static const CONF_PARSER _progress_config[] = {
 static const CONF_PARSER _timing_config[] = {
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
-
-	CONF_PARSER_TERMINATOR
-};
-
-static const CONF_PARSER _packet_config[] = {
-	{ FR_CONF_OFFSET("trace_level", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl) }, /* No default */
-	{ FR_CONF_OFFSET("trace_elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
-	{ FR_CONF_OFFSET("trace_timestamp", FR_TYPE_BOOL, dpc_config_t, packet_trace_timestamp), .dflt = "no" },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -73,8 +73,8 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("session_max_active", FR_TYPE_UINT32, dpc_config_t, session_max_active) }, /* No default */
 
 	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },
+	{ FR_CONF_POINTER("packet_trace", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_trace_config },
 	{ FR_CONF_POINTER("progress", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _progress_config },
-	{ FR_CONF_POINTER("packet", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_config },
 	{ FR_CONF_POINTER("timing", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _timing_config },
 
 	CONF_PARSER_TERMINATOR
