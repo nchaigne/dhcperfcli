@@ -451,9 +451,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	fprintf(fp, "\n");
 
 	/* Per-input statistics line. */
-	if (session_num_in >= ECTX.min_session_for_rps) {
-		dpc_per_input_stats_fprint(fp, force);
-	}
+	dpc_per_input_stats_fprint(fp, force);
 }
 
 /*
