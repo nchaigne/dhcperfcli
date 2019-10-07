@@ -2874,6 +2874,7 @@ static struct option long_options[] = {
 	{ "debug",                  no_argument,       NULL, 1 },
 	{ "input-rate",             required_argument, NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
+	{ "segment",                required_argument, NULL, 1 },
 	{ "xlat",                   optional_argument, NULL, 1 },
 	{ "xlat-file",              required_argument, NULL, 1 },
 
@@ -2906,6 +2907,7 @@ typedef enum {
 	LONGOPT_IDX_DEBUG,
 	LONGOPT_IDX_INPUT_RATE,
 	LONGOPT_IDX_RETRANSMIT,
+	LONGOPT_IDX_SEGMENT,
 	LONGOPT_IDX_XLAT,
 	LONGOPT_IDX_XLAT_FILE,
 	LONGOPT_IDX_MAX
@@ -3127,6 +3129,13 @@ static void dpc_options_parse(int argc, char **argv)
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit
 				PARSE_OPT(CONF.retransmit_max, FR_TYPE_UINT32);
+				break;
+
+			case LONGOPT_IDX_SEGMENT: // --segment
+				if (dpc_segment_parse(global_ctx, &segment_list, optarg) < 0) {
+					PERROR("Failed to parse segment \"%s\"", optarg);
+					exit(EXIT_FAILURE);
+				}
 				break;
 
 			case LONGOPT_IDX_XLAT: // --xlat
