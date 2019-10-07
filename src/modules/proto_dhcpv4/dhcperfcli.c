@@ -8,6 +8,7 @@
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 #include "dpc_config.h"
+#include "dpc_segment.h"
 
 #include <getopt.h>
 
@@ -132,6 +133,8 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 ncc_dlist_t input_list;
+ncc_dlist_t segment_list;
+dpc_segment_t *segment_cur;
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
@@ -3278,9 +3281,10 @@ int main(int argc, char **argv)
 	dpc_config_name_set_default(dpc_config, progname, false);
 
 	/*
-	 *	Initialize the chained list of input items.
+	 *	Initialize chained lists (input items, segments).
 	 */
 	NCC_DLIST_INIT(&input_list, dpc_input_t);
+	NCC_DLIST_INIT(&segment_list, dpc_segment_t);
 
 	/*
 	 *	Parse the command line options.
