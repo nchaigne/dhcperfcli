@@ -1786,6 +1786,23 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 
 	DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
 
+	/* Look for a time segment. */
+	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
+	dpc_segment_t *segment = dpc_segment_from_elapsed_time(&segment_list, segment_cur, ftd_elapsed);
+
+	if (segment != segment_cur) {
+		if (segment) {
+			DEBUG("Segment (%f - %f) usage start (elapsed time: %f)",
+			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+			      ncc_fr_time_to_float(ftd_elapsed));
+		} else {
+			DEBUG("Segment (%f - %f) is no longer eligible (elapsed time: %f)",
+			      ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
+			      ncc_fr_time_to_float(ftd_elapsed));
+		}
+		segment_cur = segment;
+	}
+
 	/* Store time of first session initialized. */
 	if (!fte_sessions_ini_start) {
 		fte_sessions_ini_start = fr_time();
