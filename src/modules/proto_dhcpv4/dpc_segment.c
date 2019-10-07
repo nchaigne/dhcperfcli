@@ -23,9 +23,9 @@ dpc_segment_t *dpc_segment_from_elapsed_time(ncc_dlist_t *dlist, dpc_segment_t *
 		  && (!segment->ftd_end || (segment->ftd_end && ftd_elapsed < segment->ftd_end)) ) {
 
 			/* This segment matches current elapsed time. */
-			DEBUG("Found matching segment (%f - %f) for elapsed time %f",
-			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
-			      ncc_fr_time_to_float(ftd_elapsed));
+			DEBUG3("Found matching segment (%f - %f) for elapsed time %f",
+			       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+			       ncc_fr_time_to_float(ftd_elapsed));
 
 			return segment;
 		}
