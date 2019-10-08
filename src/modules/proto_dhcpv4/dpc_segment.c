@@ -1,6 +1,8 @@
 #include "dhcperfcli.h"
 #include "dpc_segment.h"
 
+static uint32_t segment_id;
+
 
 /**
  * For a given elapsed time, find matching segment (if any) from the list.
@@ -23,7 +25,7 @@ dpc_segment_t *dpc_segment_from_elapsed_time(ncc_dlist_t *dlist, dpc_segment_t *
 		  && (!segment->ftd_end || (segment->ftd_end && ftd_elapsed < segment->ftd_end)) ) {
 
 			/* This segment matches current elapsed time. */
-			DEBUG3("Found matching segment (%f - %f) for elapsed time %f",
+			DEBUG3("Found matching segment (id: %u) (%f - %f) for elapsed time %f", segment->id,
 			       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
 			       ncc_fr_time_to_float(ftd_elapsed));
 
@@ -148,7 +150,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 		       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
 
 		NCC_DLIST_ENQUEUE(dlist, segment_new);
-		return segment_new;
+		goto finish;
 	}
 
 	dpc_segment_t *segment = NCC_DLIST_HEAD(dlist);
@@ -172,7 +174,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 			if (segment_new->ftd_end >= segment->ftd_start) goto overlap;
 
 			NCC_DLIST_INSERT_BEFORE(dlist, segment, segment_new);
-			return segment_new;
+			goto finish;
 		}
 
 		/* If new segment start is not specified (check performed on initial value):
@@ -204,7 +206,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 				       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
 
 				NCC_DLIST_INSERT_BEFORE(dlist, segment, segment_new);
-				return segment_new;
+				goto finish;
 			}
 
 			/* New segment is not inserted before existing segment. Check for overlap. (e.g. 5-8, 7-10 => reject.) */
@@ -219,5 +221,9 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 	       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
 
 	NCC_DLIST_ENQUEUE(dlist, segment_new);
+	goto finish;
+
+finish:
+	segment_new->id = segment_id++;
 	return segment_new;
 }

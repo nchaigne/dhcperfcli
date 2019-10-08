@@ -1792,11 +1792,11 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 
 	if (segment != segment_cur) {
 		if (segment) {
-			DEBUG("Segment (%f - %f) usage start (elapsed time: %f)",
+			DEBUG("Segment (id: %u) (%f - %f) start (elapsed: %f)", segment->id,
 			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
-			DEBUG("Segment (%f - %f) is no longer eligible (elapsed time: %f)",
+			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f)", segment_cur->id,
 			      ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		}
