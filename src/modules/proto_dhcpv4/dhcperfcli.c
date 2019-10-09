@@ -1792,6 +1792,11 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		fte_sessions_ini_start = fr_time();
 	}
 
+	/* If the session belongs to a time segment, update it. */
+	if (segment_cur) {
+		segment_cur->num_use ++;
+	}
+
 	/* If this is the first time this input is used, store current time. */
 	if (input->num_use == 0) {
 		DEBUG("Input (id: %u) start (max use: %u, duration: %.1f s, rate: %.1f)",
@@ -1961,9 +1966,9 @@ dpc_segment_t *dpc_get_current_segment()
 			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
-			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f)", segment_cur->id,
+			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f, num use: %u)", segment_cur->id,
 			      ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
-			      ncc_fr_time_to_float(ftd_elapsed));
+			      ncc_fr_time_to_float(ftd_elapsed), segment_cur->num_use);
 		}
 		segment_cur = segment;
 	}

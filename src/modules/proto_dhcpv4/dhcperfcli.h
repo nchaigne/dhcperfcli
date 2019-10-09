@@ -260,7 +260,7 @@ struct dpc_input {
 	/* Specific item data */
 	uint32_t id;              //!< Id of input (0 for the first one).
 	bool done;                //!< Is this input done ? (i.e. no session can be started from it).
-	uint32_t num_use;         //!< How many times has this input been used.
+	uint32_t num_use;         //!< How many times has this input been used to start sessions.
 
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
