@@ -1982,6 +1982,8 @@ static void dpc_loop_recv(void)
  */
 dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre)
 {
+	if (!list) return NULL;
+
 	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
 	dpc_segment_t *segment = dpc_segment_from_elapsed_time(list, segment_pre, ftd_elapsed);
 
