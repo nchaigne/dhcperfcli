@@ -62,6 +62,7 @@ fr_dict_attr_t const *attr_start_delay;
 fr_dict_attr_t const *attr_rate_limit;
 fr_dict_attr_t const *attr_max_duration;
 fr_dict_attr_t const *attr_max_use;
+fr_dict_attr_t const *attr_segment;
 fr_dict_attr_t const *attr_request_label;
 
 fr_dict_attr_t const *attr_dhcp_hop_count;
@@ -110,6 +111,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_rate_limit, .name = "Rate-Limit", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_duration, .name = "Max-Duration", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
+	{ .out = &attr_segment, .name = "Segment", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_request_label, .name = "Request-Label", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 
 	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
