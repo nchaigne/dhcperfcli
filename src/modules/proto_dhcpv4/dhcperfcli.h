@@ -264,6 +264,8 @@ struct dpc_input {
 
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
+	ncc_dlist_t *segments;    //<! List of input scoped segments.
+
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
 	double start_delay;       //!< Delay after which this input can be used to start sessions.

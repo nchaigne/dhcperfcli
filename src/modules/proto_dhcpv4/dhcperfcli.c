@@ -2419,6 +2419,12 @@ static bool dpc_input_parse(dpc_input_t *input)
 		} else if (vp->da == attr_max_use) { /* Max-Use = <n> */
 			input->max_use = vp->vp_uint32;
 
+		} else if (vp->da == attr_segment) { /* Segment = <string> */
+			if (!input->segments) {
+				input->segments = talloc_zero(input, ncc_dlist_t);
+			}
+			if (dpc_segment_parse(input, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
+
 		} else if (vp->da == attr_request_label) { /* Request-Label = <string> */
 			input->request_label = talloc_strdup(input, vp->vp_strvalue);
 		}
