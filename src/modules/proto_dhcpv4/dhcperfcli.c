@@ -292,7 +292,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
-dpc_segment_t *dpc_get_current_segment();
+dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
@@ -1955,27 +1955,26 @@ static void dpc_loop_recv(void)
 
 
 /*
- *	Get the time segment matching current elapsed time (if any).
+ *	For a given segment list, get the time segment matching current elapsed time (if any).
  */
-dpc_segment_t *dpc_get_current_segment()
+dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre)
 {
 	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
-	dpc_segment_t *segment = dpc_segment_from_elapsed_time(&segment_list, segment_cur, ftd_elapsed);
+	dpc_segment_t *segment = dpc_segment_from_elapsed_time(list, segment_pre, ftd_elapsed);
 
-	if (segment != segment_cur) {
+	if (segment != segment_pre) {
 		if (segment) {
 			DEBUG("Segment (id: %u) (%f - %f) start (elapsed: %f)", segment->id,
 			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
-			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f, num use: %u)", segment_cur->id,
-			      ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
-			      ncc_fr_time_to_float(ftd_elapsed), segment_cur->num_use);
+			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
+			      ncc_fr_time_to_float(segment_pre->ftd_start), ncc_fr_time_to_float(segment_pre->ftd_end),
+			      ncc_fr_time_to_float(ftd_elapsed), segment_pre->num_use);
 		}
-		segment_cur = segment;
 	}
 
-	return segment_cur;
+	return segment;
 }
 
 /*
@@ -2013,7 +2012,8 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limi
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
-	if (!dpc_get_current_segment()) {
+	segment_cur = dpc_get_current_segment(&segment_list, segment_cur);
+	if (!segment_cur) {
 		/*
 		 * No segment: global rate limit.
 		 */
