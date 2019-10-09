@@ -290,6 +290,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
+dpc_segment_t *dpc_get_current_segment();
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit_ref, float elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
@@ -1786,23 +1787,6 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 
 	DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
 
-	/* Look for a time segment. */
-	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
-	dpc_segment_t *segment = dpc_segment_from_elapsed_time(&segment_list, segment_cur, ftd_elapsed);
-
-	if (segment != segment_cur) {
-		if (segment) {
-			DEBUG("Segment (id: %u) (%f - %f) start (elapsed: %f)", segment->id,
-			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
-			      ncc_fr_time_to_float(ftd_elapsed));
-		} else {
-			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f)", segment_cur->id,
-			      ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
-			      ncc_fr_time_to_float(ftd_elapsed));
-		}
-		segment_cur = segment;
-	}
-
 	/* Store time of first session initialized. */
 	if (!fte_sessions_ini_start) {
 		fte_sessions_ini_start = fr_time();
@@ -1962,6 +1946,31 @@ static void dpc_loop_recv(void)
 	}
 }
 
+
+/*
+ *	Get the time segment matching current elapsed time (if any).
+ */
+dpc_segment_t *dpc_get_current_segment()
+{
+	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
+	dpc_segment_t *segment = dpc_segment_from_elapsed_time(&segment_list, segment_cur, ftd_elapsed);
+
+	if (segment != segment_cur) {
+		if (segment) {
+			DEBUG("Segment (id: %u) (%f - %f) start (elapsed: %f)", segment->id,
+			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+			      ncc_fr_time_to_float(ftd_elapsed));
+		} else {
+			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f)", segment_cur->id,
+			      ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
+			      ncc_fr_time_to_float(ftd_elapsed));
+		}
+		segment_cur = segment;
+	}
+
+	return segment_cur;
+}
+
 /*
  *	Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
  *	This can be used globally (to enforce a global rate limit on all sessions), or per-input.
@@ -1997,10 +2006,18 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
-	if (!CONF.rate_limit) return false;
+	if (!dpc_get_current_segment()) {
+		/*
+		 * No segment: global rate limit.
+		 */
+		if (!CONF.rate_limit) return false;
 
-	float elapsed_ref = dpc_start_sessions_elapsed_time_get();
-	return dpc_rate_limit_calc_gen(max_new_sessions, CONF.rate_limit, elapsed_ref, session_num);
+		float elapsed_ref = dpc_start_sessions_elapsed_time_get();
+		return dpc_rate_limit_calc_gen(max_new_sessions, CONF.rate_limit, elapsed_ref, session_num);
+
+	} else {
+		return false; // TODO.
+	}
 }
 
 
