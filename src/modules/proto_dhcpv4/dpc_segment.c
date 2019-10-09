@@ -77,8 +77,10 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	FN_ARG_CHECK(-1, in[0] != '\0');
 
 	char const *sep1, *sep2;
-	double start, end, rate;
+	double start, end;
+	double rate = 0;
 	fr_time_delta_t ftd_start, ftd_end;
+	dpc_segment_t *segment;
 
 	sep1 = strchr(in, ';');
 	if (!sep1) {
@@ -98,10 +100,12 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	ftd_start = ncc_float_to_fr_time(start);
 	ftd_end = ncc_float_to_fr_time(end);
 
-	if (!dpc_segment_add(ctx, dlist, ftd_start, ftd_end)) {
+	segment = dpc_segment_add(ctx, dlist, ftd_start, ftd_end);
+	if (!segment) {
 		fr_strerror_printf_push("Failed to add segment to list");
 		return -1;
 	}
+	segment->rate_limit = rate;
 
 	return 0;
 }

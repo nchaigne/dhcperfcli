@@ -11,10 +11,12 @@
  */
 typedef struct dpc_segment {
 	/* Generic chaining */
-	fr_dlist_t dlist;          //!< Our entry into the linked list.
+	fr_dlist_t dlist;           //!< Our entry into the linked list.
 
 	uint32_t id;                //!< Id of segment.
 	uint32_t num_use;           //!< How many times has this segment been used to start sessions.
+
+	double rate_limit;          //<! Limit rate/s of sessions initialized from this segment.
 
 	fr_time_delta_t ftd_start;  //!< Start of segment.
 	fr_time_delta_t ftd_end;    //!< End of segment.
