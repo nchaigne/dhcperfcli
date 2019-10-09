@@ -291,7 +291,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
 dpc_segment_t *dpc_get_current_segment();
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit_ref, float elapsed_ref, uint32_t cur_num_started);
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
 static uint32_t dpc_loop_start_sessions(void);
@@ -1704,7 +1704,7 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 {
 	if (!input->rate_limit) return false; /* No rate limit applies to this input. */
 
-	float elapsed_ref = dpc_item_get_elapsed(input);
+	double elapsed_ref = dpc_item_get_elapsed(input);
 	uint32_t max_new_sessions = 0;
 
 	dpc_rate_limit_calc_gen(&max_new_sessions, input->rate_limit, elapsed_ref, input->num_use);
@@ -1982,7 +1982,7 @@ dpc_segment_t *dpc_get_current_segment()
  *
  *	Returns: true if a limit has to be enforced at the moment, false otherwise.
  */
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, float rate_limit_ref, float elapsed_ref, uint32_t cur_num_started)
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started)
 {
 	if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
 		/*
@@ -2017,11 +2017,19 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 		 */
 		if (!CONF.rate_limit) return false;
 
-		float elapsed_ref = dpc_start_sessions_elapsed_time_get();
-		return dpc_rate_limit_calc_gen(max_new_sessions, CONF.rate_limit, elapsed_ref, session_num);
+		double elapsed_ref = dpc_start_sessions_elapsed_time_get();
 
+		return dpc_rate_limit_calc_gen(max_new_sessions, CONF.rate_limit, elapsed_ref, session_num);
 	} else {
-		return false; // TODO.
+		/*
+		 * Use current segment to apply a rate limit.
+		 */
+		if (!segment_cur->rate_limit) return false;
+
+		fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
+		double elapsed_ref = ncc_fr_time_to_float(ftd_elapsed);
+
+		return dpc_rate_limit_calc_gen(max_new_sessions, segment_cur->rate_limit, elapsed_ref, segment_cur->num_use);
 	}
 }
 
