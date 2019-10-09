@@ -1704,12 +1704,29 @@ static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input)
  */
 static bool dpc_item_rate_limited(dpc_input_t *input)
 {
-	if (!input->rate_limit) return false; /* No rate limit applies to this input. */
-
-	double elapsed_ref = dpc_item_get_elapsed(input);
 	uint32_t max_new_sessions = 0;
+	double elapsed_ref;
 
-	dpc_rate_limit_calc_gen(&max_new_sessions, input->rate_limit, elapsed_ref, input->num_use);
+	input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
+	if (!input->segment_cur) {
+		/*
+		 * No segment: input rate limit.
+		 */
+		if (!input->rate_limit) return false; /* No rate limit applies to this input. */
+
+		elapsed_ref = dpc_item_get_elapsed(input);
+		dpc_rate_limit_calc_gen(&max_new_sessions, input->rate_limit, elapsed_ref, input->num_use);
+
+	} else {
+		/*
+		 * Use current segment to check if a rate limit is applicable.
+		 */
+		if (!input->segment_cur->rate_limit) return false;
+
+		elapsed_ref = dpc_item_get_elapsed(input);
+		dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_cur->rate_limit, elapsed_ref, input->segment_cur->num_use);
+	}
+
 	return (max_new_sessions == 0);
 }
 
@@ -1748,7 +1765,9 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 
 		not_done++;
 
-		if (!dpc_item_rate_limited(input) && dpc_item_available(input)) return input;
+		if (!dpc_item_available(input)) continue; /* Item is not yet available. */
+
+		if (!dpc_item_rate_limited(input)) return input;
 	}
 
 	if (not_done == 0) {
@@ -1797,6 +1816,10 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	/* If the session belongs to a time segment, update it. */
 	if (segment_cur) {
 		segment_cur->num_use ++;
+	}
+
+	if (input->segment_cur) {
+		input->segment_cur->num_use ++;
 	}
 
 	/* If this is the first time this input is used, store current time. */
