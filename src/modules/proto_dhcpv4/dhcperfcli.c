@@ -3568,7 +3568,8 @@ int main(int argc, char **argv)
 			 *	If the number of sessions and the max duration are reasonably small, print packets header.
 			 *	Otherwise: no packet print.
 			 */
-			if (CONF.session_max_num > 50 || CONF.duration_start_max > 1.0) {
+			if (!CONF.session_max_num || CONF.session_max_num > 50
+			 || !CONF.duration_start_max || CONF.duration_start_max > 1.0) {
 				CONF.packet_trace_lvl = 0;
 			} else {
 				CONF.packet_trace_lvl = 1;
