@@ -3567,14 +3567,14 @@ int main(int argc, char **argv)
 		} else if (CONF.session_max_active == 1) {
 			/*
 			 *	Several requests, but no parallelism.
-			 *	If the number of sessions and the max duration are reasonably small, print packets header.
+			 *	If the number of sessions, or the max duration, are reasonably small: print packets header.
 			 *	Otherwise: no packet print.
 			 */
-			if (!CONF.session_max_num || CONF.session_max_num > 50
-			 || !CONF.duration_start_max || CONF.duration_start_max > 1.0) {
-				CONF.packet_trace_lvl = 0;
-			} else {
+			if ( (CONF.session_max_num && CONF.session_max_num <= 50)
+			  || (CONF.duration_start_max && CONF.duration_start_max <= 0.5) ) {
 				CONF.packet_trace_lvl = 1;
+			} else {
+				CONF.packet_trace_lvl = 0;
 			}
 		} else {
 			/* Several request in parallel: no packet print. */
