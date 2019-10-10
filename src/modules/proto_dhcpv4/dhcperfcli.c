@@ -367,25 +367,36 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
-	fprintf(fp, " └─ per-input rate (/s): ");
+	bool digest = false; // TODO
+
+	if (digest) {
+		fprintf(fp, " └─ per-input rate (/s): ");
+	}
 
 	dpc_input_t *input = NCC_DLIST_HEAD(&input_list);
 	int i = 0;
 
 	while (input) {
-		if (i) fprintf(fp, ", ");
-
-		/* also print status: W = waiting, A = active, T = terminated. */
+		double input_rate = 0;
 		char status = dpc_item_get_status(input);
-		fprintf(fp, "#%u (%c)", input->id, status);
+		bool rate = dpc_item_get_rate(&input_rate, input);
 
-		if (status != 'W') {
-			double input_rate = 0;
-			if (dpc_item_get_rate(&input_rate, input)) {
-				fprintf(fp, ": %.3f", input_rate);
-			} else {
-				fprintf(fp, ": N/A"); /* No relevant rate. */
+		if (digest) {
+			if (i) fprintf(fp, ", ");
+
+			/* also print status: W = waiting, A = active, T = terminated. */
+			fprintf(fp, "#%u (%c)", input->id, status);
+
+			if (status != 'W') {
+				if (rate) {
+					fprintf(fp, ": %.3f", input_rate);
+				} else {
+					fprintf(fp, ": N/A"); /* No relevant rate. */
+				}
 			}
+		} else {
+			/* Print each input on a distinct line. */
+			fprintf(fp, " └─ input #%u (%c) use: %u, rate (/s): %.3f\n", input->id, status, input->num_use, input_rate);
 		}
 
 		i++;
@@ -1696,6 +1707,8 @@ static double dpc_item_get_elapsed(dpc_input_t *input)
  */
 static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input)
 {
+	*input_rate = 0;
+
 	if (!input->fte_start) {
 		return false; /* Item has not been used yet. */
 	}
