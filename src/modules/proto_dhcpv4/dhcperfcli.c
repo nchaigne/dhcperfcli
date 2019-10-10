@@ -292,7 +292,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
-dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
+static double segment_get_rate(dpc_segment_t *segment);
+static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
@@ -455,6 +456,15 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	}
 
 	fprintf(fp, "\n");
+
+	/* Segment statistics line. */
+	segment_cur = dpc_get_current_segment(&segment_list, segment_cur);
+	if (segment_cur) {
+		fprintf(fp, " └─ ");
+		fprintf(fp, "segment #%u (%.3f - %.3f) use: %u, rate (/s): %.3f\n", segment_cur->id,
+		        ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
+		        segment_cur->num_use, segment_get_rate(segment_cur));
+	}
 
 	/* Per-input statistics line. */
 	dpc_per_input_stats_fprint(fp, force);
@@ -1980,9 +1990,32 @@ static void dpc_loop_recv(void)
 
 
 /*
+ *	Get the use rate of a time segment.
+ */
+static double segment_get_rate(dpc_segment_t *segment)
+{
+	double rate;
+	fr_time_delta_t ftd_ref;
+	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
+
+	if (segment->ftd_end && ftd_elapsed >= segment->ftd_end) {
+		/*
+		 * Current time is beyond segment end.
+		 */
+		ftd_ref = segment->ftd_end - segment->ftd_start;
+	} else {
+		ftd_ref = ftd_elapsed - segment->ftd_start;
+	}
+
+	rate = (double)segment->num_use / ncc_fr_time_to_float(ftd_ref);
+
+	return rate;
+}
+
+/*
  *	For a given segment list, get the time segment matching current elapsed time (if any).
  */
-dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre)
+static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre)
 {
 	if (!list) return NULL;
 
