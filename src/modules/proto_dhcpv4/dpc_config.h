@@ -25,6 +25,7 @@ struct dpc_config_s {
 	double progress_interval;        //<! Time interval between periodic progress statistics.
 	bool pr_stat_timestamp;          //!< Add timestamp to progress statistics.
 	bool pr_stat_per_input;          //<! Print per-input progress statistics (if multiple input).
+	bool pr_stat_per_input_digest;   //<! Print the per-input progress statistics condensed on a single line.
 	uint32_t pr_stat_per_input_max;  //<! Max number of input items shown in progress statistics.
 
 	bool template;                   //<! Template mode.

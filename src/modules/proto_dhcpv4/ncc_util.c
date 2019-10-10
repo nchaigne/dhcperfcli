@@ -1085,7 +1085,6 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
  *
  * @return pointer to the output buffer, or NULL on error.
  */
-
 char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt)
 {
 	time_t date;

@@ -44,6 +44,7 @@ static const CONF_PARSER _progress_config[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval) }, /* No default */
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
+	{ FR_CONF_OFFSET("per_input_digest", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input_digest), .dflt = "no" },
 	{ FR_CONF_OFFSET("per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
 
 	CONF_PARSER_TERMINATOR

@@ -367,7 +367,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
-	bool digest = false; // TODO
+	bool digest = CONF.pr_stat_per_input_digest;
 
 	if (digest) {
 		fprintf(fp, " └─ per-input rate (/s): ");
