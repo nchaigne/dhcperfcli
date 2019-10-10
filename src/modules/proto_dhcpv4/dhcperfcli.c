@@ -384,18 +384,19 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 		if (digest) {
 			if (i) fprintf(fp, ", ");
 
-			/* also print status: W = waiting, A = active, T = terminated. */
+			/* Print status: W = waiting, A = active, T = terminated. */
 			fprintf(fp, "#%u (%c)", input->id, status);
 
-			if (status != 'W') {
-				if (rate) {
-					fprintf(fp, ": %.3f", input_rate);
-				} else {
-					fprintf(fp, ": N/A"); /* No relevant rate. */
-				}
+			if (rate) {
+				fprintf(fp, ": %.3f", input_rate);
+			} else {
+				fprintf(fp, ": N/A"); /* No relevant rate. */
 			}
+
 		} else {
-			/* Print each input on a distinct line. */
+			/*
+			 * Print each input on a distinct line.
+			 */
 			fprintf(fp, " └─ input #%u (%c) use: %u", input->id, status, input->num_use);
 			if (rate) {
 				fprintf(fp, ", rate (/s): %.3f", input_rate);
