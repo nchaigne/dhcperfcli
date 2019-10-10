@@ -40,6 +40,30 @@ dpc_segment_t *dpc_segment_from_elapsed_time(ncc_dlist_t *dlist, dpc_segment_t *
 }
 
 /**
+ * Print to a string buffer a segment time interval.
+ *
+ * @param[out] out      where to write the output string (size should be at least DPC_SEGMENT_INTERVAL_STRLEN).
+ * @param[in]  segment  the time segment.
+ *
+ * @return pointer to the output buffer.
+ */
+char *dpc_segment_interval_sprint(char *out, dpc_segment_t *segment)
+{
+	FN_ARG_CHECK(NULL, out);
+
+	/* First endpoint is always bounded (finite value).
+	 * Second endpoint is unbounded if set to 0.
+	 */
+	if (segment->ftd_end) {
+		sprintf(out, "(%.3f - %.3f)", ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
+	} else {
+		sprintf(out, "(%.3f - inf)", ncc_fr_time_to_float(segment->ftd_start));
+	}
+
+	return out;
+}
+
+/**
  * Print the whole list of segments.
  *
  * @param[in] fp     where to print.
