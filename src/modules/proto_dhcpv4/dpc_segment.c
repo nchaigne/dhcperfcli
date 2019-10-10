@@ -64,10 +64,10 @@ char *dpc_segment_interval_sprint(char *out, dpc_segment_t *segment)
 }
 
 /**
- * Print the whole list of segments.
+ * Print a list of segments.
  *
  * @param[in] fp     where to print.
- * @param[in] dlist  list of segments
+ * @param[in] dlist  list of segments.
  */
 void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 {
@@ -82,8 +82,9 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 		int i = 0;
 
 		while (segment) {
-			fprintf(fp, "- Segment %u: start = %.3f end = %.3f\n",
-			        i, ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
+			char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
+			fprintf(fp, "- Segment %u: #%u %s\n",
+			        i, segment->id, dpc_segment_interval_sprint(interval_buf, segment));
 
 			i++;
 			segment = NCC_DLIST_NEXT(dlist, segment);
