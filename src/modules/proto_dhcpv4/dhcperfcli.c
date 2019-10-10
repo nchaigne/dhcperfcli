@@ -293,7 +293,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_loop_recv(void);
-static double segment_get_rate(dpc_segment_t *segment);
+static double dpc_segment_get_rate(dpc_segment_t *segment);
 static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
@@ -407,7 +407,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			if (input->segment_cur) {
 				fprintf(fp, " - segment #%u (%.3f - %.3f) use: %u, rate (/s): %.3f", input->segment_cur->id,
 						ncc_fr_time_to_float(input->segment_cur->ftd_start), ncc_fr_time_to_float(input->segment_cur->ftd_end),
-						input->segment_cur->num_use, segment_get_rate(input->segment_cur));
+						input->segment_cur->num_use, dpc_segment_get_rate(input->segment_cur));
 			}
 
 			fprintf(fp, "\n");
@@ -492,7 +492,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 		fprintf(fp, " └─ ");
 		fprintf(fp, "segment #%u (%.3f - %.3f) use: %u, rate (/s): %.3f\n", segment_cur->id,
 		        ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
-		        segment_cur->num_use, segment_get_rate(segment_cur));
+		        segment_cur->num_use, dpc_segment_get_rate(segment_cur));
 	}
 
 	/* Per-input statistics line. */
@@ -2023,7 +2023,7 @@ static void dpc_loop_recv(void)
 /*
  *	Get the use rate of a time segment.
  */
-static double segment_get_rate(dpc_segment_t *segment)
+static double dpc_segment_get_rate(dpc_segment_t *segment)
 {
 	double rate;
 	fr_time_delta_t ftd_ref;
