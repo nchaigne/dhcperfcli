@@ -405,8 +405,9 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			/* Print the current input scoped segment, if any. */
 			input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
 			if (input->segment_cur) {
-				fprintf(fp, " - segment #%u (%.3f - %.3f) use: %u, rate (/s): %.3f", input->segment_cur->id,
-						ncc_fr_time_to_float(input->segment_cur->ftd_start), ncc_fr_time_to_float(input->segment_cur->ftd_end),
+				char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
+				fprintf(fp, " - segment #%u %s use: %u, rate (/s): %.3f", input->segment_cur->id,
+						dpc_segment_interval_sprint(interval_buf, input->segment_cur),
 						input->segment_cur->num_use, dpc_segment_get_rate(input->segment_cur));
 			}
 
@@ -489,9 +490,9 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	/* Segment statistics line. */
 	segment_cur = dpc_get_current_segment(&segment_list, segment_cur);
 	if (segment_cur) {
-		fprintf(fp, " └─ ");
-		fprintf(fp, "segment #%u (%.3f - %.3f) use: %u, rate (/s): %.3f\n", segment_cur->id,
-		        ncc_fr_time_to_float(segment_cur->ftd_start), ncc_fr_time_to_float(segment_cur->ftd_end),
+		char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
+		fprintf(fp, " └─ segment #%u %s use: %u, rate (/s): %.3f\n", segment_cur->id,
+		        dpc_segment_interval_sprint(interval_buf, segment_cur),
 		        segment_cur->num_use, dpc_segment_get_rate(segment_cur));
 	}
 

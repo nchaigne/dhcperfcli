@@ -57,7 +57,7 @@ char *dpc_segment_interval_sprint(char *out, dpc_segment_t *segment)
 	if (segment->ftd_end) {
 		sprintf(out, "(%.3f - %.3f)", ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
 	} else {
-		sprintf(out, "(%.3f - inf)", ncc_fr_time_to_float(segment->ftd_start));
+		sprintf(out, "(%.3f - INF)", ncc_fr_time_to_float(segment->ftd_start));
 	}
 
 	return out;
