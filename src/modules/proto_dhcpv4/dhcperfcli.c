@@ -2025,11 +2025,11 @@ static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *
 
 	if (segment != segment_pre) {
 		if (segment) {
-			DEBUG("Segment (id: %u) (%f - %f) start (elapsed: %f)", segment->id,
+			DEBUG("Segment (id: %u) (%.3f - %.3f) start (elapsed: %f)", segment->id,
 			      ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
-			DEBUG("Segment (id: %u) (%f - %f) is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
+			DEBUG("Segment (id: %u) (%.3f - %.3f) is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
 			      ncc_fr_time_to_float(segment_pre->ftd_start), ncc_fr_time_to_float(segment_pre->ftd_end),
 			      ncc_fr_time_to_float(ftd_elapsed), segment_pre->num_use);
 		}
