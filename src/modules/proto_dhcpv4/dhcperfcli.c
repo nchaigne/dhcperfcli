@@ -409,7 +409,10 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 
 		input = NCC_DLIST_NEXT(&input_list, input);
 	}
-	fprintf(fp, "\n");
+
+	if (digest) {
+		fprintf(fp, "\n");
+	}
 }
 
 /*
