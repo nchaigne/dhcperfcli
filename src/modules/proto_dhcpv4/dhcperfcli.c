@@ -396,7 +396,11 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			}
 		} else {
 			/* Print each input on a distinct line. */
-			fprintf(fp, " └─ input #%u (%c) use: %u, rate (/s): %.3f\n", input->id, status, input->num_use, input_rate);
+			fprintf(fp, " └─ input #%u (%c) use: %u", input->id, status, input->num_use);
+			if (rate) {
+				fprintf(fp, ", rate (/s): %.3f", input_rate);
+			}
+			fprintf(fp, "\n");
 		}
 
 		i++;
