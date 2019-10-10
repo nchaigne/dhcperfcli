@@ -31,7 +31,8 @@ dpc_config_t *dpc_config;
  *	("epoch" here means: number of nanoseconds since the start of the program)
  */
 
-fr_time_t fte_start; /* Program execution start timestamp. */
+fr_time_t fte_program_start; /* Program execution start timestamp. */
+fr_time_t fte_start;
 int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
@@ -3382,7 +3383,7 @@ int main(int argc, char **argv)
 
 	fr_time_start();
 
-	fte_start = fr_time(); /* Program start timestamp. */
+	fte_program_start = fr_time(); /* Program start timestamp. */
 
 	/*
 	 *	Allocate the main config structure.
@@ -3557,7 +3558,7 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	fte_job_start = fr_time(); /* Job start timestamp. */
+	fte_start = fte_job_start = fr_time(); /* Job start timestamp. */
 
 	if (CONF.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
 		ECTX.fte_start_max = ncc_float_to_fr_time(CONF.duration_start_max) + fte_job_start;
