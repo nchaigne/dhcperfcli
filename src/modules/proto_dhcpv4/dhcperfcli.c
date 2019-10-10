@@ -3356,7 +3356,9 @@ static void dpc_end(void)
 
 	if (!check_config) {
 		/* If we're producing progress statistics, do it one last time. */
-		if (ECTX.ftd_progress_interval) dpc_progress_stats_fprint(stdout, true);
+		if (ECTX.ftd_progress_interval && dpc_job_elapsed_time_get() > CONF.progress_interval) {
+			dpc_progress_stats_fprint(stdout, true);
+		}
 
 		/* Statistics report. */
 		dpc_stats_fprint(stdout);
