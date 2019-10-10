@@ -401,6 +401,15 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			if (rate) {
 				fprintf(fp, ", rate (/s): %.3f", input_rate);
 			}
+
+			/* Print the current input scoped segment, if any. */
+			input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
+			if (input->segment_cur) {
+				fprintf(fp, " - segment #%u (%.3f - %.3f) use: %u, rate (/s): %.3f", input->segment_cur->id,
+						ncc_fr_time_to_float(input->segment_cur->ftd_start), ncc_fr_time_to_float(input->segment_cur->ftd_end),
+						input->segment_cur->num_use, segment_get_rate(input->segment_cur));
+			}
+
 			fprintf(fp, "\n");
 		}
 
