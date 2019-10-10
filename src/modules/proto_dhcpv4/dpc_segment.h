@@ -3,11 +3,14 @@
  * dpc_segment.h
  */
 
-#include "dhcperfcli.h"
+#include <freeradius-devel/util/dlist.h>
+#include <freeradius-devel/util/time.h>
+
+#include "ncc_util.h"
 
 
 /*
- *	Segment.
+ *	Time segment.
  */
 typedef struct dpc_segment {
 	/* Generic chaining */
