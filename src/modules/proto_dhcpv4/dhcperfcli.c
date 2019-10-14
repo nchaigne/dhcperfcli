@@ -368,7 +368,7 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  *  └─ per-input rate (/s): #0 (A): 2880.764, #1 (A): 2885.048
  * (b)
  *  └─ input #0 (A) use: 4645, rate (/s): 3015.712
- *  └─ input #1 (A) use: 4644, rate (/s): 3018.594
+ *  └─ input #1 (A) use: 4644, rate (/s): 3018.594 - segment #1 (2.000 - 8.000) use: 21, rate (/s): 20.999
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
@@ -436,8 +436,10 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 
 /**
  * Print ongoing job statistics summary.
+ * Also print an additionnal line with the current global segment (if applicable).
  * E.g.:
  * (*) 17:14:20 t(8.000) (80.0%) sessions: [in: 39259 (31.8%), ongoing: 10], session rate (/s): 4905.023
+ *  └─ segment #0 (0.000 - INF) use: 5792, rate (/s): 5791.051
  */
 static void dpc_progress_stats_fprint(FILE *fp, bool force)
 {
@@ -505,7 +507,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 		        segment_cur->num_use, dpc_segment_get_rate(segment_cur));
 	}
 
-	/* Per-input statistics line. */
+	/* Per-input statistics line(s). */
 	dpc_per_input_stats_fprint(fp, force);
 }
 
