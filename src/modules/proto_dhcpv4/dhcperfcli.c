@@ -361,6 +361,7 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
 /**
  * Print ongoing statistics detail per input.
  * Either (a) as a digest on a single line, or (b) one line per input.
+ * In the latter case, additional detail is provided, in particular the current input scoped segment (if applicable).
  *
  * E.g.:
  * (a)
@@ -433,10 +434,10 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 	}
 }
 
-/*
- *	Print ongoing job statistics summary.
- *	E.g.:
- *	(*) t(8.001) (80.0%) sessions: [started: 39259 (31.8%), ongoing: 10], rate (/s): 4905.023
+/**
+ * Print ongoing job statistics summary.
+ * E.g.:
+ * (*) 17:14:20 t(8.000) (80.0%) sessions: [in: 39259 (31.8%), ongoing: 10], session rate (/s): 4905.023
  */
 static void dpc_progress_stats_fprint(FILE *fp, bool force)
 {
