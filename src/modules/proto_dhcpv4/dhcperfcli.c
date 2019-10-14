@@ -3571,7 +3571,9 @@ int main(int argc, char **argv)
 			 *	Otherwise: no packet print.
 			 */
 			if ( (CONF.session_max_num && CONF.session_max_num <= 50)
-			  || (CONF.duration_start_max && CONF.duration_start_max <= 0.5) ) {
+			  || (CONF.duration_start_max && CONF.duration_start_max <= 0.5)
+			  || (!CONF.template && input_list.size * CONF.input_num_use <= 50)
+			  ) {
 				CONF.packet_trace_lvl = 1;
 			} else {
 				CONF.packet_trace_lvl = 0;
