@@ -358,12 +358,20 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
 	return out;
 }
 
-/*
- *	Print ongoing statistics detail per input.
+/**
+ * Print ongoing statistics detail per input.
+ * Either (a) as a digest on a single line, or (b) one line per input.
+ *
+ * E.g.:
+ * (a)
+ *  └─ per-input rate (/s): #0 (A): 2880.764, #1 (A): 2885.048
+ * (b)
+ *  └─ input #0 (A) use: 4645, rate (/s): 3015.712
+ *  └─ input #1 (A) use: 4644, rate (/s): 3018.594
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
-	if (!CONF.pr_stat_per_input || !CONF.template || NCC_DLIST_SIZE(&input_list) < 2) return;
+	if (!CONF.pr_stat_per_input || !CONF.template) return;
 
 	if (!force && !start_sessions_flag) return; /* Only trace this if we're still starting new sessions, or if force. */
 
