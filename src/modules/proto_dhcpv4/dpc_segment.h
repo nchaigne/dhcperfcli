@@ -20,6 +20,14 @@
 
 
 /*
+ *	Different kinds of time segments.
+ */
+typedef enum {
+	DPC_SEGMENT_RATE_FIXED = 1,
+	DPC_SEGMENT_RATE_LINEAR
+} dpc_segment_type_t;
+
+/*
  *	Time segment.
  */
 typedef struct dpc_segment {
@@ -29,7 +37,16 @@ typedef struct dpc_segment {
 	uint32_t id;                //!< Id of segment.
 	uint32_t num_use;           //!< How many times has this segment been used to start sessions.
 
-	double rate_limit;          //<! Limit rate/s of sessions initialized from this segment.
+	dpc_segment_type_t type;    //!< Type of segment.
+
+	union {
+		double rate_limit;      //<! Limit rate/s of sessions initialized from this segment.
+
+		struct {                //<! Varying limit rate/s of sessions initialized from this segment.
+			double start;       //<! Start value.
+			double end;         //<! End value.
+		} rate_limit_range;
+	};
 
 	fr_time_delta_t ftd_start;  //!< Start of segment.
 	fr_time_delta_t ftd_end;    //!< End of segment.
