@@ -131,7 +131,7 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 
 	segment = dpc_segment_add(ctx, dlist, ftd_start, ftd_end);
 	if (!segment) {
-		fr_strerror_printf_push("Failed to add segment to list");
+		fr_strerror_printf_push("Failed to add segment");
 		return -1;
 	}
 	segment->rate_limit = rate;

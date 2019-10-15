@@ -125,7 +125,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 
 				segment = dpc_segment_add(input, input->segments, ftd_start, ftd_end);
 				if (!segment) {
-					fr_strerror_printf_push("Failed to add segment to list");
+					cf_log_perr(subcs, "Failed to add segment");
 					goto error;
 				}
 			}
