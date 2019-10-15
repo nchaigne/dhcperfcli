@@ -106,8 +106,29 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 
 		ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, MAX_ATTR_INPUT);
 		if (ret != 0) {
+		error:
 			talloc_free(input);
 			return -1;
+		}
+
+		/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections.
+		 */
+		if (subcs) {
+			subcs = NULL;
+			while ((subcs = cf_section_find_next(cs, subcs, "segment", CF_IDENT_ANY))) {
+				fr_time_delta_t ftd_start = 0, ftd_end = 0;
+				dpc_segment_t *segment;
+
+				if (!input->segments) {
+					input->segments = talloc_zero(input, ncc_dlist_t);
+				}
+
+				segment = dpc_segment_add(input, input->segments, ftd_start, ftd_end);
+				if (!segment) {
+					fr_strerror_printf_push("Failed to add segment to list");
+					goto error;
+				}
+			}
 		}
 
 		if (fn_input_handle) (*fn_input_handle)(input, &input_list);
