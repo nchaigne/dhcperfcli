@@ -1,4 +1,8 @@
-#include "dhcperfcli.h"
+/**
+ * @file dpc_segment.c
+ * @brief Time segments handling.
+ */
+
 #include "dpc_segment.h"
 
 static uint32_t segment_id;
