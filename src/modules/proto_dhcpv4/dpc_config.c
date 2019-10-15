@@ -90,6 +90,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 {
 	CONF_SECTION *cs = NULL, *subcs;
 	dpc_input_t *input;
+	int ret;
 
 	/*
 	 *	Iterate over all the input definitions in the section, adding them to the list.
@@ -103,8 +104,9 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 		 */
 		subcs = cf_section_find_next(cs, NULL, "pairs", CF_IDENT_ANY);
 
-		int ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, MAX_ATTR_INPUT);
+		ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, MAX_ATTR_INPUT);
 		if (ret != 0) {
+			talloc_free(input);
 			return -1;
 		}
 
