@@ -88,7 +88,7 @@ static const CONF_PARSER _main_config[] = {
  */
 int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle)
 {
-	CONF_SECTION *cs = NULL;
+	CONF_SECTION *cs = NULL, *subcs;
 	dpc_input_t *input;
 
 	/*
@@ -98,7 +98,12 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 
 		MEM(input = talloc_zero(section, dpc_input_t));
 
-		int ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, cs, MAX_ATTR_INPUT);
+		/* Look for a "pairs" sub-section. If found, get the list of vps from this sub-section.
+		 * Otherwise, consider "input" as the list of vps.
+		 */
+		subcs = cf_section_find_next(cs, NULL, "pairs", CF_IDENT_ANY);
+
+		int ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, MAX_ATTR_INPUT);
 		if (ret != 0) {
 			return -1;
 		}
