@@ -70,7 +70,8 @@ static char const parse_spaces[] = "                                            
  *	Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
  *	Note: requires libfreeradius-server.
  */
-int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, CONF_SECTION *cs, unsigned int max)
+int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
+                           CONF_SECTION *cs, int cs_depth, unsigned int max)
 {
 	CONF_PAIR *cp;
 	CONF_ITEM *ci;
@@ -78,7 +79,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 
 	unsigned int total = 0;
 
-	int cf_space = 2;
+	int cf_space = cs_depth * 2;
 	cf_log_debug(cs, "%.*s%s {", cf_space, parse_spaces, cf_section_name(cs));
 
 	ci = cf_section_to_item(cs);
@@ -86,7 +87,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 	for (ci = cf_item_next(cs, NULL);
 	     ci != NULL;
 	     ci = cf_item_next(cs, ci)) {
-		int cf_space = 4;
+		int cf_space = (cs_depth + 1) * 2;
 
 		if (total++ == max) {
 			cf_log_err(ci, "Too many attributes (max: %u)", max);

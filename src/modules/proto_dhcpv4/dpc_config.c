@@ -111,7 +111,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 		 */
 		subcs = cf_section_find_next(cs, NULL, "pairs", CF_IDENT_ANY);
 
-		ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, MAX_ATTR_INPUT);
+		ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, 1, MAX_ATTR_INPUT);
 		if (ret != 0) {
 		error:
 			talloc_free(input);
