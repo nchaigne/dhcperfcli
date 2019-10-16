@@ -23,6 +23,13 @@
  *   Probably because the value pointer dynamically allocated - so we'll have to handle this.
  */
 
+static CONF_PARSER _segment_config[] = {
+	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0" },
+	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0" },
+
+	CONF_PARSER_TERMINATOR
+};
+
 static const CONF_PARSER _log_config[] = {
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
@@ -116,12 +123,21 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 		if (subcs) {
 			subcs = NULL;
 			while ((subcs = cf_section_find_next(cs, subcs, "segment", CF_IDENT_ANY))) {
+				dpc_segment_config_t segment_config;
 				fr_time_delta_t ftd_start = 0, ftd_end = 0;
 				dpc_segment_t *segment;
 
 				if (!input->segments) {
 					input->segments = talloc_zero(input, ncc_dlist_t);
 				}
+
+				/* Parse this segment sub-section.
+				 */
+				if (cf_section_rules_push(subcs, _segment_config) < 0) goto error;
+				if (cf_section_parse(input, &segment_config, subcs) < 0) goto error;
+
+				ftd_start = ncc_float_to_fr_time(segment_config.start);
+				ftd_end = ncc_float_to_fr_time(segment_config.end);
 
 				segment = dpc_segment_add(input, input->segments, ftd_start, ftd_end);
 				if (!segment) {
@@ -133,6 +149,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 
 		if (fn_input_handle) (*fn_input_handle)(input, &input_list);
 	}
+
 	return 0;
 }
 

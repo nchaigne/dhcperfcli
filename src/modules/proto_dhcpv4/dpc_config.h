@@ -53,6 +53,14 @@ struct dpc_config_s {
 	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
 };
 
+/*
+ *	Segment configuration
+ */
+typedef struct {
+	double start;
+	double end;
+} dpc_segment_config_t;
+
 typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
