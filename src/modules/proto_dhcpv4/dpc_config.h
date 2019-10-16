@@ -96,7 +96,7 @@ do {\
 	CONF_CHECK_FMT(PRIu64, _name, _var, _cond, _expected)
 
 /*
- *	Configuration checks when custom parsing.
+ *	Configuration checks when parsing.
  */
 #define CONF_CS_CHECK_FMT(_cs, _fmt, _name, _var, _cond, _expected)\
 do {\
@@ -108,3 +108,17 @@ do {\
 
 #define CONF_CS_CHECK_FLOAT(_cs, _name, _var, _cond, _expected)\
 	CONF_CS_CHECK_FMT(_cs, "f", _name, _var, _cond, _expected)
+
+#define CONF_CI_CHECK_FMT(_ci, _fmt, _cond, _expected)\
+do {\
+	if (!(_cond)) {\
+		char const *attr_name = cf_pair_attr(cf_item_to_pair(_ci));\
+		char const *attr_value = cf_pair_value(cf_item_to_pair(_ci));\
+		char const *parent_name = cf_pair_attr(cf_parent(_ci));\
+		cf_log_err(_ci, "Invalid \"%s.%s = %s\" (expected: " _expected ")", parent_name, attr_name, attr_value);\
+		goto error;\
+	}\
+} while (0)
+
+#define CONF_CI_CHECK_FLOAT(_ci, _cond, _expected)\
+	CONF_CI_CHECK_FMT(_ci, "f", _cond, _expected)

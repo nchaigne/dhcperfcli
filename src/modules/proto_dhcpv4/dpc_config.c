@@ -8,6 +8,9 @@
 
 #define MAX_ATTR_INPUT 128
 
+static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
+
+
 /* Notes:
  *
  * - Some parameters may be defined through command-line options and configuration files.
@@ -24,8 +27,8 @@
  */
 
 static CONF_PARSER _segment_config[] = {
-	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0" },
-	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0" },
+	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", .func = float64_positive_parse },
+	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0", .func = float64_positive_parse },
 	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed" },
 	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0" },
 	{ FR_CONF_OFFSET("rate_start", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_start), .dflt = "0" },
@@ -101,6 +104,21 @@ fr_table_num_sorted_t const segment_types[] = {
 size_t segment_types_len = NUM_ELEMENTS(segment_types);
 
 
+static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
+{
+	double value;
+
+	if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
+	error:
+		return -1;
+	}
+
+	memcpy(&value, out, sizeof(value));
+	CONF_CI_CHECK_FLOAT(ci, value >= 0, ">= 0");
+
+	return 0;
+}
+
 /*
  *	Iterates over all input definitions in the specified section, adding them to the list.
  */
@@ -152,9 +170,6 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 				 */
 				if (cf_section_rules_push(subcs, _segment_config) < 0) goto error;
 				if (cf_section_parse(input, &segment_config, subcs) < 0) goto error;
-
-				CONF_CS_CHECK_FLOAT(subcs, "segment start", segment_config.start, segment_config.start >= 0, ">= 0");
-				CONF_CS_CHECK_FLOAT(subcs, "segment end", segment_config.end, segment_config.end >= 0, ">= 0");
 
 				ftd_start = ncc_float_to_fr_time(segment_config.start);
 				ftd_end = ncc_float_to_fr_time(segment_config.end);
