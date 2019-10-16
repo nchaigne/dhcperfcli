@@ -65,6 +65,16 @@ VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR 
 
 static char const parse_spaces[] = "                                                                                                                                                                                                                                              ";
 
+void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth)
+{
+	cf_log_debug(cs, "%.*s%s {", cs_depth * 2, parse_spaces, cf_section_name(cs));
+}
+
+void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth)
+{
+	cf_log_debug(cs, "%.*s}", cs_depth * 2, parse_spaces);
+}
+
 /*
  *	Convert a config section into an attribute list.
  *	Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
@@ -79,8 +89,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 
 	unsigned int total = 0;
 
-	int cf_space = cs_depth * 2;
-	cf_log_debug(cs, "%.*s%s {", cf_space, parse_spaces, cf_section_name(cs));
+	ncc_cs_debug_start(cs, cs_depth);
 
 	ci = cf_section_to_item(cs);
 
@@ -113,7 +122,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 		cf_log_debug(cs, "%.*s%s", cf_space, parse_spaces, buf);
 	}
 
-	cf_log_debug(cs, "%.*s}", cf_space, parse_spaces);
+	ncc_cs_debug_end(cs, cs_depth);
 
 	return 0;
 }

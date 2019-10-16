@@ -98,6 +98,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 	CONF_SECTION *cs = NULL, *subcs;
 	dpc_input_t *input;
 	int ret;
+	int cs_depth_base = 1;
 	int cs_depth;
 
 	/*
@@ -111,8 +112,9 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 		 * Otherwise, consider "input" as the list of vps.
 		 */
 		subcs = cf_section_find_next(cs, NULL, "pairs", CF_IDENT_ANY);
+		if (subcs) ncc_cs_debug_start(cs, cs_depth_base);
 
-		cs_depth = 1;
+		cs_depth = cs_depth_base;
 		if (subcs) cs_depth++;
 
 		ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, cs_depth, MAX_ATTR_INPUT);
@@ -149,6 +151,8 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 					goto error;
 				}
 			}
+
+			ncc_cs_debug_end(cs, cs_depth_base);
 		}
 
 		if (fn_input_handle) (*fn_input_handle)(input, &input_list);

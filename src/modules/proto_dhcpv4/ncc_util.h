@@ -282,6 +282,8 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
 int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone);
 
 VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
+void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth);
+void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth);
 int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
                            CONF_SECTION *cs, int cs_depth, unsigned int max);
 
