@@ -26,6 +26,7 @@
 static CONF_PARSER _segment_config[] = {
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0" },
 	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0" },
+	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed" },
 	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0" },
 
 	CONF_PARSER_TERMINATOR
@@ -90,6 +91,13 @@ static const CONF_PARSER _main_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
+fr_table_num_sorted_t const segment_types[] = {
+	{ "fixed",  DPC_SEGMENT_RATE_FIXED },
+	{ "linear", DPC_SEGMENT_RATE_LINEAR },
+	{ "null",   DPC_SEGMENT_RATE_NULL },
+};
+size_t segment_types_len = NUM_ELEMENTS(segment_types);
+
 
 /*
  *	Iterates over all input definitions in the specified section, adding them to the list.
@@ -151,6 +159,13 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 					cf_log_perr(subcs, "Failed to add segment");
 					goto error;
 				}
+
+				segment->type = fr_table_value_by_str(segment_types, segment_config.type, DPC_SEGMENT_RATE_INVALID);
+				if (segment->type == DPC_SEGMENT_RATE_INVALID) {
+					cf_log_err(subcs, "Invalid segment type \"%s\"", segment_config.type);
+					goto error;
+				}
+
 				segment->rate_limit = segment_config.rate;
 			}
 

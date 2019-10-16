@@ -23,8 +23,10 @@
  *	Different kinds of time segments.
  */
 typedef enum {
-	DPC_SEGMENT_RATE_FIXED = 1,
-	DPC_SEGMENT_RATE_LINEAR
+	DPC_SEGMENT_RATE_INVALID = 0,
+	DPC_SEGMENT_RATE_FIXED,
+	DPC_SEGMENT_RATE_LINEAR,
+	DPC_SEGMENT_RATE_NULL
 } dpc_segment_type_t;
 
 /*

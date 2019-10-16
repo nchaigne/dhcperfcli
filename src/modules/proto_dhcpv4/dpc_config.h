@@ -59,6 +59,7 @@ struct dpc_config_s {
 typedef struct {
 	double start;
 	double end;
+	char const *type;
 	double rate;
 } dpc_segment_config_t;
 
