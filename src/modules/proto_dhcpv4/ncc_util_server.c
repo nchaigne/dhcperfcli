@@ -76,7 +76,16 @@ static char const parse_spaces[] = "                                            
  */
 void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth)
 {
-	cf_log_debug(cs, "%.*s%s {", CF_SECTION_SPACE(cs_depth), parse_spaces, cf_section_name(cs));
+	char const *cs_name1, *cs_name2;
+
+	cs_name1 = cf_section_name1(cs);
+	cs_name2 = cf_section_name2(cs);
+
+	if (!cs_name2) {
+		cf_log_debug(cs, "%.*s%s {", CF_SECTION_SPACE(cs_depth), parse_spaces, cs_name1);
+	} else {
+		cf_log_debug(cs, "%.*s%s %s {", CF_SECTION_SPACE(cs_depth), parse_spaces, cs_name1, cs_name2);
+	}
 }
 
 /**
