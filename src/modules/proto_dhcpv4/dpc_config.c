@@ -30,9 +30,9 @@ static CONF_PARSER _segment_config[] = {
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", .func = float64_positive_parse },
 	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0", .func = float64_positive_parse },
 	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed" },
-	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0" },
-	{ FR_CONF_OFFSET("rate_start", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_start), .dflt = "0" },
-	{ FR_CONF_OFFSET("rate_end", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_end), .dflt = "0" },
+	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0", .func = float64_positive_parse },
+	{ FR_CONF_OFFSET("rate_start", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_start), .dflt = "0", .func = float64_positive_parse },
+	{ FR_CONF_OFFSET("rate_end", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_end), .dflt = "0", .func = float64_positive_parse },
 
 	CONF_PARSER_TERMINATOR
 };
