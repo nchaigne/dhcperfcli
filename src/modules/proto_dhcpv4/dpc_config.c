@@ -28,6 +28,8 @@ static CONF_PARSER _segment_config[] = {
 	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0" },
 	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed" },
 	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0" },
+	{ FR_CONF_OFFSET("rate_start", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_start), .dflt = "0" },
+	{ FR_CONF_OFFSET("rate_end", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_end), .dflt = "0" },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -161,12 +163,23 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 				}
 
 				segment->type = fr_table_value_by_str(segment_types, segment_config.type, DPC_SEGMENT_RATE_INVALID);
-				if (segment->type == DPC_SEGMENT_RATE_INVALID) {
+				switch (segment->type) {
+				case DPC_SEGMENT_RATE_INVALID:
 					cf_log_err(subcs, "Invalid segment type \"%s\"", segment_config.type);
 					goto error;
-				}
 
-				segment->rate_limit = segment_config.rate;
+				case DPC_SEGMENT_RATE_FIXED:
+					segment->rate_limit = segment_config.rate;
+					break;
+
+				case DPC_SEGMENT_RATE_LINEAR:
+					segment->rate_limit_range.start = segment_config.rate_start;
+					segment->rate_limit_range.end = segment_config.rate_end;
+					break;
+
+				case DPC_SEGMENT_RATE_NULL:
+					break;
+				}
 			}
 
 			ncc_cs_debug_end(cs, cs_depth_base);

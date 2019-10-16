@@ -61,6 +61,8 @@ typedef struct {
 	double end;
 	char const *type;
 	double rate;
+	double rate_start;
+	double rate_end;
 } dpc_segment_config_t;
 
 typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);
