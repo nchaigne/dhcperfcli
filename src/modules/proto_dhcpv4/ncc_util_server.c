@@ -65,20 +65,32 @@ VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR 
 
 static char const parse_spaces[] = "                                                                                                                                                                                                                                              ";
 
+/* Equivalent to PAIR_SPACE and SECTION_SPACE (from cf_parse.c), but with depth directly provided.
+ * (Needed because CONF_SECTION is opaque and no function exposes depth)
+ */
+#define CF_PAIR_SPACE(_cs_depth) ((_cs_depth + 1) * 2)
+#define CF_SECTION_SPACE(_cs_depth) (_cs_depth * 2)
+
+/**
+ * Debug the start of a configuration section (custom parsing, i.e. not calling cf_section_parse).
+ */
 void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth)
 {
-	cf_log_debug(cs, "%.*s%s {", cs_depth * 2, parse_spaces, cf_section_name(cs));
+	cf_log_debug(cs, "%.*s%s {", CF_SECTION_SPACE(cs_depth), parse_spaces, cf_section_name(cs));
 }
 
+/**
+ * Debug the end of a configuration section (custom parsing, i.e. not calling cf_section_parse).
+ */
 void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth)
 {
-	cf_log_debug(cs, "%.*s}", cs_depth * 2, parse_spaces);
+	cf_log_debug(cs, "%.*s}", CF_SECTION_SPACE(cs_depth), parse_spaces);
 }
 
-/*
- *	Convert a config section into an attribute list.
- *	Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
- *	Note: requires libfreeradius-server.
+/**
+ * Convert a config section into an attribute list.
+ * Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
+ * Note: requires libfreeradius-server.
  */
 int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
                            CONF_SECTION *cs, int cs_depth, unsigned int max)
@@ -96,7 +108,6 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 	for (ci = cf_item_next(cs, NULL);
 	     ci != NULL;
 	     ci = cf_item_next(cs, ci)) {
-		int cf_space = (cs_depth + 1) * 2;
 
 		if (total++ == max) {
 			cf_log_err(ci, "Too many attributes (max: %u)", max);
@@ -119,7 +130,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 		fr_pair_add(out, vp);
 
 		ncc_pair_snprint(buf, sizeof(buf), vp);
-		cf_log_debug(cs, "%.*s%s", cf_space, parse_spaces, buf);
+		cf_log_debug(cs, "%.*s%s", CF_PAIR_SPACE(cs_depth), parse_spaces, buf);
 	}
 
 	ncc_cs_debug_end(cs, cs_depth);
