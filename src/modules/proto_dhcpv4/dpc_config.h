@@ -94,3 +94,17 @@ do {\
 
 #define CONF_CHECK_UINT64(_name, _var, _cond, _expected)\
 	CONF_CHECK_FMT(PRIu64, _name, _var, _cond, _expected)
+
+/*
+ *	Configuration checks when custom parsing.
+ */
+#define CONF_CS_CHECK_FMT(_cs, _fmt, _name, _var, _cond, _expected)\
+do {\
+	if (!(_cond)) {\
+		cf_log_err(_cs, "Invalid \"" _name " = %" _fmt "\" (expected: " _expected ")", _var);\
+		goto error;\
+	}\
+} while (0)
+
+#define CONF_CS_CHECK_FLOAT(_cs, _name, _var, _cond, _expected)\
+	CONF_CS_CHECK_FMT(_cs, "f", _name, _var, _cond, _expected)

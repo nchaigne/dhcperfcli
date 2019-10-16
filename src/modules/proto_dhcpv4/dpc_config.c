@@ -153,6 +153,9 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 				if (cf_section_rules_push(subcs, _segment_config) < 0) goto error;
 				if (cf_section_parse(input, &segment_config, subcs) < 0) goto error;
 
+				CONF_CS_CHECK_FLOAT(subcs, "segment start", segment_config.start, segment_config.start >= 0, ">= 0");
+				CONF_CS_CHECK_FLOAT(subcs, "segment end", segment_config.end, segment_config.end >= 0, ">= 0");
+
 				ftd_start = ncc_float_to_fr_time(segment_config.start);
 				ftd_end = ncc_float_to_fr_time(segment_config.end);
 
