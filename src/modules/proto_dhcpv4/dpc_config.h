@@ -59,6 +59,7 @@ struct dpc_config_s {
 typedef struct {
 	double start;
 	double end;
+	double rate;
 } dpc_segment_config_t;
 
 typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);

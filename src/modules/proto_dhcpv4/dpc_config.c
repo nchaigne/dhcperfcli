@@ -26,6 +26,7 @@
 static CONF_PARSER _segment_config[] = {
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0" },
 	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0" },
+	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0" },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -150,6 +151,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 					cf_log_perr(subcs, "Failed to add segment");
 					goto error;
 				}
+				segment->rate_limit = segment_config.rate;
 			}
 
 			ncc_cs_debug_end(cs, cs_depth_base);
