@@ -112,10 +112,10 @@ do {\
 #define CONF_CI_CHECK_FMT(_ci, _fmt, _cond, _expected)\
 do {\
 	if (!(_cond)) {\
-		char const *attr_name = cf_pair_attr(cf_item_to_pair(_ci));\
-		char const *attr_value = cf_pair_value(cf_item_to_pair(_ci));\
-		char const *parent_name = cf_pair_attr(cf_parent(_ci));\
-		cf_log_err(_ci, "Invalid \"%s.%s = %s\" (expected: " _expected ")", parent_name, attr_name, attr_value);\
+		char const *item_name = cf_pair_attr(cf_item_to_pair(_ci));\
+		char const *item_value = cf_pair_value(cf_item_to_pair(_ci));\
+		char const *parent_name = cf_section_name1(cf_item_to_section(cf_parent(_ci)));\
+		cf_log_err(_ci, "Invalid value \"%s.%s = %s\" (expected: " _expected ")", parent_name, item_name, item_value);\
 		goto error;\
 	}\
 } while (0)
