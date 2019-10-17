@@ -139,6 +139,11 @@ ncc_dlist_t input_list;
 ncc_dlist_t segment_list;
 dpc_segment_t *segment_cur;
 
+/* A default virtual segment from start to end with no rate limit. */
+static dpc_segment_t segment_default = {
+	.type = DPC_SEGMENT_RATE_FIXED
+};
+
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
 	.port = DHCP_PORT_SERVER
@@ -295,7 +300,8 @@ static void dpc_session_finish(dpc_session_ctx_t *session);
 static void dpc_loop_recv(void);
 static double dpc_segment_get_rate(dpc_segment_t *segment);
 static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started);
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment,
+                                    double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
 static uint32_t dpc_loop_start_sessions(void);
@@ -1768,18 +1774,16 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 		if (!input->rate_limit) return false; /* No rate limit applies to this input. */
 
 		elapsed_ref = dpc_item_get_elapsed(input);
-		dpc_rate_limit_calc_gen(&max_new_sessions, input->rate_limit, elapsed_ref, input->num_use);
+		dpc_rate_limit_calc_gen(&max_new_sessions, &segment_default, input->rate_limit, elapsed_ref, input->num_use);
 
 	} else {
 		/*
 		 * Use current segment to check if a rate limit is applicable.
 		 */
-		if (!input->segment_cur->rate_limit) return false;
-
 		fr_time_delta_t ftd_elapsed = fr_time() - (fte_job_start + input->segment_cur->ftd_start);
 		elapsed_ref = ncc_fr_time_to_float(ftd_elapsed);
 
-		dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_cur->rate_limit, elapsed_ref, input->segment_cur->num_use);
+		dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_cur, input->segment_cur->rate_limit, elapsed_ref, input->segment_cur->num_use);
 	}
 
 	return (max_new_sessions == 0);
@@ -2086,8 +2090,19 @@ static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *
  *
  *	Returns: true if a limit has to be enforced at the moment, false otherwise.
  */
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started)
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment,
+                                    double rate_limit_ref, double elapsed_ref, uint32_t cur_num_started)
 {
+	if (segment->type == DPC_SEGMENT_RATE_FIXED && !segment->rate_limit) {
+		/* No limit. */
+		return false;
+	}
+
+	if (segment->type == DPC_SEGMENT_RATE_NULL) {
+		*max_new_sessions = 0;
+		return true;
+	}
+
 	if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
 		/*
 		 *	Consider a minimum elapsed time interval for the beginning.
@@ -2099,7 +2114,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, double rate_limi
 	/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
 	elapsed_ref += ECTX.rate_limit_time_lookahead;
 
-	uint32_t session_limit = rate_limit_ref * elapsed_ref + 1; /* + 1 so we always start at least one at the beginning. */
+	uint32_t session_limit = segment->rate_limit * elapsed_ref + 1; /* + 1 so we always start at least one at the beginning. */
 
 	if (cur_num_started >= session_limit) {
 		/* Already beyond limit, don't start new sessions for now. */
@@ -2124,17 +2139,15 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 
 		double elapsed_ref = dpc_start_sessions_elapsed_time_get();
 
-		return dpc_rate_limit_calc_gen(max_new_sessions, CONF.rate_limit, elapsed_ref, session_num);
+		return dpc_rate_limit_calc_gen(max_new_sessions, &segment_default, CONF.rate_limit, elapsed_ref, session_num);
 	} else {
 		/*
 		 * Use current segment to apply a rate limit.
 		 */
-		if (!segment_cur->rate_limit) return false;
-
 		fr_time_delta_t ftd_elapsed = fr_time() - (fte_job_start + segment_cur->ftd_start);
 		double elapsed_ref = ncc_fr_time_to_float(ftd_elapsed);
 
-		return dpc_rate_limit_calc_gen(max_new_sessions, segment_cur->rate_limit, elapsed_ref, segment_cur->num_use);
+		return dpc_rate_limit_calc_gen(max_new_sessions, segment_cur, segment_cur->rate_limit, elapsed_ref, segment_cur->num_use);
 	}
 }
 
@@ -3515,6 +3528,8 @@ int main(int argc, char **argv)
 	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
+
+	segment_default.rate_limit = CONF.rate_limit;
 
 	/*
 	 *	Allocate sockets for gateways.
