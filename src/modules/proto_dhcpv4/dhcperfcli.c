@@ -3022,6 +3022,7 @@ static struct option long_options[] = {
 	/* Long options with short option equivalent. */
 	{ "conf-check",             no_argument,       NULL, 'C' },
 	{ "dict-dir",               required_argument, NULL, 'D' },
+	{ "help",                   no_argument,       NULL, 'h' },
 	{ "input-file",             required_argument, NULL, 'f' },
 	{ "duration-start-max",     required_argument, NULL, 'L' },
 	{ "session-max",            required_argument, NULL, 'N' },
@@ -3651,7 +3652,13 @@ static void NEVER_RETURNS usage(int status)
 {
 	FILE *fp = status ? stderr : stdout;
 
-	fprintf(fp, "\n");
+	/* General usage should only be printed when specifically requested by the user.
+	 */
+	if (status) {
+		fprintf(fp, "Try '%s --help' for more information.\n", progname);
+		exit(status);
+	}
+
 	fprintf(fp, "Usage: %s [options] [<server>[:<port>] [<command>]]\n", progname);
 	fprintf(fp, "  <server>:<port>  The DHCP server. If omitted, it must be specified in input items.\n");
 	fprintf(fp, "  <command>        One of (message type): discover, request, decline, release, inform, lease_query.\n");
@@ -3688,7 +3695,6 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fp, "  -X               Turn on FreeRADIUS libraries debugging (use this in conjunction with -x).\n");
 	fprintf(fp, "\n");
 	fprintf(fp, "Refer to manual for the full usage (with long options).\n");
-	fprintf(fp, "\n");
 
 	exit(status);
 }

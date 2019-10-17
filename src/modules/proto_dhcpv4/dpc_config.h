@@ -97,6 +97,9 @@ do {\
 
 /*
  *	Configuration checks when parsing.
+ *
+ *	Note: Failed checks are handled as errors. So this is different from FreeRADIUS
+ *	FR_..._COND_CHECK (cf_parse.h) macros which warn and provide a default value if necessary.
  */
 #define CONF_CS_CHECK_FMT(_cs, _fmt, _name, _var, _cond, _expected)\
 do {\
