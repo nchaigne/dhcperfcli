@@ -2602,6 +2602,17 @@ static bool dpc_input_parse(dpc_input_t *input)
 		dpc_input_socket_allocate(input);
 	}
 
+	/* Set a default segment for this input item.
+	 * If no input rate limit is set, use the global default segment.
+	 */
+	if (!input->rate_limit) {
+		input->segment_dflt = &segment_default;
+	} else {
+		MEM(input->segment_dflt = talloc_zero(input, dpc_segment_t));
+		input->segment_dflt->type = DPC_SEGMENT_RATE_FIXED;
+		input->segment_dflt->rate_limit = input->rate_limit;
+	}
+
 	/* All good. */
 	return true;
 }
