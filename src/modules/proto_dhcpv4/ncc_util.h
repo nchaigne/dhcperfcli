@@ -267,6 +267,7 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 
 char const *ncc_attr_dict_name(fr_dict_attr_t const *da);
 fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *name);
+void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da);
 
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
