@@ -2686,6 +2686,9 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 	/* Trace what we've read. */
 	dpc_input_debug(input);
 
+	/* Trace the input time segments. */
+	dpc_segment_list_debug(input->segments);
+
 	/*
 	 *	Add it to the list of input items.
 	 */

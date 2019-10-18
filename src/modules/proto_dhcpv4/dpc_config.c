@@ -10,6 +10,9 @@
 
 static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
 
+static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle);
+static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments);
+static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments);
 
 /* Notes:
  *
@@ -123,7 +126,7 @@ static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF
 /*
  *	Iterates over all configured input in the specified section.
  */
-int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle)
+static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle)
 {
 	CONF_SECTION *cs = NULL, *subcs;
 	dpc_input_t *input;
@@ -157,49 +160,12 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 		/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections.
 		 */
 		if (subcs) {
-			subcs = NULL;
-			while ((subcs = cf_section_find_next(cs, subcs, "segment", CF_IDENT_ANY))) {
-				dpc_segment_config_t segment_config;
-				fr_time_delta_t ftd_start = 0, ftd_end = 0;
-				dpc_segment_t *segment;
+			/* List is allocated even if there are no segments. */
+			input->segments = talloc_zero(input, ncc_dlist_t);
 
-				if (!input->segments) {
-					input->segments = talloc_zero(input, ncc_dlist_t);
-				}
-
-				/* Parse this segment sub-section.
-				 */
-				if (cf_section_rules_push(subcs, _segment_config) < 0) goto error;
-				if (cf_section_parse(input, &segment_config, subcs) < 0) goto error;
-
-				ftd_start = ncc_float_to_fr_time(segment_config.start);
-				ftd_end = ncc_float_to_fr_time(segment_config.end);
-
-				segment = dpc_segment_add(input, input->segments, ftd_start, ftd_end);
-				if (!segment) {
-					cf_log_perr(subcs, "Failed to add segment");
-					goto error;
-				}
-
-				segment->type = fr_table_value_by_str(segment_types, segment_config.type, DPC_SEGMENT_RATE_INVALID);
-				switch (segment->type) {
-				case DPC_SEGMENT_RATE_INVALID:
-					cf_log_err(subcs, "Invalid segment type \"%s\"", segment_config.type);
-					goto error;
-
-				case DPC_SEGMENT_RATE_FIXED:
-					segment->rate_limit = segment_config.rate;
-					break;
-
-				case DPC_SEGMENT_RATE_LINEAR:
-					segment->rate_limit_range.start = segment_config.rate_start;
-					segment->rate_limit_range.end = segment_config.rate_end;
-					break;
-
-				case DPC_SEGMENT_RATE_NULL:
-				case DPC_SEGMENT_RATE_UNBOUNDED:
-					break;
-				}
+			if (dpc_segment_sections_parse(input, cs, input->segments) != 0) {
+				cf_log_perr(subcs, "Failed to parse input 'segment' sections");
+				goto error;
 			}
 
 			ncc_cs_debug_end(cs, cs_depth_base);
@@ -214,7 +180,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 /**
  * Handle a time segment read from configuration. Add it to the provided list.
  */
-int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments)
+static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments)
 {
 	dpc_segment_t *segment = NULL;
 	fr_time_delta_t ftd_start, ftd_end;
@@ -258,7 +224,7 @@ error:
 /*
  *	Iterates over all configured segments in the specified section.
  */
-int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments)
+static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments)
 {
 	dpc_segment_config_t segment_config;
 	CONF_SECTION *cs = NULL;
