@@ -1765,6 +1765,7 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 {
 	uint32_t max_new_sessions = 0;
 	double elapsed_ref;
+	bool limit;
 
 	input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
 	if (!input->segment_cur) {
@@ -1774,7 +1775,7 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 		if (!input->rate_limit) return false; /* No rate limit applies to this input. */
 
 		elapsed_ref = dpc_item_get_elapsed(input);
-		dpc_rate_limit_calc_gen(&max_new_sessions, &segment_default, input->rate_limit, elapsed_ref, input->num_use);
+		limit = dpc_rate_limit_calc_gen(&max_new_sessions, &segment_default, input->rate_limit, elapsed_ref, input->num_use);
 
 	} else {
 		/*
@@ -1783,10 +1784,11 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 		fr_time_delta_t ftd_elapsed = fr_time() - (fte_job_start + input->segment_cur->ftd_start);
 		elapsed_ref = ncc_fr_time_to_float(ftd_elapsed);
 
-		dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_cur, input->segment_cur->rate_limit, elapsed_ref, input->segment_cur->num_use);
+		limit = dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_cur, input->segment_cur->rate_limit, elapsed_ref, input->segment_cur->num_use);
 	}
 
-	return (max_new_sessions == 0);
+	if (!limit) return false;
+	else return (max_new_sessions == 0);
 }
 
 /*
@@ -3533,7 +3535,10 @@ int main(int argc, char **argv)
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 
-	segment_default.rate_limit = CONF.rate_limit;
+	if (CONF.rate_limit) {
+		segment_default.type = DPC_SEGMENT_RATE_FIXED;
+		segment_default.rate_limit = CONF.rate_limit;
+	}
 
 	/*
 	 *	Allocate sockets for gateways.
