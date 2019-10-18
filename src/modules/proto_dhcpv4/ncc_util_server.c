@@ -16,12 +16,15 @@
 VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp)
 {
 	char const *attr, *value;
-	fr_dict_attr_t const *da;
+	fr_dict_attr_t const *da = NULL;
 	VALUE_PAIR *vp;
 
 	attr = cf_pair_attr(cp); /* Note: attr cannot be NULL. */
 
-	da = fr_dict_attr_by_name(dict, attr);
+	//da = fr_dict_attr_by_name(dict, attr);
+	// can't do that: this would only look into the provided dictionary.
+
+	da = ncc_dict_attr_by_name(dict, attr);
 	if (!da) {
 		cf_log_err(cp, "Not a valid attribute: \"%s\"", attr);
 		return NULL;

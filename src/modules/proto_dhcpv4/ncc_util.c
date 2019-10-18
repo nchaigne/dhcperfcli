@@ -403,6 +403,64 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 }
 
 
+/**
+ * Find a dictionary attribute by its name within a given dictionary.
+ * If not found, fallback to internal and other dictionaries.
+ *
+ * @param[in] dict  dictionary where attribute is looked for.
+ *                  If NULL the internal dictionary will be used.
+ * @param[in] name  attribute to look for.
+ *
+ * @return the dictionary attribute (or NULL if it could not be found).
+ */
+fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *name)
+{
+	fr_dict_attr_t const *da = NULL;
+
+	/* If a dictionary is specified, look into it first.
+	 */
+	if (dict) {
+		da = fr_dict_attr_by_name(dict, name);
+	}
+
+	if (!da) {
+		/*
+		 * Fallback to internal and other dictionaries.
+		 */
+		fr_dict_attr_by_qualified_name(&da, dict, name, true);
+
+		// fr_dict_attr_by_qualified_name does more things than we really need, but...
+		// simpler than iterate ourselves, probably not an issue.
+		// TODO: check.
+	}
+
+	return da;
+}
+
+/**
+ * Print information on a dictionary attribute (cf. function da_print_info_td from radict.c)
+ *
+ * <dictionary name> <OID> <attribute name> <type> <flags>
+ * e.g.:
+ * dhcperfcli      3004    Rate-Limit      string  internal,virtual
+ */
+void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
+{
+	char oid_str[512];
+	char flags[256];
+
+	fr_dict_t const *dict = fr_dict_by_da(da);
+
+	fr_dict_print_attr_oid(NULL, oid_str, sizeof(oid_str), NULL, da);
+
+	fr_dict_snprint_flags(flags, sizeof(flags), da->type, &da->flags);
+
+	fprintf(fp, "attr: [%s], OID: [%s], dict: [%s], type: [%s], flags: [%s]\n",
+	        da->name, oid_str, fr_dict_root(dict)->name,
+            fr_table_str_by_value(fr_value_box_type_table, da->type, "?Unknown?"), flags);
+}
+
+
 /*
  *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
