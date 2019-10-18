@@ -448,9 +448,10 @@ fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *n
 		 */
 		fr_dict_attr_by_qualified_name(&da, dict, name, true);
 
-		// fr_dict_attr_by_qualified_name does more things than we really need, but...
-		// simpler than iterate ourselves, probably not an issue.
-		// TODO: check.
+		/* Note: fr_dict_attr_by_qualified_name allows to provide a protocol qualifier.
+		 * E.g.: "dhcpv4.DHCP-Hostname" (non case sensitive).
+		 * We don't need this, but it's not an issue either.
+		 */
 	}
 
 	return da;
