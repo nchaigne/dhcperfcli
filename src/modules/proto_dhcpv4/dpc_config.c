@@ -121,7 +121,7 @@ static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF
 }
 
 /*
- *	Iterates over all input definitions in the specified section, adding them to the list.
+ *	Iterates over all configured input in the specified section.
  */
 int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle)
 {
@@ -209,6 +209,76 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 	}
 
 	return 0;
+}
+
+/**
+ * Handle a time segment read from configuration. Add it to the provided list.
+ */
+int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments)
+{
+	dpc_segment_t *segment = NULL;
+	fr_time_delta_t ftd_start, ftd_end;
+
+	ftd_start = ncc_float_to_fr_time(segment_config->start);
+	ftd_end = ncc_float_to_fr_time(segment_config->end);
+
+	segment = dpc_segment_add(ctx, segments, ftd_start, ftd_end);
+	if (!segment) {
+		cf_log_perr(cs, "Failed to add segment");
+		return -1;
+	}
+
+	segment->type = fr_table_value_by_str(segment_types, segment_config->type, DPC_SEGMENT_RATE_INVALID);
+	switch (segment->type) {
+	case DPC_SEGMENT_RATE_INVALID:
+		cf_log_err(cs, "Invalid segment type \"%s\"", segment_config->type);
+		goto error;
+
+	case DPC_SEGMENT_RATE_FIXED:
+		segment->rate_limit = segment_config->rate;
+		break;
+
+	case DPC_SEGMENT_RATE_LINEAR:
+		segment->rate_limit_range.start = segment_config->rate_start;
+		segment->rate_limit_range.end = segment_config->rate_end;
+		break;
+
+	case DPC_SEGMENT_RATE_NULL:
+	case DPC_SEGMENT_RATE_UNBOUNDED:
+		break;
+	}
+
+	return 0;
+
+error:
+	talloc_free(segment);
+	return -1;
+}
+
+/*
+ *	Iterates over all configured segments in the specified section.
+ */
+int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments)
+{
+	dpc_segment_config_t segment_config;
+	CONF_SECTION *cs = NULL;
+
+	while ((cs = cf_section_find_next(section, cs, "segment", CF_IDENT_ANY))) {
+
+		/* Parse this segment sub-section.
+		 */
+		if (cf_section_rules_push(cs, _segment_config) < 0) goto error;
+		if (cf_section_parse(ctx, &segment_config, cs) < 0) goto error;
+
+		/* Add the segment to the list.
+		 */
+		if (dpc_segment_handle(ctx, cs, &segment_config, segments) < 0) goto error;
+	}
+
+	return 0;
+
+error:
+	return -1;
 }
 
 /*
@@ -333,9 +403,25 @@ int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handl
 {
 	CONF_SECTION *cs = config->root_cs;
 
-	DEBUG2("%s: #### Loading 'input' entries ####", config->name);
+	DEBUG2("%s: #### Parsing 'input' sections ####", config->name);
 	if (dpc_input_list_parse_section(cs, fn_input_handle) != 0) {
-		ERROR("Failed to load 'input' entries from configuration file");
+		ERROR("Failed to load 'input' sections from configuration file");
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * Load configured 'segment' sections.
+ */
+int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
+{
+	CONF_SECTION *cs = config->root_cs;
+
+	DEBUG2("%s: #### Parsing 'segment' sections ####", config->name);
+	if (dpc_segment_sections_parse(cs, cs, segment_list) != 0) {
+		ERROR("Failed to load 'segment' sections from configuration file");
 		return -1;
 	}
 

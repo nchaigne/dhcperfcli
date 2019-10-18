@@ -136,7 +136,7 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 ncc_dlist_t input_list;
-ncc_dlist_t segment_list;
+ncc_dlist_t *segment_list;
 dpc_segment_t *segment_cur;
 
 /* A default virtual segment from start to end with no rate limit. */
@@ -505,7 +505,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	fprintf(fp, "\n");
 
 	/* Segment statistics line. */
-	segment_cur = dpc_get_current_segment(&segment_list, segment_cur);
+	segment_cur = dpc_get_current_segment(segment_list, segment_cur);
 	if (segment_cur) {
 		char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
 		fprintf(fp, " └─ segment #%u %s use: %u, rate (/s): %.3f\n", segment_cur->id,
@@ -2143,7 +2143,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
-	segment_cur = dpc_get_current_segment(&segment_list, segment_cur);
+	segment_cur = dpc_get_current_segment(segment_list, segment_cur);
 	if (!segment_cur) {
 		/*
 		 * No segment: use default (with fixed global rate limit if set).
@@ -3305,7 +3305,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_SEGMENT: // --segment
-				if (dpc_segment_parse(global_ctx, &segment_list, optarg) < 0) {
+				if (dpc_segment_parse(global_ctx, segment_list, optarg) < 0) {
 					PERROR("Failed to parse segment \"%s\"", optarg);
 					exit(EXIT_FAILURE);
 				}
@@ -3482,10 +3482,13 @@ int main(int argc, char **argv)
 	dpc_config_name_set_default(dpc_config, progname, false);
 
 	/*
-	 *	Initialize chained lists (input items, segments).
+	 *	Initialize chained lists (input items, global segments).
 	 */
 	NCC_DLIST_INIT(&input_list, dpc_input_t);
-	NCC_DLIST_INIT(&segment_list, dpc_segment_t);
+
+	/* Segments list is talloc'ed. */
+	segment_list = talloc_zero(global_ctx, ncc_dlist_t);
+	NCC_DLIST_INIT(segment_list, dpc_segment_t);
 
 	/*
 	 *	Parse the command line options.
@@ -3522,6 +3525,7 @@ int main(int argc, char **argv)
 	 */
 	if (dpc_config_init(dpc_config, file_config, conf_inline) < 0) exit(EXIT_FAILURE);
 	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
+	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
