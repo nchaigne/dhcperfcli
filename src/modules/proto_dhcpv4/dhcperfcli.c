@@ -1775,7 +1775,7 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 		if (!input->rate_limit) return false; /* No rate limit applies to this input. */
 
 		elapsed_ref = dpc_item_get_elapsed(input);
-		limit = dpc_rate_limit_calc_gen(&max_new_sessions, &segment_default, input->rate_limit, elapsed_ref, input->num_use);
+		limit = dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_dflt, input->rate_limit, elapsed_ref, input->num_use);
 
 	} else {
 		/*
