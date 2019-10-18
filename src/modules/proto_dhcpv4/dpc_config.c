@@ -97,9 +97,10 @@ static const CONF_PARSER _main_config[] = {
 };
 
 fr_table_num_sorted_t const segment_types[] = {
-	{ "fixed",  DPC_SEGMENT_RATE_FIXED },
-	{ "linear", DPC_SEGMENT_RATE_LINEAR },
-	{ "null",   DPC_SEGMENT_RATE_NULL },
+	{ "fixed",     DPC_SEGMENT_RATE_FIXED },
+	{ "linear",    DPC_SEGMENT_RATE_LINEAR },
+	{ "null",      DPC_SEGMENT_RATE_NULL },
+	{ "unbounded", DPC_SEGMENT_RATE_UNBOUNDED },
 };
 size_t segment_types_len = NUM_ELEMENTS(segment_types);
 
@@ -196,6 +197,7 @@ int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_inp
 					break;
 
 				case DPC_SEGMENT_RATE_NULL:
+				case DPC_SEGMENT_RATE_UNBOUNDED:
 					break;
 				}
 			}
