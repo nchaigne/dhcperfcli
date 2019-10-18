@@ -248,6 +248,11 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 
 			/* New segment is not inserted before existing segment. Check for overlap. (e.g. 5-8, 7-10 => reject.) */
 			if (segment_new->ftd_start < segment->ftd_end) goto overlap;
+
+			/* Also overlap if existing segment end is INF.
+			 * (e.g. 5-0, 10-0 => reject; 5-0, 10-15 => reject.)
+			 */
+			if (!segment->ftd_end) goto overlap;
 		}
 
 		segment = NCC_DLIST_NEXT(dlist, segment);
