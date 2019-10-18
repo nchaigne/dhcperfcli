@@ -297,10 +297,12 @@ static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
-static void dpc_loop_recv(void);
+static void dpc_segment_list_debug(ncc_dlist_t *list);
 static double dpc_segment_get_rate(dpc_segment_t *segment);
 static double dpc_segment_get_elapsed(dpc_segment_t *segment);
 static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
+
+static void dpc_loop_recv(void);
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
@@ -309,6 +311,7 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static bool dpc_input_parse(dpc_input_t *input);
+static void dpc_input_debug(dpc_input_t *input);
 static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
@@ -2033,6 +2036,16 @@ static void dpc_loop_recv(void)
 	}
 }
 
+/**
+ * Debug a list of time segments.
+ */
+static void dpc_segment_list_debug(ncc_dlist_t *list)
+{
+	if (!list || dpc_debug_lvl < 2) return;
+
+	DEBUG2("Time segments:");
+	dpc_segment_list_fprint(fr_log_fp, list);
+}
 
 /*
  *	Get the use rate of a time segment.
@@ -3529,6 +3542,8 @@ int main(int argc, char **argv)
 
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
+
+	dpc_segment_list_debug(segment_list);
 
 	/*
 	 *	Perform configuration-related initializations.
