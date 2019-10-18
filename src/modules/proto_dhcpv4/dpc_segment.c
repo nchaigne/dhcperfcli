@@ -150,6 +150,8 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
  * Likewise, end = 0 means "until the end" if there is no segment after the new segment added,
  * or if there is, "until the start of that next segment".
  *
+ * As a rule, existing segments will never be modified when trying to add a new segment.
+ *
  * @param[in] ctx        talloc context.
  * @param[in] dlist      list to which segment will be added.
  * @param[in] ftd_start  start of new segment.

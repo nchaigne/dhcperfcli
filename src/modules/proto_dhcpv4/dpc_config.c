@@ -205,6 +205,12 @@ static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_con
 		break;
 
 	case DPC_SEGMENT_RATE_LINEAR:
+		/* A linear rate can only be enforced if we know when the segment will end.
+	 	 */
+		if (!segment->ftd_end) {
+			cf_log_err(cs, "Segment of type \"%s\" must have a finite end", segment_config->type);
+			goto error;
+		}
 		segment->rate_limit_range.start = segment_config->rate_start;
 		segment->rate_limit_range.end = segment_config->rate_end;
 		break;
