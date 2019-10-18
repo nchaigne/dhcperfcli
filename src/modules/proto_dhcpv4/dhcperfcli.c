@@ -3540,13 +3540,13 @@ int main(int argc, char **argv)
 	 *	Read the configuration file (if provided), and parse configuration.
 	 */
 	if (dpc_config_init(dpc_config, file_config, conf_inline) < 0) exit(EXIT_FAILURE);
-	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
 	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
+	dpc_segment_list_debug(segment_list);
+
+	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
-
-	dpc_segment_list_debug(segment_list);
 
 	/*
 	 *	Perform configuration-related initializations.

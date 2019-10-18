@@ -161,7 +161,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 {
 	NCC_DLIST_INIT(dlist, dpc_segment_t);
 
-	DEBUG2("Trying to add segment (%.3f - %.3f)", ncc_fr_time_to_float(ftd_start), ncc_fr_time_to_float(ftd_end));
+	DEBUG3("Trying to add segment (%.3f - %.3f)", ncc_fr_time_to_float(ftd_start), ncc_fr_time_to_float(ftd_end));
 
 	if (ftd_end && ftd_end <= ftd_start) {
 		fr_strerror_printf("Invalid segment (%.3f - %.3f), end cannot predate start",
@@ -183,7 +183,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 
 	/* If list is empty, just insert new segment. */
 	if (NCC_DLIST_SIZE(dlist) == 0) {
-		DEBUG2("Inserting first segment (%.3f - %.3f)",
+		DEBUG3("Inserting first segment (%.3f - %.3f)",
 		       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
 
 		NCC_DLIST_ENQUEUE(dlist, segment_new);
@@ -238,7 +238,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 				} else if (segment_new->ftd_end > segment->ftd_start) goto overlap;
 
 				/* Else: insert before existing segment. */
-				DEBUG2("Inserting segment (%.3f - %.3f) before (%.3f - %.3f)",
+				DEBUG3("Inserting segment (%.3f - %.3f) before (%.3f - %.3f)",
 				       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end),
 				       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
 
@@ -254,7 +254,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 	}
 
 	/* Insert new segment at the tail. */
-	DEBUG2("Inserting segment (%.3f - %.3f) at the tail",
+	DEBUG3("Inserting segment (%.3f - %.3f) at the tail",
 	       ncc_fr_time_to_float(segment_new->ftd_start), ncc_fr_time_to_float(segment_new->ftd_end));
 
 	NCC_DLIST_ENQUEUE(dlist, segment_new);
