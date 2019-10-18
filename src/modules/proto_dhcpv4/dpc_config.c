@@ -164,7 +164,6 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 			input->segments = talloc_zero(input, ncc_dlist_t);
 
 			if (dpc_segment_sections_parse(input, cs, input->segments) != 0) {
-				cf_log_perr(subcs, "Failed to parse input 'segment' sections");
 				goto error;
 			}
 
