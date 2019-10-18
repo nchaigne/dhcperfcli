@@ -404,6 +404,25 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 
 
 /**
+ * Safely get the dictionary name of a dictionary attribute (or NULL).
+ */
+char const *ncc_attr_dict_name(fr_dict_attr_t const *da)
+{
+	fr_dict_t *dict;
+	fr_dict_attr_t const *da_root;
+
+	if (!da) return NULL;
+
+	dict = fr_dict_by_da(da);
+	if (!dict) return NULL;
+
+	da_root = fr_dict_root(dict);
+	if (!da_root) return NULL;
+
+	return da_root->name;
+}
+
+/**
  * Find a dictionary attribute by its name within a given dictionary.
  * If not found, fallback to internal and other dictionaries.
  *
