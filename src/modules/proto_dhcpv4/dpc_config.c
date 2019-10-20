@@ -123,19 +123,18 @@ static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF
 	return 0;
 }
 
-/*
- *	Iterates over all configured input in the specified section.
+/**
+ * Parse all "input" sections within a configuration section.
+ * These may contains directly a list of vps, or "pairs" sub-section(s).
+ * In which case, "input" can also contain "segment" sub-sections.
  */
 static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle)
 {
 	CONF_SECTION *cs = NULL, *subcs;
 	dpc_input_t *input;
-	int ret;
 	int cs_depth_base = 1;
-	int cs_depth;
 
-	/*
-	 *	Iterate over all the input definitions in the section, adding them to the list.
+	/* Iterate over all the "input" sections.
 	 */
 	while ((cs = cf_section_find_next(section, cs, "input", CF_IDENT_ANY))) {
 
@@ -145,27 +144,35 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 		 * Otherwise, consider "input" as the list of vps.
 		 */
 		subcs = cf_section_find_next(cs, NULL, "pairs", CF_IDENT_ANY);
-		if (subcs) ncc_cs_debug_start(cs, cs_depth_base);
-
-		cs_depth = cs_depth_base;
-		if (subcs) cs_depth++;
-
-		ret = ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps, subcs ? subcs : cs, cs_depth, MAX_ATTR_INPUT);
-		if (ret != 0) {
-		error:
-			talloc_free(input);
-			return -1;
-		}
-
-		/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections.
-		 */
-		if (subcs) {
-			/* List is allocated even if there are no segments. */
-			input->segments = talloc_zero(input, ncc_dlist_t);
-
-			if (dpc_segment_sections_parse(input, cs, input->segments) != 0) {
-				goto error;
+		if (!subcs) {
+			/*
+			 * "input" section contains the list of vps.
+			 */
+			if (ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps,
+			                           cs, cs_depth_base, MAX_ATTR_INPUT) != 0) {
+			error:
+				talloc_free(input);
+				return -1;
 			}
+
+		} else {
+			/*
+			 * Parse "pairs" sub-sections and aggregate all vps.
+			 */
+			ncc_cs_debug_start(cs, cs_depth_base);
+
+			while (subcs) {
+				if (ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps,
+				                           subcs, cs_depth_base + 1, MAX_ATTR_INPUT) != 0) goto error;
+
+				subcs = cf_section_find_next(section, subcs, "pairs", CF_IDENT_ANY);
+			}
+
+			/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections. Parse them.
+			 * Note: segments list is allocated even if there are no segments.
+			 */
+			input->segments = talloc_zero(input, ncc_dlist_t);
+			if (dpc_segment_sections_parse(input, cs, input->segments) != 0) goto error;
 
 			ncc_cs_debug_end(cs, cs_depth_base);
 		}
@@ -226,8 +233,9 @@ error:
 	return -1;
 }
 
-/*
- *	Iterates over all configured segments in the specified section.
+/**
+ * Parse all "segment" sections within a configuration section.
+ * Add each segment to the provided list.
  */
 static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments)
 {
