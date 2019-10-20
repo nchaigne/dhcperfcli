@@ -2113,7 +2113,10 @@ static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *
  */
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment, uint32_t cur_num_started)
 {
-	if (!segment) segment = &segment_default;
+	if (!segment) {
+		/* No segment entails no limit. */
+		return false;
+	}
 
 	if (segment->type == DPC_SEGMENT_RATE_UNBOUNDED
 	   || (segment->type == DPC_SEGMENT_RATE_FIXED && !segment->rate_limit) ) {
@@ -2616,12 +2619,10 @@ static bool dpc_input_parse(dpc_input_t *input)
 		dpc_input_socket_allocate(input);
 	}
 
-	/* Set a default segment for this input item.
-	 * If no input rate limit is set, use the global default segment.
+	/* If input has a rate limit, set a default segment for this input item.
+	 * This segment will enforce the input rate limit when no other input scoped segment is active.
 	 */
-	if (!input->rate_limit) {
-		input->segment_dflt = &segment_default;
-	} else {
+	if (input->rate_limit) {
 		MEM(input->segment_dflt = talloc_zero(input, dpc_segment_t));
 		input->segment_dflt->type = DPC_SEGMENT_RATE_FIXED;
 		input->segment_dflt->rate_limit = input->rate_limit;
