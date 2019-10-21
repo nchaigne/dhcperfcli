@@ -529,10 +529,9 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	/* Segment statistics line. */
 	segment_cur = dpc_get_current_segment(segment_list, segment_cur);
 	if (segment_cur) {
-		char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
-		fprintf(fp, " └─ segment #%u %s use: %u, rate (/s): %.3f\n", segment_cur->id,
-		        dpc_segment_interval_sprint(interval_buf, segment_cur),
-		        segment_cur->num_use, dpc_segment_get_rate(segment_cur));
+		fprintf(fp, " └─ ");
+		dpc_segment_stats_fprint(fp, segment_cur);
+		fprintf(fp, "\n");
 	}
 
 	/* Per-input statistics line(s). */
