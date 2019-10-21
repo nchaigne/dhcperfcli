@@ -100,9 +100,13 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 		while (segment) {
 			char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
 
-			fprintf(fp, "  #%u %s%s(id: %u): %s, interval: %s",
-			        i, segment->name ? segment->name : "", segment->name ? " " : "",
-			        segment->id, fr_table_str_by_value(segment_types, segment->type, "???"),
+			fprintf(fp, "  #%u ", i);
+			if (segment->name) {
+				fprintf(fp, "%s ", segment->name);
+			}
+
+			fprintf(fp, "(id: %u): %s, interval: %s", segment->id,
+			        fr_table_str_by_value(segment_types, segment->type, "???"),
 			        dpc_segment_interval_sprint(interval_buf, segment));
 
 			switch (segment->type) {
