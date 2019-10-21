@@ -370,7 +370,7 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
 /**
  * Print ongoing statistics for a given segment.
  * E.g.:
- * segment #1 name (2.000 - 8.000) use: 21, rate (/s): 20.999
+ * segment #1 <name> (2.000 - 8.000) fixed: use: 21, rate (/s): 20.999
  */
 void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
 {
@@ -383,8 +383,9 @@ void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
 		fprintf(fp, "%s ", segment->name);
 	}
 
-	fprintf(fp, "%s use: %u, rate (/s): %.3f",
+	fprintf(fp, "%s %s: use: %u, rate (/s): %.3f",
 	        dpc_segment_interval_sprint(interval_buf, segment),
+	        fr_table_str_by_value(segment_types, segment->type, "???"),
 	        segment->num_use, dpc_segment_get_rate(segment));
 }
 
