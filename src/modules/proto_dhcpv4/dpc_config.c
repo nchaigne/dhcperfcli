@@ -99,7 +99,10 @@ static const CONF_PARSER _main_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-fr_table_num_sorted_t const segment_types[] = {
+/* Map segment types to enum value.
+ * Note: using "ordered" rather than "sorted" because performance is not an issue, and it's more convenient.
+ */
+fr_table_num_ordered_t const segment_types[] = {
 	{ "fixed",     DPC_SEGMENT_RATE_FIXED },
 	{ "linear",    DPC_SEGMENT_RATE_LINEAR },
 	{ "null",      DPC_SEGMENT_RATE_NULL },
