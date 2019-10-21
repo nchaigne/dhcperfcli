@@ -99,17 +99,6 @@ static const CONF_PARSER _main_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-/* Map segment types to enum value.
- * Note: using "ordered" rather than "sorted" because performance is not an issue, and it's more convenient.
- */
-fr_table_num_ordered_t const segment_types[] = {
-	{ "fixed",     DPC_SEGMENT_RATE_FIXED },
-	{ "linear",    DPC_SEGMENT_RATE_LINEAR },
-	{ "null",      DPC_SEGMENT_RATE_NULL },
-	{ "unbounded", DPC_SEGMENT_RATE_UNBOUNDED },
-};
-size_t segment_types_len = NUM_ELEMENTS(segment_types);
-
 
 static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
 {

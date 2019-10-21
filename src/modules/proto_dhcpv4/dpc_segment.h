@@ -19,6 +19,10 @@
  */
 
 
+extern fr_table_num_ordered_t const segment_types[];
+extern size_t segment_types_len;
+
+
 /*
  *	Different kinds of time segments.
  */

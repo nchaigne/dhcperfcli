@@ -8,6 +8,18 @@
 static uint32_t segment_id;
 
 
+/* Map segment types to enum value.
+ * Note: using "ordered" rather than "sorted" because performance is not an issue, and it's more convenient.
+ */
+fr_table_num_ordered_t const segment_types[] = {
+	{ "fixed",     DPC_SEGMENT_RATE_FIXED },
+	{ "linear",    DPC_SEGMENT_RATE_LINEAR },
+	{ "null",      DPC_SEGMENT_RATE_NULL },
+	{ "unbounded", DPC_SEGMENT_RATE_UNBOUNDED },
+};
+size_t segment_types_len = NUM_ELEMENTS(segment_types);
+
+
 /**
  * For a given elapsed time, find matching segment (if any) from the list.
  *
@@ -88,9 +100,10 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 		while (segment) {
 			char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
 
-			fprintf(fp, "  #%u %s%s(id: %u), interval: %s\n",
+			fprintf(fp, "  #%u %s%s(id: %u): %s, interval: %s\n",
 			        i, segment->name ? segment->name : "", segment->name ? " " : "",
-					segment->id, dpc_segment_interval_sprint(interval_buf, segment));
+			        segment->id, fr_table_str_by_value(segment_types, segment->type, "???"),
+			        dpc_segment_interval_sprint(interval_buf, segment));
 
 			i++;
 			segment = NCC_DLIST_NEXT(dlist, segment);
