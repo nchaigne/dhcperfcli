@@ -113,30 +113,42 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 
 /**
  * Parse a segment specified from a string.
- * Input format: <start time>;<end time>[;<rate limit>]
+ * Input format: [<type>:]<start time>;<end time>[;<rate>[;<end rate]]
  */
 int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 {
 	FN_ARG_CHECK(-1, in);
 	FN_ARG_CHECK(-1, in[0] != '\0');
 
-	char const *sep1, *sep2;
+	char const *p = in;
+	char const *sep1, *sep2, *sep3;
+	int segment_type = DPC_SEGMENT_RATE_FIXED;
 	double start, end;
 	double rate = 0;
 	fr_time_delta_t ftd_start, ftd_end;
 	dpc_segment_t *segment;
 
-	sep1 = strchr(in, ';');
-	if (!sep1) {
+	sep1 = strchr(p, ':');
+	if (sep1) {
+		NCC_TABLE_VALUE_BY_STR(segment_type, segment_types, in, sep1 - p, DPC_SEGMENT_RATE_INVALID);
+		if (segment_type == DPC_SEGMENT_RATE_INVALID) {
+			fr_strerror_printf("Invalid segment (unknown type): [%s]", in);
+			return -1;
+		}
+		p = sep1 + 1;
+	}
+
+	sep2 = strchr(p, ';');
+	if (!sep2) {
 		fr_strerror_printf("Invalid segment: [%s]", in);
 		return -1;
 	}
 
-	sep2 = strchr(sep1 + 1, ';');
+	sep3 = strchr(sep2 + 1, ';');
 
-	if (ncc_value_from_str(&start, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, in, sep1 - in) < 0
-	   || ncc_value_from_str(&end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep1 + 1, sep2 ? sep2 - 1 - sep1 : -1) < 0
-	   || (sep2 && ncc_value_from_str(&rate, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep2 + 1, -1) < 0)) {
+	if (ncc_value_from_str(&start, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, p, sep2 - p) < 0
+	   || ncc_value_from_str(&end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep2 + 1, sep3 ? sep3 - 1 - sep2 : -1) < 0
+	   || (sep3 && ncc_value_from_str(&rate, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep3 + 1, -1) < 0)) {
 		fr_strerror_printf_push("Failed to parse segment [%s]", in);
 		return -1;
 	}
@@ -149,6 +161,7 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 		fr_strerror_printf_push("Failed to add segment");
 		return -1;
 	}
+	segment->type = segment_type;
 	segment->rate_limit = rate;
 
 	return 0;
