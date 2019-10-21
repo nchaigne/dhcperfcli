@@ -2659,7 +2659,10 @@ static void dpc_input_debug(dpc_input_t *input)
 
 	if (!input || dpc_debug_lvl < 2) return;
 
-	DEBUG2("Input (id: %u) vps read:", input->id);
+	DEBUG2("Input %s%s(id: %u) pairs:",
+	       input->name ? input->name : "", input->name ? " " : "",
+	       input->id);
+
 	ncc_pair_list_fprint(fr_log_fp, input->vps);
 
 	if (dpc_debug_lvl < 3) return;
