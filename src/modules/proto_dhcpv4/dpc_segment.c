@@ -141,36 +141,41 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	FN_ARG_CHECK(-1, in[0] != '\0');
 
 	char const *p = in;
-	char const *sep1, *sep2, *sep3;
+	char const *sep1, *sep2, *sep3, *sep4 = NULL;
+
+	dpc_segment_t *segment = NULL;
 	int segment_type = DPC_SEGMENT_RATE_FIXED;
-	double start, end;
-	double rate = 0;
+	double start = 0, end = 0;
+	double rate = 0, rate_end = 0;
 	fr_time_delta_t ftd_start, ftd_end;
-	dpc_segment_t *segment;
 
 	sep1 = strchr(p, ':');
 	if (sep1) {
 		NCC_TABLE_VALUE_BY_STR(segment_type, segment_types, in, sep1 - p, DPC_SEGMENT_RATE_INVALID);
 		if (segment_type == DPC_SEGMENT_RATE_INVALID) {
 			fr_strerror_printf("Invalid segment (unknown type): [%s]", in);
-			return -1;
+			goto error;
 		}
 		p = sep1 + 1;
 	}
 
 	sep2 = strchr(p, ';');
 	if (!sep2) {
-		fr_strerror_printf("Invalid segment: [%s]", in);
-		return -1;
+		fr_strerror_printf("Invalid segment (missing separator): [%s]", in);
+		goto error;
 	}
 
 	sep3 = strchr(sep2 + 1, ';');
 
+	if (sep3) sep4 = strchr(sep3 + 1, ';');
+
 	if (ncc_value_from_str(&start, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, p, sep2 - p) < 0
 	   || ncc_value_from_str(&end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep2 + 1, sep3 ? sep3 - 1 - sep2 : -1) < 0
-	   || (sep3 && ncc_value_from_str(&rate, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep3 + 1, -1) < 0)) {
+	   || (sep3 && ncc_value_from_str(&rate, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep3 + 1, sep4 ? sep4 - 1 - sep3 : -1) < 0)
+	   || (sep4 && ncc_value_from_str(&rate_end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep4 + 1, -1) < 0)
+	   ) {
 		fr_strerror_printf_push("Failed to parse segment [%s]", in);
-		return -1;
+		goto error;
 	}
 
 	ftd_start = ncc_float_to_fr_time(start);
@@ -179,12 +184,37 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	segment = dpc_segment_add(ctx, dlist, ftd_start, ftd_end);
 	if (!segment) {
 		fr_strerror_printf_push("Failed to add segment");
-		return -1;
+		goto error;
 	}
+
 	segment->type = segment_type;
-	segment->rate_limit = rate;
+
+	switch (segment->type) {
+	case DPC_SEGMENT_RATE_FIXED:
+		segment->rate_limit = rate;
+		break;
+
+	case DPC_SEGMENT_RATE_LINEAR:
+		/* A linear rate can only be enforced if we know when the segment will end.
+	 	 */
+		if (!segment->ftd_end) {
+			fr_strerror_printf_push("Segment of type \"%s\" must have a finite end",
+			                        fr_table_str_by_value(segment_types, segment->type, "???"));
+			goto error;
+		}
+		segment->rate_limit_range.start = rate;
+		segment->rate_limit_range.end = rate_end;
+		break;
+
+	default: /* null or unbounded */
+		break;
+	}
 
 	return 0;
+
+error:
+	talloc_free(segment);
+	return -1;
 }
 
 /**
