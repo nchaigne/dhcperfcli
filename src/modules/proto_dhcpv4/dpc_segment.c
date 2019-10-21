@@ -100,10 +100,26 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 		while (segment) {
 			char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
 
-			fprintf(fp, "  #%u %s%s(id: %u): %s, interval: %s\n",
+			fprintf(fp, "  #%u %s%s(id: %u): %s, interval: %s",
 			        i, segment->name ? segment->name : "", segment->name ? " " : "",
 			        segment->id, fr_table_str_by_value(segment_types, segment->type, "???"),
 			        dpc_segment_interval_sprint(interval_buf, segment));
+
+			switch (segment->type) {
+			case DPC_SEGMENT_RATE_FIXED:
+				fprintf(fp, ", rate: %.3f", segment->rate_limit);
+				break;
+
+			case DPC_SEGMENT_RATE_LINEAR:
+				fprintf(fp, ", rate range: (%.3f - %.3f)",
+				        segment->rate_limit_range.start, segment->rate_limit_range.end);
+				break;
+
+			default:
+				break;
+			}
+
+			fprintf(fp, "\n");
 
 			i++;
 			segment = NCC_DLIST_NEXT(dlist, segment);
