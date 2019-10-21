@@ -226,6 +226,12 @@ static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_con
 		break;
 	}
 
+	/* Copy the segment name if one is defined.
+	 */
+	if (segment_config->name) {
+		segment->name = talloc_strdup(ctx, segment_config->name);
+	}
+
 	return 0;
 
 error:
@@ -248,6 +254,8 @@ static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, nc
 		 */
 		if (cf_section_rules_push(cs, _segment_config) < 0) goto error;
 		if (cf_section_parse(ctx, &segment_config, cs) < 0) goto error;
+
+		segment_config.name = cf_section_name2(cs);
 
 		/* Add the segment to the list.
 		 */

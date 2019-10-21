@@ -88,8 +88,9 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 		while (segment) {
 			char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
 
-			fprintf(fp, "  #%u: id: %u, interval: %s\n",
-			        i, segment->id, dpc_segment_interval_sprint(interval_buf, segment));
+			fprintf(fp, "  #%u %s%s(id: %u), interval: %s\n",
+			        i, segment->name ? segment->name : "", segment->name ? " " : "",
+					segment->id, dpc_segment_interval_sprint(interval_buf, segment));
 
 			i++;
 			segment = NCC_DLIST_NEXT(dlist, segment);

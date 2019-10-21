@@ -57,6 +57,7 @@ struct dpc_config_s {
  *	Segment configuration
  */
 typedef struct {
+	char const *name;
 	double start;
 	double end;
 	char const *type;

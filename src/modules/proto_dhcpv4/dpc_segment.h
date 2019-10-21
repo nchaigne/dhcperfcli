@@ -37,6 +37,7 @@ typedef struct dpc_segment {
 	/* Generic chaining */
 	fr_dlist_t dlist;           //!< Our entry into the linked list.
 
+	char const *name;           //!< Name of segment (optional).
 	uint32_t id;                //!< Id of segment.
 	uint32_t num_use;           //!< How many times has this segment been used to start sessions.
 
