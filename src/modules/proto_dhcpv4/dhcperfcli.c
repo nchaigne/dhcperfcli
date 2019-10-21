@@ -402,7 +402,7 @@ void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
  *  └─ per-input rate (/s): #0 (A): 2880.764, #1 (A): 2885.048
  * (b)
  *  └─ input #0 (A) use: 4645, rate (/s): 3015.712
- *  └─ input #1 (A) use: 4644, rate (/s): 3018.594 - segment #1 (2.000 - 8.000) use: 21, rate (/s): 20.999
+ *  └─ input #1 (A) use: 4644, rate (/s): 3018.594 - segment #1 (2.000 - 8.000) fixed: use: 21, rate (/s): 20.999
  */
 static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 {
@@ -2135,6 +2135,9 @@ static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *
  */
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment, uint32_t cur_num_started)
 {
+	double elapsed_ref;
+	uint32_t session_limit;
+
 	if (!segment) {
 		/* No segment entails no limit. */
 		return false;
@@ -2152,7 +2155,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 	}
 
 	/* Get elapsed time. */
-	double elapsed_ref = dpc_segment_get_elapsed(segment);
+	elapsed_ref = dpc_segment_get_elapsed(segment);
 
 	if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
 		/*
@@ -2165,10 +2168,36 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 	/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
 	elapsed_ref += ECTX.rate_limit_time_lookahead;
 
-	uint32_t session_limit = segment->rate_limit * elapsed_ref + 1; /* + 1 so we always start at least one at the beginning. */
+	if (segment->type == DPC_SEGMENT_RATE_FIXED) {
+		/*
+		 * Fixed rate.
+		 */
+		session_limit = segment->rate_limit * elapsed_ref;
+
+	} else {
+		/*
+		 * Linear rate.
+		 */
+
+		/* Segment duration.
+		 * Note: end cannot be 0 (INF) in this case.
+		 */
+		double d = ncc_fr_time_to_float(segment->ftd_end - segment->ftd_start);
+
+		double r1 = segment->rate_limit_range.start;
+		double r2 = segment->rate_limit_range.end;
+		double r3 = r1 + (r2 - r1) * (elapsed_ref / d);
+
+		session_limit = (r1 * elapsed_ref) + (r3 - r1) * (elapsed_ref / 2);
+	}
+
+	if (!session_limit) {
+		session_limit = 1; /* So we always start at least one session at the beginning. */
+	}
 
 	if (cur_num_started >= session_limit) {
-		/* Already beyond limit, don't start new sessions for now. */
+		/* Already beyond limit, so don't start new sessions for now.
+		 */
 		*max_new_sessions = 0;
 	} else {
 		*max_new_sessions = session_limit - cur_num_started;
