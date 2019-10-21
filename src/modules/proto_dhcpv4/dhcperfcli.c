@@ -383,10 +383,13 @@ void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
 		fprintf(fp, "%s ", segment->name);
 	}
 
-	fprintf(fp, "%s %s: use: %u, rate (/s): %.3f",
-	        dpc_segment_interval_sprint(interval_buf, segment),
-	        fr_table_str_by_value(segment_types, segment->type, "???"),
-	        segment->num_use, dpc_segment_get_rate(segment));
+	fprintf(fp, "%s %s", dpc_segment_interval_sprint(interval_buf, segment),
+	        fr_table_str_by_value(segment_types, segment->type, "???"));
+
+	/* A "null" segment is not used. */
+	if (segment->type != DPC_SEGMENT_RATE_NULL) {
+		fprintf(fp, ": use: %u, rate (/s): %.3f", segment->num_use, dpc_segment_get_rate(segment));
+	}
 }
 
 /**
