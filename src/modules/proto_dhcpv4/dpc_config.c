@@ -169,6 +169,13 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 			ncc_cs_debug_end(cs, cs_depth_base);
 		}
 
+		/* Copy the input name if one is defined.
+	 	 */
+		char const *name = cf_section_name2(cs);
+		if (name) {
+			input->name = talloc_strdup(input, name);
+		}
+
 		if (fn_input_handle) (*fn_input_handle)(input, &input_list);
 	}
 

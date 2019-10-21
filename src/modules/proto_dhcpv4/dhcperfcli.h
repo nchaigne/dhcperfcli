@@ -259,6 +259,7 @@ struct dpc_input {
 	fr_dlist_t dlist;          //!< Our entry into the linked list.
 
 	/* Specific item data */
+	char const *name;         //!< Name of input (optional).
 	uint32_t id;              //!< Id of input (0 for the first one).
 	bool done;                //!< Is this input done ? (i.e. no session can be started from it).
 	uint32_t num_use;         //!< How many times has this input been used to start sessions.
