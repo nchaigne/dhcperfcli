@@ -368,6 +368,27 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
 }
 
 /**
+ * Print ongoing statistics for a given segment.
+ * E.g.:
+ * segment #1 name (2.000 - 8.000) use: 21, rate (/s): 20.999
+ */
+void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
+{
+	char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
+
+	fprintf(fp, "segment #%u ", segment->id);
+
+	/* Segment name is optional. */
+	if (segment->name) {
+		fprintf(fp, "%s ", segment->name);
+	}
+
+	fprintf(fp, "%s use: %u, rate (/s): %.3f",
+	        dpc_segment_interval_sprint(interval_buf, segment),
+	        segment->num_use, dpc_segment_get_rate(segment));
+}
+
+/**
  * Print ongoing statistics detail per input.
  * Either (a) as a digest on a single line, or (b) one line per input.
  * In the latter case, additional detail is provided, in particular the current input scoped segment (if applicable).
@@ -423,10 +444,8 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			/* Print the current input scoped segment, if any. */
 			input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
 			if (input->segment_cur) {
-				char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
-				fprintf(fp, " - segment #%u %s use: %u, rate (/s): %.3f", input->segment_cur->id,
-						dpc_segment_interval_sprint(interval_buf, input->segment_cur),
-						input->segment_cur->num_use, dpc_segment_get_rate(input->segment_cur));
+				fprintf(fp, " - ");
+				dpc_segment_stats_fprint(fp, input->segment_cur);
 			}
 
 			fprintf(fp, "\n");
