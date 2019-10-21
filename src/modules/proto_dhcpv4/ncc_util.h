@@ -385,3 +385,23 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 		memset(&_ptr[_count_pre], 0, sizeof(_type) * (_count - _count_pre)); \
 	} \
 }
+
+/**
+ * Convert a string to a value using a sorted or ordered table (calls fr_table_value_by_str).
+ * Allow to provide the length of string that should be considered (-1 for the entire string).
+ * We don't have access to the private definitions in table.h so we'll work with a macro.
+ * Note: this is *not* the same as fr_table_value_by_substr.
+ */
+#define NCC_TABLE_VALUE_BY_STR(_ret, _table, _name, _name_len, _def) \
+{ \
+	char buffer[256]; \
+	char const *value = NULL; \
+	_ret = _def; \
+	if (_name_len < 0) value = _name; \
+	else if (_name_len < (ssize_t)sizeof(buffer)) { \
+		memcpy(buffer, _name, _name_len); \
+		buffer[_name_len] = '\0'; \
+		value = buffer; \
+	} \
+	if (value) _ret = fr_table_value_by_str(_table, value, _def); \
+}
