@@ -136,13 +136,23 @@ static fr_event_list_t *event_list;
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 ncc_dlist_t input_list;
+
+/* List of global time segments, and a pointer on the segment lastly in use.
+ */
 ncc_dlist_t *segment_list;
 dpc_segment_t *segment_cur;
 
-/* A default virtual segment from start to end with no rate limit. */
+/* A default global segment, temporally all-encompassing: with no rate limit, if a global rate limit (-r) is not set.
+ * Or with a fixed rate set to the global rate limit, otherwise.
+ */
 static dpc_segment_t segment_default = {
 	.type = DPC_SEGMENT_RATE_UNBOUNDED
 };
+
+/* Note: a global rate limit is enforced only if a global time segment is not currently in use.
+ * If enforced, the global rate limit applies on the entire job execution. This entails that the instantaneous rate
+ * can be higher or slower, if catching up or slowing down is necessary to reach the target global rate.
+ */
 
 static ncc_endpoint_t server_ep = {
 	.ipaddr = { .af = AF_INET, .prefix = 32 },
