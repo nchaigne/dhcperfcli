@@ -273,7 +273,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 
 static double dpc_job_elapsed_time_snapshot_set(void);
-static void dpc_job_elapsed_time_snapshot_clear(void);
+static void dpc_time_snapshot_clear(void);
 static fr_time_t dpc_fr_time(void);
 static fr_time_t dpc_job_elapsed_fr_time_get(void);
 static double dpc_job_elapsed_time_get(void);
@@ -562,7 +562,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	dpc_per_input_stats_fprint(fp, force);
 
 	/* Clear snapshot. */
-	dpc_job_elapsed_time_snapshot_clear();
+	dpc_time_snapshot_clear();
 }
 
 
@@ -584,7 +584,7 @@ static double dpc_job_elapsed_time_snapshot_set(void)
 /**
  * Clear the current time snapshot.
  */
-static void dpc_job_elapsed_time_snapshot_clear(void)
+static void dpc_time_snapshot_clear(void)
 {
 	fte_snapshot = 0;
 }
