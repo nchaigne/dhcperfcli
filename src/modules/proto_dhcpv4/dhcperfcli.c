@@ -259,7 +259,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
 
 char elapsed_buf[NCC_TIME_STRLEN];
-#define ELAPSED ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, &fte_snapshot, DPC_DELTA_TIME_DECIMALS)
+#define ELAPSED ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), &fte_job_start, &fte_snapshot, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
@@ -789,7 +789,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-	        ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, &fte_job_end, DPC_DELTA_TIME_DECIMALS));
+	        ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), &fte_job_start, &fte_job_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
