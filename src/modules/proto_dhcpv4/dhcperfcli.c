@@ -1812,7 +1812,7 @@ static double dpc_item_get_elapsed(dpc_input_t *input)
 	if (input->fte_end) {
 		ftd_elapsed = input->fte_end - input->fte_start;
 	} else {
-		ftd_elapsed = fr_time() - input->fte_start;
+		ftd_elapsed = dpc_fr_time() - input->fte_start;
 	}
 
 	return ncc_fr_time_to_float(ftd_elapsed);
