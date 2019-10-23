@@ -1054,23 +1054,22 @@ static char *_ncc_delta_time_snprint(char *out, size_t outlen, uint8_t decimals,
 {
 	size_t len;
 	char *p = out;
-	char *end = out + outlen - 1; /* Pointer on end of buffer. */
 
 	if (hour > 0) {
-		len = snprintf(p, end - p + 1, "%u:%.02u:%.02u", hour, min, sec);
+		len = snprintf(p, outlen, "%u:%.02u:%.02u", hour, min, sec);
 	} else if (min > 0) {
-		len = snprintf(p, end - p + 1, "%u:%.02u", min, sec);
+		len = snprintf(p, outlen, "%u:%.02u", min, sec);
 	} else {
-		len = snprintf(p, end - p + 1, "%u", sec);
+		len = snprintf(p, outlen, "%u", sec);
 	}
-	ERR_IF_TRUNCATED(p, len, end - p);
+	ERR_IF_TRUNCATED_LEN(p, outlen, len);
 
 	if (decimals) {
 		char buffer[8];
 		sprintf(buffer, ".%06u", usec);
 		buffer[decimals + 1] = '\0';
-		len = snprintf(p, end - p + 1, "%s", buffer);
-		ERR_IF_TRUNCATED(p, len, end - p);
+		len = snprintf(p, outlen, "%s", buffer);
+		ERR_IF_TRUNCATED_LEN(p, outlen, len);
 	}
 
 	return out;
@@ -1114,8 +1113,7 @@ char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, str
 	sec = (uint32_t)(delta.tv_sec % 3600) % 60;
 	usec = delta.tv_usec;
 
-	_ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
-	return out;
+	return _ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
 }
 
 /**
@@ -1158,8 +1156,7 @@ char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t *from, fr_ti
 	sec = (delta_sec % 3600) % 60;
 	usec = (delta / 1000) % USEC;
 
-	_ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
-	return out;
+	return _ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
 }
 
 /** Print to a string buffer the current absolute date/time, with specified format for strftime.
@@ -1917,7 +1914,6 @@ char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list
 	int i;
 	size_t len;
 	char *p = out;
-	char *end = out + outlen - 1;
 
 	if (!ep_list) {
 		fr_strerror_printf("Invalid argument");
@@ -1925,11 +1921,11 @@ char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list
 	}
 
 	for (i = 0; i < ep_list->num; i++) {
-		len = snprintf(p, end - p, "%s%s:%u", (i > 0 ? ", " : ""),
+		len = snprintf(p, outlen, "%s%s:%u", (i > 0 ? ", " : ""),
 		               fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf),
 		               &ep_list->eps[ep_list->next].ipaddr), ep_list->eps[ep_list->next].port);
 
-		ERR_IF_TRUNCATED(p, len, end - p);
+		ERR_IF_TRUNCATED_LEN(p, outlen, len);
 	}
 
 	return out;

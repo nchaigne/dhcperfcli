@@ -164,7 +164,7 @@ extern int ncc_debug_lvl;
  * @param[in,out] _p    current char pointer on output buffer.
  * @param[in]     _ret  number of characters (excluding the terminating null byte) necessary to print given
  *                      string in output buffer.
- * @param[in]     _max  remaining available space in output buffer (not including the terminating null byte).
+ * @param[in]     _max  remaining available space in output buffer (including the terminating null byte).
  */
 #define ERR_IF_TRUNCATED(_p, _ret, _max) do { \
 	if (is_truncated(_ret, _max)) { \
@@ -172,6 +172,16 @@ extern int ncc_debug_lvl;
 		return NULL; \
 	} \
 	_p += _ret; \
+} while (0)
+
+// update remaining output buffer length
+#define ERR_IF_TRUNCATED_LEN(_p, _outlen, _ret) do { \
+	if (_ret >= _outlen) { \
+		ERR_BUFFER_SIZE(_ret + 1, _outlen, ""); \
+		return NULL; \
+	} \
+	_p += _ret; \
+	_outlen -= _ret; \
 } while (0)
 
 
