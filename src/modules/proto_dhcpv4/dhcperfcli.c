@@ -3531,7 +3531,10 @@ static void dpc_end(void)
 			dpc_progress_stats_fprint(stdout, true);
 		}
 
-		/* Statistics report. */
+		/* End statistics report.
+		 */
+		dpc_job_elapsed_time_snapshot_set(); /* Fixed reference time for consistency. */
+
 		dpc_stats_fprint(stdout);
 		dpc_tr_stats_fprint(stdout);
 	}
