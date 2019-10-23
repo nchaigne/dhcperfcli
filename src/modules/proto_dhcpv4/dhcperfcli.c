@@ -259,7 +259,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
 
 char elapsed_buf[NCC_TIME_STRLEN];
-#define ELAPSED ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, NULL, DPC_DELTA_TIME_DECIMALS)
+#define ELAPSED ncc_fr_delta_time_sprint(elapsed_buf, &fte_job_start, &fte_snapshot, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
