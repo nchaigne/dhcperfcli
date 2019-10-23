@@ -1050,21 +1050,30 @@ char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
 /*
  *	Print a difference between two timestamps (pre-parsed as hour / min / sec / usec).
  */
-static void _ncc_delta_time_sprint(char *out, uint8_t decimals, uint32_t hour, uint32_t min, uint32_t sec, uint32_t usec)
+static char *_ncc_delta_time_snprint(char *out, size_t outlen, uint8_t decimals, uint32_t hour, uint32_t min, uint32_t sec, uint32_t usec)
 {
+	size_t len;
+	char *p = out;
+	char *end = out + outlen - 1; /* Pointer on end of buffer. */
+
 	if (hour > 0) {
-		sprintf(out, "%u:%.02u:%.02u", hour, min, sec);
+		len = snprintf(p, end - p + 1, "%u:%.02u:%.02u", hour, min, sec);
 	} else if (min > 0) {
-		sprintf(out, "%u:%.02u", min, sec);
+		len = snprintf(p, end - p + 1, "%u:%.02u", min, sec);
 	} else {
-		sprintf(out, "%u", sec);
+		len = snprintf(p, end - p + 1, "%u", sec);
 	}
+	ERR_IF_TRUNCATED(p, len, end - p);
 
 	if (decimals) {
 		char buffer[8];
 		sprintf(buffer, ".%06u", usec);
-		strncat(out, buffer, decimals + 1); /* (always terminated with '\0'). */
+		buffer[decimals + 1] = '\0';
+		len = snprintf(p, end - p + 1, "%s", buffer);
+		ERR_IF_TRUNCATED(p, len, end - p);
 	}
+
+	return out;
 }
 
 /**
@@ -1105,7 +1114,7 @@ char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, str
 	sec = (uint32_t)(delta.tv_sec % 3600) % 60;
 	usec = delta.tv_usec;
 
-	_ncc_delta_time_sprint(out, decimals, hour, min, sec, usec);
+	_ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
 	return out;
 }
 
@@ -1149,7 +1158,7 @@ char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t *from, fr_ti
 	sec = (delta_sec % 3600) % 60;
 	usec = (delta / 1000) % USEC;
 
-	_ncc_delta_time_sprint(out, decimals, hour, min, sec, usec);
+	_ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
 	return out;
 }
 
