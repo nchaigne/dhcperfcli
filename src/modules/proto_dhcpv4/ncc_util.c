@@ -1131,13 +1131,13 @@ char *ncc_fr_delta_time_sprint(char *out, fr_time_t *from, fr_time_t *when, uint
 	FN_ARG_CHECK(NULL, out);
 	FN_ARG_CHECK(NULL, from);
 
-	if (when && *when < *from) {
+	if (when && *when && *when < *from) {
 		fr_strerror_printf("Cannot have a negative time difference");
 		return NULL;
 	}
 
 	/* If second timestamp is not specified, use current time. */
-	if (!when) {
+	if (!when || !*when) {
 		to = fr_time();
 		when = &to;
 	}
