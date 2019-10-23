@@ -2194,6 +2194,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 {
 	double elapsed_ref;
 	uint32_t session_limit;
+	double segment_duration = 0;
 
 	if (!segment) {
 		/* No segment entails no limit. */
@@ -2225,6 +2226,12 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 	/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
 	elapsed_ref += ECTX.rate_limit_time_lookahead;
 
+	/* Don't go beyond segment end. */
+	if (segment->ftd_end) {
+		segment_duration = ncc_fr_time_to_float(segment->ftd_end - segment->ftd_start);
+		if (elapsed_ref > segment_duration) elapsed_ref = segment_duration;
+	}
+
 	if (segment->type == DPC_SEGMENT_RATE_FIXED) {
 		/*
 		 * Fixed rate.
@@ -2239,11 +2246,9 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 		/* Segment duration.
 		 * Note: end cannot be 0 (INF) in this case.
 		 */
-		double d = ncc_fr_time_to_float(segment->ftd_end - segment->ftd_start);
-
 		double r1 = segment->rate_limit_range.start;
 		double r2 = segment->rate_limit_range.end;
-		double r3 = r1 + (r2 - r1) * (elapsed_ref / d);
+		double r3 = r1 + (r2 - r1) * (elapsed_ref / segment_duration);
 
 		session_limit = (r1 * elapsed_ref) + (r3 - r1) * (elapsed_ref / 2);
 	}
