@@ -176,7 +176,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	/* DHCP specific information. */
 	if (packet->data && packet->data_len >= 34) { /* Only print this if there is enough data. */
 		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
-		fprintf(fp, " (hwaddr: %s", ncc_ether_addr_sprint(buf_hwaddr, hwaddr) );
+		fprintf(fp, " (hwaddr: %s", ncc_ether_addr_snprint(buf_hwaddr, sizeof(buf_hwaddr), hwaddr) );
 
 		if (packet->code == FR_DHCP_ACK || packet->code == FR_DHCP_OFFER) {
 			memcpy(&yiaddr, packet->data + 16, 4);

@@ -1037,26 +1037,44 @@ char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 /**
  * Print to a string buffer an ethernet address.
  *
- * @param[out] out  where to write the output string (size must be at least NCC_ETHADDR_STRLEN).
- * @param[in]  ep   pointer on buffer which contains the 6 octets of the ethernet address.
+ * @param[out] out     where to write the output string (size must be at least NCC_ETHADDR_STRLEN).
+ * @param[in]  outlen  size of output buffer.
+ * @param[in]  addr    pointer on buffer which contains the 6 octets of the ethernet address.
  *
  * @return pointer to the output buffer.
  */
-char *ncc_ether_addr_sprint(char *out, const uint8_t *addr)
+char *ncc_ether_addr_snprint(char *out, size_t outlen, const uint8_t *addr)
 {
+	size_t len;
+	char *p = out;
+
 	FN_ARG_CHECK(NULL, out);
 	FN_ARG_CHECK(NULL, addr);
 
-	sprintf(out, "%02x:%02x:%02x:%02x:%02x:%02x",
-	        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	len = snprintf(out, outlen, "%02x:%02x:%02x:%02x:%02x:%02x",
+	               addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+
+	ERR_IF_TRUNCATED_LEN(p, outlen, len);
 	return out;
 }
 
 
-/*
- *	Print a difference between two timestamps (pre-parsed as hour / min / sec / usec).
+/**
+ * Print a difference between two timestamps (pre-parsed as hour / min / sec / usec).
+ * Internal helper function.
+ *
+ * @param[out] out       where to write the output string.
+ * @param[in]  outlen    size of output buffer.
+ * @param[in]  decimals  number of decimals to print in output (0-6).
+ * @param[in]  hour      number of hours.
+ * @param[in]  min       number of minutes (0-59).
+ * @param[in]  min       number of seconds (0-59).
+ * @param[in]  usec      number of microseconds.
+ *
+ * @return pointer to the output buffer.
  */
-static char *_ncc_delta_time_snprint(char *out, size_t outlen, uint8_t decimals, uint32_t hour, uint32_t min, uint32_t sec, uint32_t usec)
+static char *_ncc_delta_time_snprint(char *out, size_t outlen, uint8_t decimals,
+                                     uint32_t hour, uint32_t min, uint32_t sec, uint32_t usec)
 {
 	size_t len;
 	char *p = out;
@@ -1074,6 +1092,7 @@ static char *_ncc_delta_time_snprint(char *out, size_t outlen, uint8_t decimals,
 		char buffer[8];
 		sprintf(buffer, ".%06u", usec);
 		buffer[decimals + 1] = '\0';
+
 		len = snprintf(p, outlen, "%s", buffer);
 		ERR_IF_TRUNCATED_LEN(p, outlen, len);
 	}

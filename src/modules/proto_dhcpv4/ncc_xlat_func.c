@@ -972,7 +972,7 @@ static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_
 	}
 
 	char ethaddr_buf[NCC_ETHADDR_STRLEN] = "";
-	ncc_ether_addr_sprint(ethaddr_buf, xlat_frame->ethaddr_range.next);
+	ncc_ether_addr_snprint(ethaddr_buf, sizeof(ethaddr_buf), xlat_frame->ethaddr_range.next);
 
 	*out = talloc_typed_asprintf(ctx, "%s", ethaddr_buf);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
@@ -1046,7 +1046,7 @@ static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t
 	memcpy(ethaddr, &value, 6);
 
 	char ethaddr_buf[NCC_ETHADDR_STRLEN] = "";
-	ncc_ether_addr_sprint(ethaddr_buf, ethaddr);
+	ncc_ether_addr_snprint(ethaddr_buf, sizeof(ethaddr_buf), ethaddr);
 
 	*out = talloc_typed_asprintf(ctx, "%s", ethaddr_buf);
 	/* Note: we allocate our own output buffer (outlen = 0) as specified when registering. */
