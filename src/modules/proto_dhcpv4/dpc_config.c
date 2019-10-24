@@ -382,6 +382,15 @@ failure:
 	return -1;
 }
 
+/**
+ * Free the configuration. Called only when exiting.
+ */
+void dpc_config_free(dpc_config_t **config)
+{
+	TALLOC_FREE((*config)->root_cs);
+	TALLOC_FREE(*config);
+}
+
 /*
  * Load configured 'input' sections.
  */

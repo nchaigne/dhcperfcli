@@ -3559,10 +3559,15 @@ static void dpc_exit(void)
 	// (maybe temporary - FreeRADIUS might fix this in the future)
 	//fr_dict_free(&dict_dhcpv4); // <- nope. :'(
 
-	fr_strerror_free();
+	/* Free parsed configuration items.
+	 */
+	dpc_config_free(&dpc_config);
+
 	TALLOC_FREE(pl);
 	TALLOC_FREE(event_list);
 	TALLOC_FREE(global_ctx);
+
+	fr_strerror_free();
 
 	/*
 	 * Anything not cleaned up by the above is allocated in
@@ -3594,7 +3599,7 @@ int main(int argc, char **argv)
 	dpc_debug_lvl = 0; /* Our own debug. */
 	fr_log_fp = stdout; /* Everything will go there. */
 
-	global_ctx = talloc_autofree_context();
+	global_ctx = talloc_new(talloc_autofree_context());
 
 	fr_time_start();
 
