@@ -473,12 +473,13 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 {
 	char oid_str[512];
 	char flags[256];
+	fr_dict_t const *dict = NULL; // for now (?)
 
 	if (!da) return;
 
 	fr_dict_print_attr_oid(NULL, oid_str, sizeof(oid_str), NULL, da);
 
-	fr_dict_snprint_flags(flags, sizeof(flags), da->type, &da->flags);
+	fr_dict_snprint_flags(flags, sizeof(flags), dict, da->type, &da->flags);
 
 	fprintf(fp, "attr: [%s], OID: [%s], dict: [%s], type: [%s], flags: [%s]\n",
 	        da->name, oid_str, ncc_attr_dict_name(da),
