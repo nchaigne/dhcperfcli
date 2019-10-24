@@ -961,7 +961,7 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 	DEBUG_TRACE("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
 	            outlen, in_len, num_line, prefix_len, needed);
 
-	CHECK_BUFFER_SIZE(NULL, needed, outlen, "output");
+	CHECK_BUFFER_SIZE(NULL, needed, outlen);
 
 	for (i = 0; i < in_len; i++) {
 		if (line_max_len && (k == line_max_len)) { /* Start a new line. */

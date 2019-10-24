@@ -168,19 +168,24 @@ extern int ncc_debug_lvl;
  */
 
 /* Push error about insufficient buffer size. */
-#define ERR_BUFFER_SIZE(_need, _size, _info) \
+#define ERR_BUFFER_SIZE(_need, _size) \
 	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size));
 
-/* Check buffer size, if insufficient: push error and return.
- * _size is the buffer size, _need what we need (including the terminating '\0' if relevant)
+/**
+ * Check buffer size, if insufficient: push error and return.
+ *
+ * @param[in] _ret   return with this value if size is not sufficient.
+ * @param[in] _need  how many bytes are needed (must account for the terminating '\0' if relevant).
+ * @param[in] _size  available space in output buffer.
  */
-#define CHECK_BUFFER_SIZE(_ret, _need, _size, _info) \
+#define CHECK_BUFFER_SIZE(_ret, _need, _size) \
 	if (_size < _need) { \
-		ERR_BUFFER_SIZE(_need, _size, _info); \
+		ERR_BUFFER_SIZE(_need, _size); \
 		return _ret; \
 	}
 
-/* Check if we have enough remaining buffer space. If not push an error and return NULL.
+/**
+ * Check if we have enough remaining buffer space. If not push an error and return NULL.
  * Otherwise, update the current char pointer.
  *
  * @param[in,out] _p    current char pointer on output buffer.
@@ -190,7 +195,7 @@ extern int ncc_debug_lvl;
  */
 #define ERR_IF_TRUNCATED(_p, _ret, _max) do { \
 	if (_ret >= _max) { \
-		ERR_BUFFER_SIZE(_ret + 1, _max, ""); \
+		ERR_BUFFER_SIZE(_ret + 1, _max); \
 		return NULL; \
 	} \
 	_p += _ret; \
@@ -200,7 +205,7 @@ extern int ncc_debug_lvl;
  */
 #define ERR_IF_TRUNCATED_LEN(_p, _outlen, _ret) do { \
 	if (_ret >= _outlen) { \
-		ERR_BUFFER_SIZE(_ret + 1, _outlen, ""); \
+		ERR_BUFFER_SIZE(_ret + 1, _outlen); \
 		return NULL; \
 	} \
 	_p += _ret; \
