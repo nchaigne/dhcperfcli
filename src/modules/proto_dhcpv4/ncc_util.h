@@ -134,10 +134,20 @@ extern int ncc_debug_lvl;
 	} \
 }
 
-/* Print an error and return error value. */
+/* Print an error to FreeRADIUS error stack, and return error value. */
 #define FN_ERROR_PRINTF(_ret, _f, ...) { \
 	fr_strerror_printf(_f, ## __VA_ARGS__); \
 	return _ret; \
+}
+
+/* Push an error to FreeRADIUS error stack, with location detail (file name and line number).
+ * Note: can't have a function because there isn't a non-variadic version (va_list) of fr_strerror_printf. */
+#define FR_ERROR_PRINTF_LOCATION(_f, ...) \
+{ \
+	char *file = __FILE__; \
+	char *p = strrchr(file, FR_DIR_SEP); \
+	if (p) file = p + 1; \
+	fr_strerror_printf("[%s:%i] " _f, file, __LINE__, ## __VA_ARGS__); \
 }
 
 
@@ -152,7 +162,7 @@ extern int ncc_debug_lvl;
 /* Push error about insufficient buffer size. */
 #define ERR_BUFFER_SIZE(_need, _size, _info) \
 	NCC_LOG_FLAGS(L_ERR, NCC_LOG_LOCATION, "Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size)); \
-	fr_strerror_printf("%s buffer too small (needed: %zu bytes, have: %zu)", _info, (size_t)(_need), (size_t)(_size));
+	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size));
 
 /* Check buffer size, if insufficient: push error and return.
  * _size is the buffer size, _need what we need (including the terminating '\0' if relevant)
