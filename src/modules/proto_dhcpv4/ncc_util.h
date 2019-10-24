@@ -56,6 +56,10 @@ extern int ncc_debug_lvl;
 	if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, _lvl, __FILE__, __LINE__, _f, ## __VA_ARGS__); \
 } while (0)
 
+#define NCC_LOG_FLAGS(_lvl, _flags, _f, ...) do { \
+	if (NCC_LOG_ENABLED) ncc_log_printf(&ncc_default_log, (_lvl | _flags), __FILE__, __LINE__, _f, ## __VA_ARGS__); \
+} while (0)
+
 #define NCC_LOG_STACK(_lvl, _f, ...) do { \
 	if (NCC_LOG_ENABLED) ncc_log_perror(&ncc_default_log, _lvl, _f, ## __VA_ARGS__); \
 } while (0)
@@ -147,7 +151,8 @@ extern int ncc_debug_lvl;
 
 /* Push error about insufficient buffer size. */
 #define ERR_BUFFER_SIZE(_need, _size, _info) \
-	fr_strerror_printf("%s buffer too small (needed: %zu bytes, have: %zu)", _info, (size_t)(_need), (size_t)(_size))
+	NCC_LOG_FLAGS(L_ERR, NCC_LOG_LOCATION, "Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size)); \
+	fr_strerror_printf("%s buffer too small (needed: %zu bytes, have: %zu)", _info, (size_t)(_need), (size_t)(_size));
 
 /* Check buffer size, if insufficient: push error and return.
  * _size is the buffer size, _need what we need (including the terminating '\0' if relevant)
@@ -186,10 +191,13 @@ extern int ncc_debug_lvl;
 } while (0)
 
 
-/* custom flags that can be passed within "type" to ncc_value_from_str */
+/* Custom flags that can be passed within "type" to ncc_value_from_str */
 #define NCC_TYPE_NOT_EMPTY     (1 << 10)
 #define NCC_TYPE_NOT_NEGATIVE  (1 << 11)
 #define NCC_TYPE_NOT_ZERO      (1 << 12)
+
+/* Custom log flags that can extend fr_log_type_t */
+#define NCC_LOG_LOCATION       (1 << 10)
 
 
 /* Check that endpoint is not undefined. */
