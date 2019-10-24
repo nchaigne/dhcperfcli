@@ -387,6 +387,8 @@ failure:
  */
 void dpc_config_free(dpc_config_t **config)
 {
+	if (!config || !*config) return;
+
 	TALLOC_FREE((*config)->root_cs);
 	TALLOC_FREE(*config);
 }

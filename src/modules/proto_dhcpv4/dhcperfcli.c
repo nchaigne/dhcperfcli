@@ -66,14 +66,20 @@ fr_dict_attr_t const *attr_max_use;
 fr_dict_attr_t const *attr_segment;
 fr_dict_attr_t const *attr_request_label;
 
-fr_dict_attr_t const *attr_dhcp_hop_count;
-fr_dict_attr_t const *attr_dhcp_transaction_id;
-fr_dict_attr_t const *attr_dhcp_client_ip_address;
-fr_dict_attr_t const *attr_dhcp_your_ip_address;
-fr_dict_attr_t const *attr_dhcp_gateway_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_hop_count;
+extern fr_dict_attr_t const *attr_dhcp_transaction_id;
+extern fr_dict_attr_t const *attr_dhcp_client_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_your_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_gateway_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_message_type;
 fr_dict_attr_t const *attr_dhcp_server_identifier;
 fr_dict_attr_t const *attr_dhcp_requested_ip_address;
-fr_dict_attr_t const *attr_dhcp_message_type;
+/*
+ * Except from the last two, all these dhcpv4 attributes are actually linked from src/protocols/dhcpv4/base.c
+ * (and loaded when calling fr_dhcpv4_global_init)
+ * The "extern" is not strictly required, but it's certainly less confusing.
+ */
+extern fr_dict_attr_t const *_attr_dhcp_message_type;
 
 static char const *progname;
 
@@ -87,13 +93,20 @@ static char const *dict_fn_freeradius = "freeradius/dictionary.freeradius.intern
 
 static fr_dict_t *dict_freeradius;
 static fr_dict_t *dict_dhcperfcli;
-fr_dict_t *dict_dhcpv4;
+//fr_dict_t *dict_dhcpv4;
+static fr_dict_t *dpc_dict_dhcpv4; /* Ensure we use our own. */
 
 extern fr_dict_autoload_t dpc_dict_autoload[];
 fr_dict_autoload_t dpc_dict_autoload[] = {
 	{ .out = &dict_freeradius, .proto = "freeradius" }, /* "freeradius" identifies internal dictionary - otherwise it's protocol. */
-	{ .out = &dict_dhcpv4, .proto = "dhcpv4" },
 	{ .out = &dict_dhcperfcli, .proto = "dhcperfcli" },
+
+	//{ .out = &dict_dhcpv4, .proto = "dhcpv4" },
+	// ^ if we do that it works, but memory will not be freed... (FreeRADIUS bug ? probably, because dhcpclient does this...)
+	// TODO: check if dhcpclient leaks memory.
+	// ...and if we don't, we can't autoload attributes using "dict_dhcpv4"... so we need our own:
+	{ .out = &dpc_dict_dhcpv4, .proto = "dhcpv4" },
+
 	{ NULL }
 };
 
@@ -114,7 +127,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
 	{ .out = &attr_segment, .name = "Segment", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_request_label, .name = "Request-Label", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
-
+/*
 	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_client_ip_address, .name = "DHCP-Client-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
@@ -124,6 +137,10 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_message_type, .name = "DHCP-Message-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
+*/
+
+	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
+	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
 
 	{ NULL }
 };
@@ -3552,12 +3569,12 @@ static void dpc_exit(void)
 	ncc_xlat_core_free();
 
 	fr_dhcpv4_global_free();
-	// not working !? stuff allocated when calling fr_dhcpv4_global_init is not freed.
+	// This does not seem to work correctly if we try to load attributes using dict_dhcpv4 from FreeRADIUS (bug ?)
+
 	fr_dict_autofree(dpc_dict_autoload);
 
 	fr_dict_free(&fr_dict_internal); /* Loaded by fr_dict_autoload, but not freed by fr_dict_autofree. */
 	// (maybe temporary - FreeRADIUS might fix this in the future)
-	//fr_dict_free(&dict_dhcpv4); // <- nope. :'(
 
 	/* Free parsed configuration items.
 	 */
@@ -3652,7 +3669,7 @@ int main(int argc, char **argv)
 	 *	Initialize dictionaries and preload attributes.
 	 */
 	dpc_dict_init(global_ctx);
-
+//dpc_exit(); // KO HERE LEAK - fixed ? seems ok.
 	/*
 	 *	Initialize the xlat framework, and register xlat expansion functions.
 	 */
