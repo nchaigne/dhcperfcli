@@ -272,11 +272,12 @@ static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_st
 static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 
-static double dpc_job_elapsed_time_snapshot_set(void);
-static void dpc_time_snapshot_clear(void);
-static fr_time_t dpc_fr_time(void);
-static fr_time_t dpc_job_elapsed_fr_time_get(void);
-static double dpc_job_elapsed_time_get(void);
+static inline double dpc_job_elapsed_time_snapshot_set(void);
+static inline void dpc_time_snapshot_clear(void);
+static inline fr_time_t dpc_fr_time(void);
+static inline fr_time_t dpc_elapsed_fr_time_get(fr_time_t start, fr_time_t end);
+static inline fr_time_t dpc_job_elapsed_fr_time_get(void);
+static inline double dpc_job_elapsed_time_get(void);
 
 static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
 static double dpc_get_session_in_rate(bool per_input);
@@ -570,7 +571,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
  * Set a snapshot of the current time.
  * Return job elapsed time (up to the snapshot).
  */
-static double dpc_job_elapsed_time_snapshot_set(void)
+static inline double dpc_job_elapsed_time_snapshot_set(void)
 {
 	if (fte_job_end) {
 		fte_snapshot = fte_job_end;
@@ -584,7 +585,7 @@ static double dpc_job_elapsed_time_snapshot_set(void)
 /**
  * Clear the current time snapshot.
  */
-static void dpc_time_snapshot_clear(void)
+static inline void dpc_time_snapshot_clear(void)
 {
 	fte_snapshot = 0;
 }
@@ -592,57 +593,50 @@ static void dpc_time_snapshot_clear(void)
 /**
  * Get either the current time snapshot if set, or real current time otherwise.
  */
-static fr_time_t dpc_fr_time(void)
+static inline fr_time_t dpc_fr_time(void)
 {
 	if (fte_snapshot) return fte_snapshot;
 	else return fr_time();
 }
 
 /**
+ * Get an elapsed time (difference between start and end).
+ * If end is not set, use instead current time (or time snapshot if set).
+ */
+static inline fr_time_t dpc_elapsed_fr_time_get(fr_time_t start, fr_time_t end)
+{
+	if (!start) return 0; /* Start time not initialized yet. */
+
+	if (end) {
+		/* Time delta from start to end.
+		 */
+		return end - start;
+
+	} else {
+		/* Time delta from start to current time (or time snapshot if set).
+		 */
+		return dpc_fr_time() - start;
+	}
+}
+
+/**
  * Obtain the job (either ongoing or finished) elapsed time.
  */
-static fr_time_t dpc_job_elapsed_fr_time_get(void)
+static inline fr_time_t dpc_job_elapsed_fr_time_get(void)
 {
-	fr_time_delta_t ftd_elapsed;
-
-	/*
-	 * If job is finished, get elapsed time from start to end.
-	 * Otherwise, get elapsed time from start to now.
-	 */
-	if (fte_job_end) {
-		ftd_elapsed = fte_job_end - fte_job_start;
-	} else {
-		ftd_elapsed = dpc_fr_time() - fte_job_start;
-	}
-
-	return ftd_elapsed;
+	return dpc_elapsed_fr_time_get(fte_job_start, fte_job_end);
 }
-static double dpc_job_elapsed_time_get(void)
+static inline double dpc_job_elapsed_time_get(void)
 {
 	return ncc_fr_time_to_float(dpc_job_elapsed_fr_time_get());
 }
 
-/*
- *	Obtain job elapsed time related to starting new sessions.
+/**
+ * Obtain job elapsed time related to starting new sessions.
  */
-static double dpc_start_sessions_elapsed_time_get(void)
+static inline double dpc_start_sessions_elapsed_time_get(void)
 {
-	fr_time_delta_t ftd_elapsed;
-
-	if (!fte_sessions_ini_start) return 0; /* No session started yet. */
-
-	/*
-	 *	If we've stopped starting new sessions, get elapsed time from start to this timestamp.
-	 *	Otherwise, get elapsed time from start to now.
-	 */
-	if (fte_sessions_ini_end) {
-		ftd_elapsed = fte_sessions_ini_end - fte_sessions_ini_start;
-	} else {
-		fr_time_t now = fr_time();
-		ftd_elapsed = now - fte_sessions_ini_start;
-	}
-
-	return ncc_fr_time_to_float(ftd_elapsed);
+	return ncc_fr_time_to_float(dpc_elapsed_fr_time_get(fte_sessions_ini_start, fte_sessions_ini_end));
 }
 
 /*
