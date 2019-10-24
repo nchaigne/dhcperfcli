@@ -88,7 +88,6 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t extended_type, char const *file, int line, char const *fmt, va_list ap)
 {
 	TALLOC_CTX *pool;
-	char const *filename = file;
 	bool debug_location = false;
 	char const *fmt_location = "";
 	char fmt_time[NCC_DATETIME_STRLEN];
@@ -98,13 +97,12 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t extended_type, char con
 	fr_log_type_t type = (extended_type & 0xff);
 	bool log_location = (extended_type & NCC_LOG_LOCATION);
 
-	if (log->basename && file) {
+	if (log->basename) {
 		/* file is __FILE__ which is set at build time by gcc.
 		 * e.g. src/modules/proto_dhcpv4/dhcperfcli.c
 		 * Extract the file base name to have leaner traces.
 		 */
-		char *p = strrchr(file, FR_DIR_SEP);
-		if (p) filename = p + 1;
+		FILE_BASENAME(file);
 	}
 
 	fmt_time[0] = '\0';
@@ -127,13 +125,13 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t extended_type, char con
 	 * e.g. " )dhcperfcli.c:2556           : "
 	 *      " )src/modules/proto_dhcpv4/dhcperfcli.c:2556: "
 	 */
-	if (type == L_DBG && log->line_number && filename) debug_location = true;
+	if (type == L_DBG && log->line_number && file) debug_location = true;
 	if (debug_location) {
 		size_t len;
 		int pad = 0;
 		char *str;
 
-		str = talloc_asprintf(pool, " )%s:%i", filename, line);
+		str = talloc_asprintf(pool, " )%s:%i", file, line);
 		len = talloc_array_length(str) - 1;
 
 		/*
@@ -155,7 +153,7 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t extended_type, char con
 	} else if (log_location) {
 		/* With flag "log location" just print file name and line number.
 		 */
-		fmt_location = talloc_asprintf(pool, "%s:%i : ", filename, line);
+		fmt_location = talloc_asprintf(pool, "%s:%i : ", file, line);
 	}
 
 	/* Absolute date/time. */

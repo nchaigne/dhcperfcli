@@ -140,13 +140,21 @@ extern int ncc_debug_lvl;
 	return _ret; \
 }
 
+/* Get a pointer on __FILE__ base name. */
+#define FILE_BASENAME(_file) \
+{ \
+	if (_file) { \
+		char *p = strrchr(_file, FR_DIR_SEP); \
+		if (p) _file = p + 1; \
+	} \
+}
+
 /* Push an error to FreeRADIUS error stack, with location detail (file name and line number).
  * Note: can't have a function because there isn't a non-variadic version (va_list) of fr_strerror_printf. */
 #define FR_ERROR_PRINTF_LOCATION(_f, ...) \
 { \
 	char *file = __FILE__; \
-	char *p = strrchr(file, FR_DIR_SEP); \
-	if (p) file = p + 1; \
+	FILE_BASENAME(file); \
 	fr_strerror_printf("[%s:%i] " _f, file, __LINE__, ## __VA_ARGS__); \
 }
 
