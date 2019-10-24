@@ -4,11 +4,11 @@
 
 #include "dhcperfcli.h"
 #include "ncc_util.h"
+#include "ncc_segment.h"
 #include "ncc_xlat.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 #include "dpc_config.h"
-#include "dpc_segment.h"
 
 #include <getopt.h>
 
@@ -140,13 +140,13 @@ ncc_dlist_t input_list;
 /* List of global time segments, and a pointer on the segment lastly in use.
  */
 ncc_dlist_t *segment_list;
-dpc_segment_t *segment_cur;
+ncc_segment_t *segment_cur;
 
 /* A default global segment, temporally all-encompassing: with no rate limit, if a global rate limit (-r) is not set.
  * Or with a fixed rate set to the global rate limit, otherwise.
  */
-static dpc_segment_t segment_default = {
-	.type = DPC_SEGMENT_RATE_UNBOUNDED
+static ncc_segment_t segment_default = {
+	.type = NCC_SEGMENT_RATE_UNBOUNDED
 };
 
 /* Note: a global rate limit is enforced only if a global time segment is not currently in use.
@@ -316,12 +316,12 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_segment_list_debug(ncc_dlist_t *list);
-static double dpc_segment_get_rate(dpc_segment_t *segment);
-static double dpc_segment_get_elapsed(dpc_segment_t *segment);
-static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre);
+static double dpc_segment_get_rate(ncc_segment_t *segment);
+static double dpc_segment_get_elapsed(ncc_segment_t *segment);
+static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre);
 
 static void dpc_loop_recv(void);
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment, uint32_t cur_num_started);
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, ncc_segment_t *segment, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
 static uint32_t dpc_loop_start_sessions(void);
@@ -390,9 +390,9 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  * E.g.:
  * segment #1 <name> (2.000 - 8.000) fixed: use: 21, rate (/s): 20.999
  */
-void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
+void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
 {
-	char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
+	char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
 
 	fprintf(fp, "segment #%u ", segment->id);
 
@@ -401,11 +401,11 @@ void dpc_segment_stats_fprint(FILE *fp, dpc_segment_t *segment)
 		fprintf(fp, "%s ", segment->name);
 	}
 
-	fprintf(fp, "%s %s", dpc_segment_interval_sprint(interval_buf, segment),
+	fprintf(fp, "%s %s", ncc_segment_interval_sprint(interval_buf, segment),
 	        fr_table_str_by_value(segment_types, segment->type, "???"));
 
 	/* A "null" segment is not used. */
-	if (segment->type != DPC_SEGMENT_RATE_NULL) {
+	if (segment->type != NCC_SEGMENT_RATE_NULL) {
 		fprintf(fp, ": use: %u, rate (/s): %.3f", segment->num_use, dpc_segment_get_rate(segment));
 	}
 }
@@ -2117,13 +2117,13 @@ static void dpc_segment_list_debug(ncc_dlist_t *list)
 	if (!list || dpc_debug_lvl < 2) return;
 
 	DEBUG2("Time segments:");
-	dpc_segment_list_fprint(fr_log_fp, list);
+	ncc_segment_list_fprint(fr_log_fp, list);
 }
 
 /*
  *	Get the use rate of a time segment.
  */
-static double dpc_segment_get_rate(dpc_segment_t *segment)
+static double dpc_segment_get_rate(ncc_segment_t *segment)
 {
 	double rate;
 	fr_time_delta_t ftd_ref;
@@ -2147,7 +2147,7 @@ static double dpc_segment_get_rate(dpc_segment_t *segment)
  * Get elapsed time from the start of a given time segment.
  * Assuming we're not beyond this segment end.
  */
-static double dpc_segment_get_elapsed(dpc_segment_t *segment)
+static double dpc_segment_get_elapsed(ncc_segment_t *segment)
 {
 	fr_time_delta_t ftd_elapsed = fr_time() - (fte_job_start + segment->ftd_start);
 	return ncc_fr_time_to_float(ftd_elapsed);
@@ -2156,12 +2156,12 @@ static double dpc_segment_get_elapsed(dpc_segment_t *segment)
 /*
  *	For a given segment list, get the time segment matching current elapsed time (if any).
  */
-static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *segment_pre)
+static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre)
 {
 	if (!list) return NULL;
 
 	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
-	dpc_segment_t *segment = dpc_segment_from_elapsed_time(list, segment_pre, ftd_elapsed);
+	ncc_segment_t *segment = ncc_segment_from_elapsed_time(list, segment_pre, ftd_elapsed);
 
 	if (segment != segment_pre) {
 		if (segment) {
@@ -2184,7 +2184,7 @@ static dpc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, dpc_segment_t *
  *
  *	Returns: true if a limit has to be enforced at the moment, false otherwise.
  */
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *segment, uint32_t cur_num_started)
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, ncc_segment_t *segment, uint32_t cur_num_started)
 {
 	double elapsed_ref;
 	uint32_t session_limit;
@@ -2195,13 +2195,13 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 		return false;
 	}
 
-	if (segment->type == DPC_SEGMENT_RATE_UNBOUNDED
-	   || (segment->type == DPC_SEGMENT_RATE_FIXED && !segment->rate_limit) ) {
+	if (segment->type == NCC_SEGMENT_RATE_UNBOUNDED
+	   || (segment->type == NCC_SEGMENT_RATE_FIXED && !segment->rate_limit) ) {
 		/* No limit. */
 		return false;
 	}
 
-	if (segment->type == DPC_SEGMENT_RATE_NULL) {
+	if (segment->type == NCC_SEGMENT_RATE_NULL) {
 		*max_new_sessions = 0;
 		return true;
 	}
@@ -2226,7 +2226,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, dpc_segment_t *s
 		if (elapsed_ref > segment_duration) elapsed_ref = segment_duration;
 	}
 
-	if (segment->type == DPC_SEGMENT_RATE_FIXED) {
+	if (segment->type == NCC_SEGMENT_RATE_FIXED) {
 		/*
 		 * Fixed rate.
 		 */
@@ -2669,7 +2669,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 			if (!input->segments) {
 				input->segments = talloc_zero(input, ncc_dlist_t);
 			}
-			if (dpc_segment_parse(input, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
+			if (ncc_segment_parse(input, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
 
 		} else if (vp->da == attr_request_label) { /* Request-Label = <string> */
 			input->request_label = talloc_strdup(input, vp->vp_strvalue);
@@ -2730,8 +2730,8 @@ static bool dpc_input_parse(dpc_input_t *input)
 	 * This segment will enforce the input rate limit when no other input scoped segment is active.
 	 */
 	if (input->rate_limit) {
-		MEM(input->segment_dflt = talloc_zero(input, dpc_segment_t));
-		input->segment_dflt->type = DPC_SEGMENT_RATE_FIXED;
+		MEM(input->segment_dflt = talloc_zero(input, ncc_segment_t));
+		input->segment_dflt->type = NCC_SEGMENT_RATE_FIXED;
 		input->segment_dflt->rate_limit = input->rate_limit;
 	}
 
@@ -3432,7 +3432,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_SEGMENT: // --segment
-				if (dpc_segment_parse(global_ctx, segment_list, optarg) < 0) {
+				if (ncc_segment_parse(global_ctx, segment_list, optarg) < 0) {
 					PERROR("Failed to parse segment \"%s\"", optarg);
 					exit(EXIT_FAILURE);
 				}
@@ -3618,7 +3618,7 @@ int main(int argc, char **argv)
 
 	/* Segments list is talloc'ed. */
 	segment_list = talloc_zero(global_ctx, ncc_dlist_t);
-	NCC_DLIST_INIT(segment_list, dpc_segment_t);
+	NCC_DLIST_INIT(segment_list, ncc_segment_t);
 
 	/*
 	 *	Parse the command line options.
@@ -3684,7 +3684,7 @@ int main(int argc, char **argv)
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 
 	if (CONF.rate_limit) {
-		segment_default.type = DPC_SEGMENT_RATE_FIXED;
+		segment_default.type = NCC_SEGMENT_RATE_FIXED;
 		segment_default.rate_limit = CONF.rate_limit;
 	}
 

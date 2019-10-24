@@ -187,29 +187,29 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
  */
 static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments)
 {
-	dpc_segment_t *segment = NULL;
+	ncc_segment_t *segment = NULL;
 	fr_time_delta_t ftd_start, ftd_end;
 
 	ftd_start = ncc_float_to_fr_time(segment_config->start);
 	ftd_end = ncc_float_to_fr_time(segment_config->end);
 
-	segment = dpc_segment_add(ctx, segments, ftd_start, ftd_end);
+	segment = ncc_segment_add(ctx, segments, ftd_start, ftd_end);
 	if (!segment) {
 		cf_log_perr(cs, "Failed to add segment");
 		return -1;
 	}
 
-	segment->type = fr_table_value_by_str(segment_types, segment_config->type, DPC_SEGMENT_RATE_INVALID);
+	segment->type = fr_table_value_by_str(segment_types, segment_config->type, NCC_SEGMENT_RATE_INVALID);
 	switch (segment->type) {
-	case DPC_SEGMENT_RATE_INVALID:
+	case NCC_SEGMENT_RATE_INVALID:
 		cf_log_err(cs, "Invalid segment type \"%s\"", segment_config->type);
 		goto error;
 
-	case DPC_SEGMENT_RATE_FIXED:
+	case NCC_SEGMENT_RATE_FIXED:
 		segment->rate_limit = segment_config->rate;
 		break;
 
-	case DPC_SEGMENT_RATE_LINEAR:
+	case NCC_SEGMENT_RATE_LINEAR:
 		/* A linear rate can only be enforced if we know when the segment will end.
 	 	 */
 		if (!segment->ftd_end) {
@@ -220,8 +220,8 @@ static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_con
 		segment->rate_limit_range.end = segment_config->rate_end;
 		break;
 
-	case DPC_SEGMENT_RATE_NULL:
-	case DPC_SEGMENT_RATE_UNBOUNDED:
+	case NCC_SEGMENT_RATE_NULL:
+	case NCC_SEGMENT_RATE_UNBOUNDED:
 		break;
 	}
 

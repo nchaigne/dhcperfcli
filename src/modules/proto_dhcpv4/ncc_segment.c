@@ -1,9 +1,9 @@
 /**
- * @file dpc_segment.c
+ * @file ncc_segment.c
  * @brief Time segments handling.
  */
 
-#include "dpc_segment.h"
+#include "ncc_segment.h"
 
 static uint32_t segment_id;
 
@@ -12,10 +12,10 @@ static uint32_t segment_id;
  * Note: using "ordered" rather than "sorted" because performance is not an issue, and it's more convenient.
  */
 fr_table_num_ordered_t const segment_types[] = {
-	{ "fixed",     DPC_SEGMENT_RATE_FIXED },
-	{ "linear",    DPC_SEGMENT_RATE_LINEAR },
-	{ "null",      DPC_SEGMENT_RATE_NULL },
-	{ "unbounded", DPC_SEGMENT_RATE_UNBOUNDED },
+	{ "fixed",     NCC_SEGMENT_RATE_FIXED },
+	{ "linear",    NCC_SEGMENT_RATE_LINEAR },
+	{ "null",      NCC_SEGMENT_RATE_NULL },
+	{ "unbounded", NCC_SEGMENT_RATE_UNBOUNDED },
 };
 size_t segment_types_len = NUM_ELEMENTS(segment_types);
 
@@ -29,7 +29,7 @@ size_t segment_types_len = NUM_ELEMENTS(segment_types);
  *
  * @return segment matching elapsed time (NULL if no match).
  */
-dpc_segment_t *dpc_segment_from_elapsed_time(ncc_dlist_t *dlist, dpc_segment_t *segment, fr_time_delta_t ftd_elapsed)
+ncc_segment_t *ncc_segment_from_elapsed_time(ncc_dlist_t *dlist, ncc_segment_t *segment, fr_time_delta_t ftd_elapsed)
 {
 	if (!NCC_DLIST_IS_INIT(dlist)) return NULL;
 
@@ -58,12 +58,12 @@ dpc_segment_t *dpc_segment_from_elapsed_time(ncc_dlist_t *dlist, dpc_segment_t *
 /**
  * Print to a string buffer a segment time interval.
  *
- * @param[out] out      where to write the output string (size should be at least DPC_SEGMENT_INTERVAL_STRLEN).
+ * @param[out] out      where to write the output string (size should be at least NCC_SEGMENT_INTERVAL_STRLEN).
  * @param[in]  segment  the time segment.
  *
  * @return pointer to the output buffer.
  */
-char *dpc_segment_interval_sprint(char *out, dpc_segment_t *segment)
+char *ncc_segment_interval_sprint(char *out, ncc_segment_t *segment)
 {
 	FN_ARG_CHECK(NULL, out);
 
@@ -85,7 +85,7 @@ char *dpc_segment_interval_sprint(char *out, dpc_segment_t *segment)
  * @param[in] fp     where to print.
  * @param[in] dlist  list of segments.
  */
-void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
+void ncc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 {
 	if (!NCC_DLIST_IS_INIT(dlist)) {
 		fprintf(fp, "Segment list is uninitialized\n");
@@ -94,11 +94,11 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 	} else {
 		fprintf(fp, "Segment list (size: %u)\n", NCC_DLIST_SIZE(dlist));
 
-		dpc_segment_t *segment = NCC_DLIST_HEAD(dlist);
+		ncc_segment_t *segment = NCC_DLIST_HEAD(dlist);
 		int i = 0;
 
 		while (segment) {
-			char interval_buf[DPC_SEGMENT_INTERVAL_STRLEN];
+			char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
 
 			fprintf(fp, "  #%u ", i);
 			if (segment->name) {
@@ -107,14 +107,14 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 
 			fprintf(fp, "(id: %u): %s, interval: %s", segment->id,
 			        fr_table_str_by_value(segment_types, segment->type, "???"),
-			        dpc_segment_interval_sprint(interval_buf, segment));
+			        ncc_segment_interval_sprint(interval_buf, segment));
 
 			switch (segment->type) {
-			case DPC_SEGMENT_RATE_FIXED:
+			case NCC_SEGMENT_RATE_FIXED:
 				fprintf(fp, ", rate: %.3f", segment->rate_limit);
 				break;
 
-			case DPC_SEGMENT_RATE_LINEAR:
+			case NCC_SEGMENT_RATE_LINEAR:
 				fprintf(fp, ", rate range: (%.3f - %.3f)",
 				        segment->rate_limit_range.start, segment->rate_limit_range.end);
 				break;
@@ -135,7 +135,7 @@ void dpc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
  * Parse a segment specified from a string.
  * Input format: [<type>:]<start time>;<end time>[;<rate>[;<end rate]]
  */
-int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
+int ncc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 {
 	FN_ARG_CHECK(-1, in);
 	FN_ARG_CHECK(-1, in[0] != '\0');
@@ -143,16 +143,16 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	char const *p = in;
 	char const *sep1, *sep2, *sep3, *sep4 = NULL;
 
-	dpc_segment_t *segment = NULL;
-	int segment_type = DPC_SEGMENT_RATE_FIXED;
+	ncc_segment_t *segment = NULL;
+	int segment_type = NCC_SEGMENT_RATE_FIXED;
 	double start = 0, end = 0;
 	double rate = 0, rate_end = 0;
 	fr_time_delta_t ftd_start, ftd_end;
 
 	sep1 = strchr(p, ':');
 	if (sep1) {
-		NCC_TABLE_VALUE_BY_STR(segment_type, segment_types, in, sep1 - p, DPC_SEGMENT_RATE_INVALID);
-		if (segment_type == DPC_SEGMENT_RATE_INVALID) {
+		NCC_TABLE_VALUE_BY_STR(segment_type, segment_types, in, sep1 - p, NCC_SEGMENT_RATE_INVALID);
+		if (segment_type == NCC_SEGMENT_RATE_INVALID) {
 			fr_strerror_printf("Invalid segment (unknown type): [%s]", in);
 			goto error;
 		}
@@ -181,7 +181,7 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	ftd_start = ncc_float_to_fr_time(start);
 	ftd_end = ncc_float_to_fr_time(end);
 
-	segment = dpc_segment_add(ctx, dlist, ftd_start, ftd_end);
+	segment = ncc_segment_add(ctx, dlist, ftd_start, ftd_end);
 	if (!segment) {
 		fr_strerror_printf_push("Failed to add segment");
 		goto error;
@@ -190,11 +190,11 @@ int dpc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	segment->type = segment_type;
 
 	switch (segment->type) {
-	case DPC_SEGMENT_RATE_FIXED:
+	case NCC_SEGMENT_RATE_FIXED:
 		segment->rate_limit = rate;
 		break;
 
-	case DPC_SEGMENT_RATE_LINEAR:
+	case NCC_SEGMENT_RATE_LINEAR:
 		/* A linear rate can only be enforced if we know when the segment will end.
 	 	 */
 		if (!segment->ftd_end) {
@@ -236,9 +236,9 @@ error:
  *
  * @return the new segment added, or NULL if failed.
  */
-dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delta_t ftd_start, fr_time_delta_t ftd_end)
+ncc_segment_t *ncc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delta_t ftd_start, fr_time_delta_t ftd_end)
 {
-	NCC_DLIST_INIT(dlist, dpc_segment_t);
+	NCC_DLIST_INIT(dlist, ncc_segment_t);
 
 	DEBUG3("Trying to add segment (%.3f - %.3f)", ncc_fr_time_to_float(ftd_start), ncc_fr_time_to_float(ftd_end));
 
@@ -254,9 +254,9 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 		return NULL;
 	}
 
-	dpc_segment_t *segment_new;
+	ncc_segment_t *segment_new;
 
-	MEM(segment_new = talloc_zero(ctx, dpc_segment_t));
+	MEM(segment_new = talloc_zero(ctx, ncc_segment_t));
 	segment_new->ftd_start = ftd_start;
 	segment_new->ftd_end = ftd_end;
 
@@ -269,7 +269,7 @@ dpc_segment_t *dpc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 		goto finish;
 	}
 
-	dpc_segment_t *segment = NCC_DLIST_HEAD(dlist);
+	ncc_segment_t *segment = NCC_DLIST_HEAD(dlist);
 	while (segment) {
 
 		/* If existing segment starts at the beginning and last until the end, then we cannot add anything more. */

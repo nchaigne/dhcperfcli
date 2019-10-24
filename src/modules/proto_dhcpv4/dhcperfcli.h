@@ -10,7 +10,7 @@
 #include <libgen.h>
 
 #include "ncc_util.h"
-#include "dpc_segment.h"
+#include "ncc_segment.h"
 
 
 typedef struct dpc_context dpc_context_t;
@@ -267,8 +267,8 @@ struct dpc_input {
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
 	ncc_dlist_t *segments;       //<! List of input scoped segments.
-	dpc_segment_t *segment_cur;  //<! Currently used segment.
-	dpc_segment_t *segment_dflt; //<! Default segment for this input.
+	ncc_segment_t *segment_cur;  //<! Currently used segment.
+	ncc_segment_t *segment_dflt; //<! Default segment for this input.
 
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
