@@ -79,7 +79,7 @@ fr_dict_attr_t const *attr_dhcp_requested_ip_address;
  * (and loaded when calling fr_dhcpv4_global_init)
  * The "extern" is not strictly required, but it's certainly less confusing.
  */
-extern fr_dict_attr_t const *_attr_dhcp_message_type;
+
 
 static char const *progname;
 
