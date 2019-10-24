@@ -347,6 +347,7 @@ static void dpc_options_parse(int argc, char **argv);
 
 static void dpc_signal(int sig);
 static void dpc_end(void);
+static void dpc_exit(void);
 
 
 /*
@@ -3538,6 +3539,14 @@ static void dpc_end(void)
 		dpc_tr_stats_fprint(stdout);
 	}
 
+	dpc_exit();
+}
+
+/**
+ * Free resources and exit.
+ */
+static void dpc_exit(void)
+{
 	/* Free memory. */
 	ncc_xlat_free();
 	ncc_xlat_core_free();
@@ -3731,17 +3740,6 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 *	Ensure we have something to work with.
-	 */
-	if (NCC_DLIST_SIZE(&input_list) == 0) {
-		if (!with_stdin_input && argc < 2) usage(EXIT_SUCCESS); /* If no input nor arguments, show usage. */
-
-		WARN("No valid input loaded, nothing to do");
-		exit(0);
-	}
-	//dpc_input_list_fprint(stdout, &input_list);
-
-	/*
 	 *	If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (CONF.packet_trace_lvl < 0) {
@@ -3791,6 +3789,17 @@ int main(int argc, char **argv)
 		DEBUG("Configuration appears to be OK");
 		dpc_end();
 	}
+
+	/*
+	 *	Ensure we have something to work with.
+	 */
+	if (NCC_DLIST_SIZE(&input_list) == 0) {
+		if (!with_stdin_input && argc < 2) usage(EXIT_SUCCESS); /* If no input nor arguments, show usage. */
+
+		WARN("No valid input loaded, nothing to do");
+		dpc_exit();
+	}
+	//dpc_input_list_fprint(stdout, &input_list);
 
 	/* Arm a timer to produce periodic statistics. */
 	dpc_event_add_progress_stats();
