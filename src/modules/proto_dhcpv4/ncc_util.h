@@ -169,7 +169,6 @@ extern int ncc_debug_lvl;
 
 /* Push error about insufficient buffer size. */
 #define ERR_BUFFER_SIZE(_need, _size, _info) \
-	NCC_LOG_FLAGS(L_ERR, NCC_LOG_LOCATION, "Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size)); \
 	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size));
 
 /* Check buffer size, if insufficient: push error and return.
