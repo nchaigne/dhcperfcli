@@ -3573,9 +3573,6 @@ static void dpc_exit(void)
 
 	fr_dict_autofree(dpc_dict_autoload);
 
-	fr_dict_free(&fr_dict_internal); /* Loaded by fr_dict_autoload, but not freed by fr_dict_autofree. */
-	// (maybe temporary - FreeRADIUS might fix this in the future)
-
 	/* Free parsed configuration items.
 	 */
 	dpc_config_free(&dpc_config);
