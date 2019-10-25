@@ -2170,8 +2170,8 @@ static double dpc_segment_get_elapsed(ncc_segment_t *segment)
 	return ncc_fr_time_to_float(ftd_elapsed);
 }
 
-/*
- *	For a given segment list, get the time segment matching current elapsed time (if any).
+/**
+ * For a given segment list, get the time segment matching current elapsed time (if any).
  */
 static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre)
 {
@@ -2181,14 +2181,16 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
 	ncc_segment_t *segment = ncc_segment_from_elapsed_time(list, segment_pre, ftd_elapsed);
 
 	if (segment != segment_pre) {
+		char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
+
 		if (segment) {
-			DEBUG2("Segment (id: %u) (%.3f - %.3f) start (elapsed: %f)", segment->id,
-			       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
-			       ncc_fr_time_to_float(ftd_elapsed));
+			DEBUG("Segment (id: %u) %s start (elapsed: %f)", segment->id,
+			      ncc_segment_interval_sprint(interval_buf, segment),
+			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
-			DEBUG2("Segment (id: %u) (%.3f - %.3f) is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
-			       ncc_fr_time_to_float(segment_pre->ftd_start), ncc_fr_time_to_float(segment_pre->ftd_end),
-			       ncc_fr_time_to_float(ftd_elapsed), segment_pre->num_use);
+			DEBUG("Segment (id: %u) %s is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
+			      ncc_segment_interval_sprint(interval_buf, segment),
+			      ncc_fr_time_to_float(ftd_elapsed), segment_pre->num_use);
 		}
 	}
 
@@ -2252,10 +2254,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, ncc_segment_t *s
 	} else {
 		/*
 		 * Linear rate.
-		 */
-
-		/* Segment duration.
-		 * Note: end cannot be 0 (INF) in this case.
+		 * Note: segment end cannot be 0 (INF) in this case, so we always have a defined segment duration.
 		 */
 		double r1 = segment->rate_limit_range.start;
 		double r2 = segment->rate_limit_range.end;
