@@ -411,7 +411,7 @@ void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
 {
 	char buf[128];
 
-	if (!ncc_segment_description_snprint(buf, sizeof(buf), segment)) return;
+	if (!ncc_segment_description_snprint(buf, sizeof(buf), segment, false)) return;
 	fprintf(fp, "segment %s", buf);
 
 	/* A "null" segment is not used. */

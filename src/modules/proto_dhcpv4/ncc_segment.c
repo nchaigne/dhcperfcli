@@ -58,13 +58,14 @@ ncc_segment_t *ncc_segment_from_elapsed_time(ncc_dlist_t *dlist, ncc_segment_t *
 /**
  * Print to a string buffer the description of a segment.
  *
- * @param[out] out      where to write the output string.
- * @param[in]  outlen   size of output buffer.
- * @param[in]  segment  the time segment.
+ * @param[out] out        where to write the output string.
+ * @param[in]  outlen     size of output buffer.
+ * @param[in]  segment    the time segment.
+ * @param[in]  with_rate  should we print rate target (or range) if applicable.
  *
  * @return pointer to the output buffer.
  */
-char *ncc_segment_description_snprint(char *out, size_t outlen, ncc_segment_t *segment)
+char *ncc_segment_description_snprint(char *out, size_t outlen, ncc_segment_t *segment, bool with_rate)
 {
 	size_t len;
 	char *p = out;
@@ -87,6 +88,24 @@ char *ncc_segment_description_snprint(char *out, size_t outlen, ncc_segment_t *s
 	/* Segment type. */
 	len = snprintf(p, outlen, " %s", fr_table_str_by_value(segment_types, segment->type, "???"));
 	ERR_IF_TRUNCATED_LEN(p, outlen, len);
+
+	/* Rate target or range. */
+	if (with_rate) {
+		switch (segment->type) {
+		case NCC_SEGMENT_RATE_FIXED:
+			len = snprintf(p, outlen, " (rate target: %.3f)", segment->rate_limit);
+			ERR_IF_TRUNCATED_LEN(p, outlen, len);
+			break;
+
+		case NCC_SEGMENT_RATE_LINEAR:
+			len = snprintf(p, outlen, " (rate range: %.3f - %.3f)", segment->rate_limit_range.start, segment->rate_limit_range.end);
+			ERR_IF_TRUNCATED_LEN(p, outlen, len);
+			break;
+
+		default:
+			break;
+		}
+	}
 
 	return out;
 }
@@ -387,5 +406,4 @@ ncc_segment_t *ncc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 
 finish:
 	segment_new->id = segment_id++;
-	return segment_new;
-}
+	return segment_ne
