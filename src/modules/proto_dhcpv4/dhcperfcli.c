@@ -2744,6 +2744,9 @@ static bool dpc_input_parse(dpc_input_t *input)
 		MEM(input->segment_dflt = talloc_zero(input, ncc_segment_t));
 		input->segment_dflt->type = NCC_SEGMENT_RATE_FIXED;
 		input->segment_dflt->rate_limit = input->rate_limit;
+
+		/* Segment will start at "Start-Delay" if set. */
+		input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
 	}
 
 	/* All good. */
