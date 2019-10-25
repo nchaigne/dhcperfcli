@@ -409,17 +409,10 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
  */
 void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
 {
-	char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
+	char buf[128];
 
-	fprintf(fp, "segment #%u ", segment->id);
-
-	/* Segment name is optional. */
-	if (segment->name) {
-		fprintf(fp, "%s ", segment->name);
-	}
-
-	fprintf(fp, "%s %s", ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment),
-	        fr_table_str_by_value(segment_types, segment->type, "???"));
+	if (!ncc_segment_description_snprint(buf, sizeof(buf), segment)) return;
+	fprintf(fp, "segment %s", buf);
 
 	/* A "null" segment is not used. */
 	if (segment->type != NCC_SEGMENT_RATE_NULL) {
