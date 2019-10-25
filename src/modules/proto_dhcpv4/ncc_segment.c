@@ -59,23 +59,28 @@ ncc_segment_t *ncc_segment_from_elapsed_time(ncc_dlist_t *dlist, ncc_segment_t *
  * Print to a string buffer a segment time interval.
  *
  * @param[out] out      where to write the output string (size should be at least NCC_SEGMENT_INTERVAL_STRLEN).
+ * @param[in]  outlen   size of output buffer.
  * @param[in]  segment  the time segment.
  *
  * @return pointer to the output buffer.
  */
-char *ncc_segment_interval_sprint(char *out, ncc_segment_t *segment)
+char *ncc_segment_interval_snprint(char *out, size_t outlen, ncc_segment_t *segment)
 {
+	size_t len;
+	char *p = out;
+
 	FN_ARG_CHECK(NULL, out);
 
 	/* First endpoint is always bounded (finite value).
 	 * Second endpoint is unbounded if set to 0.
 	 */
 	if (segment->ftd_end) {
-		sprintf(out, "(%.3f - %.3f)", ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
+		len = snprintf(p, outlen, "(%.3f - %.3f)", ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end));
 	} else {
-		sprintf(out, "(%.3f - INF)", ncc_fr_time_to_float(segment->ftd_start));
+		len = snprintf(p, outlen, "(%.3f - INF)", ncc_fr_time_to_float(segment->ftd_start));
 	}
 
+	ERR_IF_TRUNCATED_LEN(p, outlen, len);
 	return out;
 }
 
@@ -107,7 +112,7 @@ void ncc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 
 			fprintf(fp, "(id: %u): %s, interval: %s", segment->id,
 			        fr_table_str_by_value(segment_types, segment->type, "???"),
-			        ncc_segment_interval_sprint(interval_buf, segment));
+			        ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment));
 
 			switch (segment->type) {
 			case NCC_SEGMENT_RATE_FIXED:

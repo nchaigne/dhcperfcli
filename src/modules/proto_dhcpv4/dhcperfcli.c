@@ -418,7 +418,7 @@ void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
 		fprintf(fp, "%s ", segment->name);
 	}
 
-	fprintf(fp, "%s %s", ncc_segment_interval_sprint(interval_buf, segment),
+	fprintf(fp, "%s %s", ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment),
 	        fr_table_str_by_value(segment_types, segment->type, "???"));
 
 	/* A "null" segment is not used. */
@@ -2187,11 +2187,11 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
 		if (segment) {
 			DEBUG("Segment (id: %u) %s%s%s start (elapsed: %f)", segment->id,
 			      segment->name ? segment->name : "", segment->name ? " " : "",
-			      ncc_segment_interval_sprint(interval_buf, segment),
+			      ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
 			DEBUG("Segment (id: %u) %s is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
-			      ncc_segment_interval_sprint(interval_buf, segment),
+			      ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment),
 			      ncc_fr_time_to_float(ftd_elapsed), segment_pre->num_use);
 		}
 	}
