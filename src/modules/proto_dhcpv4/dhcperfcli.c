@@ -102,8 +102,7 @@ fr_dict_autoload_t dpc_dict_autoload[] = {
 	{ .out = &dict_dhcperfcli, .proto = "dhcperfcli" },
 
 	//{ .out = &dict_dhcpv4, .proto = "dhcpv4" },
-	// ^ if we do that it works, but memory will not be freed... (FreeRADIUS bug ? probably, because dhcpclient does this...)
-	// TODO: check if dhcpclient leaks memory.
+	// ^ if we do that it works, but memory will not be freed... (FreeRADIUS bug ?)
 	// ...and if we don't, we can't autoload attributes using "dict_dhcpv4"... so we need our own:
 	{ .out = &dpc_dict_dhcpv4, .proto = "dhcpv4" },
 
@@ -3565,13 +3564,18 @@ static void dpc_end(void)
 static void dpc_exit(void)
 {
 	/* Free memory. */
-	ncc_xlat_free();
+	ncc_xlat_free(); // Note: this removes reference on "internal" (freeradius) dictionary
 	ncc_xlat_core_free();
 
+	// If using non static "dict_dhcpv4" from FreeRADIUS, then dictionary "DHCPv4" has *two* talloc references
+	// i.e. two parents in addition to the initial one (cf. talloc_reference_count).
+	// This is one more than expected (why ??) and thus prevents memory being properly freed.
+	// fr_dhcpv4_global_free() and fr_dict_autofree(dpc_dict_autoload) will each remove one of the two references.
+
 	fr_dhcpv4_global_free();
-	// This does not seem to work correctly if we try to load attributes using dict_dhcpv4 from FreeRADIUS (bug ?)
 
 	fr_dict_autofree(dpc_dict_autoload);
+	// Now all dictionaries have been freed.
 
 	/* Free parsed configuration items.
 	 */
