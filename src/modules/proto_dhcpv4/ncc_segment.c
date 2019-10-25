@@ -56,6 +56,42 @@ ncc_segment_t *ncc_segment_from_elapsed_time(ncc_dlist_t *dlist, ncc_segment_t *
 }
 
 /**
+ * Print to a string buffer the description of a segment.
+ *
+ * @param[out] out      where to write the output string.
+ * @param[in]  outlen   size of output buffer.
+ * @param[in]  segment  the time segment.
+ *
+ * @return pointer to the output buffer.
+ */
+char *ncc_segment_description_snprint(char *out, size_t outlen, ncc_segment_t *segment)
+{
+	size_t len;
+	char *p = out;
+
+	FN_ARG_CHECK(NULL, out);
+
+	/* Segment name if defined, or id otherwise.
+	 */
+	if (segment->name) {
+		len = snprintf(p, outlen, "%s ", segment->name);
+	} else {
+		len = snprintf(p, outlen, "#%u ", segment->id);
+	}
+	ERR_IF_TRUNCATED_LEN(p, outlen, len);
+
+	/* Segment time interval. */
+	if (!ncc_segment_interval_snprint(p, outlen, segment)) return NULL;
+	p = out + strlen(out); // this is clumsy... maybe should return a size_t ?
+
+	/* Segment type. */
+	len = snprintf(p, outlen, " %s", fr_table_str_by_value(segment_types, segment->type, "???"));
+	ERR_IF_TRUNCATED_LEN(p, outlen, len);
+
+	return out;
+}
+
+/**
  * Print to a string buffer a segment time interval.
  *
  * @param[out] out      where to write the output string (size should be at least NCC_SEGMENT_INTERVAL_STRLEN).
