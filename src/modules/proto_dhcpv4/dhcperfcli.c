@@ -1974,8 +1974,9 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 
 	/* If this is the first time this input is used, store current time. */
 	if (input->num_use == 0) {
-		DEBUG("Input (id: %u) start (max use: %u, duration: %.1f s, rate: %.1f)",
-		      input->id, input->max_use, input->max_duration, input->rate_limit);
+		DEBUG("Input (id: %u) %s%sstart (max use: %u, duration: %.1f s, rate: %.1f)",
+		      input->id, input->name ? input->name : "", input->name ? " " : "",
+		      input->max_use, input->max_duration, input->rate_limit);
 
 		input->fte_start = fr_time();
 
