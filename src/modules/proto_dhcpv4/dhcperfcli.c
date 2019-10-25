@@ -2184,7 +2184,8 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
 		char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
 
 		if (segment) {
-			DEBUG("Segment (id: %u) %s start (elapsed: %f)", segment->id,
+			DEBUG("Segment (id: %u) %s%s%s start (elapsed: %f)", segment->id,
+			      segment->name ? segment->name : "", segment->name ? " " : "",
 			      ncc_segment_interval_sprint(interval_buf, segment),
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
