@@ -20,14 +20,14 @@ To sum up you will need :
 
 - Libkqueue
 
-  - Build from sources:
+  - Build from sources (requires [cmake](https://cmake.org/download/) version 3):
 
->__`LIBKQUEUE_VERSION=2.1.0`__<br>
+>__`LIBKQUEUE_VERSION=2.3.1`__<br>
 >__`cd /home/build`__<br>
 >__`wget https://github.com/mheily/libkqueue/archive/v${LIBKQUEUE_VERSION}.tar.gz`__<br>
 >__`tar -xvzf v${LIBKQUEUE_VERSION}.tar.gz`__<br>
 >__`cd libkqueue-${LIBKQUEUE_VERSION}`__<br>
->__`./configure --prefix=/opt/libkqueue/${LIBKQUEUE_VERSION}`__<br>
+>__`cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/opt/libkqueue/${LIBKQUEUE_VERSION} -DCMAKE_INSTALL_LIBDIR=lib .`__<br>
 >__`make && make install`__<br>
 
 
@@ -61,8 +61,8 @@ Then:
 ### Build from sources
 
 >__`./configure --disable-developer --prefix=/opt/freeradius/4.0.x \`__<br>
->__`--with-kqueue-include-dir=/opt/libkqueue/2.1.0/include/kqueue \`__<br>
->__`--with-kqueue-lib-dir=/opt/libkqueue/2.1.0/lib`__<br>
+>__`--with-kqueue-include-dir=/opt/libkqueue/2.3.1/include/kqueue \`__<br>
+>__`--with-kqueue-lib-dir=/opt/libkqueue/2.3.1/lib`__<br>
 >__`make`__<br>
 >__`make install`__<br>
 
