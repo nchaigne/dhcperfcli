@@ -406,4 +406,5 @@ ncc_segment_t *ncc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 
 finish:
 	segment_new->id = segment_id++;
-	return segment_ne
+	return segment_new;
+}
