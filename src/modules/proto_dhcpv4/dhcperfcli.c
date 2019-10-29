@@ -324,7 +324,7 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 static bool dpc_item_available(dpc_input_t *item);
 static char dpc_item_get_status(dpc_input_t *input);
 static double dpc_item_get_elapsed(dpc_input_t *input);
-static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input);
+static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
 static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
@@ -332,8 +332,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
 static void dpc_segment_list_debug(ncc_dlist_t *list);
-static double dpc_segment_get_rate(ncc_segment_t *segment);
 static double dpc_segment_get_elapsed(ncc_segment_t *segment);
+static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment);
 static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre);
 
 static void dpc_loop_recv(void);
@@ -416,7 +416,13 @@ void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
 
 	/* A "null" segment is not used. */
 	if (segment->type != NCC_SEGMENT_RATE_NULL) {
-		fprintf(fp, ": use: %u, rate (/s): %.3f", segment->num_use, dpc_segment_get_rate(segment));
+		double rate = 0;
+		bool with_rate = dpc_segment_get_rate(&rate, segment);
+
+		fprintf(fp, ": use: %u", segment->num_use);
+		if (with_rate) {
+			fprintf(fp, ", rate (/s): %.3f", rate);
+		}
 	}
 }
 
@@ -448,9 +454,9 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 	int i = 0;
 
 	while (input) {
-		double input_rate = 0;
+		double rate = 0;
 		char status = dpc_item_get_status(input);
-		bool rate = dpc_item_get_rate(&input_rate, input);
+		bool with_rate = dpc_item_get_rate(&rate, input);
 
 		if (digest) {
 			if (i) fprintf(fp, ", ");
@@ -458,8 +464,8 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			/* Print status: W = waiting, A = active, T = terminated. */
 			fprintf(fp, "#%u (%c)", input->id, status);
 
-			if (rate) {
-				fprintf(fp, ": %.3f", input_rate);
+			if (with_rate) {
+				fprintf(fp, ": %.3f", rate);
 			} else {
 				fprintf(fp, ": N/A"); /* No relevant rate. */
 			}
@@ -469,8 +475,8 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 			 * Print each input on a distinct line.
 			 */
 			fprintf(fp, " └─ input #%u (%c) use: %u", input->id, status, input->num_use);
-			if (rate) {
-				fprintf(fp, ", rate (/s): %.3f", input_rate);
+			if (with_rate) {
+				fprintf(fp, ", rate (/s): %.3f", rate);
 			}
 
 			/* Print the current input scoped segment, if any. */
@@ -1826,9 +1832,9 @@ static double dpc_item_get_elapsed(dpc_input_t *input)
  *	Get the use rate of an input item, relative to the point at which it started being used,
  *	up to now (if it's still active) or the last time is was used.
  */
-static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input)
+static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input)
 {
-	*input_rate = 0;
+	*out_rate = 0;
 
 	if (!input->fte_start) {
 		return false; /* Item has not been used yet. */
@@ -1839,7 +1845,7 @@ static bool dpc_item_get_rate(double *input_rate, dpc_input_t *input)
 	if (input->num_use < ECTX.min_session_for_rps
 	    || elapsed < ECTX.min_session_time_for_rps) return false;
 
-	*input_rate = (double)input->num_use / elapsed;
+	*out_rate = (double)input->num_use / elapsed;
 	return true;
 }
 
@@ -2131,14 +2137,17 @@ static void dpc_segment_list_debug(ncc_dlist_t *list)
 	ncc_segment_list_fprint(fr_log_fp, list);
 }
 
-/*
- *	Get the use rate of a time segment.
+/**
+ * Get elapsed time from the start of a given time segment.
  */
-static double dpc_segment_get_rate(ncc_segment_t *segment)
+static double dpc_segment_get_elapsed(ncc_segment_t *segment)
 {
-	double rate;
 	fr_time_delta_t ftd_ref;
 	fr_time_delta_t ftd_elapsed = dpc_job_elapsed_fr_time_get();
+
+	if (ftd_elapsed < segment->ftd_start) {
+		return 0; /* Segment is not started yet. */
+	}
 
 	if (segment->ftd_end && ftd_elapsed >= segment->ftd_end) {
 		/*
@@ -2149,19 +2158,23 @@ static double dpc_segment_get_rate(ncc_segment_t *segment)
 		ftd_ref = ftd_elapsed - segment->ftd_start;
 	}
 
-	rate = (double)segment->num_use / ncc_fr_time_to_float(ftd_ref);
-
-	return rate;
+	return ncc_fr_time_to_float(ftd_ref);
 }
 
 /**
- * Get elapsed time from the start of a given time segment.
- * Assuming we're not beyond this segment end.
+ * Get the use rate of a time segment.
  */
-static double dpc_segment_get_elapsed(ncc_segment_t *segment)
+static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment)
 {
-	fr_time_delta_t ftd_elapsed = fr_time() - (fte_job_start + segment->ftd_start);
-	return ncc_fr_time_to_float(ftd_elapsed);
+	*out_rate = 0;
+
+	double elapsed = dpc_segment_get_elapsed(segment);
+
+	if (segment->num_use < ECTX.min_session_for_rps
+	    || elapsed < ECTX.min_session_time_for_rps) return false;
+
+	*out_rate = (double)segment->num_use / elapsed;
+	return true;
 }
 
 /**
