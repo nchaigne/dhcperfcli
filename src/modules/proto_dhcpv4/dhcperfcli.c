@@ -37,7 +37,7 @@ int dpc_debug_lvl = 0;
 
 dpc_context_t exe_ctx = {
 	.min_session_for_rps = 50,
-	.min_session_time_for_rps = 0.9,
+	.min_session_time_for_rps = 0.5,
 	.min_ref_time_rate_limit = 0.2,
 	.rate_limit_time_lookahead = 0.02,
 };
