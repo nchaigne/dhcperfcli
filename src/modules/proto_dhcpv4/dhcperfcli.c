@@ -1100,8 +1100,8 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		}
 	}
 
-	dpc_assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
-	dpc_assert(packet->data == NULL);
+	ncc_assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
+	ncc_assert(packet->data == NULL);
 
 	/*
 	 *	Encode the packet.
