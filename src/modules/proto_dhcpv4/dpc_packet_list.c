@@ -334,9 +334,9 @@ dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
  */
 bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 {
-	dpc_assert(pl != NULL);
-	dpc_assert(request_p != NULL);
-	dpc_assert(*request_p != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(request_p != NULL);
+	ncc_assert(*request_p != NULL);
 
 	bool r = rbtree_insert(pl->tree, request_p);
 	if (r) {
@@ -358,8 +358,8 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	DHCP_PACKET my_request = { 0 }, *request = NULL;
 	dpc_packet_socket_t *ps;
 
-	dpc_assert(pl != NULL);
-	dpc_assert(reply != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(reply != NULL);
 
 	ps = dpc_socket_find(pl, reply->sockfd);
 	if (!ps) {
@@ -422,8 +422,8 @@ bool dpc_packet_list_yank(dpc_packet_list_t *pl, DHCP_PACKET *request)
 {
 	rbnode_t *node;
 
-	dpc_assert(pl != NULL);
-	dpc_assert(request != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(request != NULL);
 
 	node = rbtree_find(pl->tree, &request);
 	if (!node) return false;
@@ -462,9 +462,9 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	DHCP_PACKET *request;
 	int tries = 0;
 
-	dpc_assert(pl != NULL);
-	dpc_assert(request_p != NULL);
-	dpc_assert(*request_p != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(request_p != NULL);
+	ncc_assert(*request_p != NULL);
 
 	request = *request_p;
 
@@ -542,8 +542,8 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, DHCP_PACKET *request)
 {
 	dpc_packet_socket_t *ps;
 
-	dpc_assert(pl != NULL);
-	dpc_assert(request != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(request != NULL);
 
 	if (!dpc_packet_list_yank(pl, request)) return false;
 
@@ -571,8 +571,8 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 {
 	int i, maxfd;
 
-	dpc_assert(pl != NULL);
-	dpc_assert(set != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(set != NULL);
 
 	maxfd = -1;
 
@@ -603,8 +603,8 @@ DHCP_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 	DHCP_PACKET *packet;
 	dpc_packet_socket_t *ps;
 
-	dpc_assert(pl != NULL);
-	dpc_assert(set != NULL);
+	ncc_assert(pl != NULL);
+	ncc_assert(set != NULL);
 
 	start = pl->last_recv;
 	do {
