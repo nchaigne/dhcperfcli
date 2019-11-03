@@ -2421,7 +2421,7 @@ static uint32_t dpc_loop_start_sessions(void)
 /*
  *	Handle timer events.
  */
-static void dpc_loop_timer_events(void)
+static void dpc_loop_timer_events(fr_event_list_t *el)
 {
 	int num_processed = 0; /* Number of timers events triggered. */
 	fr_time_t now;
@@ -2472,7 +2472,7 @@ static void dpc_main_loop(void)
 		dpc_loop_recv();
 
 		/* Handle timer events. */
-		dpc_loop_timer_events();
+		dpc_loop_timer_events(event_list);
 
 		/* Check if we're done. */
 		dpc_loop_check_done();
