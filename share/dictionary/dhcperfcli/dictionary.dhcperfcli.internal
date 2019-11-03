@@ -9,15 +9,16 @@ FLAGS internal
 # Control attributes
 # Note: FreeRADIUS does not provide a "float" type, so we have to declare as string instead where needed.
 #
-ATTRIBUTE DHCP-Encoded-Data            3000   octets virtual
-ATTRIBUTE DHCP-Authorized-Server       3001   ipaddr virtual
-ATTRIBUTE DHCP-Workflow-Type           3002   byte virtual
-ATTRIBUTE Start-Delay                  3003   string virtual
-ATTRIBUTE Rate-Limit                   3004   string virtual
-ATTRIBUTE Max-Duration                 3005   string virtual
-ATTRIBUTE Max-Use                      3006   integer virtual
-ATTRIBUTE Segment                      3007   string virtual
-ATTRIBUTE Request-Label                3008   string virtual
+ATTRIBUTE Input-Name                   3000   string virtual
+ATTRIBUTE DHCP-Encoded-Data            3001   octets virtual
+ATTRIBUTE DHCP-Authorized-Server       3002   ipaddr virtual
+ATTRIBUTE DHCP-Workflow-Type           3003   byte virtual
+ATTRIBUTE Start-Delay                  3004   string virtual
+ATTRIBUTE Rate-Limit                   3005   string virtual
+ATTRIBUTE Max-Duration                 3006   string virtual
+ATTRIBUTE Max-Use                      3007   integer virtual
+ATTRIBUTE Segment                      3008   string virtual
+ATTRIBUTE Request-Label                3009   string virtual
 
 VALUE     DHCP-Workflow-Type           DORA           1
 VALUE     DHCP-Workflow-Type           DORA-Decline   2

@@ -56,6 +56,7 @@ fr_dict_attr_t const *attr_packet_dst_port;
 fr_dict_attr_t const *attr_packet_src_ip_address;
 fr_dict_attr_t const *attr_packet_src_port;
 
+fr_dict_attr_t const *attr_input_name;
 fr_dict_attr_t const *attr_encoded_data;
 fr_dict_attr_t const *attr_authorized_server;
 fr_dict_attr_t const *attr_workflow_type;
@@ -117,6 +118,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_packet_src_ip_address, .name = "Packet-Src-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_freeradius },
 	{ .out = &attr_packet_src_port, .name = "Packet-Src-Port", .type = FR_TYPE_UINT16, .dict = &dict_freeradius },
 
+	{ .out = &attr_input_name, .name = "Input-Name", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
@@ -1182,7 +1184,7 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 
 	if (ftd_wait_time) {
 		tvi_wait = fr_time_delta_to_timeval(*ftd_wait_time);
-		DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tvi_wait));
+		//DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tvi_wait));
 	}
 
 	/*
@@ -2676,6 +2678,9 @@ static bool dpc_input_parse(dpc_input_t *input)
 
 		} else if (vp->da == attr_packet_src_ip_address) {
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
+
+		} else if (vp->da == attr_input_name) { /* Input-Name = <string> */
+			input->name = talloc_strdup(input, vp->vp_strvalue);
 
 		} else if (vp->da == attr_start_delay) { /* Start-Delay = <n> */
 			if (!ncc_str_to_float(&input->start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
