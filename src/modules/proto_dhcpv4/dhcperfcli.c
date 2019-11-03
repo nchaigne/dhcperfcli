@@ -1047,32 +1047,35 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_de
 	}
 }
 
-/*
- *	Send one packet.
- *	Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
- *	Returns: 0 = success, -1 = error.
+/**
+ * Send one packet (initial or retransmission).
+ * Grab a socket, insert packet in the packet list (and obtain an id), encode DHCP packet, and send it.
+ *
+ * @param[in] session   the session to which the packet belongs.
+ * @param[in] packet_p  pointer on packet. Note: this is a 'DHCP_PACKET **', which is necessary for inserting
+ *                      into the packet list rbtree (cf. dpc_packet_list_id_alloc).
+ *
+ * @return -1 = error, 0 = success.
  */
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p)
-// note: we need a 'DHCP_PACKET **' for dpc_packet_list_id_alloc.
 {
 	DHCP_PACKET *packet = *packet_p;
-	int my_sockfd;
+	int sockfd;
 	int ret;
 
 	DEBUG_TRACE("Preparing to send one packet");
 
-	/*
-	 *	Get a socket to send this over.
+	/* Get a socket to send this over.
 	 */
 #ifdef HAVE_LIBPCAP
 	if (session->input->ext.with_pcap) {
-		my_sockfd = pcap->fd;
+		sockfd = pcap->fd;
 	} else
 #endif
 	{
-		my_sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
+		sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
 	}
-	if (my_sockfd < 0) {
+	if (sockfd < 0) {
 		SPERROR("Failed to provide a suitable socket");
 		return -1;
 	}
@@ -1081,21 +1084,21 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		/* Need to assign an xid to this packet. */
 		bool rcode;
 
-		/*
-		 *	Set packet->id to prefered value (if any). Note: it will be reset if allocation fails.
+		/* Set packet->id to prefered value (if any).
+		 * Note: it will be reset if allocation fails.
 		 */
 		packet->id = session->input->ext.xid;
 
-		/* An xlat expression may have been provided. Go look in packet vps. */
+		/* An xlat expression may have been provided. Go look in packet vps.
+		 */
 		if (packet->id == DPC_PACKET_ID_UNASSIGNED && CONF.xlat) {
 			VALUE_PAIR *vp_xid = ncc_pair_find_by_da(packet->vps, attr_dhcp_transaction_id);
 			if (vp_xid) packet->id = vp_xid->vp_uint32;
 		}
 
-		/*
-		 *	Allocate an id, and prepare the packet (socket fd, src addr)
+		/* Allocate an id, and prepare the packet (socket fd, src addr)
 		 */
-		rcode = dpc_packet_list_id_alloc(pl, my_sockfd, packet_p);
+		rcode = dpc_packet_list_id_alloc(pl, sockfd, packet_p);
 		if (!rcode) {
 			SERROR("Failed to allocate packet xid");
 			return -1;
@@ -1103,19 +1106,20 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	}
 
 	ncc_assert(packet->id != DPC_PACKET_ID_UNASSIGNED);
-	ncc_assert(packet->data == NULL);
 
-	/*
-	 *	Encode the packet.
-	 */
-	DEBUG_TRACE("Encoding and sending packet");
-	if (dpc_dhcp_encode(packet) < 0) { /* Should never happen. */
-		SERROR("Failed to encode request packet");
-		exit(EXIT_FAILURE);
+	if (!packet->data) {
+		/*
+		 * Encode the packet.
+		 * Note: it's already encoded if retransmitting.
+		 */
+		DEBUG_TRACE("Encoding packet");
+		if (dpc_dhcp_encode(packet) < 0) { /* Should never happen. */
+			SERROR("Failed to encode request packet");
+			exit(EXIT_FAILURE);
+		}
 	}
 
-	/*
-	 *	Send the packet.
+	/* Send the packet.
 	 */
 	packet->timestamp = fr_time(); /* Store packet send time. */
 
@@ -1123,23 +1127,27 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	// on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv
 	// - actual value is set in recvfromto right before returning
 
-	packet->sockfd = my_sockfd;
+	packet->sockfd = sockfd;
 
 #ifdef HAVE_LIBPCAP
 	if (session->input->ext.with_pcap) {
-		/* Send using pcap raw socket. */
+		/*
+		 * Send using pcap raw socket.
+		 */
 		packet->if_index = pcap->if_index; /* So we can trace it. */
 		ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
 		/*
-		 *	Note: we're sending from our real Ethernet source address (from the selected interface,
-		 *	set by fr_pcap_open / fr_pcap_mac_addr), *not* field 'chaddr' from the DHCP packet
-		 *	(which is a fake hardware address).
-		 *	This because we want replies (sent by the DHCP server to our Ethernet address) to reach us.
+		 * Note: we're sending from our real Ethernet source address (from the selected interface,
+		 * set by fr_pcap_open / fr_pcap_mac_addr), *not* field 'chaddr' from the DHCP packet
+		 * (which is a fake hardware address).
+		 * This because we want replies (sent by the DHCP server to our Ethernet address) to reach us.
 		 */
 	} else
 #endif
 	{
-		/* Send using a connectionless UDP socket (sendfromto). */
+		/*
+		 * Send using a connectionless UDP socket (sendfromto).
+		 */
 		ret = fr_dhcpv4_udp_packet_send(packet);
 	}
 	if (ret < 0) {
@@ -1147,7 +1155,8 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		return -1;
 	}
 
-	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT); /* Print request packet. */
+	/* Print sent packet. */
+	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT);
 
 	/* Statistics. */
 	if (session->retransmit == 0) {
