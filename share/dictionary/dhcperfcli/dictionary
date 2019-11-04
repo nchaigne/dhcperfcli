@@ -3,7 +3,10 @@
 #	dhcperfcli dictionary file
 #
 
-# we need a "virtual protocol" because only "freeradius" dictionary is loaded as internal
+#
+# We need a "virtual protocol" because only "freeradius" dictionary is loaded as internal.
+# Using 255 (the highest valid number) to (hopefully) avoid potential future conflicts.
+#
 PROTOCOL	dhcperfcli		255
 BEGIN-PROTOCOL	dhcperfcli
 

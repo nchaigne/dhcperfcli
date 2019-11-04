@@ -2,6 +2,10 @@
 #
 #	Internal attributes defined for dhcperfcli.
 #
+#	These are defined in the "3000-3999" range.
+#	But they also belong to a "virtual" protocol we're using, so they will never conflict with attributes
+#	defined in local configuration.
+#
 
 FLAGS internal
 
@@ -9,16 +13,16 @@ FLAGS internal
 # Control attributes
 # Note: FreeRADIUS does not provide a "float" type, so we have to declare as string instead where needed.
 #
-ATTRIBUTE Input-Name                   3000   string virtual
-ATTRIBUTE DHCP-Encoded-Data            3001   octets virtual
-ATTRIBUTE DHCP-Authorized-Server       3002   ipaddr virtual
-ATTRIBUTE DHCP-Workflow-Type           3003   byte virtual
-ATTRIBUTE Start-Delay                  3004   string virtual
-ATTRIBUTE Rate-Limit                   3005   string virtual
-ATTRIBUTE Max-Duration                 3006   string virtual
-ATTRIBUTE Max-Use                      3007   integer virtual
-ATTRIBUTE Segment                      3008   string virtual
-ATTRIBUTE Request-Label                3009   string virtual
+ATTRIBUTE Input-Name                   3700   string virtual
+ATTRIBUTE DHCP-Encoded-Data            3701   octets virtual
+ATTRIBUTE DHCP-Authorized-Server       3702   ipaddr virtual
+ATTRIBUTE DHCP-Workflow-Type           3703   byte virtual
+ATTRIBUTE Start-Delay                  3704   string virtual
+ATTRIBUTE Rate-Limit                   3705   string virtual
+ATTRIBUTE Max-Duration                 3706   string virtual
+ATTRIBUTE Max-Use                      3707   integer virtual
+ATTRIBUTE Segment                      3708   string virtual
+ATTRIBUTE Request-Label                3709   string virtual
 
 VALUE     DHCP-Workflow-Type           DORA           1
 VALUE     DHCP-Workflow-Type           DORA-Decline   2
