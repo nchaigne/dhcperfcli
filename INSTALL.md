@@ -68,7 +68,8 @@ Note: if downloading a specific commit (as recommended), `master` will be replac
 
 Note: before proceeding, copy *dhcperfcli* files into FreeRADIUS source tree (see below), so that everything is built all at once.
 
->__`./configure --disable-developer --prefix=/opt/freeradius/4.0.x \`__<br>
+>__`./configure --with-modules="rlm_dhcperfcli" \`__<br>
+>__`--disable-developer --prefix=/opt/freeradius/4.0.x \`__<br>
 >__`--with-kqueue-include-dir=/opt/libkqueue/2.3.1/include/kqueue \`__<br>
 >__`--with-kqueue-lib-dir=/opt/libkqueue/2.3.1/lib`__<br>
 >__`make`__<br>
@@ -77,6 +78,7 @@ Note: before proceeding, copy *dhcperfcli* files into FreeRADIUS source tree (se
 Notes:
 - Do __*not*__ configure with `--enable-developer`. This is not appropriate for performance tests. The CPU cost is simply too high.
 - Set `--prefix` (or not) according to where you want FreeRADIUS to be installed. As this is a version currently in development I recommand not to use the default.
+- Option `--with-modules` is required to have FreeRADIUS run autoconf on *dhcperfcli* source directory (by default, it does so only on modules marked as "stable").
 
 
 ## Build *dhcperfcli*
