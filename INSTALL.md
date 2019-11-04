@@ -5,7 +5,7 @@
 
 Building *dhcperfcli* requires recent sources of FreeRADIUS version 4.0.x (`master` branch). Note that this version is currently in development. It's alright. We're using FreeRADIUS libraries. They just work fine.
 
-That said, changes made by the FreeRADIUS team may break *dhcperfcli* at any time. Although I try to keep up with these changes, I cannot guarantee responsiveness. Consequently, it is recommended to build a specific FreeRADIUS commit (with which *dhcpercli* will work) rather than the HEAD: [e2b7ee67fada6d382f9229eeef156a1ab580f45c](https://github.com/FreeRADIUS/freeradius-server/tree/e2b7ee67fada6d382f9229eeef156a1ab580f45c) (October 24, 2019).
+That said, changes made by the FreeRADIUS team may break *dhcperfcli* at any time. Although I try to keep up with these changes, I cannot guarantee responsiveness. Consequently, it is recommended to build a specific FreeRADIUS commit (with which *dhcpercli* will work) rather than the HEAD: [3b7b2c53adb449dabaa3b88cbc3ef00f89debabc](https://github.com/FreeRADIUS/freeradius-server/tree/3b7b2c53adb449dabaa3b88cbc3ef00f89debabc) (November 4, 2019).
 
 Instructions on how to build FreeRADIUS is available on their wiki :
 https://wiki.freeradius.org/building/home
@@ -45,9 +45,13 @@ While libpcap is not mandatory to build, it is needed by *dhcpercli* to send pac
 ### Get the sources
 
 You can get FreeRADIUS sources using git as follows:
->__`git clone https://github.com/FreeRADIUS/freeradius-server.git`__<br>
+>__`git clone -n https://github.com/FreeRADIUS/freeradius-server.git`__<br>
 >__`cd freeradius-server`__<br>
 >__`git checkout master`__
+
+Note: to check out a specific commit (as recommended), replace `master` with the commit ID. For example:
+
+>__`git checkout 3b7b2c53adb449dabaa3b88cbc3ef00f89debabc`__
 
 Avoid cloning using GitHub Desktop on Windows. You may have issues with line endings. And... other bad things. I've been there. Windows is hell.
 
@@ -58,7 +62,11 @@ Then:
 >__`unzip freeradius-server-master.zip`__<br>
 >__`cd freeradius-server-master`__
 
+Note: if downloading a specific commit (as recommended), `master` will be replaced with the commit ID. Adjust as needed.
+
 ### Build from sources
+
+Note: before proceeding, copy *dhcperfcli* files into FreeRADIUS source tree (see below), so that everything is built all at once.
 
 >__`./configure --disable-developer --prefix=/opt/freeradius/4.0.x \`__<br>
 >__`--with-kqueue-include-dir=/opt/libkqueue/2.3.1/include/kqueue \`__<br>
@@ -91,18 +99,14 @@ Then:
 
 Copy *dhcpercli* files into FreeRADIUS source tree:
 
->__`cp -f src/modules/proto_dhcpv4/* <FreeRADIUS sources>/src/modules/proto_dhcpv4/`__<br>
+>__`cp -Rf src/modules/rlm_dhcperfcli/ <FreeRADIUS sources>/src/modules/`__<br>
 >__`cp -Rf share/dictionary/dhcperfcli <FreeRADIUS sources>/share/dictionary/`__<br>
-
-Note: file `all.mk` will be overwritten. This is necessary so FreeRADIUS knows that it has to build *dhcperfcli*.
 
 It is also necessary to add `dhcperfcli` to the `PROTOCOLS` list in FreeRADIUS Makefile (so that the dictionaries are included during install). This can be achieved as follows:
 
 >__`sed -i '/^PROTOCOLS.*/a\\tdhcperfcli \\' <FreeRADIUS sources>/Makefile`__<br>
 
-Then build FreeRADIUS again:
->__`make`__<br>
->__`make install`__
+Then configure and build FreeRADIUS as described previously.
 
 ### Update PATH
 
