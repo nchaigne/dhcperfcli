@@ -585,7 +585,7 @@ PACKAGE_URL=
 ac_unique_file="dhcperfcli.c"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-targetname
+mod_sources
 mod_ldflags
 mod_cflags
 LIBCURL
@@ -1933,6 +1933,9 @@ ac_config_headers="$ac_config_headers config.h"
 # or use curl_version_info to figure it out at runtime.
 
 
+
+# sources to build only if we have libcurl
+SOURCES_REQ_LIBCURL="ncc_curl.c"
 
 if test x$with_dhcperfcli != xno; then
 
@@ -3293,13 +3296,14 @@ fi
 mod_ldflags="$LIBCURL"
 mod_cflags="$LIBCURL_CPPFLAGS"
 
+mod_sources=""
+if test x"$LIBCURL" != x""; then
+	mod_sources="$SOURCES_REQ_LIBCURL $mod_sources"
+fi
 
 
 
 
-
-unset ac_cv_env_LIBS_set
-unset ac_cv_env_LIBS_value
 
 ac_config_files="$ac_config_files dhcperfcli.mk"
 
@@ -4575,6 +4579,4 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-
-
 

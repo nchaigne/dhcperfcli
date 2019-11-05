@@ -5,6 +5,9 @@ AC_DEFUN(modname,[dhcperfcli])
 AC_CONFIG_HEADER(config.h)
 m4_include([m4/libcurl_check_config.m4])
 
+# sources to build only if we have libcurl
+SOURCES_REQ_LIBCURL="ncc_curl.c"
+
 if test x$with_[]modname != xno; then
 
 	AC_PROG_CC
@@ -58,9 +61,13 @@ fi
 mod_ldflags="$LIBCURL"
 mod_cflags="$LIBCURL_CPPFLAGS"
 
+mod_sources=""
+if test x"$LIBCURL" != x""; then
+	mod_sources="$SOURCES_REQ_LIBCURL $mod_sources"
+fi
+
 AC_SUBST(mod_cflags)
 AC_SUBST(mod_ldflags)
+AC_SUBST(mod_sources)
 
-AC_SUBST(targetname)
 AC_OUTPUT(dhcperfcli.mk)
-
