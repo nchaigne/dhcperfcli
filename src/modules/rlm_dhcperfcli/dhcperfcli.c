@@ -3694,7 +3694,7 @@ int main(int argc, char **argv)
 	 *	Initialize dictionaries and preload attributes.
 	 */
 	dpc_dict_init(global_ctx);
-//dpc_exit(); // KO HERE LEAK - fixed ? seems ok.
+
 	/*
 	 *	Initialize the xlat framework, and register xlat expansion functions.
 	 */
@@ -3858,19 +3858,27 @@ int main(int argc, char **argv)
 	dpc_end();
 }
 
-/*
- *	Print program version.
+/**
+ * Print program version and optional dependencies.
  */
+#ifdef HAVE_LIBPCAP
+  #define BUILT_WITH_LIBPCAP "yes"
+#else
+ #define BUILT_WITH_LIBPCAP "no"
+#endif
+
+#ifdef HAVE_LIBCURL
+  #define BUILT_WITH_LIBCURL "yes"
+#else
+  #define BUILT_WITH_LIBCURL "no"
+#endif
+
 static void version_print(void)
 {
 	printf("%s: %s\n", progname, prog_version);
-	printf("Built with libpcap: %s\n",
-#ifdef HAVE_LIBPCAP
-		"yes"
-#else
-		"no"
-#endif
-	);
+	printf("Program was built with:\n");
+	printf("- libpcap: " BUILT_WITH_LIBPCAP "\n");
+	printf("- libcurl: " BUILT_WITH_LIBCURL "\n");
 }
 
 /*
