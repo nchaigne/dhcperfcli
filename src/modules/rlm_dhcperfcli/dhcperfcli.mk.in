@@ -1,4 +1,24 @@
+TARGETNAME :=
+TGT_PREREQS :=
+SRC_CFLAGS :=
+
+#
+# Check if libfreeradius-json.a is available (which means we have json-c-devel).
+#
+-include $(top_builddir)/src/lib/json/all.mk
+
+ifneq "${TARGETNAME}" ""
+  # JSON support is available.
+  # Set TGT_PREREQS. Append SRC_CFLAGS and leave TGT_LDLIBS alone.
+  TGT_PREREQS += libfreeradius-json.a
+  SRC_CFLAGS += -I$(top_builddir)/src/lib/json/
+endif
+
+TARGETNAME := dhcperfcli
 TARGET := dhcperfcli
+
+# configuration dependent sources (libcurl-devel)
+MOD_SOURCES := @mod_sources@
 
 SOURCES := dhcperfcli.c
 SOURCES += ncc_util.c
@@ -6,19 +26,26 @@ SOURCES += ncc_segment.c
 SOURCES += ncc_util_server.c ncc_xlat_core.c ncc_xlat_func.c
 SOURCES += dpc_config.c dpc_packet_list.c dpc_util.c
 
-# configuration dependent sources (libcurl-devel)
-SOURCES += @mod_sources@
+SOURCES += $(MOD_SOURCES)
 
 # Using FreeRADIUS libraries:
 # - libfreeradius-util
 # - libfreeradius-dhcpv4 (fr_dhcpv4_*)
 # - libfreeradius-server, libfreeradius-unlang (for xlat engine, and config parser)
 
-TGT_PREREQS := libfreeradius-util.a
+TGT_PREREQS += libfreeradius-util.a
 TGT_PREREQS += libfreeradius-dhcpv4.a
 TGT_PREREQS += libfreeradius-unlang.a libfreeradius-server.a
 
-TGT_LDLIBS := $(LIBS)
+# Note: LIBS is set in top-level "Make.inc"
+# (e.g. "-ltalloc -lkqueue  -lpcre -lrt -lnsl -lresolv -ldl -lpthread")
+TGT_LDLIBS += $(LIBS)
 
-SRC_CFLAGS := @mod_cflags@
+SRC_CFLAGS += @mod_cflags@
 TGT_LDLIBS += @mod_ldflags@
+
+$(info dhcperfcli: MOD_SOURCES = $(MOD_SOURCES))
+$(info dhcperfcli: SRC_CFLAGS  = $(SRC_CFLAGS))
+$(info dhcperfcli: LIBS        = $(LIBS))
+$(info dhcperfcli: TGT_LDLIBS  = $(TGT_LDLIBS))
+$(info dhcperfcli: TGT_PREREQS = $(TGT_PREREQS))
