@@ -1,11 +1,13 @@
 /*
  * dhcperfcli.c
  */
+#include "config.h"
 
-#include "dhcperfcli.h"
 #include "ncc_util.h"
 #include "ncc_segment.h"
 #include "ncc_xlat.h"
+
+#include "dhcperfcli.h"
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 #include "dpc_config.h"
@@ -3873,12 +3875,19 @@ int main(int argc, char **argv)
   #define BUILT_WITH_LIBCURL "no"
 #endif
 
+#ifdef HAVE_JSON
+  #define BUILT_WITH_LIBJSON "yes"
+#else
+  #define BUILT_WITH_LIBJSON "no"
+#endif
+
 static void version_print(void)
 {
 	printf("%s: %s\n", progname, prog_version);
 	printf("Program was built with:\n");
 	printf("- libpcap: " BUILT_WITH_LIBPCAP "\n");
 	printf("- libcurl: " BUILT_WITH_LIBCURL "\n");
+	printf("- libjson: " BUILT_WITH_LIBJSON "\n");
 }
 
 /*
