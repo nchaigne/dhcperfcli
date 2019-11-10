@@ -87,6 +87,16 @@ typedef struct ncc_dlist {
 }
 
 /*
+ *	Add an item to the head of the list.
+ */
+#define NCC_DLIST_PUSH(_ncc_dlist, _item) { \
+	if (_item) { \
+		fr_dlist_insert_head(&(*_ncc_dlist).head, _item); \
+		(*_ncc_dlist).size++; \
+	} \
+}
+
+/*
  *	Get (and remove) the head item from a list.
  */
 #define NCC_DLIST_DEQUEUE(_ncc_dlist, _item) { \
