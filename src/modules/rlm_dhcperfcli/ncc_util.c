@@ -294,36 +294,37 @@ int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, v
 {
 	char *tmp = NULL;
 	char const *strerror;
+	bool prefix = (fmt && fmt[0] != '\0');
 
 	strerror = fr_strerror_pop();
 	if (!strerror) {
-		if (!fmt) return 0; /* No "fmt" and no error stack. */
+		if (!prefix) return 0; /* No "fmt" prefix and no error stack. */
 
 		ncc_vlog_printf(log, type, NULL, type, fmt, ap);
 		return 0;
 	}
 
 	/* If we have "fmt", use it as prefix. */
-	if (fmt) {
+	if (prefix) {
 		tmp = talloc_vasprintf(NULL, fmt, ap);
 	}
 
 	if (log->multiline) {
 		/*
 		 * Print the first error.
-		 * If we have "fmt", concatenate it with the first error.
+		 * If we have a prefix, concatenate it with the first error.
 		 */
-		if (fmt) {
+		if (prefix) {
 			ncc_log_printf(log, type, NULL, 0, "%s: %s", tmp, strerror);
 		} else {
 			ncc_log_printf(log, type, NULL, 0, "%s", strerror);
 		}
 
 		/*
-		 * Then print all other errors (without the "fmt" prefix) on separate lines.
+		 * Then print all other errors (without the prefix) on separate lines.
 		 */
 		while ((strerror = fr_strerror_pop())) {
-			if (fmt && log->prefix_all) {
+			if (prefix && log->prefix_all) {
 				/* Repeat the prefix on each line - it is useful for aligned errors.
 				 * (cf. fr_canonicalize_error)
 				 */
