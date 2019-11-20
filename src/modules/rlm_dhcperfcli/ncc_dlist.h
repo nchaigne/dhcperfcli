@@ -64,13 +64,23 @@ typedef struct ncc_dlist {
  *	Does nothing if it's not in list.
  *	Clear "last used" if this is the item removed. Ensures we do not access freed memory later on.
  */
-#define NCC_DLIST_REMOVE(_ncc_dlist, _item) { \
+#define _NCC_DLIST_REMOVE(_ncc_dlist, _item, _prev) { \
 	if (_item && !NCC_IS_LONE_ITEM(_item)) { \
 		fr_dlist_head_t *list_head = &(*_ncc_dlist).head; \
 		if (_item == (*_ncc_dlist).last_used) (*_ncc_dlist).last_used = NULL; \
-		fr_dlist_remove(list_head, _item); \
+		_prev = fr_dlist_remove(list_head, _item); \
 		(*_ncc_dlist).size--; \
 	} \
+}
+
+/* Remove item, and return previous item (for continuing iteration). */
+#define NCC_DLIST_REMOVE_ITER(_ncc_dlist, _item, _prev) \
+	_NCC_DLIST_REMOVE(_ncc_dlist, _item, _prev);
+
+/* Just remove item (no iteration needed). */
+#define NCC_DLIST_REMOVE(_ncc_dlist, _item) { \
+	UNUSED void *_prev; \
+	_NCC_DLIST_REMOVE(_ncc_dlist, _item, _prev); \
 }
 
 // this is now just the same so...
