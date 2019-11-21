@@ -3408,7 +3408,6 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'n':
 			instance = optarg;
-			dpc_config_name_set_default(dpc_config, instance, true);
 			break;
 
 		case 'N':
@@ -3688,6 +3687,13 @@ int main(int argc, char **argv)
 	 *	Parse the command line options.
 	 */
 	dpc_options_parse(argc, argv);
+
+	/* If no instance name is set, use a default name: <program>.<PID>.
+	 */
+	if (!instance) {
+		instance = talloc_asprintf(global_ctx, "%s.%u", progname, my_pid);
+	}
+	dpc_config_name_set_default(dpc_config, instance, true);
 
 	/*
 	 *	Mismatch between the binary and the libraries it depends on.
