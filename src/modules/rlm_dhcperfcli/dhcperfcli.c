@@ -3408,6 +3408,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'n':
 			instance = optarg;
+			dpc_config_name_set_default(dpc_config, instance, true);
 			break;
 
 		case 'N':
@@ -3933,7 +3934,7 @@ static void NEVER_RETURNS usage(int status)
 #endif
 	fprintf(fp, "  -I <num>         Start generating xid values with <num>.\n");
 	fprintf(fp, "  -L <seconds>     Limit duration for starting new input sessions.\n");
-	fprintf(fd, "  -n <name>        Label this instance of the program.\n");
+	fprintf(fp, "  -n <name>        Label this instance of the program.\n");
 	fprintf(fp, "  -N <num>         Start at most <num> sessions from input items.\n");
 	fprintf(fp, "  -p <num>         Send up to <num> session initial requests in parallel.\n");
 	fprintf(fp, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
