@@ -151,6 +151,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 static char const *file_config; /* Optional configuration file. */
 static char const *conf_inline;
 
+static char const *instance;
 static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t *event_list;
 
@@ -3199,7 +3200,7 @@ static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in)
 
 
 /* Short options. */
-#define OPTSTR_BASE "a:c:CD:f:g:hI:L:MN:p:P:r:s:t:TvxX"
+#define OPTSTR_BASE "a:c:CD:f:g:hI:L:Mn:N:p:P:r:s:t:TvxX"
 #ifdef HAVE_LIBPCAP
   #define OPTSTR_LIBPCAP "Ai:"
 #else
@@ -3403,6 +3404,10 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'M':
 			ECTX.talloc_memory_report = true;
+			break;
+
+		case 'n':
+			instance = optarg;
 			break;
 
 		case 'N':
@@ -3928,6 +3933,7 @@ static void NEVER_RETURNS usage(int status)
 #endif
 	fprintf(fp, "  -I <num>         Start generating xid values with <num>.\n");
 	fprintf(fp, "  -L <seconds>     Limit duration for starting new input sessions.\n");
+	fprintf(fd, "  -n <name>        Label this instance of the program.\n");
 	fprintf(fp, "  -N <num>         Start at most <num> sessions from input items.\n");
 	fprintf(fp, "  -p <num>         Send up to <num> session initial requests in parallel.\n");
 	fprintf(fp, "  -P <num>         Packet trace level (0: none, 1: header, 2: and attributes, 3: and hex data).\n");
