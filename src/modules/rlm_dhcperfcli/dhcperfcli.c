@@ -1,6 +1,10 @@
 /*
  * dhcperfcli.c
  */
+
+/* Our own auto-configuration header.
+ * Will define HAVE_LIBCURL if libcurl is available.
+ */
 #include "config.h"
 
 #include "ncc_util.h"
@@ -85,6 +89,7 @@ fr_dict_attr_t const *attr_dhcp_requested_ip_address;
 
 
 static char const *progname;
+static pid_t my_pid;
 
 /*
  *	Dictionaries and attributes.
@@ -289,7 +294,7 @@ char elapsed_buf[NCC_TIME_STRLEN];
 static void usage(int);
 static void version_print(void);
 
-static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t stat_type);
+static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type);
 static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 
@@ -374,7 +379,7 @@ static void dpc_exit(void);
 /*
  *	Print number of each type of message (sent, received, ...).
  */
-char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t stat_type)
+char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type)
 {
 	int i;
 	char *p = out;
@@ -395,11 +400,10 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_t st
 	} \
 }
 
-	uint32_t *num_packet = stat_ctx.dpc_stat[stat_type];
-	uint32_t remain = num_packet[0]; /* Total. */
+	uint32_t remain = PACKET_STAT_NUM_GET(stat_ctx.dpc_stat, stat_type, 0); /* Total. */
 
-	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
-		MSG_TYPE_PRINT(num_packet[i], dpc_message_types[i]);
+	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i++) {
+		MSG_TYPE_PRINT(PACKET_STAT_NUM_GET(stat_ctx.dpc_stat, stat_type, i), dpc_message_types[i]);
 	}
 	if (remain) { /* Unknown message types. */
 		MSG_TYPE_PRINT(remain, "unknown");
@@ -548,8 +552,8 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 		fprintf(fp, ", ongoing: %u", session_num_active);
 
 		/* Packets lost (for which a reply was expected, but we didn't get one. */
-		if (STAT_ALL_LOST > 0) {
-			fprintf(fp, ", lost: %u", STAT_ALL_LOST);
+		if (STAT_ALL_PACKET(lost) > 0) {
+			fprintf(fp, ", lost: %u", STAT_ALL_PACKET(lost));
 		}
 
 		/* NAK replies. */
@@ -809,30 +813,30 @@ static void dpc_stats_fprint(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	/* Packets sent (total, and of each message type). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", STAT_ALL_PACKET_SENT);
-	if (stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0] > 0) {
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", STAT_ALL_PACKET(sent));
+	if (STAT_ALL_PACKET(sent) > 0) {
 		fprintf(fp, " (%s)", dpc_num_message_type_sprint(buffer, sizeof(buffer), DPC_STAT_PACKET_SENT));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][0]);
-	if (stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][0] > 0) {
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", STAT_ALL_PACKET(recv));
+	if (STAT_ALL_PACKET(recv) > 0) {
 		fprintf(fp, " (%s)", dpc_num_message_type_sprint(buffer, sizeof(buffer), DPC_STAT_PACKET_RECV));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets to which no response was received. */
-	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Retransmissions", stat_ctx.dpc_stat[DPC_STAT_PACKET_RETR][0]);
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Retransmissions", STAT_ALL_PACKET(retr));
 
 	if (retr_breakdown && retr_breakdown[0] > 0) {
 		fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "  Retr breakdown",
-		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET_SENT, retr_breakdown, CONF.retransmit_max));
+		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET(sent), retr_breakdown, CONF.retransmit_max));
 	}
 
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_LOST);
-	if (STAT_ALL_LOST > 0) {
-		fprintf(fp, " (%.1f%%)", 100 * (float)STAT_ALL_LOST / STAT_ALL_PACKET_SENT);
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_PACKET(lost));
+	if (STAT_ALL_PACKET(lost) > 0) {
+		fprintf(fp, " (%.1f%%)", 100 * (float)STAT_ALL_PACKET(lost) / STAT_ALL_PACKET(sent));
 	}
 	fprintf(fp, "\n");
 
@@ -3673,6 +3677,8 @@ int main(int argc, char **argv)
 		progname = p + 1;
 	}
 	dpc_config_name_set_default(dpc_config, progname, false);
+
+	my_pid = getpid();
 
 	/*
 	 *	Initialize chained lists (input items, global segments).

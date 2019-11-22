@@ -113,24 +113,6 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define DPC_PACKET_ID_UNASSIGNED (-1)
 
 
-/*
- *	Statistics macros.
- */
-#define STAT_INCR(_type, _packet) \
-{ \
-	stat_ctx.dpc_stat[_type][0] ++; \
-	if (is_dhcp_message(_packet->code)) stat_ctx.dpc_stat[_type][_packet->code] ++; \
-}
-
-#define STAT_INCR_PACKET_SENT(_packet) STAT_INCR(DPC_STAT_PACKET_SENT, _packet)
-#define STAT_INCR_PACKET_RETR(_packet) STAT_INCR(DPC_STAT_PACKET_RETR, _packet)
-#define STAT_INCR_PACKET_LOST(_packet) STAT_INCR(DPC_STAT_PACKET_LOST, _packet)
-#define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(DPC_STAT_PACKET_RECV, _packet)
-
-#define STAT_ALL_PACKET_SENT (stat_ctx.dpc_stat[DPC_STAT_PACKET_SENT][0])
-#define STAT_ALL_LOST (stat_ctx.dpc_stat[DPC_STAT_PACKET_LOST][0])
-#define STAT_NAK_RECV (stat_ctx.dpc_stat[DPC_STAT_PACKET_RECV][6])
-
 
 /* Specific states of a session. */
 typedef enum {
@@ -182,7 +164,7 @@ typedef enum {
 	DPC_STAT_PACKET_RECV = 3,  //<! Packets (replies) received
 
 	DPC_STAT_MAX_TYPE = DPC_STAT_PACKET_RECV
-} dpc_packet_stat_t;
+} dpc_packet_stat_field_t;
 
 /* Template variable update mode. */
 typedef enum {
@@ -205,6 +187,13 @@ typedef struct dpc_transaction_stats {
 /*
  *	All statistics.
  */
+typedef struct {
+	uint32_t sent;  //<! Packets sent (not including retransmissions)
+	uint32_t retr;  //<! Packets retransmitted
+	uint32_t lost;  //<! Packets lost (no reply received before timeout + all retransmissions)
+	uint32_t recv;  //<! Packets (replies) received
+} dpc_packet_stat_t;
+
 typedef struct dpc_statistics {
 	/*
 	 *	Statistics per transaction or workflow type.
@@ -216,7 +205,7 @@ typedef struct dpc_statistics {
 	uint32_t num_transaction_type;
 	dpc_transaction_stats_t *dyn_tr_stats;
 
-	uint32_t dpc_stat[DPC_STAT_MAX_TYPE + 1][DHCP_MAX_MESSAGE_TYPE + 1];
+	dpc_packet_stat_t dpc_stat[DHCP_MAX_MESSAGE_TYPE + 1];
 
 	uint32_t num_packet_recv_unexpected;
 
@@ -302,3 +291,52 @@ struct dpc_session_ctx {
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
 };
+
+
+
+/*
+ *	Statistics macros.
+ */
+#define PACKET_STAT_INCR(_dpc_stat, _type, _packet_code) \
+{ \
+	_dpc_stat[0]._type ++; \
+	if (is_dhcp_message(_packet_code)) _dpc_stat[_packet_code]._type ++; \
+}
+#define PACKET_STAT_GET(_dpc_stat, _type, _packet_code) _dpc_stat[_packet_code]._type
+
+#define PACKET_STAT_NUM_INCR(_dpc_stat, _type_num, _code) \
+{ \
+	switch (_type_num) { \
+	case DPC_STAT_PACKET_SENT: PACKET_STAT_INCR(_dpc_stat, sent, _code); break; \
+	case DPC_STAT_PACKET_RETR: PACKET_STAT_INCR(_dpc_stat, retr, _code); break; \
+	case DPC_STAT_PACKET_LOST: PACKET_STAT_INCR(_dpc_stat, lost, _code); break; \
+	case DPC_STAT_PACKET_RECV: PACKET_STAT_INCR(_dpc_stat, recv, _code); break; \
+	} \
+}
+
+static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_packet_stat_field_t type_num, uint32_t code)
+{
+	uint32_t value = 0;
+
+	switch (type_num) {
+	case DPC_STAT_PACKET_SENT: value = PACKET_STAT_GET(dpc_stat, sent, code); break;
+	case DPC_STAT_PACKET_RETR: value = PACKET_STAT_GET(dpc_stat, retr, code); break;
+	case DPC_STAT_PACKET_LOST: value = PACKET_STAT_GET(dpc_stat, lost, code); break;
+	case DPC_STAT_PACKET_RECV: value = PACKET_STAT_GET(dpc_stat, recv, code); break;
+	default:
+		break;
+	}
+	return value;
+}
+
+#define STAT_INCR(_type, _packet) { \
+	PACKET_STAT_INCR(stat_ctx.dpc_stat, _type, _packet->code); \
+}
+
+#define STAT_INCR_PACKET_SENT(_packet) STAT_INCR(sent, _packet)
+#define STAT_INCR_PACKET_RETR(_packet) STAT_INCR(retr, _packet)
+#define STAT_INCR_PACKET_LOST(_packet) STAT_INCR(lost, _packet)
+#define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(recv, _packet)
+
+#define STAT_ALL_PACKET(_type) (stat_ctx.dpc_stat[0]._type)
+#define STAT_NAK_RECV (stat_ctx.dpc_stat[6].recv)
