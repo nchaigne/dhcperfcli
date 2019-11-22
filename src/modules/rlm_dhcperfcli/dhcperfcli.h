@@ -329,14 +329,24 @@ static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_pack
 	return value;
 }
 
-#define STAT_INCR(_type, _packet) { \
+#define __STAT_INCR(_type, _packet) { \
 	PACKET_STAT_INCR(stat_ctx.dpc_stat, _type, _packet->code); \
 }
+// don't use this, it cannot handle functions calls (needed for time-data).
 
-#define STAT_INCR_PACKET_SENT(_packet) STAT_INCR(sent, _packet)
-#define STAT_INCR_PACKET_RETR(_packet) STAT_INCR(retr, _packet)
-#define STAT_INCR_PACKET_LOST(_packet) STAT_INCR(lost, _packet)
-#define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(recv, _packet)
+#define STAT_NUM_INCR(_type_num, _packet) { \
+	PACKET_STAT_NUM_INCR(stat_ctx.dpc_stat, _type_num, _packet->code); \
+}
+
+//#define STAT_INCR_PACKET_SENT(_packet) STAT_INCR(sent, _packet)
+//#define STAT_INCR_PACKET_RETR(_packet) STAT_INCR(retr, _packet)
+//#define STAT_INCR_PACKET_LOST(_packet) STAT_INCR(lost, _packet)
+//#define STAT_INCR_PACKET_RECV(_packet) STAT_INCR(recv, _packet)
+
+#define STAT_INCR_PACKET_SENT(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_SENT, _packet)
+#define STAT_INCR_PACKET_RETR(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_RETR, _packet)
+#define STAT_INCR_PACKET_LOST(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_LOST, _packet)
+#define STAT_INCR_PACKET_RECV(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_RECV, _packet)
 
 #define STAT_ALL_PACKET(_type) (stat_ctx.dpc_stat[0]._type)
 #define STAT_NAK_RECV (stat_ctx.dpc_stat[6].recv)
