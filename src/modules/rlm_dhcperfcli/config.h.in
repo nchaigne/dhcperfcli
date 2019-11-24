@@ -68,3 +68,8 @@
 
 /* Define curl_free() as free() if our version of curl lacks curl_free. */
 #undef curl_free
+
+/* Define to 1 if libcurl has option XOAUTH2_BEARER. */
+#undef LIBCURL_OPT_XOAUTH2_BEARER
+
+#include <freeradius-devel/automask.h>

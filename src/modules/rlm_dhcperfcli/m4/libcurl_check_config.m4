@@ -61,6 +61,8 @@ AC_DEFUN([LIBCURL_CHECK_CONFIG],
   AH_TEMPLATE([LIBCURL_PROTOCOL_IMAP],[Defined if libcurl supports IMAP])
   AH_TEMPLATE([LIBCURL_PROTOCOL_SMTP],[Defined if libcurl supports SMTP])
 
+  AH_TEMPLATE([LIBCURL_OPT_XOAUTH2_BEARER],[Defined if libcurl has option XOAUTH2_BEARER])
+
   AC_ARG_WITH(libcurl,
      AC_HELP_STRING([--with-libcurl=PREFIX],[look for the curl library in PREFIX/lib and headers in PREFIX/include]),
      [_libcurl_with=$withval],[_libcurl_with=ifelse([$1],,[yes],[$1])])
@@ -223,6 +225,15 @@ if (x) ;
 	      AC_DEFINE_UNQUOTED(AS_TR_CPP(libcurl_protocol_$_libcurl_protocol),[1])
 	      eval AS_TR_SH(libcurl_protocol_$_libcurl_protocol)=yes
 	   done
+
+		# XOAUTH2_BEARER option added in 7.33.0 (0x072100 = 467200)
+		if test $_libcurl_version -ge 467200; then
+			AC_MSG_NOTICE([libcurl >= version 7.33.0 - XOAUTH2_BEARER option is available])
+			AC_DEFINE(LIBCURL_OPT_XOAUTH2_BEARER,1,[Define to 1 if libcurl has option XOAUTH2_BEARER])
+		else
+			AC_MSG_NOTICE([libcurl < version 7.33.0 - XOAUTH2_BEARER option is not available])
+		fi
+
 	else
 	   unset LIBCURL
 	   unset LIBCURL_CPPFLAGS
