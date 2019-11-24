@@ -390,41 +390,41 @@ int dpc_packet_stat_send(bool ending)
 
 		if (!stat->end && ending) stat->end = now;
 
-		if (!stat->end) continue;
-
-		/*
-		 * Item is ready to send. Do that now.
-		 */
-		char influx_data[1024];
-		int i;
-
-		for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
-			/* Don't write if we have nothing for this type of packet.
+		if (stat->end) {
+			/*
+			 * Item is ready to send. Do that now.
 			 */
-			if (PACKET_STAT_GET(stat->data, recv, i) == 0 && PACKET_STAT_GET(stat->data, sent, i) == 0
-				&& PACKET_STAT_GET(stat->data, retr, i) == 0 && PACKET_STAT_GET(stat->data, lost, i) == 0) {
-				continue;
+			char influx_data[1024];
+			int i;
+
+			for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
+				/* Don't write if we have nothing for this type of packet.
+				 */
+				if (PACKET_STAT_GET(stat->data, recv, i) == 0 && PACKET_STAT_GET(stat->data, sent, i) == 0
+					&& PACKET_STAT_GET(stat->data, retr, i) == 0 && PACKET_STAT_GET(stat->data, lost, i) == 0) {
+					continue;
+				}
+
+				snprintf(influx_data, sizeof(influx_data), "packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
+					timedata_config.instance,
+					dpc_message_types[i],
+					PACKET_STAT_GET(stat->data, recv, i),
+					PACKET_STAT_GET(stat->data, sent, i),
+					PACKET_STAT_GET(stat->data, retr, i),
+					PACKET_STAT_GET(stat->data, lost, i),
+					stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+
+				/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
+				 * If fields are created with a given type (e.g. the default "float"),
+				 * then they cannot be re-created later with another type ("integer") even if the measurement is dropped.
+				 * The database has to be dropped (or manually remove "fields.idx" files).
+				 */
+
+				if (dpc_timedata_write(influx_data) < 0) {
+					return -1;
+				}
+				stat->sent = true;
 			}
-
-			snprintf(influx_data, sizeof(influx_data), "packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
-				timedata_config.instance,
-				dpc_message_types[i],
-				PACKET_STAT_GET(stat->data, recv, i),
-				PACKET_STAT_GET(stat->data, sent, i),
-				PACKET_STAT_GET(stat->data, retr, i),
-				PACKET_STAT_GET(stat->data, lost, i),
-				stat->timestamp.tv_sec, stat->timestamp.tv_usec);
-
-			/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
-			 * If fields are created with a given type (e.g. the default "float"),
-			 * then they cannot be re-created later with another type ("integer") even if the measurement is dropped.
-			 * The database has to be dropped (or manually remove "fields.idx" files).
-			*/
-
-			if (dpc_timedata_write(influx_data) < 0) {
-				return -1;
-			}
-			stat->sent = true;
 		}
 
 		stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
