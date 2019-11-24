@@ -1097,16 +1097,18 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 		else if (auth == REST_HTTP_AUTH_BEARER) {
 			SET_AUTH_OPTION(CURLOPT_HTTPAUTH, http_curl_auth[auth]);
 
+#ifdef LIBCURL_OPT_XOAUTH2_BEARER
 			/*
-			 * Curl option XOAUTH2_BEARER should be known if doing this type of authentication.
-			 * (Unless we're linked to an older libcurl.)
+			 * Use Curl option XOAUTH2_BEARER if available (added in 7.33.0).
+			 * (Note: will fail if we're linked to an older libcurl...)
 			 */
 			SET_AUTH_OPTION(CURLOPT_XOAUTH2_BEARER, section->bearer_token);
-
-			// Otherwise we could still do it ourselves:
-			//snprintf(buffer, sizeof(buffer), "Authorization: Bearer %s", section->bearer_token);
-			//ctx->headers = curl_slist_append(ctx->headers, buffer);
-			//if (!ctx->headers) goto error_header;
+#else
+			/* Otherwise just do it ourselves. */
+			snprintf(buffer, sizeof(buffer), "Authorization: Bearer %s", section->bearer_token);
+			ctx->headers = curl_slist_append(ctx->headers, buffer);
+			if (!ctx->headers) goto error_header;
+#endif
 		}
 
 	}
