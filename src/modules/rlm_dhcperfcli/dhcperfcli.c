@@ -99,10 +99,10 @@ static char const *dict_dir = DICTDIR;
 static char const *dict_fn_freeradius = "freeradius/dictionary.freeradius.internal";
 //static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.internal";
 
-static fr_dict_t *dict_freeradius;
-static fr_dict_t *dict_dhcperfcli;
-//fr_dict_t *dict_dhcpv4;
-static fr_dict_t *dpc_dict_dhcpv4; /* Ensure we use our own. */
+static fr_dict_t const *dict_freeradius;
+static fr_dict_t const *dict_dhcperfcli;
+//fr_dict_t const *dict_dhcpv4;
+static fr_dict_t const *dpc_dict_dhcpv4; /* Ensure we use our own. */
 
 extern fr_dict_autoload_t dpc_dict_autoload[];
 fr_dict_autoload_t dpc_dict_autoload[] = {
@@ -3082,7 +3082,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	/*
 	 *	Initialize dictionaries.
 	 */
-	if (fr_dict_global_init(ctx, dict_dir) < 0) {
+	if (!fr_dict_global_ctx_init(ctx, dict_dir)) {
 		PERROR("Failed to initialize dictionary");
 		exit(EXIT_FAILURE);
 	}
