@@ -102,7 +102,7 @@ int dpc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
 }
 
 /**
- * Escape strings for sending to Influx.
+ * Escape data for sending to Influx.
  *
  * From the InfluxDB documentation:
  * "If a measurement, tag key, tag value, or field key contains a space, comma, or an equals sign
@@ -113,12 +113,12 @@ int dpc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
  * So they say. But... a backslash at the end of a value is not supported (bug ?).
  * Anyway, trying to use backslashes in values is dumb. Don't do that.
  */
-size_t dpc_influx_str_escape(char *out, size_t outlen, char const *in)
+size_t dpc_influx_data_escape(char *out, size_t outlen, char const *in, char const *escape_chars)
 {
 	size_t freespace = outlen;
 
 	while (*in) {
-		if (*in == ' ' || *in == ',' || *in == '=') {
+		if (strchr(escape_chars, *in) != NULL) {
 			if (freespace <= 2) break;
 			*out++ = '\\';
 			freespace --;
@@ -133,6 +133,11 @@ size_t dpc_influx_str_escape(char *out, size_t outlen, char const *in)
 	*out = '\0';
 	return outlen - freespace;
 }
+
+#define DPC_INFLUX_ESCAPE_KEY(_out, _outlen, _in) dpc_influx_data_escape(_out, _outlen, _in, ",= ")
+#define DPC_INFLUX_ESCAPE_STR(_out, _outlen, _in) dpc_influx_data_escape(_out, _outlen, _in, "\"")
+/* A string value is enclosed within double quotes; double-quotes in the value must be escaped. */
+
 
 /**
  * Load configured 'time-data' section.
@@ -159,7 +164,7 @@ int dpc_timedata_config_load(dpc_config_t *config)
 	}
 
 	/* Handle escaping so it can safely be sent to Influx. */
-	dpc_influx_str_escape(buf, sizeof(buf), timedata_config.instance);
+	DPC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), timedata_config.instance);
 	timedata_config.instance = talloc_strdup(ctx, buf);
 
 	/* Parse 'time-data' section.
