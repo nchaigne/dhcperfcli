@@ -442,9 +442,18 @@ int dpc_process_exec_send(bool ending)
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 
-	snprintf(influx_data, sizeof(influx_data), "process,instance=%s type=\"%s\" %lu%06lu000",
-	         timedata_config.instance, ending ? "stop" : "start",
-	         tv.tv_sec, tv.tv_usec);
+	size_t len, freespace = sizeof(influx_data);
+	char *p = influx_data;
+
+	len = snprintf(p, freespace, "process");
+	p += len; freespace -= len;
+
+	if (timedata_config.instance) {
+		len = snprintf(p, freespace, ",instance=%s ", timedata_config.instance);
+		p += len; freespace -= len;
+	}
+
+	len = snprintf(p, freespace, " type=\"%s\" %lu%06lu000", ending ? "stop" : "start", tv.tv_sec, tv.tv_usec);
 
 	if (dpc_timedata_write(influx_data) < 0) {
 		return -1;
