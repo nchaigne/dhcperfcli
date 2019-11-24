@@ -73,7 +73,6 @@ int dpc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
 	}
 
 	if (ncc_curl_load() < 0) return -1;
-	if (dpc_timedata_init(ctx) < 0) return -1;
 
 	/* Pre-establish connection to Influx (if connect_uri is set).
 	 */
@@ -150,6 +149,8 @@ int dpc_timedata_config_load(dpc_config_t *config)
 		/* Not configured. */
 		return 0;
 	}
+
+	if (dpc_timedata_init(ctx) < 0) goto error;
 
 	/* If we don't have an instance set, use program instance name.
 	 */
@@ -562,6 +563,8 @@ int dpc_timedata_start()
  */
 void dpc_timedata_stop()
 {
+	if (!store_timedata) return;
+
 	if (worker_started) {
 		/* Signal the worker.
 		 */
