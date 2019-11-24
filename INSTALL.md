@@ -33,6 +33,11 @@ To sum up you will need :
 
 And optionally:
 
+- Libcurl and json-c
+
+>__`yum -y install libcurl-devel json-c-devel`__
+
+
 - Libpcap
 
 >__`yum -y install libpcap-devel`__
