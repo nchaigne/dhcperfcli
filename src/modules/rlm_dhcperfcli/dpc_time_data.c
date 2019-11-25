@@ -92,11 +92,11 @@ int dpc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
 	/* All good. */
 	with_influx = true;
 
-	INFO("time-data: 'influx' destination configured with libcurl support");
+	INFO("Time-data: 'influx' destination configured with libcurl support");
 
 	/* JSON support is optional. */
 #ifndef HAVE_JSON
-	INFO("time-data: libjson-c is not available: JSON decoding is not supported");
+	INFO("Time-data: libjson-c is not available: JSON decoding is not supported");
 #endif
 
 	return 0;
@@ -331,10 +331,16 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 			}
 		}
 
-		/* Then remove everything after that. */
+		/* Then remove everything after that.
+		 */
 		while (stat) {
-			prev = stat;
+			/* Warn when we first start discarding. */
+			if (!num_discard) {
+				WARN("Time-data: history full (destination unavailable), now discarding extra data points");
+			}
 			num_discard++;
+
+			prev = stat;
 			NCC_DLIST_REMOVE_ITER(packet_stat_dlist, stat, prev);
 			talloc_free(stat);
 			stat = NCC_DLIST_NEXT(packet_stat_dlist, prev);
@@ -490,7 +496,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 			/* Sending successful.
 			 */
 			if (send_fail) {
-				INFO("Time-data destination is now available again");
+				INFO("Time-data: destination is now available again");
 				send_fail = 0;
 			}
 		} else {
