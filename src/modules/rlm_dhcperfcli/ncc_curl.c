@@ -414,7 +414,7 @@ static ssize_t ncc_curl_request_encode_wrapper(char **out, curl_read_t func, siz
  *
  * (cf. rest_request_init from FreeRADIUS "rest.c")
  */
-static void ncc_curl_request_init(ncc_curl_mod_section_t const *section, ncc_curl_request_t *ctx)
+UNUSED static void ncc_curl_request_init(ncc_curl_mod_section_t const *section, ncc_curl_request_t *ctx)
 {
 	ctx->section = section;
 	ctx->state = READ_STATE_INIT;
@@ -517,7 +517,7 @@ int ncc_curl_response_decode(void *handle)
 static size_t ncc_curl_response_header(void *in, size_t size, size_t nmemb, void *userdata)
 {
 	ncc_curl_response_t *ctx = userdata;
-	ncc_curl_mod_section_t *section = ctx->section;
+	ncc_curl_mod_section_t const *section = ctx->section;
 	TALLOC_CTX *talloc_ctx = ctx->talloc_ctx;
 
 	char const *start = (char *)in, *p = start, *end = p + (size * nmemb);
@@ -1018,7 +1018,7 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 		snprintf(buffer, sizeof(buffer), "Content-Type: %s", content_type);
 		ctx->headers = curl_slist_append(ctx->headers, buffer);
 		if (!ctx->headers) {
-		error_header:
+		//error_header:
 			fr_strerror_printf("Failed to append curl headers");
 			return -1;
 		}
