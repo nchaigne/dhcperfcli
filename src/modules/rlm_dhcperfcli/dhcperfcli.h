@@ -297,12 +297,14 @@ struct dpc_session_ctx {
 /*
  *	Statistics macros.
  */
-#define PACKET_STAT_INCR(_dpc_stat, _type, _packet_code) \
+#define PACKET_STAT_INCR(_data, _type, _packet_code) \
 { \
-	_dpc_stat[0]._type ++; \
-	if (is_dhcp_message(_packet_code)) _dpc_stat[_packet_code]._type ++; \
+	dpc_packet_stat_t *_dpc_stat = (dpc_packet_stat_t *)_data; \
+	(_dpc_stat)[0]._type ++; \
+	if (is_dhcp_message(_packet_code)) (_dpc_stat)[_packet_code]._type ++; \
 }
-#define PACKET_STAT_GET(_dpc_stat, _type, _packet_code) _dpc_stat[_packet_code]._type
+
+#define PACKET_STAT_GET(_dpc_stat, _type, _packet_code) ((dpc_packet_stat_t *)_dpc_stat)[_packet_code]._type
 
 #define PACKET_STAT_NUM_INCR(_dpc_stat, _type_num, _code) \
 { \
@@ -336,6 +338,7 @@ static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_pack
 
 #define STAT_NUM_INCR(_type_num, _packet) { \
 	PACKET_STAT_NUM_INCR(stat_ctx.dpc_stat, _type_num, _packet->code); \
+	if (CONF.with_timedata) dpc_packet_stat_add(_type_num, _packet->code); \
 }
 
 //#define STAT_INCR_PACKET_SENT(_packet) STAT_INCR(sent, _packet)

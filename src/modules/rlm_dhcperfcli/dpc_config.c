@@ -268,7 +268,7 @@ error:
 }
 
 /*
- *	Set the server name
+ *	Set the program instance name.
  *	Cf. FreeRADIUS function main_config_dict_dir_set (src/lib/server/main_config.c)
  */
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config)

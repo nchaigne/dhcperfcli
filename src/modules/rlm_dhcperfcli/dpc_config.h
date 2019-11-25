@@ -51,6 +51,8 @@ struct dpc_config_s {
 	uint32_t input_num_use;          //<! Max number of uses of each input item (default: unlimited in template mode, 1 otherwise).
 	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
 	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
+
+	bool with_timedata;              //<! Whether time-data statistics are enabled.
 };
 
 /*
