@@ -336,7 +336,7 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 		while (stat) {
 			/* Warn when we first start discarding. */
 			if (!num_discard) {
-				WARN("Time-data: history full (destination unavailable), now discarding extra data points");
+				WARN("Time-data: History full (destination unavailable), now discarding extra data points");
 			}
 			num_discard++;
 
@@ -496,7 +496,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 			/* Sending successful.
 			 */
 			if (send_fail) {
-				INFO("Time-data: destination is now available again");
+				INFO("Time-data: Destination is now available again");
 				send_fail = 0;
 			}
 		} else {
@@ -505,7 +505,10 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 
 			/* Only log when the problem first appears. */
 			// e.g. "Failed to write to InfluxDB: Request failed: curl error (7) [Couldn't connect to server]"
-			if (!send_fail) PERROR(NULL);
+			if (!send_fail) {
+				PERROR("Time-data");
+				INFO("Time-data: Further errors will be suppressed until destination is available again");
+			}
 			send_fail++;
 		}
 
@@ -607,7 +610,7 @@ void dpc_timedata_stop()
 	}
 
 	if (num_discard) {
-		WARN("Time-data: discarded %u data point(s) (of %u) due to destination unavailability",
+		WARN("Time-data: Discarded %u data point(s) (of %u) due to destination unavailability",
 		     num_discard, num_points);
 	}
 }
