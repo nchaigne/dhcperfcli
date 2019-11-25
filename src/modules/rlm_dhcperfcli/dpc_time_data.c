@@ -63,6 +63,11 @@ static CONF_PARSER _timedata_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
+/*
+ * Function prototype for dpc_timedata_send_* functions.
+ */
+typedef int (*dpc_timedata_stat_send)(dpc_timedata_stat_t *stat);
+
 
 /**
  * Load configured 'influx' sub-section within 'time-data'.
@@ -411,16 +416,55 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 }
 
 /**
- * Check if items in the packet stat list are ready to be sent to their destination.
- * If so, prepare and send the data point, and mark item as "sent".
+ * Prepare and send a packet statistics data point to its destination.
  */
-int dpc_packet_stat_send(bool force)
+int dpc_timedata_send_packet_stat(dpc_timedata_stat_t *stat)
+{
+	char influx_data[1024];
+	int i;
+
+	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
+		/* Don't write if we have nothing for this type of packet.
+		 */
+		if (PACKET_STAT_GET(stat->data, recv, i) == 0 && PACKET_STAT_GET(stat->data, sent, i) == 0
+			&& PACKET_STAT_GET(stat->data, retr, i) == 0 && PACKET_STAT_GET(stat->data, lost, i) == 0) {
+			continue;
+		}
+
+		snprintf(influx_data, sizeof(influx_data), "packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
+			timedata_config.instance,
+			dpc_message_types[i],
+			PACKET_STAT_GET(stat->data, recv, i),
+			PACKET_STAT_GET(stat->data, sent, i),
+			PACKET_STAT_GET(stat->data, retr, i),
+			PACKET_STAT_GET(stat->data, lost, i),
+			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+
+		/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
+		 * If fields are created with a given type (e.g. the default "float"),
+		 * then they cannot be re-created later with another type ("integer") even if the measurement is dropped.
+		 * The database has to be dropped (or manually remove "fields.idx" files).
+		 */
+
+		if (dpc_timedata_write(influx_data) < 0) {
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Check if items in the time-data stat list are ready to be sent to their destination.
+ * If so, prepare and send the data (calling provided function), and mark item as "sent".
+ */
+int dpc_timedata_send(ncc_dlist_t *dlist, pthread_mutex_t *mutex, dpc_timedata_stat_send send_func, bool force)
 {
 	fr_time_t now = fr_time();
 
-	pthread_mutex_lock(&packet_stat_mutex);
-	dpc_timedata_stat_t *stat = NCC_DLIST_HEAD(packet_stat_dlist);
-	pthread_mutex_unlock(&packet_stat_mutex);
+	pthread_mutex_lock(mutex);
+	dpc_timedata_stat_t *stat = NCC_DLIST_HEAD(dlist);
+	pthread_mutex_unlock(mutex);
 
 	while (stat) {
 		if (stat->sent) {
@@ -436,35 +480,8 @@ int dpc_packet_stat_send(bool force)
 			/*
 			 * Item is ready to send. Do that now.
 			 */
-			char influx_data[1024];
-			int i;
-
-			for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
-				/* Don't write if we have nothing for this type of packet.
-				 */
-				if (PACKET_STAT_GET(stat->data, recv, i) == 0 && PACKET_STAT_GET(stat->data, sent, i) == 0
-					&& PACKET_STAT_GET(stat->data, retr, i) == 0 && PACKET_STAT_GET(stat->data, lost, i) == 0) {
-					continue;
-				}
-
-				snprintf(influx_data, sizeof(influx_data), "packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
-					timedata_config.instance,
-					dpc_message_types[i],
-					PACKET_STAT_GET(stat->data, recv, i),
-					PACKET_STAT_GET(stat->data, sent, i),
-					PACKET_STAT_GET(stat->data, retr, i),
-					PACKET_STAT_GET(stat->data, lost, i),
-					stat->timestamp.tv_sec, stat->timestamp.tv_usec);
-
-				/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
-				 * If fields are created with a given type (e.g. the default "float"),
-				 * then they cannot be re-created later with another type ("integer") even if the measurement is dropped.
-				 * The database has to be dropped (or manually remove "fields.idx" files).
-				 */
-
-				if (dpc_timedata_write(influx_data) < 0) {
-					return -1;
-				}
+			if (send_func(stat) < 0) {
+				return -1;
 			}
 
 			/* Flag as sent only if we've successfully sent everything. */
@@ -472,6 +489,19 @@ int dpc_packet_stat_send(bool force)
 		}
 
 		stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
+	}
+
+	return 0;
+}
+
+/**
+ * Handle all time-data statistics ready to be sent.
+ */
+int dpc_timedata_send_all(bool force)
+{
+	/* Packet statistics. */
+	if (dpc_timedata_send(packet_stat_dlist, &packet_stat_mutex, dpc_timedata_send_packet_stat, force) < 0) {
+		return -1;
 	}
 
 	return 0;
@@ -515,7 +545,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 	int ret;
 	while (!signal_done) {
 
-		ret = dpc_packet_stat_send(false);
+		ret = dpc_timedata_send_all(false);
 		if (ret == 0) {
 			/* Sending successful.
 			 */
@@ -555,8 +585,8 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 		sem_timedwait(&worker_semaphore, &timeout);
 	}
 
-	/* Process last entry. */
-	ret = dpc_packet_stat_send(true);
+	/* Process last entries. */
+	ret = dpc_timedata_send_all(true);
 	if (ret != 0) {
 		PERROR(NULL);
 	}
