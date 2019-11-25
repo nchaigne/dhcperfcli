@@ -465,8 +465,10 @@ int dpc_packet_stat_send(bool force)
 				if (dpc_timedata_write(influx_data) < 0) {
 					return -1;
 				}
-				stat->sent = true;
 			}
+
+			/* Flag as sent only if we've successfully sent everything. */
+			stat->sent = true;
 		}
 
 		stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
