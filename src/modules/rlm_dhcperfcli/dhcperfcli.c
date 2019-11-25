@@ -482,8 +482,16 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 		} else {
 			/*
 			 * Print each input on a distinct line.
+			 * Display input name if defined, or id otherwise.
 			 */
-			fprintf(fp, " └─ input #%u (%c) use: %u", input->id, status, input->num_use);
+			fprintf(fp, " └─ ");
+			if (input->name) {
+				fprintf(fp, "%s", input->name);
+			} else {
+				fprintf(fp, "input #%u", input->id);
+			}
+			fprintf(fp, " (%c) use: %u", status, input->num_use);
+
 			if (with_rate) {
 				fprintf(fp, ", rate (/s): %.3f", rate);
 			}
