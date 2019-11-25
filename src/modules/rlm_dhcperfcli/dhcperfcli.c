@@ -15,6 +15,7 @@
 #include "dpc_packet_list.h"
 #include "dpc_util.h"
 #include "dpc_config.h"
+#include "dpc_time_data.h"
 
 #include <getopt.h>
 
@@ -3585,6 +3586,9 @@ static void dpc_end(void)
 	fte_job_end = fr_time();
 
 	if (!check_config) {
+		/* Stop time-data handler if it is running. */
+		dpc_timedata_stop();
+
 		/* If we're producing progress statistics, do it one last time. */
 		if (ECTX.ftd_progress_interval && dpc_job_elapsed_time_get() > CONF.progress_interval) {
 			dpc_progress_stats_fprint(stdout, true);
@@ -3738,6 +3742,9 @@ int main(int argc, char **argv)
 	 *	Read the configuration file (if provided), and parse configuration.
 	 */
 	if (dpc_config_init(dpc_config, file_config, conf_inline) < 0) exit(EXIT_FAILURE);
+
+	if (dpc_timedata_config_load(dpc_config) < 0) exit(EXIT_FAILURE);
+
 	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
 	dpc_segment_list_debug(segment_list);
 
