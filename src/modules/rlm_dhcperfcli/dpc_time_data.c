@@ -33,6 +33,8 @@ static bool worker_started;
 static bool signal_done;
 
 static uint32_t send_fail; /* Keep track of previous send failures so we don't spam errors. */
+static uint32_t num_discard; /* Points discarded in case of destination unavailable + full history */
+static uint32_t num_points; /* All time-data points handled (successfully sent or not). */
 
 #ifdef HAVE_LIBCURL
 static ncc_curl_mod_t *influx_config;
@@ -296,7 +298,7 @@ int dpc_timedata_init(TALLOC_CTX *ctx)
  * Remove items that have been sent successfully.
  * If items cannot be sent (because destination is unavailable), only keep a limited history as configured.
  */
-void dpc_timedata_list_cleanup(ncc_dlist_t *dlist)
+void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 {
 	/* Remove entries that have been sent successfully.
 	 * We don't need them anymore.
@@ -313,20 +315,26 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist)
 	}
 
 	/* Only keep a max number of entries.
+	 * (Or force remove all when stopping.)
 	 */
-	if (timedata_config.max_history && NCC_DLIST_SIZE(dlist) > timedata_config.max_history) {
-
-		/* Skip the first "max_history" entries, which we keep. */
-		uint32_t skip = timedata_config.max_history;
+	if ( (timedata_config.max_history && NCC_DLIST_SIZE(dlist) > timedata_config.max_history)
+	    || force) {
 		stat = NCC_DLIST_HEAD(dlist);
-		while (stat && skip) {
-			skip--;
-			stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
+
+		if (!force) {
+			/* Skip the first "max_history" entries, which we keep.
+			 */
+			uint32_t skip = timedata_config.max_history;
+			while (stat && skip) {
+				skip--;
+				stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
+			}
 		}
 
 		/* Then remove everything after that. */
 		while (stat) {
 			prev = stat;
+			num_discard++;
 			NCC_DLIST_REMOVE_ITER(packet_stat_dlist, stat, prev);
 			talloc_free(stat);
 			stat = NCC_DLIST_NEXT(packet_stat_dlist, prev);
@@ -358,6 +366,7 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 	}
 
 	if (!stat) {
+		num_points++;
 		NCC_DLIST_ALLOC_ITEM(packet_stat_dlist, stat, dpc_timedata_stat_t);
 		stat->data = talloc_zero_array(stat, dpc_packet_stat_t, DHCP_MAX_MESSAGE_TYPE + 1);
 
@@ -380,7 +389,7 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
  * Check if items in the packet stat list are ready to be sent to their destination.
  * If so, prepare and send the data point, and mark item as "sent".
  */
-int dpc_packet_stat_send(bool ending)
+int dpc_packet_stat_send(bool force)
 {
 	fr_time_t now = fr_time();
 
@@ -393,7 +402,7 @@ int dpc_packet_stat_send(bool ending)
 			break;
 		}
 
-		if (!stat->end && ending) stat->end = now;
+		if (!stat->end && force) stat->end = now;
 
 		if (stat->end) {
 			/*
@@ -494,7 +503,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 			send_fail++;
 		}
 
-		dpc_timedata_list_cleanup(packet_stat_dlist);
+		dpc_timedata_list_cleanup(packet_stat_dlist, false);
 
 		/* Wait until signaled to wake up,
 		 * or timeout expires, in which case we can retry sending if in failed mode.
@@ -518,6 +527,9 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 	if (ret != 0) {
 		PERROR(NULL);
 	}
+
+	/* Final clean-up. */
+	dpc_timedata_list_cleanup(packet_stat_dlist, true);
 
 	return NULL;
 }
@@ -586,5 +598,10 @@ void dpc_timedata_stop()
 	/* Write "process stop" data point. */
 	if (dpc_process_exec_send(true) < 0) {
 		PERROR(NULL);
+	}
+
+	if (num_discard) {
+		WARN("Time-data: discarded %u data point(s) (of %u) due to destination unavailability",
+		     num_discard, num_points);
 	}
 }
