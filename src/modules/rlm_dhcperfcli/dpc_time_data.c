@@ -22,6 +22,12 @@
 
 
 static ncc_dlist_t *packet_stat_dlist;
+static dpc_timedata_stat_t *packet_stat_cur;
+static pthread_mutex_t packet_stat_mutex = PTHREAD_MUTEX_INITIALIZER;
+/*
+ * Items are only inserted to the head, so we need to lock when: getting the head, adding an item, and removing items.
+ * Iterating (without addition or removal) does not require locking once the head has been obtained.
+ */
 
 static dpc_timedata_config_t timedata_config;
 static bool with_influx;
@@ -307,6 +313,9 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 	 * We don't need them anymore.
 	 */
 	dpc_timedata_stat_t *stat, *prev = NULL;
+
+	pthread_mutex_lock(&packet_stat_mutex);
+
 	stat = NCC_DLIST_HEAD(dlist);
 	while (stat) {
 		prev = stat;
@@ -349,6 +358,8 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 			stat = NCC_DLIST_NEXT(packet_stat_dlist, prev);
 		}
 	}
+
+	pthread_mutex_unlock(&packet_stat_mutex);
 }
 
 void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type)
@@ -359,7 +370,7 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 	fr_time_t now = fr_time();
 	fr_time_t fte_start = now; /* Start of new item, if applicable. */
 
-	dpc_timedata_stat_t *stat = NCC_DLIST_HEAD(packet_stat_dlist);
+	dpc_timedata_stat_t *stat = packet_stat_cur;
 	if (stat) {
 		if (now >= stat->start + timedata_config.time_interval) {
 			/*
@@ -370,6 +381,13 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 
 			/* Have new data point start at "previous" start + interval, to avoid drifting. */
 			fte_start = stat->start + timedata_config.time_interval;
+
+			/* Push item to worker list.
+			 */
+			pthread_mutex_lock(&packet_stat_mutex);
+			NCC_DLIST_PUSH(packet_stat_dlist, stat);
+			pthread_mutex_unlock(&packet_stat_mutex);
+
 			stat = NULL;
 		}
 	}
@@ -381,9 +399,7 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 
 		stat->start = fte_start;
 		gettimeofday(&stat->timestamp, NULL);
-
-		/* Push new item to list head. */
-		NCC_DLIST_PUSH(packet_stat_dlist, stat);
+		packet_stat_cur = stat;
 	}
 
 	/* Signal worker if there's work to be done. */
@@ -402,7 +418,10 @@ int dpc_packet_stat_send(bool force)
 {
 	fr_time_t now = fr_time();
 
+	pthread_mutex_lock(&packet_stat_mutex);
 	dpc_timedata_stat_t *stat = NCC_DLIST_HEAD(packet_stat_dlist);
+	pthread_mutex_unlock(&packet_stat_mutex);
+
 	while (stat) {
 		if (stat->sent) {
 			/* Already sent.
