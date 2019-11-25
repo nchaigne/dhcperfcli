@@ -264,6 +264,9 @@ int dpc_timedata_write(char const *data)
 		break;
 
 	case TIMEDATA_DST_STDOUT:
+		printf("Time-data> %s\n", data);
+		break;
+
 	case TIMEDATA_DST_FILE:
 		// TODO
 		break;
