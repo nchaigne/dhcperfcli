@@ -2894,6 +2894,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
+
 # Check whether --with-libcurl was given.
 if test "${with_libcurl+set}" = set; then :
   withval=$with_libcurl; _libcurl_with=$withval
@@ -3226,6 +3228,19 @@ _ACEOF
 
 	      eval `$as_echo "libcurl_protocol_$_libcurl_protocol" | $as_tr_sh`=yes
 	   done
+
+		# XOAUTH2_BEARER option added in 7.33.0 (0x072100 = 467200)
+		if test $_libcurl_version -ge 467200; then
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: libcurl >= version 7.33.0 - XOAUTH2_BEARER option is available" >&5
+$as_echo "$as_me: libcurl >= version 7.33.0 - XOAUTH2_BEARER option is available" >&6;}
+
+$as_echo "#define LIBCURL_OPT_XOAUTH2_BEARER 1" >>confdefs.h
+
+		else
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: libcurl < version 7.33.0 - XOAUTH2_BEARER option is not available" >&5
+$as_echo "$as_me: libcurl < version 7.33.0 - XOAUTH2_BEARER option is not available" >&6;}
+		fi
+
 	else
 	   unset LIBCURL
 	   unset LIBCURL_CPPFLAGS
