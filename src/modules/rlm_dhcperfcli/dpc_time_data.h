@@ -49,6 +49,20 @@ typedef struct dpc_timedata_stat_t {
 
 } dpc_timedata_stat_t;
 
+/*
+ *	Time-data context
+ */
+typedef struct dpc_timedata_context_t {
+	char const *name;
+
+	dpc_timedata_stat_t *stat_cur;   //<! Current time-data point.
+	ncc_dlist_t *dlist;              //<! List of past time-data points.
+	pthread_mutex_t mutex;           //<! Mutex for accessing the list.
+	/*
+	 * Items are only inserted to the head, so we need to lock when: getting the head, adding an item, and removing items.
+	 * Iterating (without addition or removal) does not require locking once the head has been obtained.
+	 */
+} dpc_timedata_context_t;
 
 
 int dpc_timedata_config_load(dpc_config_t *config);

@@ -21,13 +21,8 @@
 #include "dpc_time_data.h"
 
 
-static ncc_dlist_t *packet_stat_dlist;
-static dpc_timedata_stat_t *packet_stat_cur;
-static pthread_mutex_t packet_stat_mutex = PTHREAD_MUTEX_INITIALIZER;
-/*
- * Items are only inserted to the head, so we need to lock when: getting the head, adding an item, and removing items.
- * Iterating (without addition or removal) does not require locking once the head has been obtained.
- */
+dpc_timedata_context_t *contexts;
+dpc_timedata_context_t *packet_stat_context;
 
 static dpc_timedata_config_t timedata_config;
 static bool with_influx;
@@ -296,12 +291,29 @@ int dpc_timedata_write(char const *data)
 }
 
 /**
+ * Initialize a new time-data context.
+ */
+void dpc_timedata_context_add(TALLOC_CTX *ctx, char const *name)
+{
+	size_t num = talloc_array_length(contexts);
+
+	TALLOC_REALLOC_ZERO(ctx, contexts, dpc_timedata_context_t, num, num + 1);
+	contexts[num].name = name;
+
+	contexts[num].dlist = talloc_zero(ctx, ncc_dlist_t);
+	NCC_DLIST_INIT(contexts[num].dlist, dpc_timedata_stat_t);
+
+	pthread_mutex_init(&contexts[num].mutex, NULL);
+}
+
+/**
  * Initialize time-data storage.
  */
 int dpc_timedata_init(TALLOC_CTX *ctx)
 {
-	packet_stat_dlist = talloc_zero(ctx, ncc_dlist_t);
-	NCC_DLIST_INIT(packet_stat_dlist, dpc_timedata_stat_t);
+	dpc_timedata_context_add(ctx, "packet_stat");
+
+	packet_stat_context = &contexts[0];
 
 	store_timedata = true;
 	return 0;
@@ -312,23 +324,26 @@ int dpc_timedata_init(TALLOC_CTX *ctx)
  * Remove items that have been sent successfully.
  * If items cannot be sent (because destination is unavailable), only keep a limited history as configured.
  */
-void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
+void dpc_timedata_list_cleanup(dpc_timedata_context_t *context, bool force)
 {
+	ncc_dlist_t *dlist = context->dlist;
+	pthread_mutex_t *mutex = &context->mutex;
+
 	/* Remove entries that have been sent successfully.
 	 * We don't need them anymore.
 	 */
 	dpc_timedata_stat_t *stat, *prev = NULL;
 
-	pthread_mutex_lock(&packet_stat_mutex);
+	pthread_mutex_lock(mutex);
 
 	stat = NCC_DLIST_HEAD(dlist);
 	while (stat) {
 		prev = stat;
 		if (stat->sent) {
-			NCC_DLIST_REMOVE_ITER(packet_stat_dlist, stat, prev);
+			NCC_DLIST_REMOVE_ITER(dlist, stat, prev);
 			talloc_free(stat); /* Safe because we continue iteration from previous. */
 		}
-		stat = NCC_DLIST_NEXT(packet_stat_dlist, prev);
+		stat = NCC_DLIST_NEXT(dlist, prev);
 	}
 
 	/* Only keep a max number of entries.
@@ -344,7 +359,7 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 			uint32_t skip = timedata_config.max_history;
 			while (stat && skip) {
 				skip--;
-				stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
+				stat = NCC_DLIST_NEXT(dlist, stat);
 			}
 		}
 
@@ -358,13 +373,13 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 			num_discard++;
 
 			prev = stat;
-			NCC_DLIST_REMOVE_ITER(packet_stat_dlist, stat, prev);
+			NCC_DLIST_REMOVE_ITER(dlist, stat, prev);
 			talloc_free(stat);
-			stat = NCC_DLIST_NEXT(packet_stat_dlist, prev);
+			stat = NCC_DLIST_NEXT(dlist, prev);
 		}
 	}
 
-	pthread_mutex_unlock(&packet_stat_mutex);
+	pthread_mutex_unlock(mutex);
 }
 
 /**
@@ -372,15 +387,18 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
  * Then allocate a new current.
  * Return current stat to be updated by caller.
  */
-dpc_timedata_stat_t *dpc_timedata_get_storage(ncc_dlist_t *dlist, pthread_mutex_t *mutex, dpc_timedata_stat_t **stat_cur_p)
+dpc_timedata_stat_t *dpc_timedata_get_storage(dpc_timedata_context_t *context)
 {
 	if (!store_timedata) return NULL;
+
+	ncc_dlist_t *dlist = context->dlist;
+	pthread_mutex_t *mutex = &context->mutex;
 
 	bool work = false;
 	fr_time_t now = fr_time();
 	fr_time_t fte_start = now; /* Start of new item, if applicable. */
 
-	dpc_timedata_stat_t *stat = *stat_cur_p;
+	dpc_timedata_stat_t *stat = context->stat_cur;
 	if (stat) {
 		if (now >= stat->start + timedata_config.time_interval) {
 			/*
@@ -408,7 +426,7 @@ dpc_timedata_stat_t *dpc_timedata_get_storage(ncc_dlist_t *dlist, pthread_mutex_
 
 		stat->start = fte_start;
 		gettimeofday(&stat->timestamp, NULL);
-		*stat_cur_p = stat;
+		context->stat_cur = stat;
 	}
 
 	/* Signal worker if there's work to be done. */
@@ -426,7 +444,7 @@ void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t 
 {
 	if (!store_timedata) return;
 
-	dpc_timedata_stat_t *stat = dpc_timedata_get_storage(packet_stat_dlist, &packet_stat_mutex, &packet_stat_cur);
+	dpc_timedata_stat_t *stat = dpc_timedata_get_storage(packet_stat_context);
 	if (!stat) return; /* Cannot happen. */
 
 	if (!stat->data) {
@@ -482,8 +500,11 @@ int dpc_timedata_send_packet_stat(dpc_timedata_stat_t *stat)
  * Check if items in the time-data stat list are ready to be sent to their destination.
  * If so, prepare and send the data (calling provided function), and mark item as "sent".
  */
-int dpc_timedata_send(ncc_dlist_t *dlist, pthread_mutex_t *mutex, dpc_timedata_stat_send send_func, bool force)
+int dpc_timedata_send(dpc_timedata_context_t *context, dpc_timedata_stat_send send_func, bool force)
 {
+	ncc_dlist_t *dlist = context->dlist;
+	pthread_mutex_t *mutex = &context->mutex;
+
 	fr_time_t now = fr_time();
 
 	pthread_mutex_lock(mutex);
@@ -512,7 +533,7 @@ int dpc_timedata_send(ncc_dlist_t *dlist, pthread_mutex_t *mutex, dpc_timedata_s
 			stat->sent = true;
 		}
 
-		stat = NCC_DLIST_NEXT(packet_stat_dlist, stat);
+		stat = NCC_DLIST_NEXT(dlist, stat);
 	}
 
 	return 0;
@@ -524,7 +545,7 @@ int dpc_timedata_send(ncc_dlist_t *dlist, pthread_mutex_t *mutex, dpc_timedata_s
 int dpc_timedata_send_all(bool force)
 {
 	/* Packet statistics. */
-	if (dpc_timedata_send(packet_stat_dlist, &packet_stat_mutex, dpc_timedata_send_packet_stat, force) < 0) {
+	if (dpc_timedata_send(packet_stat_context, dpc_timedata_send_packet_stat, force) < 0) {
 		return -1;
 	}
 
@@ -590,7 +611,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 			send_fail++;
 		}
 
-		dpc_timedata_list_cleanup(packet_stat_dlist, false);
+		dpc_timedata_list_cleanup(packet_stat_context, false);
 
 		/* Wait until signaled to wake up,
 		 * or timeout expires, in which case we can retry sending if in failed mode.
@@ -616,7 +637,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 	}
 
 	/* Final clean-up. */
-	dpc_timedata_list_cleanup(packet_stat_dlist, true);
+	dpc_timedata_list_cleanup(packet_stat_context, true);
 
 	return NULL;
 }
