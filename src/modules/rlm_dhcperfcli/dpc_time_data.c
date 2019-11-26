@@ -42,6 +42,9 @@ static ncc_curl_mod_t *influx_config;
 #endif
 
 
+int dpc_timedata_send_packet_stat(dpc_timedata_stat_t *stat);
+
+
 fr_table_num_sorted_t const dpc_timedata_str2dst[] = {
 	{ "file",   TIMEDATA_DST_FILE },
 	{ "influx", TIMEDATA_DST_INFLUX },
@@ -58,10 +61,6 @@ static CONF_PARSER _timedata_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-/*
- * Function prototype for dpc_timedata_send_* functions.
- */
-typedef int (*dpc_timedata_stat_send)(dpc_timedata_stat_t *stat);
 
 
 /**
@@ -314,6 +313,7 @@ int dpc_timedata_init(TALLOC_CTX *ctx)
 	dpc_timedata_context_add(ctx, "packet_stat");
 
 	packet_stat_context = &contexts[0];
+	packet_stat_context->send_func = dpc_timedata_send_packet_stat;
 
 	store_timedata = true;
 	return 0;
@@ -511,10 +511,11 @@ int dpc_timedata_send_packet_stat(dpc_timedata_stat_t *stat)
  * Check if items in the time-data stat list are ready to be sent to their destination.
  * If so, prepare and send the data (calling provided function), and mark item as "sent".
  */
-int dpc_timedata_send(dpc_timedata_context_t *context, dpc_timedata_stat_send send_func, bool force)
+int dpc_timedata_send(dpc_timedata_context_t *context, bool force)
 {
 	ncc_dlist_t *dlist = context->dlist;
 	pthread_mutex_t *mutex = &context->mutex;
+	 dpc_timedata_stat_send send_func = context->send_func;
 
 	fr_time_t now = fr_time();
 
@@ -556,7 +557,7 @@ int dpc_timedata_send(dpc_timedata_context_t *context, dpc_timedata_stat_send se
 int dpc_timedata_send_all(bool force)
 {
 	/* Packet statistics. */
-	if (dpc_timedata_send(packet_stat_context, dpc_timedata_send_packet_stat, force) < 0) {
+	if (dpc_timedata_send(packet_stat_context, force) < 0) {
 		return -1;
 	}
 

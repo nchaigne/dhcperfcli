@@ -7,6 +7,7 @@
 #include <semaphore.h>
 
 
+
 typedef enum {
 	TIMEDATA_DST_NULL = 0, //!< Discard.
 	TIMEDATA_DST_STDOUT,   //!< Write to stdout.
@@ -50,6 +51,11 @@ typedef struct dpc_timedata_stat_t {
 } dpc_timedata_stat_t;
 
 /*
+ * Function prototype for dpc_timedata_send_* functions.
+ */
+typedef int (*dpc_timedata_stat_send)(dpc_timedata_stat_t *stat);
+
+/*
  *	Time-data context
  */
 typedef struct dpc_timedata_context_t {
@@ -62,6 +68,9 @@ typedef struct dpc_timedata_context_t {
 	 * Items are only inserted to the head, so we need to lock when: getting the head, adding an item, and removing items.
 	 * Iterating (without addition or removal) does not require locking once the head has been obtained.
 	 */
+
+	dpc_timedata_stat_send send_func;
+
 } dpc_timedata_context_t;
 
 
