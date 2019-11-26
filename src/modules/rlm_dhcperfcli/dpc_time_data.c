@@ -383,6 +383,17 @@ void dpc_timedata_list_cleanup(dpc_timedata_context_t *context, bool force)
 }
 
 /**
+ * Clean-up all time-data lists.
+ */
+void dpc_timedata_cleanup_all(bool force)
+{
+	size_t num = talloc_array_length(contexts);
+	while (num--) {
+		dpc_timedata_list_cleanup(&contexts[num], force);
+	}
+}
+
+/**
  * If current time-data stat is ready to be sent, move it to the worker list and signal worker.
  * Then allocate a new current.
  * Return current stat to be updated by caller.
@@ -611,7 +622,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 			send_fail++;
 		}
 
-		dpc_timedata_list_cleanup(packet_stat_context, false);
+		dpc_timedata_cleanup_all(false);
 
 		/* Wait until signaled to wake up,
 		 * or timeout expires, in which case we can retry sending if in failed mode.
@@ -637,7 +648,7 @@ void *dpc_timedata_handler(UNUSED void *input_ctx)
 	}
 
 	/* Final clean-up. */
-	dpc_timedata_list_cleanup(packet_stat_context, true);
+	dpc_timedata_cleanup_all(true);
 
 	return NULL;
 }
