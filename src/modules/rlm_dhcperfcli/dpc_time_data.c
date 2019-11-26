@@ -556,9 +556,11 @@ int dpc_timedata_send(dpc_timedata_context_t *context, bool force)
  */
 int dpc_timedata_send_all(bool force)
 {
-	/* Packet statistics. */
-	if (dpc_timedata_send(packet_stat_context, force) < 0) {
-		return -1;
+	size_t num = talloc_array_length(contexts);
+	while (num--) {
+		if (dpc_timedata_send(&contexts[num], force) < 0) {
+			return -1;
+		}
 	}
 
 	return 0;
