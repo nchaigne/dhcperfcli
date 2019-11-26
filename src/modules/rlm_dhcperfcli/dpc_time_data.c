@@ -367,15 +367,20 @@ void dpc_timedata_list_cleanup(ncc_dlist_t *dlist, bool force)
 	pthread_mutex_unlock(&packet_stat_mutex);
 }
 
-void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type)
+/**
+ * If current time-data stat is ready to be sent, move it to the worker list and signal worker.
+ * Then allocate a new current.
+ * Return current stat to be updated by caller.
+ */
+dpc_timedata_stat_t *dpc_timedata_get_storage(ncc_dlist_t *dlist, pthread_mutex_t *mutex, dpc_timedata_stat_t **stat_cur_p)
 {
-	if (!store_timedata) return;
+	if (!store_timedata) return NULL;
 
 	bool work = false;
 	fr_time_t now = fr_time();
 	fr_time_t fte_start = now; /* Start of new item, if applicable. */
 
-	dpc_timedata_stat_t *stat = packet_stat_cur;
+	dpc_timedata_stat_t *stat = *stat_cur_p;
 	if (stat) {
 		if (now >= stat->start + timedata_config.time_interval) {
 			/*
@@ -389,9 +394,9 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 
 			/* Push item to worker list.
 			 */
-			pthread_mutex_lock(&packet_stat_mutex);
-			NCC_DLIST_PUSH(packet_stat_dlist, stat);
-			pthread_mutex_unlock(&packet_stat_mutex);
+			pthread_mutex_lock(mutex);
+			NCC_DLIST_PUSH(dlist, stat);
+			pthread_mutex_unlock(mutex);
 
 			stat = NULL;
 		}
@@ -399,17 +404,36 @@ void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type
 
 	if (!stat) {
 		num_points++;
-		NCC_DLIST_ALLOC_ITEM(packet_stat_dlist, stat, dpc_timedata_stat_t);
-		stat->data = talloc_zero_array(stat, dpc_packet_stat_t, DHCP_MAX_MESSAGE_TYPE + 1);
+		NCC_DLIST_ALLOC_ITEM(dlist, stat, dpc_timedata_stat_t);
 
 		stat->start = fte_start;
 		gettimeofday(&stat->timestamp, NULL);
-		packet_stat_cur = stat;
+		*stat_cur_p = stat;
 	}
 
 	/* Signal worker if there's work to be done. */
 	if (work) {
 		sem_post(&worker_semaphore);
+	}
+
+	return stat;
+}
+
+/**
+ * Store packet statistics into time-data.
+ */
+void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t packet_type)
+{
+	if (!store_timedata) return;
+
+	dpc_timedata_stat_t *stat = dpc_timedata_get_storage(packet_stat_dlist, &packet_stat_mutex, &packet_stat_cur);
+	if (!stat) return; /* Cannot happen. */
+
+	if (!stat->data) {
+		/* Newly allocated item.
+		 * Now allocate specific data storage.
+		 */
+		stat->data = talloc_zero_array(stat, dpc_packet_stat_t, DHCP_MAX_MESSAGE_TYPE + 1);
 	}
 
 	PACKET_STAT_NUM_INCR(stat->data, stat_type, packet_type);

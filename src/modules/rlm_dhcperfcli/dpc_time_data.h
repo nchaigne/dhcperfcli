@@ -56,7 +56,7 @@ int dpc_timedata_init(TALLOC_CTX *ctx);
 int dpc_timedata_start(void);
 void dpc_timedata_stop(void);
 
-void dpc_packet_stat_add(dpc_packet_stat_field_t stat_type, uint32_t packet_type);
+void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t packet_type);
 int dpc_process_exec_send(bool ending);
 
 #ifdef HAVE_LIBCURL
