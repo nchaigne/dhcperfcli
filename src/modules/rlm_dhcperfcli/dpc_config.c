@@ -322,6 +322,9 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 			ERROR("Failed to generate temporary file name");
 			goto failure;
 		}
+		// Note: mktemp is considered unsafe because generating the name and opening the file is not atomic.
+		// Should use mkstemp, however it seems to mess with threads writing to stdout for some reason...
+		// TODO.
 
 		FILE *fp_tmp = fopen(tmp_file, "w");
 		if (!fp_tmp) {
