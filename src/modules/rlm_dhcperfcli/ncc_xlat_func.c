@@ -94,7 +94,7 @@ static TALLOC_CTX *xlat_ctx;
 static ncc_dlist_t *ncc_xlat_frames; /* This is an array of lists. */
 static ncc_xlat_file_t *ncc_xlat_files;
 
-static fr_dict_t *dict_freeradius;
+static fr_dict_t const *dict_freeradius;
 
 static fr_dict_autoload_t _dict_autoload[] = {
 	{ .out = &dict_freeradius, .proto = "freeradius" },
