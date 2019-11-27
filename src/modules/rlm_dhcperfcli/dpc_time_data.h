@@ -75,6 +75,7 @@ typedef struct dpc_timedata_context_t {
 
 
 int dpc_timedata_config_load(dpc_config_t *config);
+int dpc_timedata_config_init(CONF_SECTION *cs, char const *name);
 int dpc_timedata_init(TALLOC_CTX *ctx);
 int dpc_timedata_start(void);
 void dpc_timedata_stop(void);

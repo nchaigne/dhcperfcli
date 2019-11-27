@@ -147,13 +147,11 @@ size_t dpc_influx_data_escape(char *out, size_t outlen, char const *in, char con
 
 
 /**
- * Load configured 'time-data' section.
+ * Load configured 'time-data' section, and initialize time-data handling.
  */
 int dpc_timedata_config_load(dpc_config_t *config)
 {
 	CONF_SECTION *cs = config->root_cs;
-	TALLOC_CTX *ctx = cs;
-	char buf[256];
 
 	DEBUG2("%s: #### Parsing 'time-data' section ####", config->name);
 	cs = cf_section_find(cs, "time-data", CF_IDENT_ANY);
@@ -162,12 +160,29 @@ int dpc_timedata_config_load(dpc_config_t *config)
 		return 0;
 	}
 
+	int ret = dpc_timedata_config_init(cs, config->name);
+	if (ret == 0) {
+		config->with_timedata = true;
+	}
+
+	return ret;
+}
+
+/**
+ * Parse 'time-data' section and initialize storage.
+ * If successful, start the worker thread.
+ */
+int dpc_timedata_config_init(CONF_SECTION *cs, char const *name)
+{
+	TALLOC_CTX *ctx = cs;
+	char buf[256];
+
 	if (dpc_timedata_init(ctx) < 0) goto error;
 
-	/* If we don't have an instance set, use program instance name.
+	/* If we don't have an instance set, use provided name.
 	 */
 	if (!timedata_config.instance) {
-		timedata_config.instance = config->name;
+		timedata_config.instance = name;
 	}
 
 	/* Handle escaping so it can safely be sent to Influx. */
@@ -200,12 +215,9 @@ int dpc_timedata_config_load(dpc_config_t *config)
 		break;
 	}
 
-	/* If time-data storage is initialized, start the worker thread.
+	/* Time-data storage is initialized. Start the worker thread.
 	 */
-	if (store_timedata) {
-		if (dpc_timedata_start() < 0) return -1;
-		config->with_timedata = true;
-	}
+	if (dpc_timedata_start() < 0) return -1;
 
 	return 0;
 
