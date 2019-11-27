@@ -3587,7 +3587,7 @@ static void dpc_end(void)
 
 	if (!check_config) {
 		/* Stop time-data handler if it is running. */
-		dpc_timedata_stop();
+		ncc_timedata_stop();
 
 		/* If we're producing progress statistics, do it one last time. */
 		if (ECTX.ftd_progress_interval && dpc_job_elapsed_time_get() > CONF.progress_interval) {
