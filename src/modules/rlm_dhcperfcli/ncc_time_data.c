@@ -18,13 +18,8 @@
 #include "ncc_time_data.h"
 
 
-
-ncc_timedata_context_t *contexts;
-ncc_timedata_context_t *packet_stat_context;
-
 static ncc_timedata_config_t timedata_config;
-static bool with_influx;
-static bool store_timedata;
+static ncc_timedata_context_t *contexts;
 
 static pthread_t worker_thread;
 static sem_t worker_semaphore;
@@ -228,9 +223,6 @@ static int ncc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
 		PERROR(NULL);
 		return -1;
 	}
-
-	/* All good. */
-	with_influx = true;
 
 	INFO("Time-data: 'influx' destination configured with libcurl support");
 
