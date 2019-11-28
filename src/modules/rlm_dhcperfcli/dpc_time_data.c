@@ -17,8 +17,8 @@
 #include "dpc_time_data.h"
 
 
-uint32_t packet_stat_context_id;
-uint32_t tr_stat_context_id;
+ncc_timedata_context_t *packet_stat_context;
+ncc_timedata_context_t *tr_stat_context;
 
 
 /**
@@ -26,15 +26,15 @@ uint32_t tr_stat_context_id;
  */
 static int dpc_timedata_init(TALLOC_CTX *ctx)
 {
-	packet_stat_context_id = ncc_timedata_context_add(ctx, "packet_stat");
-	if (packet_stat_context_id < 0) return -1;
+	packet_stat_context = ncc_timedata_context_add(ctx, "packet_stat");
+	if (!packet_stat_context) return -1;
 
-	ncc_timedata_context_by_id(packet_stat_context_id)->send_func = dpc_timedata_send_packet_stat;
+	packet_stat_context->send_func = dpc_timedata_send_packet_stat;
 
-	tr_stat_context_id = ncc_timedata_context_add(ctx, "transaction_stat");
-	if (tr_stat_context_id < 0) return -1;
+	tr_stat_context = ncc_timedata_context_add(ctx, "transaction_stat");
+	if (!tr_stat_context) return -1;
 
-	ncc_timedata_context_by_id(tr_stat_context_id)->send_func = dpc_timedata_send_tr_stat;
+	tr_stat_context->send_func = dpc_timedata_send_tr_stat;
 
 	return 0;
 }
@@ -66,7 +66,7 @@ int dpc_timedata_config_load(dpc_config_t *config)
  */
 void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t packet_type)
 {
-	ncc_timedata_stat_t *stat = ncc_timedata_get_storage(packet_stat_context_id);
+	ncc_timedata_stat_t *stat = ncc_timedata_context_get_storage(packet_stat_context);
 	if (!stat) return;
 
 	if (!stat->data) {
@@ -126,7 +126,7 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
  */
 void dpc_time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
 {
-	ncc_timedata_stat_t *stat = ncc_timedata_get_storage(tr_stat_context_id);
+	ncc_timedata_stat_t *stat = ncc_timedata_context_get_storage(tr_stat_context);
 	if (!stat) return;
 
 	if (!stat->data) {

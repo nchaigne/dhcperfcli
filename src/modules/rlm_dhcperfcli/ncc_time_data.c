@@ -19,7 +19,7 @@
 
 
 static ncc_timedata_config_t timedata_config;
-static ncc_timedata_context_t *contexts;
+static ncc_timedata_context_t **contexts;
 
 static pthread_t worker_thread;
 static sem_t worker_semaphore;
@@ -311,25 +311,30 @@ char const *ncc_timedata_get_inst_esc()
  * Initialize a new time-data context.
  * Return the index of the new context.
  */
-uint32_t ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name)
+ncc_timedata_context_t *ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name)
 {
 	size_t num = talloc_array_length(contexts);
 
-	TALLOC_REALLOC_ZERO(ctx, contexts, ncc_timedata_context_t, num, num + 1);
-	contexts[num].name = name;
+	/* Initialize the new time data context. */
+	ncc_timedata_context_t *context_new = talloc_zero(ctx, ncc_timedata_context_t);
+	context_new->name = name;
 
-	contexts[num].dlist = talloc_zero(ctx, ncc_dlist_t);
-	NCC_DLIST_INIT(contexts[num].dlist, ncc_timedata_stat_t);
+	context_new->dlist = talloc_zero(context_new, ncc_dlist_t);
+	NCC_DLIST_INIT(context_new->dlist, ncc_timedata_stat_t);
 
-	pthread_mutex_init(&contexts[num].mutex, NULL);
+	pthread_mutex_init(&context_new->mutex, NULL);
 
-	return num;
+	/* Reallocate the array of contexts. */
+	TALLOC_REALLOC_ZERO(ctx, contexts, ncc_timedata_context_t *, num, num + 1);
+	contexts[num] = context_new;
+
+	return context_new;
 }
 
 ncc_timedata_context_t *ncc_timedata_context_by_id(uint32_t context_id)
 {
 	if (context_id >= talloc_array_length(contexts)) return NULL;
-	return &contexts[context_id];
+	return contexts[context_id];
 }
 
 /**
@@ -402,7 +407,7 @@ void ncc_timedata_cleanup_all(bool force)
 {
 	size_t num = talloc_array_length(contexts);
 	while (num--) {
-		ncc_timedata_list_cleanup(&contexts[num], force);
+		ncc_timedata_list_cleanup(contexts[num], force);
 	}
 }
 
@@ -411,7 +416,7 @@ void ncc_timedata_cleanup_all(bool force)
  * Then allocate a new current.
  * Return current stat to be updated by caller.
  */
-static ncc_timedata_stat_t *ncc_timedata_get_context_storage(ncc_timedata_context_t *context)
+ncc_timedata_stat_t *ncc_timedata_context_get_storage(ncc_timedata_context_t *context)
 {
 	if (!context || !context->dlist) return NULL;
 
@@ -459,13 +464,6 @@ static ncc_timedata_stat_t *ncc_timedata_get_context_storage(ncc_timedata_contex
 	}
 
 	return stat;
-}
-
-ncc_timedata_stat_t *ncc_timedata_get_storage(uint32_t context_id)
-{
-	if (context_id >= talloc_array_length(contexts)) return NULL;
-
-	return ncc_timedata_get_context_storage(&contexts[context_id]);
 }
 
 /**
@@ -519,7 +517,7 @@ int ncc_timedata_send_all(bool force)
 {
 	size_t num = talloc_array_length(contexts);
 	while (num--) {
-		if (ncc_timedata_send(&contexts[num], force) < 0) {
+		if (ncc_timedata_send(contexts[num], force) < 0) {
 			return -1;
 		}
 	}

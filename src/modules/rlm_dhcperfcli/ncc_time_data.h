@@ -84,9 +84,8 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name);
 char const *ncc_timedata_get_inst_esc(void);
 int ncc_timedata_write(char const *data);
 
-uint32_t ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name);
-ncc_timedata_context_t *ncc_timedata_context_by_id(uint32_t context_id);
-ncc_timedata_stat_t *ncc_timedata_get_storage(uint32_t context_id);
+ncc_timedata_context_t *ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name);
+ncc_timedata_stat_t *ncc_timedata_context_get_storage(ncc_timedata_context_t *context);
 
 int ncc_timedata_start(void);
 void ncc_timedata_stop(void);
