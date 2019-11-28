@@ -147,6 +147,7 @@ void dpc_time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
 int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 {
 	char influx_data[1024];
+	char name_buf[256];
 
 	dpc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
 
@@ -163,10 +164,12 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 		double rtt_min = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_min);
 		double rtt_max = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_max);
 
+		NCC_INFLUX_ESCAPE_KEY(name_buf, sizeof(name_buf), dyn_tr_stats->names[i]);
+
 		snprintf(influx_data, sizeof(influx_data),
 			"transaction,instance=%s,type=%s num=%ui rtt.avg=%.3f rtt.min=%.3f rtt.max=%.3f %lu%06lu000",
 			ncc_timedata_get_inst_esc(),
-			dyn_tr_stats->names[i], // TODO: escape?
+			name_buf,
 			transaction_stat->num,
 			rtt_avg, rtt_min, rtt_max,
 			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
