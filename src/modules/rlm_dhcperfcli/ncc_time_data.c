@@ -252,16 +252,6 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 	TALLOC_CTX *ctx = cs;
 	char buf[256];
 
-	/* If we don't have an instance set, use provided name.
-	 */
-	if (!timedata_config.instance) {
-		timedata_config.instance = name;
-	}
-
-	/* Handle escaping so it can safely be sent to Influx. */
-	NCC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), timedata_config.instance);
-	timedata_config.instance = talloc_strdup(ctx, buf);
-
 	/* Parse 'time-data' section.
 	*/
 	if (cf_section_rules_push(cs, _timedata_config) < 0) goto error;
@@ -281,12 +271,29 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		break;
 
 	case TIMEDATA_DST_INFLUX:
-		if (ncc_timedata_config_influx(cs, cs) < 0) goto error;
+		if (ncc_timedata_config_influx(ctx, cs) < 0) goto error;
 		break;
 
 	default:
 		break;
 	}
+
+	/* Use section instance name if defined.
+	 */
+	char const *instance = cf_section_name2(cs);
+	if (instance) {
+		timedata_config.instance = talloc_strdup(ctx, instance);
+	}
+
+	/* If we don't have an instance set, use provided name.
+	 */
+	if (!timedata_config.instance) {
+		timedata_config.instance = name;
+	}
+
+	/* Handle escaping so it can safely be sent to Influx. */
+	NCC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), timedata_config.instance);
+	timedata_config.instance = talloc_strdup(ctx, buf);
 
 	/* Time-data storage is initialized. Start the worker thread.
 	 */
