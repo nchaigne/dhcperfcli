@@ -31,6 +31,11 @@ static int dpc_timedata_init(TALLOC_CTX *ctx)
 
 	packet_stat_context->send_func = dpc_timedata_send_packet_stat;
 
+	//tr_stat_context = ncc_timedata_context_add(ctx, "transaction_stat");
+	//if (!tr_stat_context) return -1;
+
+	//tr_stat_context->send_func = dpc_timedata_send_tr_stat;
+
 	return 0;
 }
 
@@ -71,8 +76,8 @@ void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t 
 		stat->data = talloc_zero_array(stat, dpc_packet_stat_t, DHCP_MAX_MESSAGE_TYPE + 1);
 	}
 
-	dpc_packet_stat_t *dpc_stat = stat->data;
-	PACKET_STAT_NUM_INCR(dpc_stat, stat_type, packet_type);
+	dpc_packet_stat_t *packet_stat = stat->data;
+	PACKET_STAT_NUM_INCR(packet_stat, stat_type, packet_type);
 }
 
 /**
@@ -83,21 +88,23 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 	char influx_data[1024];
 	int i;
 
+	dpc_packet_stat_t *packet_stat = stat->data;
 	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
 		/* Don't write if we have nothing for this type of packet.
 		 */
-		if (PACKET_STAT_GET(stat->data, recv, i) == 0 && PACKET_STAT_GET(stat->data, sent, i) == 0
-			&& PACKET_STAT_GET(stat->data, retr, i) == 0 && PACKET_STAT_GET(stat->data, lost, i) == 0) {
+		if (PACKET_STAT_GET(packet_stat, recv, i) == 0 && PACKET_STAT_GET(packet_stat, sent, i) == 0
+			&& PACKET_STAT_GET(packet_stat, retr, i) == 0 && PACKET_STAT_GET(packet_stat, lost, i) == 0) {
 			continue;
 		}
 
-		snprintf(influx_data, sizeof(influx_data), "packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
+		snprintf(influx_data, sizeof(influx_data),
+			"packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
 			ncc_timedata_get_inst_esc(),
 			dpc_message_types[i],
-			PACKET_STAT_GET(stat->data, recv, i),
-			PACKET_STAT_GET(stat->data, sent, i),
-			PACKET_STAT_GET(stat->data, retr, i),
-			PACKET_STAT_GET(stat->data, lost, i),
+			PACKET_STAT_GET(packet_stat, recv, i),
+			PACKET_STAT_GET(packet_stat, sent, i),
+			PACKET_STAT_GET(packet_stat, retr, i),
+			PACKET_STAT_GET(packet_stat, lost, i),
 			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
 		/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
@@ -117,7 +124,7 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 /**
  * Store transaction statistics into time-data.
  */
-void time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
+void dpc_time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
 {
 	ncc_timedata_stat_t *stat = ncc_timedata_get_storage(tr_stat_context);
 	if (!stat) return;
@@ -131,4 +138,38 @@ void time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
 
 	dpc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
 	dpc_dyn_tr_stats_update(stat, dyn_tr_stats, name, rtt);
+}
+
+/**
+ * Prepare and send a transaction statistics data point to its destination.
+ */
+int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
+{
+	char influx_data[1024];
+
+	dpc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
+
+	size_t num_names = talloc_array_length(dyn_tr_stats->names);
+	size_t num_transaction_type = talloc_array_length(dyn_tr_stats->stats);
+
+	int i;
+	for (i = 0; i < num_transaction_type; i++) {
+		if (i >= num_names) break; /* Should never happen. */
+
+		dpc_transaction_stats_t *transaction_stat = &dyn_tr_stats->stats[i];
+
+		double rtt_avg = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_cumul) / transaction_stat->num;
+		double rtt_min = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_min);
+		double rtt_max = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_max);
+
+		snprintf(influx_data, sizeof(influx_data),
+			"transaction,instance=%s,type=%s num=%ui rtt.avg=%.3f rtt.min=%.3f rtt.max=%.3f %lu%06lu000",
+			ncc_timedata_get_inst_esc(),
+			dyn_tr_stats->names[i], // TODO: escape?
+			transaction_stat->num,
+			rtt_avg, rtt_min, rtt_max,
+			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+	}
+
+	return 0;
 }
