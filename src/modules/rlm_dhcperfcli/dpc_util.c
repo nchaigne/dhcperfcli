@@ -33,6 +33,49 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
 
 
 /*
+ *	Update a type of transaction statistics, with one newly completed transaction:
+ *	number of such transactions, cumulated rtt, min/max rtt.
+ */
+void dpc_tr_stats_update_values(dpc_transaction_stats_t *stats, fr_time_delta_t rtt)
+{
+	if (!rtt) return;
+
+	/* Update 'rtt_min'. */
+	if (stats->num == 0 || rtt < stats->rtt_min) {
+		stats->rtt_min = rtt;
+	}
+
+	/* Update 'rtt_max'. */
+	if (stats->num == 0 || rtt > stats->rtt_max) {
+		stats->rtt_max = rtt;
+	}
+
+	/* Update 'rtt_cumul' and 'num'. */
+	stats->rtt_cumul += rtt;
+	stats->num ++;
+}
+
+/*
+ *	Update statistics for a dynamically named transaction type.
+ */
+void dpc_dyn_tr_stats_update(TALLOC_CTX *ctx, dpc_dyn_tr_stats_t *dyn_tr_stats, char const *name, fr_time_delta_t rtt)
+{
+	/* Get the transaction name index. */
+	int i = ncc_str_array_index(ctx, &dyn_tr_stats->names, name);
+
+	/* Reallocate if necessary */
+	size_t num_transaction_type = talloc_array_length(dyn_tr_stats->stats);
+	if (i >= num_transaction_type) {
+		TALLOC_REALLOC_ZERO(ctx, dyn_tr_stats->stats,
+		                    dpc_transaction_stats_t, num_transaction_type, i + 1);
+	}
+
+	dpc_transaction_stats_t *my_stats = &(dyn_tr_stats->stats[i]);
+	dpc_tr_stats_update_values(my_stats, rtt);
+}
+
+
+/*
  *	Print the transaction type associated to a session.
  *	Built as follows: [<label>.]<request>:<reply>
  */

@@ -856,29 +856,6 @@ static void dpc_stats_fprint(FILE *fp)
 }
 
 /*
- *	Update a type of transaction statistics, with one newly completed transaction:
- *	number of such transactions, cumulated rtt, min/max rtt.
- */
-static void dpc_tr_stats_update_values(dpc_transaction_stats_t *my_stats, fr_time_delta_t rtt)
-{
-	if (!rtt) return;
-
-	/* Update 'rtt_min'. */
-	if (my_stats->num == 0 || rtt < my_stats->rtt_min) {
-		my_stats->rtt_min = rtt;
-	}
-
-	/* Update 'rtt_max'. */
-	if (my_stats->num == 0 || rtt > my_stats->rtt_max) {
-		my_stats->rtt_max = rtt;
-	}
-
-	/* Update 'rtt_cumul' and 'num'. */
-	my_stats->rtt_cumul += rtt;
-	my_stats->num ++;
-}
-
-/*
  *	Update statistics for a type of transaction
  */
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt)
@@ -896,31 +873,17 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t 
 }
 
 /*
- *	Update statistics for a dynamically named transaction type.
+ *	From a session context, update dynamically named transaction statistics.
  */
-static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t rtt)
+static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t rtt)
 {
 	char name[256];
 
 	/* Build the transaction name. */
 	dpc_session_transaction_snprint(name, sizeof(name), session);
 
-	/* Get the transaction name index. */
-	int i = ncc_str_array_index(global_ctx, &stat_ctx.dyn_tr_stats.names, name);
-
-	size_t num_transaction_type = talloc_array_length(stat_ctx.dyn_tr_stats.stats);
-
-	if (i >= num_transaction_type) {
-		TALLOC_REALLOC_ZERO(global_ctx, stat_ctx.dyn_tr_stats.stats,
-		                    dpc_transaction_stats_t, num_transaction_type, i + 1);
-	}
-
-	dpc_transaction_stats_t *my_stats = &stat_ctx.dyn_tr_stats.stats[i];
-	dpc_tr_stats_update_values(my_stats, rtt);
-
-	DEBUG_TRACE("Updated named transaction stats: id: %u, name: [%s], num: %u, this rtt: %.6f, min: %.6f, max: %.6f",
-	            i, name, my_stats->num, ncc_fr_time_to_float(rtt),
-	            ncc_fr_time_to_float(my_stats->rtt_min), ncc_fr_time_to_float(my_stats->rtt_max));
+	/* Update transaction statistics. */
+	dpc_dyn_tr_stats_update(global_ctx, &stat_ctx.dyn_tr_stats, name, rtt);
 }
 
 /*
@@ -936,7 +899,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 	rtt = session->ftd_rtt;
 
 	/* Name the transaction and update its statistics. */
-	dpc_dyn_tr_stats_update(session, rtt);
+	dpc_session_dyn_tr_stats_update(session, rtt);
 
 	/* Also update for 'All'. */
 	dpc_tr_stats_update(DPC_TR_ALL, rtt);
