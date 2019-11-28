@@ -28,6 +28,7 @@ typedef struct {
 	uint32_t max_history;          //<! Limit entries stored in the time-data lists.
 
 	char const *instance;
+	char const *instance_esc;      //<! Escaped instance which can safely be used for writing to Influx.
 
 } ncc_timedata_config_t;
 

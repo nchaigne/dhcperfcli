@@ -291,9 +291,11 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		timedata_config.instance = name;
 	}
 
-	/* Handle escaping so it can safely be sent to Influx. */
-	NCC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), timedata_config.instance);
-	timedata_config.instance = talloc_strdup(ctx, buf);
+	if (timedata_config.instance) {
+		/* Handle escaping so it can safely be sent to Influx. */
+		NCC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), timedata_config.instance);
+		timedata_config.instance_esc = talloc_strdup(ctx, buf);
+	}
 
 	/* Time-data storage is initialized. Start the worker thread.
 	 */
