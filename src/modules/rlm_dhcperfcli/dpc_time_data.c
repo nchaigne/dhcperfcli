@@ -167,7 +167,7 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 		NCC_INFLUX_ESCAPE_KEY(name_buf, sizeof(name_buf), dyn_tr_stats->names[i]);
 
 		snprintf(influx_data, sizeof(influx_data),
-			"transaction,instance=%s,type=%s num=%ui rtt.avg=%.3f rtt.min=%.3f rtt.max=%.3f %lu%06lu000",
+			"transaction,instance=%s,type=%s num=%ui,rtt.avg=%.3f,rtt.min=%.3f,rtt.max=%.3f %lu%06lu000",
 			ncc_timedata_get_inst_esc(),
 			name_buf,
 			transaction_stat->num,
