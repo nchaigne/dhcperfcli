@@ -841,7 +841,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	if (retr_breakdown && retr_breakdown[0] > 0) {
 		fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "  Retr breakdown",
-		        dpc_retransmit_sprint(buffer, sizeof(buffer), STAT_ALL_PACKET(sent), retr_breakdown, CONF.retransmit_max));
+		        dpc_retransmit_snprint(buffer, sizeof(buffer), STAT_ALL_PACKET(sent), retr_breakdown, CONF.retransmit_max));
 	}
 
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_PACKET(lost));
@@ -903,7 +903,7 @@ static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t 
 	char name[256];
 
 	/* Build the transaction name. */
-	dpc_session_transaction_sprint(name, sizeof(name), session);
+	dpc_session_transaction_snprint(name, sizeof(name), session);
 
 	/* Get the transaction name index. */
 	int i = ncc_str_array_index(global_ctx, &stat_ctx.dyn_tr_stats.names, name);

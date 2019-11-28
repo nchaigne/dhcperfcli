@@ -36,7 +36,7 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
  *	Print the transaction type associated to a session.
  *	Built as follows: [<label>.]<request>:<reply>
  */
-char *dpc_session_transaction_sprint(char *out, size_t outlen, dpc_session_ctx_t *session)
+char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_t *session)
 {
 	char *p = out;
 	char const *p_name_request;
@@ -82,7 +82,8 @@ char *dpc_message_type_sprint(char *out, int message)
 /*
  *	Print retransmissions breakdown by number of retransmissions per request sent.
  */
-char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max)
+char *dpc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max)
+// TODO: use outlen
 {
 	int i;
 	char *p = out;

@@ -15,9 +15,9 @@
 #define DPC_XLAT_MAX_LEN 4096
 
 
-char *dpc_session_transaction_sprint(char *out, size_t outlen, dpc_session_ctx_t *session);
+char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_t *session);
 char *dpc_message_type_sprint(char *out, int code);
-char *dpc_retransmit_sprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max);
+char *dpc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max);
 
 void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);
