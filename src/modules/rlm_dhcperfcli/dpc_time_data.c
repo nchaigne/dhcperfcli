@@ -12,11 +12,13 @@
 #include "ncc_time_data.h"
 
 #include "dhcperfcli.h"
+#include "dpc_util.h"
 #include "dpc_config.h"
 #include "dpc_time_data.h"
 
 
 ncc_timedata_context_t *packet_stat_context;
+ncc_timedata_context_t *tr_stat_context;
 
 
 /**
@@ -69,7 +71,8 @@ void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t 
 		stat->data = talloc_zero_array(stat, dpc_packet_stat_t, DHCP_MAX_MESSAGE_TYPE + 1);
 	}
 
-	PACKET_STAT_NUM_INCR(stat->data, stat_type, packet_type);
+	dpc_packet_stat_t *dpc_stat = stat->data;
+	PACKET_STAT_NUM_INCR(dpc_stat, stat_type, packet_type);
 }
 
 /**
@@ -109,4 +112,23 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 	}
 
 	return 0;
+}
+
+/**
+ * Store transaction statistics into time-data.
+ */
+void time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
+{
+	ncc_timedata_stat_t *stat = ncc_timedata_get_storage(tr_stat_context);
+	if (!stat) return;
+
+	if (!stat->data) {
+		/* Newly allocated item.
+		 * Now allocate specific data storage.
+		 */
+		stat->data = talloc_zero(stat, dpc_dyn_tr_stats_t);
+	}
+
+	dpc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
+	dpc_dyn_tr_stats_update(stat, dyn_tr_stats, name, rtt);
 }
