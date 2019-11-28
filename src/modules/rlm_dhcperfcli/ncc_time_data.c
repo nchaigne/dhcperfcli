@@ -180,7 +180,7 @@ static int ncc_process_exec_send(bool ending)
 	p += len; freespace -= len;
 
 	if (timedata_config.instance) {
-		len = snprintf(p, freespace, ",instance=%s ", timedata_config.instance);
+		len = snprintf(p, freespace, ",instance=%s", timedata_config.instance);
 		p += len; freespace -= len;
 	}
 

@@ -856,7 +856,7 @@ static void dpc_stats_fprint(FILE *fp)
 }
 
 /*
- *	Update statistics for a type of transaction
+ *	Update statistics for a type of transaction.
  */
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt)
 {
@@ -884,6 +884,9 @@ static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_
 
 	/* Update transaction statistics. */
 	dpc_dyn_tr_stats_update(global_ctx, &stat_ctx.dyn_tr_stats, name, rtt);
+
+	/* If time-data is enabled, also store in time-data context. */
+	if (CONF.with_timedata) dpc_time_data_store_tr_stat(name, rtt);
 }
 
 /*

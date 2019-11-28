@@ -21,6 +21,13 @@ ncc_timedata_context_t *packet_stat_context;
 ncc_timedata_context_t *tr_stat_context;
 
 
+/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
+ * If fields are created with a given type (e.g. the default "float"),
+ * then they cannot be re-created later with another type ("integer") even if the measurement is dropped.
+ * The database has to be dropped (or manually remove "fields.idx" files).
+ */
+
+
 /**
  * Initialize time-data storage.
  */
@@ -107,12 +114,6 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 			PACKET_STAT_GET(packet_stat, lost, i),
 			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
-		/* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
-		 * If fields are created with a given type (e.g. the default "float"),
-		 * then they cannot be re-created later with another type ("integer") even if the measurement is dropped.
-		 * The database has to be dropped (or manually remove "fields.idx" files).
-		 */
-
 		if (ncc_timedata_write(influx_data) < 0) {
 			return -1;
 		}
@@ -169,6 +170,10 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 			transaction_stat->num,
 			rtt_avg, rtt_min, rtt_max,
 			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+
+		if (ncc_timedata_write(influx_data) < 0) {
+			return -1;
+		}
 	}
 
 	return 0;
