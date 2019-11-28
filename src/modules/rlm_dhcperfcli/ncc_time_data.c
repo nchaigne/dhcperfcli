@@ -300,6 +300,14 @@ error:
 }
 
 /**
+ * Get escaped instance name.
+ */
+char const *ncc_timedata_get_inst_esc()
+{
+	return timedata_config.instance_esc;
+}
+
+/**
  * Initialize a new time-data context.
  */
 ncc_timedata_context_t *ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name)

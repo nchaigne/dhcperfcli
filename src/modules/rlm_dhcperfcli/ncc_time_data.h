@@ -81,6 +81,7 @@ typedef struct ncc_timedata_context_t {
 
 
 int ncc_timedata_config_init(CONF_SECTION *cs, char const *name);
+char const *ncc_timedata_get_inst_esc(void);
 int ncc_timedata_write(char const *data);
 ncc_timedata_context_t *ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name);
 ncc_timedata_stat_t *ncc_timedata_get_storage(ncc_timedata_context_t *context);

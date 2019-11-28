@@ -89,7 +89,7 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 		}
 
 		snprintf(influx_data, sizeof(influx_data), "packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
-			"INSTANCE", //timedata_config.instance, // TODO
+			ncc_timedata_get_inst_esc(),
 			dpc_message_types[i],
 			PACKET_STAT_GET(stat->data, recv, i),
 			PACKET_STAT_GET(stat->data, sent, i),
