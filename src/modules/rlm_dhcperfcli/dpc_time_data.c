@@ -31,10 +31,10 @@ static int dpc_timedata_init(TALLOC_CTX *ctx)
 
 	ncc_timedata_context_by_id(packet_stat_context_id)->send_func = dpc_timedata_send_packet_stat;
 
-	//tr_stat_context_id = ncc_timedata_context_add(ctx, "transaction_stat");
-	//if (tr_stat_context_id < 0) return -1;
+	tr_stat_context_id = ncc_timedata_context_add(ctx, "transaction_stat");
+	if (tr_stat_context_id < 0) return -1;
 
-	//ncc_timedata_context_by_id(tr_stat_context_id)->send_func = dpc_timedata_send_tr_stat;
+	ncc_timedata_context_by_id(tr_stat_context_id)->send_func = dpc_timedata_send_tr_stat;
 
 	return 0;
 }
