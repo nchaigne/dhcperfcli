@@ -181,4 +181,3 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 
 	return 0;
 }
-
