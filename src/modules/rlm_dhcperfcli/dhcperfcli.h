@@ -194,6 +194,14 @@ typedef struct {
 	uint32_t recv;  //<! Packets (replies) received
 } dpc_packet_stat_t;
 
+/*
+ *	Statistics for dynamically named transactions.
+ */
+typedef struct {
+	char **names;                   //<! Array storing transaction names.
+	dpc_transaction_stats_t *stats; //<! Statistics data.
+} dpc_dyn_tr_stats_t;
+
 typedef struct dpc_statistics {
 	/*
 	 *	Statistics per transaction or workflow type.
@@ -202,8 +210,7 @@ typedef struct dpc_statistics {
 	dpc_transaction_stats_t tr_stats[DPC_TR_MAX];
 
 	/* Statistics per dynamically named transaction type. */
-	uint32_t num_transaction_type;
-	dpc_transaction_stats_t *dyn_tr_stats;
+	dpc_dyn_tr_stats_t dyn_tr_stats;
 
 	dpc_packet_stat_t dpc_stat[DHCP_MAX_MESSAGE_TYPE + 1];
 

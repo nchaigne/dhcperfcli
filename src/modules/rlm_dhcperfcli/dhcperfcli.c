@@ -283,8 +283,6 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_TR_TYPE_MAX 50 /* Limit transaction type name displayed. */
 #define LG_PAD_STATS       20
 
-static ncc_str_array_t *arr_tr_types; /* Store dynamically encountered transaction types. */
-
 char elapsed_buf[NCC_TIME_STRLEN];
 #define ELAPSED ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), &fte_job_start, &fte_snapshot, DPC_DELTA_TIME_DECIMALS)
 
@@ -741,10 +739,11 @@ static double dpc_get_session_in_rate(bool per_input)
 static size_t dpc_tr_name_max_len(void)
 {
 	int i;
+	size_t num_transaction_type = talloc_array_length(stat_ctx.dyn_tr_stats.names);
 	size_t max_len = strlen(transaction_types[DPC_TR_ALL]); /* (All) */
 
-	for (i = 0; i < stat_ctx.num_transaction_type; i++) {
-		size_t len = strlen(arr_tr_types->strings[i]);
+	for (i = 0; i < num_transaction_type; i++) {
+		size_t len = strlen(stat_ctx.dyn_tr_stats.names[i]);
 		if (len > max_len) max_len = len;
 	}
 	return max_len;
@@ -782,7 +781,9 @@ static void dpc_tr_stats_fprint(FILE *fp)
 	int i;
 	int pad_len = 0;
 
-	if (stat_ctx.num_transaction_type == 0) return; /* We got nothing. */
+	size_t num_transaction_type = talloc_array_length(stat_ctx.dyn_tr_stats.names);
+
+	if (num_transaction_type == 0) return; /* We got nothing. */
 
 	pad_len = dpc_tr_name_max_len() + 1;
 	if (pad_len > LG_PAD_TR_TYPE_MAX) pad_len = LG_PAD_TR_TYPE_MAX;
@@ -790,12 +791,12 @@ static void dpc_tr_stats_fprint(FILE *fp)
 	fprintf(fp, "*** Statistics (per-transaction):\n");
 
 	/* only print "All" if we have more than one (otherwise it's redundant). */
-	if (stat_ctx.num_transaction_type > 1) {
+	if (num_transaction_type > 1) {
 		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.tr_stats[DPC_TR_ALL], transaction_types[DPC_TR_ALL]);
 	}
 
-	for (i = 0; i < stat_ctx.num_transaction_type; i++) {
-		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.dyn_tr_stats[i], arr_tr_types->strings[i]);
+	for (i = 0; i < num_transaction_type; i++) {
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.dyn_tr_stats.stats[i], stat_ctx.dyn_tr_stats.names[i]);
 	}
 
 	/* print DORA if we have some. */
@@ -904,17 +905,17 @@ static void dpc_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t 
 	/* Build the transaction name. */
 	dpc_session_transaction_sprint(name, sizeof(name), session);
 
-	/* Get the transaction name id. */
-	int i = ncc_str_array_index(global_ctx, &arr_tr_types, name);
+	/* Get the transaction name index. */
+	int i = ncc_str_array_index(global_ctx, &stat_ctx.dyn_tr_stats.names, name);
 
-	if (i >= stat_ctx.num_transaction_type) {
-		TALLOC_REALLOC_ZERO(global_ctx, stat_ctx.dyn_tr_stats,
-		                    dpc_transaction_stats_t, stat_ctx.num_transaction_type, i + 1);
+	size_t num_transaction_type = talloc_array_length(stat_ctx.dyn_tr_stats.stats);
 
-		stat_ctx.num_transaction_type = i + 1;
+	if (i >= num_transaction_type) {
+		TALLOC_REALLOC_ZERO(global_ctx, stat_ctx.dyn_tr_stats.stats,
+		                    dpc_transaction_stats_t, num_transaction_type, i + 1);
 	}
 
-	dpc_transaction_stats_t *my_stats = &stat_ctx.dyn_tr_stats[i];
+	dpc_transaction_stats_t *my_stats = &stat_ctx.dyn_tr_stats.stats[i];
 	dpc_tr_stats_update_values(my_stats, rtt);
 
 	DEBUG_TRACE("Updated named transaction stats: id: %u, name: [%s], num: %u, this rtt: %.6f, min: %.6f, max: %.6f",
