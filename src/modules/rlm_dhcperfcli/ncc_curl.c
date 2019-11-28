@@ -1018,7 +1018,7 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 		snprintf(buffer, sizeof(buffer), "Content-Type: %s", content_type);
 		ctx->headers = curl_slist_append(ctx->headers, buffer);
 		if (!ctx->headers) {
-		//error_header:
+		error_header:
 			fr_strerror_printf("Failed to append curl headers");
 			return -1;
 		}
