@@ -886,7 +886,7 @@ static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_
 	dpc_dyn_tr_stats_update(global_ctx, &stat_ctx.dyn_tr_stats, name, rtt);
 
 	/* If time-data is enabled, also store in time-data context. */
-	if (CONF.with_timedata) dpc_time_data_store_tr_stat(name, rtt);
+	if (CONF.with_timedata) dpc_timedata_store_tr_stat(name, rtt);
 }
 
 /*

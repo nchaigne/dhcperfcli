@@ -131,7 +131,7 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 /**
  * Store transaction statistics into time-data.
  */
-void dpc_time_data_store_tr_stat(char const *name, fr_time_delta_t rtt)
+void dpc_timedata_store_tr_stat(char const *name, fr_time_delta_t rtt)
 {
 	ncc_timedata_stat_t *stat = ncc_timedata_context_get_storage(tr_stat_context);
 	if (!stat) return;
