@@ -2194,7 +2194,7 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
 			      ncc_fr_time_to_float(ftd_elapsed));
 		} else {
 			DEBUG("Segment (id: %u) %s is no longer eligible (elapsed: %f, num use: %u)", segment_pre->id,
-			      ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment),
+			      ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment_pre),
 			      ncc_fr_time_to_float(ftd_elapsed), segment_pre->num_use);
 		}
 	}
