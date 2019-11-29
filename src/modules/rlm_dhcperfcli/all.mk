@@ -1,1 +1,1 @@
-SUBMAKEFILES := dhcperfcli.mk
+SUBMAKEFILES := libncc-util.mk libncc-server.mk dhcperfcli.mk
