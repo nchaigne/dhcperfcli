@@ -2055,7 +2055,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	        session_num_active, session_num_in_active, session_num_parallel);
 
 	/* If time-data is enabled, store session in time-data context. */
-	if (CONF.with_timedata) dpc_timedata_store_session_stat(input->id, input->name);
+	if (CONF.with_timedata) dpc_timedata_store_session_stat(input->id, input->name, input->segment_cur);
 
 	return session;
 }

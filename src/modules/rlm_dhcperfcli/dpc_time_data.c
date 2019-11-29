@@ -192,20 +192,25 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
  *	Update statistics for a dynamically discovered session type.
  */
 void dpc_dyn_session_stats_update(TALLOC_CTX *ctx, dpc_dyn_session_stats_t *dyn_session_stats,
-                                  uint32_t input_id, char const *input_name)
+                                  uint32_t input_id, char const *input_name, ncc_segment_t *segment)
 {
 	int num = talloc_array_length(dyn_session_stats->stats);
 	int i;
 
 	/* Get the item index. */
 	for (i = 0; i < num; i++) {
-		if (dyn_session_stats->stats[i].input_id == input_id) break;
+		if (dyn_session_stats->stats[i].input_id == input_id
+		    && ( (!segment && !dyn_session_stats->stats[i].segment)
+			  || (segment && dyn_session_stats->stats[i].segment && segment == dyn_session_stats->stats[i].segment)
+			   )
+		) break;
 	}
 	if (i == num) {
 		/* Not found, add a new item. */
 		TALLOC_REALLOC_ZERO(ctx, dyn_session_stats->stats, dpc_session_stats_t, num, num + 1);
 		dyn_session_stats->stats[i].input_id = input_id;
 		dyn_session_stats->stats[i].input_name = input_name;
+		dyn_session_stats->stats[i].segment = segment;
 	}
 
 	dyn_session_stats->stats[i].num ++;
@@ -214,7 +219,7 @@ void dpc_dyn_session_stats_update(TALLOC_CTX *ctx, dpc_dyn_session_stats_t *dyn_
 /**
  * Store session statistics into time-data.
  */
-void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name)
+void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name, ncc_segment_t *segment)
 {
 	ncc_timedata_stat_t *stat = ncc_timedata_context_get_storage(session_stat_context);
 	if (!stat) return;
@@ -227,7 +232,7 @@ void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name)
 	}
 
 	dpc_dyn_session_stats_t *dyn_session_stats = stat->data;
-	dpc_dyn_session_stats_update(stat, dyn_session_stats, input_id, input_name);
+	dpc_dyn_session_stats_update(stat, dyn_session_stats, input_id, input_name, segment);
 }
 
 /**
@@ -236,7 +241,8 @@ void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name)
 int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat)
 {
 	char influx_data[1024];
-	char input_name_buf[256];
+	char input_buf[256];
+	char segment_buf[256];
 
 	dpc_dyn_session_stats_t *dyn_session_stats = stat->data;
 
@@ -248,17 +254,37 @@ int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat)
 
 		/* Use input name if it has one, otherwise use its Id. */
 		if (session_stat->input_name) {
-			NCC_INFLUX_ESCAPE_KEY(input_name_buf, sizeof(input_name_buf), session_stat->input_name);
+			NCC_INFLUX_ESCAPE_KEY(input_buf, sizeof(input_buf), session_stat->input_name);
 		} else {
-			sprintf(input_name_buf, "%u", session_stat->input_id);
+			sprintf(input_buf, "%u", session_stat->input_id);
 		}
 
-		snprintf(influx_data, sizeof(influx_data),
-			"session,instance=%s,input=%s num=%ui %lu%06lu000",
-			ncc_timedata_get_inst_esc(),
-			input_name_buf,
-			session_stat->num,
-			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+		/* Segment is optional.
+		 */
+		if (session_stat->segment) {
+			/* Use segment name if it has one, otherwise use its Id.
+			 */
+			if (session_stat->segment->name) {
+				NCC_INFLUX_ESCAPE_KEY(segment_buf, sizeof(segment_buf), session_stat->segment->name);
+			} else {
+				sprintf(input_buf, "%u", session_stat->segment->id);
+			}
+		}
+
+		size_t len, freespace = sizeof(influx_data);
+		char *p = influx_data;
+
+		len = snprintf(p, freespace, "session,instance=%s,input=%s",
+		               ncc_timedata_get_inst_esc(), input_buf);
+		p += len; freespace -= len;
+
+		if (session_stat->segment) {
+			len = snprintf(p, freespace, ",segment=%s", segment_buf);
+			p += len; freespace -= len;
+		}
+
+		len = snprintf(p, freespace, " num=%ui %lu%06lu000",
+		               session_stat->num, stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
 		if (ncc_timedata_write(influx_data) < 0) {
 			return -1;
