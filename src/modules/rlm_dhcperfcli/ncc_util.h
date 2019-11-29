@@ -383,7 +383,7 @@ char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list
 
 bool ncc_stdin_peek();
 
-uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char *value);
+uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char const *value);
 
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */

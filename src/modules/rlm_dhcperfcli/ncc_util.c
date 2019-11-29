@@ -1981,7 +1981,7 @@ bool ncc_stdin_peek()
  *	Search for a value in an array of string, add it if not found. Return its index.
  *	Note: this is unefficient, but it's meant for only a handful of elements so it doesn't matter.
  */
-uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char *value)
+uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char const *value)
 {
 	size_t size_pre = talloc_array_length(*pt_array); /* Previous size (also index of the new element if added). */
 	int i;
