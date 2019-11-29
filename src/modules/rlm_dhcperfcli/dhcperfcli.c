@@ -2054,6 +2054,9 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	SDEBUG2("New session initialized from input - active sessions: %u (in: %u), parallel: %u",
 	        session_num_active, session_num_in_active, session_num_parallel);
 
+	/* If time-data is enabled, store session in time-data context. */
+	if (CONF.with_timedata) dpc_timedata_store_session_stat(input->id, input->name);
+
 	return session;
 }
 

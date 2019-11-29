@@ -19,6 +19,7 @@
 
 ncc_timedata_context_t *packet_stat_context;
 ncc_timedata_context_t *tr_stat_context;
+ncc_timedata_context_t *session_stat_context;
 
 
 /* Note: an annoying bug in Influx < 1.7.8: https://github.com/influxdata/influxdb/issues/10052
@@ -42,6 +43,11 @@ static int dpc_timedata_init(TALLOC_CTX *ctx)
 	if (!tr_stat_context) return -1;
 
 	tr_stat_context->send_func = dpc_timedata_send_tr_stat;
+
+	session_stat_context =  ncc_timedata_context_add(ctx, "session_stat");
+	if (!session_stat_context) return -1;
+
+	session_stat_context->send_func = dpc_timedata_send_session_stat;
 
 	return 0;
 }
@@ -172,6 +178,86 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 			name_buf,
 			transaction_stat->num,
 			rtt_avg, rtt_min, rtt_max,
+			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+
+		if (ncc_timedata_write(influx_data) < 0) {
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ *	Update statistics for a dynamically discovered session type.
+ */
+void dpc_dyn_session_stats_update(TALLOC_CTX *ctx, dpc_dyn_session_stats_t *dyn_session_stats,
+                                  uint32_t input_id, char const *input_name)
+{
+	int num = talloc_array_length(dyn_session_stats->stats);
+	int i;
+
+	/* Get the item index. */
+	for (i = 0; i < num; i++) {
+		if (dyn_session_stats->stats[i].input_id == input_id) break;
+	}
+	if (i == num) {
+		/* Not found, add a new item. */
+		TALLOC_REALLOC_ZERO(ctx, dyn_session_stats->stats, dpc_session_stats_t, num, num + 1);
+		dyn_session_stats->stats[i].input_id = input_id;
+		dyn_session_stats->stats[i].input_name = input_name;
+	}
+
+	dyn_session_stats->stats[i].num ++;
+}
+
+/**
+ * Store session statistics into time-data.
+ */
+void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name)
+{
+	ncc_timedata_stat_t *stat = ncc_timedata_context_get_storage(session_stat_context);
+	if (!stat) return;
+
+	if (!stat->data) {
+		/* Newly allocated item.
+		 * Now allocate specific data storage.
+		 */
+		stat->data = talloc_zero(stat, dpc_dyn_session_stats_t);
+	}
+
+	dpc_dyn_session_stats_t *dyn_session_stats = stat->data;
+	dpc_dyn_session_stats_update(stat, dyn_session_stats, input_id, input_name);
+}
+
+/**
+ * Prepare and send a session statistics data point to its destination.
+ */
+int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat)
+{
+	char influx_data[1024];
+	char input_name_buf[256];
+
+	dpc_dyn_session_stats_t *dyn_session_stats = stat->data;
+
+	size_t num = talloc_array_length(dyn_session_stats->stats);
+
+	int i;
+	for (i = 0; i < num; i++) {
+		dpc_session_stats_t *session_stat = &dyn_session_stats->stats[i];
+
+		/* Use input name if it has one, otherwise use its Id. */
+		if (session_stat->input_name) {
+			NCC_INFLUX_ESCAPE_KEY(input_name_buf, sizeof(input_name_buf), session_stat->input_name);
+		} else {
+			sprintf(input_name_buf, "%u", session_stat->input_id);
+		}
+
+		snprintf(influx_data, sizeof(influx_data),
+			"session,instance=%s,input=%s num=%ui %lu%06lu000",
+			ncc_timedata_get_inst_esc(),
+			input_name_buf,
+			session_stat->num,
 			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
 		if (ncc_timedata_write(influx_data) < 0) {

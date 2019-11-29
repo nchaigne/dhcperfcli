@@ -178,7 +178,7 @@ typedef enum {
  *	Holds statistics for a given transaction type.
  */
 typedef struct dpc_transaction_stats {
-	uint32_t       num;        //!< Number of completed transactions
+	uint32_t num;              //!< Number of completed transactions
 	fr_time_delta_t rtt_cumul; //!< Cumulated rtt (request to reply time)
 	fr_time_delta_t rtt_min;   //!< Lowest rtt
 	fr_time_delta_t rtt_max;   //!< Highest rtt (timeout are not included)
