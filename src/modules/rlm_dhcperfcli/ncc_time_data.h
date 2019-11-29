@@ -75,10 +75,8 @@ typedef struct ncc_timedata_context_t {
 } ncc_timedata_context_t;
 
 
-#define NCC_INFLUX_ESCAPE_KEY(_out, _outlen, _in) ncc_influx_data_escape(_out, _outlen, _in, ",= ")
-#define NCC_INFLUX_ESCAPE_STR(_out, _outlen, _in) ncc_influx_data_escape(_out, _outlen, _in, "\"")
-/* A string value is enclosed within double quotes; double-quotes in the value must be escaped. */
 
+size_t ncc_influx_data_escape(char *out, size_t outlen, char const *in, char const *escape_chars);
 
 int ncc_timedata_config_init(CONF_SECTION *cs, char const *name);
 char const *ncc_timedata_get_inst_esc(void);
@@ -89,3 +87,11 @@ ncc_timedata_stat_t *ncc_timedata_context_get_storage(ncc_timedata_context_t *co
 
 int ncc_timedata_start(void);
 void ncc_timedata_stop(void);
+
+
+/* Escaping for sending to Influx:
+ * Measurement, tag key, tag value, or field: space, comma or equals sign must be escaped.
+ * String value (which is enclosed within double quotes): double quote must be escaped.
+ */
+#define NCC_INFLUX_ESCAPE_KEY(_out, _outlen, _in) ncc_influx_data_escape(_out, _outlen, _in, ",= ")
+#define NCC_INFLUX_ESCAPE_STR(_out, _outlen, _in) ncc_influx_data_escape(_out, _outlen, _in, "\"")
