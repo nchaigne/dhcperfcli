@@ -126,6 +126,9 @@ char *ncc_segment_interval_snprint(char *out, size_t outlen, ncc_segment_t *segm
 
 	FN_ARG_CHECK(NULL, out);
 
+	*out = '\0';
+	if (!segment) return out;
+
 	/* First endpoint is always bounded (finite value).
 	 * Second endpoint is unbounded if set to 0.
 	 */
