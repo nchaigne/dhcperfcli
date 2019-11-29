@@ -21,11 +21,14 @@ TARGET := dhcperfcli
 MOD_SOURCES := @mod_sources@
 
 SOURCES := dhcperfcli.c
-SOURCES += ncc_xlat_core.c ncc_xlat_func.c
 SOURCES += dpc_config.c dpc_packet_list.c dpc_util.c
 SOURCES += ncc_time_data.c dpc_time_data.c
 
 SOURCES += $(MOD_SOURCES)
+
+# Our own libraries
+# Note: libncc-server.a *must* come before libfreeradius-server.a (otherwise our xlat functions would not be called).
+TGT_PREREQS += libncc-util.a libncc-server.a
 
 # Using FreeRADIUS libraries:
 # - libfreeradius-util
@@ -35,9 +38,6 @@ SOURCES += $(MOD_SOURCES)
 TGT_PREREQS += libfreeradius-util.a
 TGT_PREREQS += libfreeradius-dhcpv4.a
 TGT_PREREQS += libfreeradius-unlang.a libfreeradius-server.a
-
-# Our own libraries
-TGT_PREREQS += libncc-util.a libncc-server.a
 
 # Note: LIBS is set in top-level "Make.inc"
 # (e.g. "-ltalloc -lkqueue  -lpcre -lrt -lnsl -lresolv -ldl -lpthread")

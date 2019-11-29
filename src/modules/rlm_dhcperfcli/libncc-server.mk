@@ -1,7 +1,8 @@
 TARGET := libncc-server.a
 
 SOURCES := \
-	ncc_util_server.c
+	ncc_util_server.c \
+	ncc_xlat_core.c ncc_xlat_func.c
 
 # System libraries discovered by top level configure script
 TGT_LDLIBS  := $(LIBS)

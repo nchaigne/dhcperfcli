@@ -11,6 +11,11 @@
  *	And also, to avoid having unchecked xlat functions which can crash our process. :'(
  *
  *	Note: we need to link with libfreeradius-server (and libfreeradius-unlang) for xlat_tokenize, xlat_eval, etc.
+ *
+ *	Our xlat_func_find must be called by xlat_tokenize_function, so our own "xlat_root" tree is used instead
+ *	of that of FreeRADIUS.
+ *	For this to work, our symbols must be processed by the linker before those of "libfreeradius-server".
+ *	Which means files must be provided to the linker in the correct order.
  */
 
 #include <freeradius-devel/server/base.h>
