@@ -74,10 +74,9 @@ void dpc_dyn_tr_stats_update(TALLOC_CTX *ctx, dpc_dyn_tr_stats_t *dyn_tr_stats, 
 	dpc_tr_stats_update_values(my_stats, rtt);
 }
 
-
-/*
- *	Print the transaction type associated to a session.
- *	Built as follows: [<label>.]<request>:<reply>
+/**
+ * Print the transaction name (request sent, reply received) associated to a session.
+ * Built as follows: [<input name>.]<request>:<reply>
  */
 char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_t *session)
 {
@@ -95,8 +94,8 @@ char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_
 	p_name_request = dpc_message_types[session->request->code];
 	p_name_reply = dpc_message_types[session->reply->code];
 
-	if (session->input->request_label) {
-		snprintf(p, outlen, "%s.%s:%s", session->input->request_label, p_name_request, p_name_reply);
+	if (session->input->name) {
+		snprintf(p, outlen, "%s.%s:%s", session->input->name, p_name_request, p_name_reply);
 	} else {
 		snprintf(p, outlen, "%s:%s", p_name_request, p_name_reply);
 	}

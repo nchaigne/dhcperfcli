@@ -72,7 +72,6 @@ fr_dict_attr_t const *attr_rate_limit;
 fr_dict_attr_t const *attr_max_duration;
 fr_dict_attr_t const *attr_max_use;
 fr_dict_attr_t const *attr_segment;
-fr_dict_attr_t const *attr_request_label;
 
 extern fr_dict_attr_t const *attr_dhcp_hop_count;
 extern fr_dict_attr_t const *attr_dhcp_transaction_id;
@@ -135,7 +134,6 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_max_duration, .name = "Max-Duration", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
 	{ .out = &attr_segment, .name = "Segment", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
-	{ .out = &attr_request_label, .name = "Request-Label", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 /*
 	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_transaction_id, .name = "DHCP-Transaction-Id", .type = FR_TYPE_UINT32, .dict = &dict_dhcpv4 },
@@ -2700,8 +2698,6 @@ static int dpc_input_parse(dpc_input_t *input)
 			}
 			if (ncc_segment_parse(input, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
 
-		} else if (vp->da == attr_request_label) { /* Request-Label = <string> */
-			input->request_label = talloc_strdup(input, vp->vp_strvalue);
 		}
 
 	} /* loop over the input vps */

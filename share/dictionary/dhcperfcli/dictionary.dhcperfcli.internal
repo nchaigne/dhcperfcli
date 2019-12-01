@@ -22,7 +22,6 @@ ATTRIBUTE Rate-Limit                   3705   string virtual
 ATTRIBUTE Max-Duration                 3706   string virtual
 ATTRIBUTE Max-Use                      3707   integer virtual
 ATTRIBUTE Segment                      3708   string virtual
-ATTRIBUTE Request-Label                3709   string virtual
 
 VALUE     DHCP-Workflow-Type           DORA           1
 VALUE     DHCP-Workflow-Type           DORA-Decline   2
