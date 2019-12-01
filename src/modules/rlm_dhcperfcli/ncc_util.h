@@ -423,12 +423,15 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 	return q;
 }
 
-/* talloc_realloc doesn't zero-initialize the new memory. */
+/**
+ * Call talloc_realloc, and set new memory to zero.
+ * Note about the memset: "_ptr" might be "*something" (hence, parenthesis are crucial).
+ */
 #define TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, _count_pre, _count) \
 { \
 	_ptr = talloc_realloc(_ctx, _ptr, _type, _count); \
 	if (_count > _count_pre) { \
-		memset(&_ptr[_count_pre], 0, sizeof(_type) * (_count - _count_pre)); \
+		memset(&(_ptr)[_count_pre], 0, sizeof(_type) * (_count - _count_pre)); \
 	} \
 }
 
