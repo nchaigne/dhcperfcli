@@ -105,6 +105,7 @@ Attribute|Description
 `Packet-Dst-IP-Address` | The packet destination IP address. Can also be set through argument `<server>`.
 `Packet-Src-Port` | The packet source UDP port. Default is 68 for a client, 67 for a gateway.
 `Packet-Dst-Port` | The packet destination UDP port. Default is 67 for a server or a gateway.
+`Input-Name` | Name of this item. Used in ongoing statistics, and as a prefix for named transactions shown in end report.
 `Rate-Limit` | Maximum new sessions initialized per second from this input item.<br>Actual rate for a given item is calculated from the time it started being used.
 `Start-Delay` | Delay (seconds) before allowing to use this input item to start new sessions.<br>This is useful to handle synchronization between multiple input items.
 `Max-Duration` | Limit duration (seconds) for starting new sessions from this input item (relative to the time it started being used).<br>If a global limit is set (option `-L`), then the earliest limit applies.
@@ -277,12 +278,20 @@ This shows the following information:
   - Number of retransmissions (if any).
   - Number of requests for which no response was received (in the allowed time limit).
   - Number of unexpected replies.<br>This may be responses received after the allowed time limit, or which we cannot correlate with a request (giaddr / source IP address mixup, transaction Id mismatch, or other odd things that broken DHCP servers might do).
+
 - Per-transaction statistics
-  - For each transaction type (pair of request type / reply type): number of such transactions, RTT (average, min and max response times), and (if the test lasts at least one second) average transaction rate per second.
+  - For each transaction type (composed of request type, reply type, and optional prefix):
+    - Number of such transactions.
+    - RTT (average, min and max response times).
+    - Average transaction rate per second (if the test lasts at least one second).
   - Likewise, for DORA workflows (if there are some).
   - And `(All)` shows the aggregation of all transactions types (if there are more than one).
 
-Note: RTT (*round trip time*) is the time interval between a packet being sent and the reception of the corresponding response. This is an accurate measurement of how fast the DHCP server can handle a message. For DORA workflows, this includes the time spent decoding and encoding packets, so this is more than the sum of Discover / Offer and Request / Ack RTT.
+Notes:
+
+- Some requests (such as DHCP Release) do not get a response, and thus will never be part of a transaction.
+
+- RTT (*round trip time*) is the time interval between a packet being sent and the reception of the corresponding response. This is an accurate measurement of how fast the DHCP server can handle a message. For DORA workflows, this includes the time spent decoding and encoding packets, so this is more than the sum of Discover / Offer and Request / Ack RTT.
 
 ### Ongoing statistics
 
