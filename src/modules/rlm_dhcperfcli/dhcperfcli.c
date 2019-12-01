@@ -353,7 +353,7 @@ static uint32_t dpc_loop_start_sessions(void);
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
-static bool dpc_input_parse(dpc_input_t *input);
+static int dpc_input_parse(dpc_input_t *input);
 static void dpc_input_debug(dpc_input_t *input);
 static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
@@ -2516,10 +2516,15 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	}
 }
 
-/*
- *	Parse an input item and prepare information necessary to build a packet.
+/**
+ * Parse and validate an input item.
+ * Parse provided attributes, and prepare information necessary to build a packet.
+ *
+ * @param[in,out] input  item to parse and validate.
+ *
+ * @return -1 = invalid input (discarded), 0 = success.
  */
-static bool dpc_input_parse(dpc_input_t *input)
+static int dpc_input_parse(dpc_input_t *input)
 {
 	fr_cursor_t cursor;
 	VALUE_PAIR *vp;
@@ -2527,12 +2532,12 @@ static bool dpc_input_parse(dpc_input_t *input)
 
 	if (!input->vps) {
 		WARN("Empty vps list. Discarding input (id: %u)", input->id);
-		return false;
+		return -1;
 	}
 
 #define WARN_ATTR_VALUE { \
 		PWARN("Invalid value for attribute %s. Discarding input (id: %u)", vp->da->name, input->id); \
-		return false; \
+		return -1; \
 	}
 
 	input->ext.code = FR_CODE_UNDEFINED;
@@ -2574,7 +2579,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 		 */
 		if (vp->op != T_OP_EQ && vp->op != T_OP_SET) {
 			WARN("Invalid operator '%s' in assignment for attribute '%s'. Discarding input (id: %u)", fr_tokens[vp->op], vp->da->name, input->id);
-			return false;
+			return -1;
 		}
 		vp->op = T_OP_EQ; /* Force to '=' for consistency. */
 
@@ -2612,7 +2617,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 					talloc_free(value);
 					talloc_free(xlat);
 
-					return false;
+					return -1;
 				}
 				talloc_free(value);
 
@@ -2628,7 +2633,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 				 */
 				if (ncc_pair_value_from_str(vp, vp->xlat) < 0) {
 					WARN("Unsupported xlat expression for attribute '%s'. Discarding input (id: %u)", vp->da->name, input->id);
-					return false;
+					return -1;
 				}
 			}
 		}
@@ -2739,7 +2744,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 
 	if (!vp_encoded_data && input->ext.code == FR_CODE_UNDEFINED) {
 		WARN("No packet type specified in input vps or command line. Discarding input (id: %u)", input->id);
-		return false;
+		return -1;
 	}
 
 	/*
@@ -2763,7 +2768,7 @@ static bool dpc_input_parse(dpc_input_t *input)
 	}
 
 	/* All good. */
-	return true;
+	return 0;
 }
 
 /*
@@ -2813,7 +2818,7 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 	input->id = input_num ++;
 	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
-	if (!dpc_input_parse(input)) {
+	if (dpc_input_parse(input) < 0) {
 		/*
 		 *	Invalid item. Discard.
 		 */
