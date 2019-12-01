@@ -300,10 +300,11 @@ In addition to the end report, an ongoing statistics summary can also be display
 For example:
 
 ```
-(*) t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], session rate (/s): 999.990
+(*) 17:42:55 t(30.000) (50.0%) sessions: [started: 30000 (25.0%), ongoing: 0], session rate (/s): 999.990
 ```
 
 This shows the following information:
+- Current absolute local time.
 - Current elapsed time of the test, in seconds.
 - If the test is time-limited (option `-L`), completed percentage of said limit.
 - Number of sessions started.
@@ -318,7 +319,7 @@ In addition, the following information is displayed if relevant:
 For example (unresponsive server):
 
 ```
-(*) t(5.001) (50.0%) sessions: [in: 320, ongoing: 64, lost: 256], session rate (/s): 63.987
+(*) 17:42:55 t(5.001) (50.0%) sessions: [in: 320, ongoing: 64, lost: 256], session rate (/s): 63.987
 ```
 
 If multiple input items are involved, a second line provides additional, per-input statistics, which shows:
@@ -327,9 +328,8 @@ If multiple input items are involved, a second line provides additional, per-inp
 
 
 ```
-(*) t(9.000) (60.0%) sessions: [in: 1806, ongoing: 0], session rate (/s): 100.335
+(*) 17:42:55 t(9.000) (60.0%) sessions: [in: 1806, ongoing: 0], session rate (/s): 100.335
  └─ per-input rate (/s): #0 (A): 100.334, #1 (T): 200.665, #2 (W)
-
 ```
 
 
