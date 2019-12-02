@@ -2795,17 +2795,20 @@ static int dpc_input_parse(dpc_input_t *input)
 		dpc_input_socket_allocate(input);
 	}
 
-	/* If input has a rate limit, set a default segment for this input item.
+	/* Set a default segment for this input.
 	 * This segment will enforce the input rate limit when no other input scoped segment is active.
 	 */
+	MEM(input->segment_dflt = talloc_zero(input, ncc_segment_t));
+
 	if (input->rate_limit) {
-		MEM(input->segment_dflt = talloc_zero(input, ncc_segment_t));
 		input->segment_dflt->type = NCC_SEGMENT_RATE_FIXED;
 		input->segment_dflt->rate_limit = input->rate_limit;
-
-		/* Segment will start at "Start-Delay" if set. */
-		input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
+	} else {
+		input->segment_dflt->type = NCC_SEGMENT_RATE_UNBOUNDED;
 	}
+
+	/* Default segment will start at "Start-Delay" if set. */
+	input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
 
 	/* All good. */
 	return 0;
