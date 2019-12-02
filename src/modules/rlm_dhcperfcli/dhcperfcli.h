@@ -55,6 +55,7 @@ extern fr_time_t fte_start;
 extern ncc_dlist_t input_list;
 extern fr_dict_attr_t const *attr_encoded_data;
 extern fr_dict_attr_t const *attr_dhcp_message_type;
+extern fr_dict_attr_t const *attr_dhcp_requested_ip_address;
 
 extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 
