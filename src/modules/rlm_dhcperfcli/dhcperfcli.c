@@ -171,7 +171,8 @@ ncc_segment_t *segment_cur;
  * Or with a fixed rate set to the global rate limit, otherwise.
  */
 static ncc_segment_t segment_default = {
-	.type = NCC_SEGMENT_RATE_UNBOUNDED
+	.type = NCC_SEGMENT_RATE_UNBOUNDED,
+	.name = "dflt"
 };
 
 /* Note: a global rate limit is enforced only if a global time segment is not currently in use.
@@ -1867,7 +1868,7 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 	ncc_segment_t *segment = input->segment_cur;
 	if (!segment) {
 		/*
-		 * No current input segment: use input default (which is defined if input has a rate limit).
+		 * No current input segment: use input default.
 		 */
 		segment = input->segment_dflt;
 	}
@@ -2248,6 +2249,7 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
  *                               (false means try to be smart and allow a bit more to compensate for internal tasks)
  * @param[in]  segment           time segment on which the limit is to be computed.
  * @param[in]  cur_num_started   how many sessions have been started so far (within the segment).
+ *                               (or 0 to compute the segment current target)
  *
  * @return true = a limit is to be enforced, false otherwise.
  */
@@ -2341,6 +2343,7 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 		 */
 		segment = &segment_default;
 	}
+
 	return dpc_rate_limit_calc_gen(max_new_sessions, false, segment, segment->num_use);
 }
 
@@ -2799,6 +2802,7 @@ static int dpc_input_parse(dpc_input_t *input)
 	 * This segment will enforce the input rate limit when no other input scoped segment is active.
 	 */
 	MEM(input->segment_dflt = talloc_zero(input, ncc_segment_t));
+	input->segment_dflt->name = "dflt";
 
 	if (input->rate_limit) {
 		input->segment_dflt->type = NCC_SEGMENT_RATE_FIXED;
