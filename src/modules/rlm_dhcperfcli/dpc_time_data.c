@@ -288,8 +288,16 @@ int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat)
 			p += len; freespace -= len;
 		}
 
-		len = snprintf(p, freespace, " num=%ui,target=%ui %lu%06lu000",
-		               session_stat->num, session_stat->target, stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+		len = snprintf(p, freespace, " num=%ui", session_stat->num);
+		p += len; freespace -= len;
+
+		/* Don't write "target" if unlimited. */
+		if (session_stat->target) {
+			len = snprintf(p, freespace, ",target=%ui", session_stat->target);
+			p += len; freespace -= len;
+		}
+
+		len = snprintf(p, freespace, " %lu%06lu000", stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
 		if (ncc_timedata_write(influx_data) < 0) {
 			return -1;
