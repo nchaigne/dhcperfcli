@@ -1863,18 +1863,16 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 	bool limit;
 
 	input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
-	if (!input->segment_cur) {
-		/*
-		 * No segment: use input default (which is the global default if input has no set rate limit).
-		 */
-		limit = dpc_rate_limit_calc_gen(&max_new_sessions, false, input->segment_dflt, input->num_use);
 
-	} else {
+	ncc_segment_t *segment = input->segment_cur;
+	if (!segment) {
 		/*
-		 * Use current segment to check if a rate limit is applicable.
+		 * No current input segment: use input default (which is defined if input has a rate limit).
 		 */
-		limit = dpc_rate_limit_calc_gen(&max_new_sessions, false, input->segment_cur, input->segment_cur->num_use);
+		segment = input->segment_dflt;
 	}
+
+	limit = dpc_rate_limit_calc_gen(&max_new_sessions, false, segment, segment->num_use);
 
 	/* If no limit is currently enforced, item can be used.
 	 * Otherwise, it can be used (at least once) if the max number of new sessions is not zero.
@@ -2071,11 +2069,22 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		dpc_timedata_store_session_stat(input->id, input->name, segment, target_add);
 	}
 
-	/* If the session belongs to a time segment, update it. */
+	/*
+	 * Update segments usage.
+	 */
+
+	/* Always update default global segment. */
+	segment_default.num_use ++;
+
+	/* If the session belongs to a global time segment (explicitly defined, i.e. not the default), update it. */
 	if (segment_cur) {
 		segment_cur->num_use ++;
 	}
 
+	/* If session input has a default segment (which is the case if input is rate limited), update it. */
+	if (input->segment_dflt) input->segment_dflt->num_use ++;
+
+	/* If the session belongs to an input-scoped time segment (explicitly defined), update it. */
 	if (input->segment_cur) {
 		input->segment_cur->num_use ++;
 	}
@@ -2324,18 +2333,15 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
 	segment_cur = dpc_get_current_segment(segment_list, segment_cur);
-	if (!segment_cur) {
-		/*
-		 * No segment: use default (with fixed global rate limit if set).
-		 */
-		return dpc_rate_limit_calc_gen(max_new_sessions, false, &segment_default, session_num);
 
-	} else {
+	ncc_segment_t *segment = segment_cur;
+	if (!segment) {
 		/*
-		 * Use current segment to apply a rate limit.
+		 * No current segment: use default (with fixed global rate limit if set, otherwise unbounded).
 		 */
-		return dpc_rate_limit_calc_gen(max_new_sessions, false, segment_cur, segment_cur->num_use);
+		segment = &segment_default;
 	}
+	return dpc_rate_limit_calc_gen(max_new_sessions, false, segment, segment->num_use);
 }
 
 
