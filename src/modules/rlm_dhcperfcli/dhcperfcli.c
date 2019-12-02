@@ -1289,10 +1289,16 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		 *	This is *not* a reply we've been expecting.
 		 *	This can happen legitimately if, when handling a DORA, we've sent the Request and are
 		 *	now expecting an Ack, but then we receive another Offer (from another DHCP server).
+		 *
+		 *	We can also receive a NAK, even though we're requesting a lease that we were offered.
+		 *	This means someone acquired the lease before us. A DHCP server can offer the same lease more than once.
+		 *	This is more likely to happen if the pool of remaining available adresses is small.
 		 */
 		DEBUG_TRACE("Discarding received reply code %d (session state: %d)", reply->code, session->state);
 
 		dpc_packet_digest_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
+		//TODO: print configurable? but not based on packet trace lvl (because this should not happen)
+
 		fr_radius_packet_free(&reply);
 
 		return true; /* Session is not finished. */
