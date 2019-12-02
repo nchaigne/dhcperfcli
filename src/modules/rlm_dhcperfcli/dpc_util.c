@@ -219,12 +219,22 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	/* DHCP specific information. */
 	if (packet->data && packet->data_len >= 34) { /* Only print this if there is enough data. */
 		memcpy(hwaddr, packet->data + 28, sizeof(hwaddr));
-		fprintf(fp, " (hwaddr: %s", ncc_ether_addr_snprint(buf_hwaddr, sizeof(buf_hwaddr), hwaddr) );
+		fprintf(fp, " (hwaddr: %s", ncc_ether_addr_snprint(buf_hwaddr, sizeof(buf_hwaddr), hwaddr));
 
 		if (packet->code == FR_DHCP_ACK || packet->code == FR_DHCP_OFFER) {
 			memcpy(&yiaddr, packet->data + 16, 4);
-			fprintf(fp, ", yiaddr: %s", inet_ntop(AF_INET, &yiaddr, lease_ipaddr, sizeof(lease_ipaddr)) );
+			fprintf(fp, ", yiaddr: %s", inet_ntop(AF_INET, &yiaddr, lease_ipaddr, sizeof(lease_ipaddr)));
 		}
+
+		/* If we sent a Request and got a NAK, print the Requested IP address that the server didn't like.
+		 */
+		if (packet->code == FR_DHCP_NAK && session->request->code == FR_DHCP_REQUEST) {
+			VALUE_PAIR *vp = fr_pair_find_by_da(session->request->vps, attr_dhcp_requested_ip_address, TAG_ANY);
+			if (vp) {
+				fprintf(fp, ", req addr: %s", inet_ntop(AF_INET, &vp->vp_ipv4addr, lease_ipaddr, sizeof(lease_ipaddr)));
+			}
+		}
+
 		fprintf(fp, ")");
 	}
 
