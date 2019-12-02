@@ -2229,6 +2229,11 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
  * Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
  * This can be used globally (to enforce a global rate limit on all sessions), or per-input.
  *
+ * Note: if we transition from a rate-limited segment to a global rate limit, this can lead to a temporary spike
+ * in started sessions, which can be much higher than the specified global rate.
+ * Although this is not a bug (the effective global rate is computed from the program start), this can be a bit odd
+ * when looking at graphs.
+ *
  * @param[out] max_new_sessions  limit of new sessions allowed to be started.
  * @param[in]  strict            perform strict calculation of limit at current time.
  *                               (false means try to be smart and allow a bit more to compensate for internal tasks)
