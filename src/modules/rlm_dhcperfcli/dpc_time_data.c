@@ -188,11 +188,12 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 	return 0;
 }
 
-/*
- *	Update statistics for a dynamically discovered session type.
+/**
+ * Update statistics for a dynamically discovered session type.
  */
 void dpc_dyn_session_stats_update(TALLOC_CTX *ctx, dpc_dyn_session_stats_t *dyn_session_stats,
-                                  uint32_t input_id, char const *input_name, ncc_segment_t *segment)
+                                  uint32_t input_id, char const *input_name, ncc_segment_t *segment,
+                                  uint32_t target_add)
 {
 	int num = talloc_array_length(dyn_session_stats->stats);
 	int i;
@@ -214,12 +215,16 @@ void dpc_dyn_session_stats_update(TALLOC_CTX *ctx, dpc_dyn_session_stats_t *dyn_
 	}
 
 	dyn_session_stats->stats[i].num ++;
+
+	/* Update the target number of sessions. */
+	dyn_session_stats->stats[i].target += target_add;
 }
 
 /**
  * Store session statistics into time-data.
  */
-void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name, ncc_segment_t *segment)
+void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name, ncc_segment_t *segment,
+                                     uint32_t target_add)
 {
 	ncc_timedata_stat_t *stat = ncc_timedata_context_get_storage(session_stat_context);
 	if (!stat) return;
@@ -232,7 +237,7 @@ void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name, 
 	}
 
 	dpc_dyn_session_stats_t *dyn_session_stats = stat->data;
-	dpc_dyn_session_stats_update(stat, dyn_session_stats, input_id, input_name, segment);
+	dpc_dyn_session_stats_update(stat, dyn_session_stats, input_id, input_name, segment, target_add);
 }
 
 /**
@@ -283,8 +288,8 @@ int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat)
 			p += len; freespace -= len;
 		}
 
-		len = snprintf(p, freespace, " num=%ui %lu%06lu000",
-		               session_stat->num, stat->timestamp.tv_sec, stat->timestamp.tv_usec);
+		len = snprintf(p, freespace, " num=%ui,target=%ui %lu%06lu000",
+		               session_stat->num, session_stat->target, stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
 		if (ncc_timedata_write(influx_data) < 0) {
 			return -1;

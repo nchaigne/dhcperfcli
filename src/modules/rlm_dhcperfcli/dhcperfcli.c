@@ -344,7 +344,7 @@ static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment);
 static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre);
 
 static void dpc_loop_recv(void);
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, ncc_segment_t *segment, uint32_t cur_num_started);
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc_segment_t *segment, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
 static uint32_t dpc_loop_start_sessions(void);
@@ -1867,13 +1867,13 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 		/*
 		 * No segment: use input default (which is the global default if input has no set rate limit).
 		 */
-		limit = dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_dflt, input->num_use);
+		limit = dpc_rate_limit_calc_gen(&max_new_sessions, false, input->segment_dflt, input->num_use);
 
 	} else {
 		/*
 		 * Use current segment to check if a rate limit is applicable.
 		 */
-		limit = dpc_rate_limit_calc_gen(&max_new_sessions, input->segment_cur, input->segment_cur->num_use);
+		limit = dpc_rate_limit_calc_gen(&max_new_sessions, false, input->segment_cur, input->segment_cur->num_use);
 	}
 
 	/* If no limit is currently enforced, item can be used.
@@ -1966,15 +1966,6 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		fte_sessions_ini_start = fr_time();
 	}
 
-	/* If the session belongs to a time segment, update it. */
-	if (segment_cur) {
-		segment_cur->num_use ++;
-	}
-
-	if (input->segment_cur) {
-		input->segment_cur->num_use ++;
-	}
-
 	/* If this is the first time this input is used, store current time. */
 	if (input->num_use == 0) {
 		DEBUG("Input (id: %u) %s%sstart (max use: %u, duration: %.1f s, rate: %.1f)",
@@ -2065,7 +2056,29 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	        session_num_active, session_num_in_active, session_num_parallel);
 
 	/* If time-data is enabled, store session in time-data context. */
-	if (CONF.with_timedata) dpc_timedata_store_session_stat(input->id, input->name, input->segment_cur);
+	if (CONF.with_timedata) {
+		uint32_t target_add = 0;
+		ncc_segment_t *segment = input->segment_cur;
+		if (segment) {
+			/* Compute the segment target, which is the total number of sessions that should have been started
+			 * using this segment to meet the specified rate.
+			 */
+			uint32_t target = 0;
+			dpc_rate_limit_calc_gen(&target, true, segment, 0);
+			target_add = target - segment->target;
+			segment->target = target;
+		}
+		dpc_timedata_store_session_stat(input->id, input->name, segment, target_add);
+	}
+
+	/* If the session belongs to a time segment, update it. */
+	if (segment_cur) {
+		segment_cur->num_use ++;
+	}
+
+	if (input->segment_cur) {
+		input->segment_cur->num_use ++;
+	}
 
 	return session;
 }
@@ -2212,13 +2225,19 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
 	return segment;
 }
 
-/*
- *	Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
- *	This can be used globally (to enforce a global rate limit on all sessions), or per-input.
+/**
+ * Figure out how to enforce a rate limit. To do so we limit the number of new sessions allowed to be started.
+ * This can be used globally (to enforce a global rate limit on all sessions), or per-input.
  *
- *	Returns: true if a limit has to be enforced at the moment, false otherwise.
+ * @param[out] max_new_sessions  limit of new sessions allowed to be started.
+ * @param[in]  strict            perform strict calculation of limit at current time.
+ *                               (false means try to be smart and allow a bit more to compensate for internal tasks)
+ * @param[in]  segment           time segment on which the limit is to be computed.
+ * @param[in]  cur_num_started   how many sessions have been started so far (within the segment).
+ *
+ * @return true = a limit is to be enforced, false otherwise.
  */
-static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, ncc_segment_t *segment, uint32_t cur_num_started)
+static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc_segment_t *segment, uint32_t cur_num_started)
 {
 	double elapsed_ref;
 	uint32_t session_limit;
@@ -2243,16 +2262,18 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, ncc_segment_t *s
 	/* Get elapsed time. */
 	elapsed_ref = dpc_segment_get_elapsed(segment);
 
-	if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
-		/*
-		 *	Consider a minimum elapsed time interval for the beginning.
-		 *	We may start more sessions than the desired rate before this time, but this will be quickly corrected.
-		 */
-		elapsed_ref = ECTX.min_ref_time_rate_limit;
-	}
+	if (!strict) {
+		if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
+			/*
+			 * Consider a minimum elapsed time interval for the beginning.
+			 * We may start more sessions than the desired rate before this time, but this will be quickly corrected.
+			 */
+			elapsed_ref = ECTX.min_ref_time_rate_limit;
+		}
 
-	/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
-	elapsed_ref += ECTX.rate_limit_time_lookahead;
+		/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
+		elapsed_ref += ECTX.rate_limit_time_lookahead;
+	}
 
 	/* Don't go beyond segment end. */
 	if (segment->ftd_end) {
@@ -2302,13 +2323,13 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 		/*
 		 * No segment: use default (with fixed global rate limit if set).
 		 */
-		return dpc_rate_limit_calc_gen(max_new_sessions, &segment_default, session_num);
+		return dpc_rate_limit_calc_gen(max_new_sessions, false, &segment_default, session_num);
 
 	} else {
 		/*
 		 * Use current segment to apply a rate limit.
 		 */
-		return dpc_rate_limit_calc_gen(max_new_sessions, segment_cur, segment_cur->num_use);
+		return dpc_rate_limit_calc_gen(max_new_sessions, false, segment_cur, segment_cur->num_use);
 	}
 }
 

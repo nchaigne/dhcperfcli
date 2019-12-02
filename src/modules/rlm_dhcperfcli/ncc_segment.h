@@ -44,6 +44,7 @@ typedef struct ncc_segment {
 	char const *name;           //!< Name of segment (optional).
 	uint32_t id;                //!< Id of segment.
 	uint32_t num_use;           //!< How many times has this segment been used to start sessions.
+	uint32_t target;            //!< How many times should this segment have been used to meet target rate.
 
 	ncc_segment_type_t type;    //!< Type of segment.
 

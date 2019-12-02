@@ -9,7 +9,8 @@
  *	Holds sessions statistics.
  */
 typedef struct dpc_session_stats {
-	uint32_t num;              //!< Number of started sessions
+	uint32_t num;              //!< Number of started sessions.
+	uint32_t target;           //<! Target number of sessions (computed from specified rate).
 
 	char const *input_name;    //!< Name of input (optional).
 	uint32_t input_id;         //!< Id of input.
@@ -35,6 +36,8 @@ void dpc_timedata_store_tr_stat(char const *name, fr_time_delta_t rtt);
 int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat);
 
 void dpc_dyn_session_stats_update(TALLOC_CTX *ctx, dpc_dyn_session_stats_t *dyn_session_stats,
-                                  uint32_t input_id, char const *input_name, ncc_segment_t *segment);
-void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name, ncc_segment_t *segment);
+                                  uint32_t input_id, char const *input_name, ncc_segment_t *segment,
+                                  uint32_t target_add);
+void dpc_timedata_store_session_stat(uint32_t input_id, char const *input_name, ncc_segment_t *segment,
+                                     uint32_t target_add);
 int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat);
