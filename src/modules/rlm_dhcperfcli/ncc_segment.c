@@ -207,7 +207,7 @@ int ncc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 	char const *sep1, *sep2, *sep3, *sep4 = NULL;
 
 	ncc_segment_t *segment = NULL;
-	int segment_type = NCC_SEGMENT_RATE_FIXED;
+	ncc_segment_type_t segment_type = NCC_SEGMENT_RATE_FIXED;
 	double start = 0, end = 0;
 	double rate = 0, rate_end = 0;
 	fr_time_delta_t ftd_start, ftd_end;
@@ -410,4 +410,72 @@ ncc_segment_t *ncc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 finish:
 	segment_new->id = segment_id++;
 	return segment_new;
+}
+
+/**
+ * Fill in the gaps in a list of segments.
+ * Add new segments if necessary, unbounded or with a fixed rate.
+ *
+ * @param[in] ctx        talloc context.
+ * @param[in] dlist      list of segments.
+ * @param[in] rate       new segments fixed rate (0 for unbounded).
+ *
+ * @return -1 = error, 0 = success.
+ */
+int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
+{
+	ncc_segment_t *segment, *segment2, *segment_new;
+
+	ncc_segment_type_t segment_type = NCC_SEGMENT_RATE_UNBOUNDED;
+	if (rate) {
+		segment_type = NCC_SEGMENT_RATE_FIXED;
+	}
+
+	/* If list is uninitialized or empty, don't do anything. */
+	if (!NCC_DLIST_IS_INIT(dlist) || NCC_DLIST_SIZE(dlist) == 0) return 0;
+
+	/* If head does not start at 0, insert a first segment.
+	 */
+	segment = NCC_DLIST_HEAD(dlist);
+	if (!ncc_assert(segment)) return -1;
+
+	if (segment->ftd_start) {
+		segment_new = ncc_segment_add(ctx, dlist, 0, segment->ftd_end);
+		if (segment_new) return -1;
+
+		segment_new->type = segment_type;
+		segment_new->rate_limit = rate;
+	}
+
+	/* If tail does not end at 0 (INF), insert a last segment.
+	 */
+	segment = NCC_DLIST_TAIL(dlist);
+	if (!ncc_assert(segment)) return -1;
+
+	if (segment->ftd_end) {
+		segment_new = ncc_segment_add(ctx, dlist, segment->ftd_end, 0);
+		if (segment_new) return -1;
+
+		segment_new->type = segment_type;
+		segment_new->rate_limit = rate;
+	}
+
+	/* Iterate over the segment list and fill the gaps between segments, if necessary.
+	 */
+	segment = NCC_DLIST_HEAD(dlist);
+	if (!ncc_assert(segment)) return -1;
+
+	while (segment) {
+		segment2 = NCC_DLIST_NEXT(dlist, segment);
+		if (segment2 && segment->ftd_end != segment2->ftd_start) {
+			segment_new = ncc_segment_add(ctx, dlist, segment->ftd_end, segment2->ftd_start);
+			if (segment_new) return -1;
+
+			segment_new->type = segment_type;
+			segment_new->rate_limit = rate;
+		}
+		segment = segment2;
+	}
+
+	return 0;
 }
