@@ -275,7 +275,7 @@ int dpc_timedata_send_session_stat(ncc_timedata_stat_t *stat)
 			if (session_stat->segment->name) {
 				NCC_INFLUX_ESCAPE_KEY(segment_buf, sizeof(segment_buf), session_stat->segment->name);
 			} else {
-				sprintf(input_buf, "%u", session_stat->segment->id);
+				sprintf(segment_buf, "%u", session_stat->segment->id);
 			}
 		}
 
