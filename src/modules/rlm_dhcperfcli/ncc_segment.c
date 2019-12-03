@@ -124,10 +124,9 @@ char *ncc_segment_interval_snprint(char *out, size_t outlen, ncc_segment_t *segm
 	size_t len;
 	char *p = out;
 
-	ncc_assert(segment);
+	if (!ncc_assert(segment)) return NULL;
 
 	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(NULL, segment);
 
 	/* First endpoint is always bounded (finite value).
 	 * Second endpoint is unbounded if set to 0.
@@ -350,7 +349,7 @@ ncc_segment_t *ncc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delt
 		 * - Else: overlap error. (e.g. 5-8, 0-6 => reject.)
 		 */
 		if (!segment_new->ftd_start && segment->ftd_start) {
-			if (segment_new->ftd_end >= segment->ftd_start) goto overlap;
+			if (segment_new->ftd_end > segment->ftd_start) goto overlap;
 
 			NCC_DLIST_INSERT_BEFORE(dlist, segment, segment_new);
 			goto finish;
@@ -440,8 +439,8 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 	if (!ncc_assert(segment)) return -1;
 
 	if (segment->ftd_start) {
-		segment_new = ncc_segment_add(ctx, dlist, 0, segment->ftd_end);
-		if (segment_new) return -1;
+		segment_new = ncc_segment_add(ctx, dlist, 0, segment->ftd_start);
+		if (!segment_new) return -1;
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
@@ -454,7 +453,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 	if (segment->ftd_end) {
 		segment_new = ncc_segment_add(ctx, dlist, segment->ftd_end, 0);
-		if (segment_new) return -1;
+		if (!segment_new) return -1;
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
@@ -469,7 +468,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 		segment2 = NCC_DLIST_NEXT(dlist, segment);
 		if (segment2 && segment->ftd_end != segment2->ftd_start) {
 			segment_new = ncc_segment_add(ctx, dlist, segment->ftd_end, segment2->ftd_start);
-			if (segment_new) return -1;
+			if (!segment_new) return -1;
 
 			segment_new->type = segment_type;
 			segment_new->rate_limit = rate;
