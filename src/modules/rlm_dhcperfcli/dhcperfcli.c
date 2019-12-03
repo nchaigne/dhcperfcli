@@ -2798,6 +2798,12 @@ static int dpc_input_parse(dpc_input_t *input)
 		dpc_input_socket_allocate(input);
 	}
 
+	/* Fill in the gaps in the list of segments. */
+	if (ncc_segment_list_complete(input, input->segments, input->rate_limit) < 0) {
+		PWARN("Failed to complete segment list. Discarding input (id: %u)", input->id);
+		return -1;
+	}
+
 	/* Set a default segment for this input.
 	 * This segment will enforce the input rate limit when no other input scoped segment is active.
 	 */
@@ -3774,6 +3780,12 @@ int main(int argc, char **argv)
 
 	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
+
+	/* Fill in the gaps in the list of global segments. */
+	if (ncc_segment_list_complete(global_ctx, segment_list, CONF.rate_limit) < 0) {
+		PERROR("Failed to complete global segment list");
+		exit(EXIT_FAILURE);
+	}
 
 	/*
 	 *	Perform configuration-related initializations.
