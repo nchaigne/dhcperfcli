@@ -236,7 +236,7 @@ static int ncc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
 }
 
 /**
- * Parse 'time-data' section and initialize storage.
+ * Parse 'time-data' section.
  * If successful, start the worker thread.
  */
 int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)

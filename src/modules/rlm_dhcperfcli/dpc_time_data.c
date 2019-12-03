@@ -67,8 +67,11 @@ int dpc_timedata_config_load(dpc_config_t *config)
 		return 0;
 	}
 
-	if (ncc_timedata_config_init(cs, config->name) < 0) return -1;
+	/* Initialize time-data storage. */
 	if (dpc_timedata_init(ctx) < 0) return -1;
+
+	/* Parse time-data section and start the worker thread. */
+	if (ncc_timedata_config_init(cs, config->name) < 0) return -1;
 
 	config->with_timedata = true;
 	return 0;
