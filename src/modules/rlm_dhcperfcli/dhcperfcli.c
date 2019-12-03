@@ -2060,6 +2060,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	if (CONF.with_timedata) {
 		uint32_t target_add = 0;
 		ncc_segment_t *segment = input->segment_cur;
+
 		if (segment) {
 			/* Compute the segment target, which is the total number of sessions that should have been started
 			 * using this segment to meet the specified rate.
@@ -2532,7 +2533,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	if (!is_ipaddr_defined(input->ext.src.ipaddr)) return;
 
 #ifdef HAVE_LIBPCAP
-	if (CONF.iface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
+	if (CONF.interface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
 	    && (dpc_ipaddr_is_broadcast(&input->ext.dst.ipaddr) == 1)
 	   ) {
 		DEBUG_TRACE("Input (id: %u) involves broadcast using pcap raw socket", input->id);
@@ -3031,7 +3032,7 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 {
 	char pcap_filter[255];
 
-	pcap = fr_pcap_init(ctx, CONF.iface, PCAP_INTERFACE_IN_OUT);
+	pcap = fr_pcap_init(ctx, CONF.interface, PCAP_INTERFACE_IN_OUT);
 	if (!pcap) {
 		PERROR("Failed to initialize pcap");
 		exit(EXIT_FAILURE);
@@ -3429,7 +3430,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 #ifdef HAVE_LIBPCAP
 		case 'i':
-			CONF.iface = optarg;
+			CONF.interface = optarg;
 			break;
 #endif
 
@@ -3837,7 +3838,7 @@ int main(int argc, char **argv)
 	 *	And a pcap raw socket (if we need one).
 	 */
 #ifdef HAVE_LIBPCAP
-	if (CONF.iface) {
+	if (CONF.interface) {
 		dpc_pcap_init(global_ctx);
 	}
 #endif
@@ -3887,7 +3888,7 @@ int main(int argc, char **argv)
 	}
 
 #ifdef HAVE_LIBPCAP
-	if (CONF.iface) {
+	if (CONF.interface) {
 		/*
 		 *	Now that we've opened all the sockets we need, build the pcap filter.
 		 */

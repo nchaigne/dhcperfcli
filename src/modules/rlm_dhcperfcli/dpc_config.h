@@ -36,7 +36,7 @@ struct dpc_config_s {
 	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
 	bool ignore_invalid_input;       //<! Ignore invalid input (discard), or exit in error.
 
-	char const *iface;               //<! Interface used for unconfigured clients to broadcast through a raw socket.
+	char const *interface;           //<! Interface used for unconfigured clients to broadcast through a raw socket.
 	char const **gateways;           //<! Gateways simulated for sending DHCP packets.
 	fr_ipaddr_t allowed_server;      //<! Only allow replies from a specific server.
 

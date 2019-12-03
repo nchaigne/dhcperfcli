@@ -19,6 +19,7 @@ static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, nc
  * - Some parameters may be defined through command-line options and configuration files.
  *   For these parameters, do *not* provide a default ("dflt") to the configuration parser.
  *   A value will be set by the config parser only if the parameter is explicitly defined in configuration files.
+ *   If a parameter is provided both through command-line and configuration file, the latter takes precedence.
  *
  * - Type 'uint32' is restricted to values 0-INT32_MAX (not 0-UINT32_MAX).
  *   Cf. function cf_pair_parse_value (cf_parse.c) for rationale.
@@ -70,6 +71,7 @@ static const CONF_PARSER _progress_config[] = {
 static const CONF_PARSER _transport_config[] = {
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout) }, /* No default */
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
+	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) }, /* No default */
 
 	CONF_PARSER_TERMINATOR
 };
@@ -370,6 +372,11 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	if (!config->file_input && old_config.file_input) {
 		config->file_input = old_config.file_input;
 	}
+	if (!config->interface && old_config.interface) {
+		config->interface = old_config.interface;
+	}
+	// this is ugly :'/
+	// TODO: something better.
 
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
@@ -510,6 +517,10 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_BOOL(debug_basename);
 	CONF_DEBUG_BOOL(log_timestamp);
 
+	CONF_DEBUG_INT(packet_trace_lvl);
+	CONF_DEBUG_BOOL(packet_trace_elapsed);
+	CONF_DEBUG_BOOL(packet_trace_timestamp);
+
 	CONF_DEBUG_FLOAT(progress_interval);
 	CONF_DEBUG_BOOL(pr_stat_timestamp);
 	CONF_DEBUG_BOOL(pr_stat_per_input);
@@ -521,13 +532,10 @@ void dpc_config_debug(dpc_config_t *config)
 	CONF_DEBUG_STR_MULTI(xlat_files);
 	CONF_DEBUG_UINT64(base_xid);
 
-	CONF_DEBUG_STR(iface);
+	CONF_DEBUG_STR(interface);
 	CONF_DEBUG_STR_MULTI(gateways);
 	CONF_DEBUG_IPADDR(allowed_server);
 
-	CONF_DEBUG_INT(packet_trace_lvl);
-	CONF_DEBUG_BOOL(packet_trace_elapsed);
-	CONF_DEBUG_BOOL(packet_trace_timestamp);
 	CONF_DEBUG_FLOAT(request_timeout);
 	CONF_DEBUG_UINT(retransmit_max);
 
