@@ -423,15 +423,15 @@ finish:
  */
 int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 {
+	/* If list is uninitialized or empty, don't do anything. */
+	if (!dlist || !NCC_DLIST_IS_INIT(dlist) || NCC_DLIST_SIZE(dlist) == 0) return 0;
+
 	ncc_segment_t *segment, *segment2, *segment_new;
 
 	ncc_segment_type_t segment_type = NCC_SEGMENT_RATE_UNBOUNDED;
 	if (rate) {
 		segment_type = NCC_SEGMENT_RATE_FIXED;
 	}
-
-	/* If list is uninitialized or empty, don't do anything. */
-	if (!NCC_DLIST_IS_INIT(dlist) || NCC_DLIST_SIZE(dlist) == 0) return 0;
 
 	/* If head does not start at 0, insert a first segment.
 	 */
