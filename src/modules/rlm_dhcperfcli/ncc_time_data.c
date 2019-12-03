@@ -313,6 +313,11 @@ char const *ncc_timedata_get_inst_esc()
  */
 ncc_timedata_context_t *ncc_timedata_context_add(TALLOC_CTX *ctx, char const *name)
 {
+	if (worker_started) {
+		ERROR("Cannot add context after worker is started");
+		return NULL;
+	}
+
 	size_t num = talloc_array_length(contexts);
 
 	/* Initialize the new time data context. */
