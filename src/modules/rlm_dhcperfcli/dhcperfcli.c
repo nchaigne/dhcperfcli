@@ -204,6 +204,8 @@ static fr_time_t fte_last_session_in; /* Last time a session has been initialize
 static fr_time_t fte_snapshot; /* Snapshot of current time (for consistency when reporting linked values). */
 
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
+static uint32_t num_input_invalid = 0; /* Number of invalid input. */
+
 static uint32_t session_num = 0; /* Total number of sessions initialized (including received requests). */
 static uint32_t session_num_in = 0; /* Number of sessions initialized for sending requests. */
 static uint32_t session_num_active = 0; /* Number of active sessions. */
@@ -2876,6 +2878,7 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 		 *	Invalid item. Discard.
 		 */
 		talloc_free(input);
+		num_input_invalid++;
 		return -1;
 	}
 
@@ -3896,6 +3899,11 @@ int main(int argc, char **argv)
 
 	if (CONF.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
 		ECTX.fte_start_max = ncc_float_to_fr_time(CONF.duration_start_max) + fte_job_start;
+	}
+
+	if (!CONF.ignore_invalid_input && num_input_invalid > 0) {
+		ERROR("Invalid input configuration");
+		exit(EXIT_FAILURE);
 	}
 
 	/*

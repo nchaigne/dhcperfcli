@@ -32,7 +32,7 @@
  *	or "ASSERT WOULD FAIL" if non-debug build (NDEBUG).
  */
 #define ncc_void_assert(_expr) ((void) ((_expr) ? (void) 0 : (void) fr_assert_exit(__FILE__, __LINE__, #_expr)))
-#define ncc_assert(_expr) (((_expr) ? 0 : fr_assert_exit(__FILE__, __LINE__, #_expr)))
+#define ncc_assert(_expr) (((_expr) ? true : fr_assert_exit(__FILE__, __LINE__, #_expr)))
 
 
 

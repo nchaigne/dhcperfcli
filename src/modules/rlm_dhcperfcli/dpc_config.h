@@ -34,6 +34,7 @@ struct dpc_config_s {
 	char const **xlat_files;         //<! Files containing values for xlat "file" expansions.
 	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.
 	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
+	bool ignore_invalid_input;       //<! Ignore invalid input (discard), or exit in error.
 
 	char const *iface;               //<! Interface used for unconfigured clients to broadcast through a raw socket.
 	char const **gateways;           //<! Gateways simulated for sending DHCP packets.
