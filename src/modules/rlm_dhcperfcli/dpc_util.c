@@ -735,7 +735,8 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 	out->vps = NULL;
 	out->dlist = (fr_dlist_t){};
 
-	MEM(fr_pair_list_copy(out, &out->vps, in->vps) >= 0);
+	/* Copy the list of vps (preserving pre-compiled xlat) */
+	MEM(ncc_pair_list_copy(out, &out->vps, in->vps) >= 0);
 
 	return out;
 }
