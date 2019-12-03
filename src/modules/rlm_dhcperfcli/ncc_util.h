@@ -25,14 +25,14 @@
  *	Not anymore: now in non-debug build (NDEBUG) it does nothing... (??)
  *
  *	assert output:
- *	dhcperfcli: src/modules/proto_dhcpv4/dpc_packet_list.c:601: dpc_packet_list_recv: Assertion `pl != ((void *)0)' failed.
+ *	dhcperfcli: src/modules/rlm_dhcperfcli/dpc_packet_list.c:601: dpc_packet_list_recv: Assertion `pl != ((void *)0)' failed.
  *
  *	fr_assert_exit output:
- *	ASSERT FAILED src/modules/proto_dhcpv4/dpc_packet_list.c[601]: pl != NULL
+ *	ASSERT FAILED src/modules/rlm_dhcperfcli/dpc_packet_list.c[601]: pl != NULL
  *	or "ASSERT WOULD FAIL" if non-debug build (NDEBUG).
  */
-//#define ncc_assert(_expr)
-#define ncc_assert(_expr) ((void) ((_expr) ? (void) 0 : (void) fr_assert_exit(__FILE__, __LINE__, #_expr)))
+#define ncc_void_assert(_expr) ((void) ((_expr) ? (void) 0 : (void) fr_assert_exit(__FILE__, __LINE__, #_expr)))
+#define ncc_assert(_expr) (((_expr) ? 0 : fr_assert_exit(__FILE__, __LINE__, #_expr)))
 
 
 
