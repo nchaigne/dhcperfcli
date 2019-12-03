@@ -444,6 +444,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
+		segment_new->name = "dflt";
 	}
 
 	/* If tail does not end at 0 (INF), insert a last segment.
@@ -457,6 +458,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
+		segment_new->name = "dflt";
 	}
 
 	/* Iterate over the segment list and fill the gaps between segments, if necessary.
@@ -472,6 +474,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 			segment_new->type = segment_type;
 			segment_new->rate_limit = rate;
+			segment_new->name = "dflt";
 		}
 		segment = segment2;
 	}
