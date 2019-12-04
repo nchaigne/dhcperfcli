@@ -115,9 +115,23 @@ It is also necessary to add `dhcperfcli` to the `PROTOCOLS` list in FreeRADIUS M
 
 Then configure and build FreeRADIUS as described previously.
 
+## Deploy
+
+### Install the libraries
+
+If you're deploying *dhcperfcli* on a host different from that where it was built, you will need to install the libraries it was linked with. For packaged libraries, simply install the non-devel version using your package manager (they may already be available, depending on your distro).
+
+For example:
+
+>__`yum -y install libtalloc libpcap libcurl json-c`__
+
+For libkqueue, you must either deploy the library at the same location (installation prefix), or update `LD_LIBRARY_PATH` environment variable accordingly.
+
+Likewise for FreeRADIUS libraries. The safest option is to deploy all of FreeRADIUS directory tree in the configured installation prefix.
+
 ### Update PATH
 
-You will need to update your PATH environment variable so you can execute the program from wherever.<br>
+You will need to update your `PATH` environment variable so you can execute the program from wherever.<br>
 For example:
 >__`export PATH=/opt/freeradius/4.0.x/sbin:$PATH`__
 
