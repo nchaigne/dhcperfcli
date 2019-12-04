@@ -2820,8 +2820,18 @@ static int dpc_input_parse(dpc_input_t *input)
 		input->segment_dflt->type = NCC_SEGMENT_RATE_UNBOUNDED;
 	}
 
-	/* Default segment will start at "Start-Delay" if set. */
-	input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
+	/* Handle "Start-Delay" if set. Do not allow any traffic to start before that.
+	 * Adjust segments so that rate calculations are relative to this new start.
+	 */
+	if input->start_delay() {
+		input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
+
+		/* Override the start of segment list. */
+		if (ncc_segment_list_override_start(input, input->segments, ncc_float_to_fr_time(input->start_delay)) < 0) {
+			PWARN("Failed to override segment list start. Discarding input (id: %u)", input->id);
+			return -1;
+		}
+	}
 
 	/* All good. */
 	return 0;

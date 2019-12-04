@@ -481,3 +481,49 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 	return 0;
 }
+
+/**
+ * Given a list of segments, override the start of allowed traffic.
+ */
+int ncc_segment_list_override_start(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delta_t ftd_start)
+{
+	/* Nothing to do. */
+	if (!ftd_start) return 0;
+
+	ncc_segment_t *segment, *prev;
+	segment = NCC_DLIST_HEAD(dlist);
+	while (segment) {
+		if (segment->ftd_start >= ftd_start) break;
+
+		if (segment->ftd_end > ftd_start) {
+			/* Alter segment start. */
+			DEBUG3("Altering segment (%.3f - %.3f) - adjust start to start override (%.3f)",
+			       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+			       ncc_fr_time_to_float(ftd_start));
+
+			segment->ftd_start = ftd_start;
+			break;
+		}
+
+		/* Remove this segment altogether. */
+		DEBUG3("Removing segment (%.3f - %.3f) - it ends before start override (%.3f)",
+				ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+				ncc_fr_time_to_float(ftd_start));
+
+		/* Then iterate to the next segment. */
+		prev = segment;
+		NCC_DLIST_REMOVE_ITER(dlist, segment, prev);
+		talloc_free(segment);
+
+		segment = NCC_DLIST_NEXT(dlist, prev);
+	}
+
+	/* Now add a new "null" segment starting at 0 and ending at the start override. */
+	segment = ncc_segment_add(ctx, dlist, 0, ftd_start);
+	if (!segment) return -1;
+
+	segment->type = NCC_SEGMENT_RATE_NULL;
+	segment->name = "dflt";
+
+	return 0;
+}
