@@ -109,6 +109,40 @@ static const CONF_PARSER _main_config[] = {
 };
 
 
+/*
+ *	Our list of strings for which we want to restore the initial value we provided, if no new value was set.
+ *	To do so we reuse FreeRADIUS "CONF_PARSER" structure.
+ */
+static const CONF_PARSER _fix_strings[] = {
+	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
+	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) },
+
+	CONF_PARSER_TERMINATOR
+};
+
+/* Restore strings for which we didn't parse anything.
+ * The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
+ */
+void _cf_rules_fix_strings(CONF_PARSER const *rules, dpc_config_t *old_config, dpc_config_t *config)
+{
+	CONF_PARSER const *rule_p;
+
+	for (rule_p = rules; rule_p->name; rule_p++) {
+
+		DEBUG3("Fixup for configuration string: %s (offset: %u)", rule_p->name, rule_p->offset);
+
+		char **pvalue;
+		char *old_value;
+
+		pvalue = (char**)((uint8_t *)config + rule_p->offset);
+		old_value = *(char**)((uint8_t *)old_config + rule_p->offset);
+
+		if (!*pvalue && old_value) {
+			*pvalue = old_value;
+		}
+	}
+}
+
 static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
 {
 	double value;
@@ -368,15 +402,10 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
 
-	/* Restore strings for which we didn't parse anything. */
-	if (!config->file_input && old_config.file_input) {
-		config->file_input = old_config.file_input;
-	}
-	if (!config->interface && old_config.interface) {
-		config->interface = old_config.interface;
-	}
-	// this is ugly :'/
-	// TODO: something better.
+	/* Restore strings for which we didn't parse anything.
+	 * The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
+	 */
+	_cf_rules_fix_strings(_fix_strings, &old_config, config);
 
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
