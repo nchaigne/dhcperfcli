@@ -483,6 +483,21 @@ int ncc_timedata_send(ncc_timedata_context_t *context, bool force)
 
 	fr_time_t now = fr_time();
 
+	if (force) {
+		ncc_timedata_stat_t *stat = context->stat_cur;
+		if (stat) {
+			stat->end = now;
+
+			/* Push last item to worker list.
+			 */
+			pthread_mutex_lock(mutex);
+			NCC_DLIST_PUSH(dlist, stat);
+			pthread_mutex_unlock(mutex);
+
+			context->stat_cur = NULL;
+		}
+	}
+
 	pthread_mutex_lock(mutex);
 	ncc_timedata_stat_t *stat = NCC_DLIST_HEAD(dlist);
 	pthread_mutex_unlock(mutex);
@@ -494,8 +509,6 @@ int ncc_timedata_send(ncc_timedata_context_t *context, bool force)
 			 */
 			break;
 		}
-
-		if (!stat->end && force) stat->end = now;
 
 		if (stat->end) {
 			/*
