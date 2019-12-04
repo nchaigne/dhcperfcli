@@ -128,11 +128,13 @@ void _cf_rules_fix_strings(CONF_PARSER const *rules, dpc_config_t *old_config, d
 	CONF_PARSER const *rule_p;
 
 	for (rule_p = rules; rule_p->name; rule_p++) {
-
-		DEBUG3("Fixup for configuration string: %s (offset: %u)", rule_p->name, rule_p->offset);
-
 		char **pvalue;
 		char *old_value;
+
+		/* Ensure this is a string. */
+		if (FR_BASE_TYPE(rule_p->type) != FR_TYPE_STRING) continue;
+
+		DEBUG3("Fixup for configuration string: %s (offset: %u)", rule_p->name, rule_p->offset);
 
 		pvalue = (char**)((uint8_t *)config + rule_p->offset);
 		old_value = *(char**)((uint8_t *)old_config + rule_p->offset);
