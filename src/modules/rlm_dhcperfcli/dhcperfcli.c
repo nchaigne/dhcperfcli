@@ -2823,7 +2823,7 @@ static int dpc_input_parse(dpc_input_t *input)
 	/* Handle "Start-Delay" if set. Do not allow any traffic to start before that.
 	 * Adjust segments so that rate calculations are relative to this new start.
 	 */
-	if input->start_delay() {
+	if (input->start_delay) {
 		input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
 
 		/* Override the start of segment list. */
@@ -2831,6 +2831,8 @@ static int dpc_input_parse(dpc_input_t *input)
 			PWARN("Failed to override segment list start. Discarding input (id: %u)", input->id);
 			return -1;
 		}
+
+		/* Note: for linear segments the start rate is not altered. This means we'll have a steeper profile. */
 	}
 
 	/* All good. */
