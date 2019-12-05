@@ -2745,6 +2745,10 @@ static int dpc_input_parse(dpc_input_t *input)
 			input->max_use = vp->vp_uint32;
 
 		} else if (vp->da == attr_segment) { /* Segment = <string> */
+			if (!CONF.template) {
+				WARN("Input segments are not allowed in non template mode. Discarding input (id: %u)", input->id);
+				return -1;
+			}
 			if (!input->segments) {
 				input->segments = talloc_zero(input, ncc_dlist_t);
 			}

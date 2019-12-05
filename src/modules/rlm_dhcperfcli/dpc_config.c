@@ -188,15 +188,15 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 				subcs = cf_section_find_next(section, subcs, "pairs", CF_IDENT_ANY);
 			}
 
-			/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections. Parse them.
-			 * Note: segments list is allocated even if there are no segments.
+			/* Input segments are not allowed in non template mode.
 			 */
-			input->segments = talloc_zero(section, ncc_dlist_t);
-			if (dpc_segment_sections_parse(section, cs, input->segments) != 0) goto error;
-			/*
-			 * Segments are *not* allocated on "input" talloc context.
-			 * They might be needed after input is freed, e.g. in non template mode, with "num use > 1".
-			 */
+			if (CONF.template) {
+				/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections. Parse them.
+				 * Note: segments list is allocated even if there are no segments.
+				 */
+				input->segments = talloc_zero(input, ncc_dlist_t);
+				if (dpc_segment_sections_parse(input, cs, input->segments) != 0) goto error;
+			}
 
 			ncc_cs_debug_end(cs, cs_depth_base);
 		}
