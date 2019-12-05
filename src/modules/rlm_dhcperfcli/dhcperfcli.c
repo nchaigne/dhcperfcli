@@ -2010,6 +2010,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 	dpc_session_set_transport(session, input);
 
+	if (!CONF.template) talloc_steal(session, input);
+
 	/*
 	 *	Prepare a DHCP packet to send for this session.
 	 */
