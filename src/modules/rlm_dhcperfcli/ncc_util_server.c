@@ -32,6 +32,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
 	uint32_t type_check = parse_ctx->type_check;
 
+	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
+	bool force_min = (type_check & NCC_TYPE_FORCE_MIN);
 	bool not_negative = (type_check & NCC_TYPE_NOT_NEGATIVE);
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
@@ -46,6 +48,13 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	{
 		float v;
 		memcpy(&v, out, sizeof(v));
+
+		if (!v && ignore_zero) return 0;
+
+		if (force_min) {
+			NCC_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
+			memcpy(out, &v, sizeof(v));
+		}
 		value_double = v;
 	}
 		break;
@@ -54,6 +63,13 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	{
 		double v;
 		memcpy(&v, out, sizeof(v));
+
+		if (!v && ignore_zero) return 0;
+
+		if (force_min) {
+			NCC_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
+			memcpy(out, &v, sizeof(v));
+		}
 		value_double = v;
 	}
 		break;
