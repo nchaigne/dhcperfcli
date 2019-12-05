@@ -321,6 +321,17 @@ do {\
 
 #define NCC_FLOAT_BOUND_CHECK(_ci, _name, _var, _op, _bound) NCC_FLOAT_COND_CHECK(_ci, _name, _var, (_var _op _bound), _bound)
 
+#define NCC_TIME_DELTA_BOUND_CHECK(_ci, _name, _var, _op, _bound)\
+do {\
+	if (!(_var _op _bound)) {\
+		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
+			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
+		else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
+			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
+		_var = _bound;\
+	}\
+} while (0)
+
 
 
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */

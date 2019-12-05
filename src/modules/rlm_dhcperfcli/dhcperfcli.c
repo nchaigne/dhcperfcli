@@ -926,7 +926,7 @@ static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now,
  */
 static void dpc_event_add_progress_stats(void)
 {
-	if (!ECTX.ftd_progress_interval) return;
+	if (!CONF.ftd_progress_interval) return;
 
 	/*
 	 *	Generate uniformly spaced out statistics.
@@ -940,7 +940,7 @@ static void dpc_event_add_progress_stats(void)
 
 	/* Ensure the scheduled time is in the future. */
 	do {
-		fte_progress_stat += ECTX.ftd_progress_interval;
+		fte_progress_stat += CONF.ftd_progress_interval;
 	} while (fte_progress_stat < now);
 
 	if (fr_event_timer_at(global_ctx, event_list, &ev_progress_stats,
@@ -3640,7 +3640,7 @@ static void dpc_end(void)
 		ncc_timedata_stop();
 
 		/* If we're producing progress statistics, do it one last time. */
-		if (ECTX.ftd_progress_interval && dpc_job_elapsed_time_get() > CONF.progress_interval) {
+		if (CONF.ftd_progress_interval && dpc_job_elapsed_fr_time_get() > CONF.ftd_progress_interval) {
 			dpc_progress_stats_fprint(stdout, true);
 		}
 
@@ -3826,7 +3826,7 @@ int main(int argc, char **argv)
 		retr_breakdown = talloc_zero_array(global_ctx, uint32_t, CONF.retransmit_max);
 	}
 
-	ECTX.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
+	CONF.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
 	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 

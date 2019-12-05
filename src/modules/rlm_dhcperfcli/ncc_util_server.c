@@ -73,9 +73,14 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 
 	case FR_TYPE_TIME_DELTA:
 	{
-		fr_time_delta_t ftd;
-		memcpy(&ftd, out, sizeof(ftd));
-		value_double = ncc_fr_time_to_float(ftd);
+		fr_time_delta_t v;
+		memcpy(&v, out, sizeof(v));
+
+		if (!v && ignore_zero) return 0;
+		if (force_min) NCC_TIME_DELTA_BOUND_CHECK(ci, item_name, v, >=, ncc_float_to_fr_time(parse_ctx->_float.min));
+		if (force_max) NCC_TIME_DELTA_BOUND_CHECK(ci, item_name, v, <=, ncc_float_to_fr_time(parse_ctx->_float.max));
+		memcpy(out, &v, sizeof(v));
+		value_double = ncc_fr_time_to_float(v);
 	}
 		break;
 

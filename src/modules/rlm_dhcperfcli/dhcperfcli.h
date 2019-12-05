@@ -25,7 +25,6 @@ extern dpc_context_t exe_ctx;
 struct dpc_context {
 	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
 
-	fr_time_delta_t ftd_progress_interval;
 	fr_time_delta_t ftd_request_timeout;
 
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
