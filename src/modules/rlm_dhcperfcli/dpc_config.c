@@ -8,8 +8,6 @@
 
 #define MAX_ATTR_INPUT 128
 
-static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
-
 static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t fn_input_handle);
 static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments);
 static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments);
@@ -31,12 +29,12 @@ static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, nc
  */
 
 static CONF_PARSER _segment_config[] = {
-	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", .func = float64_positive_parse },
-	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0", .func = float64_positive_parse },
 	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed" },
-	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0", .func = float64_positive_parse },
-	{ FR_CONF_OFFSET("rate_start", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_start), .dflt = "0", .func = float64_positive_parse },
-	{ FR_CONF_OFFSET("rate_end", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_end), .dflt = "0", .func = float64_positive_parse },
+	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0", FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("rate", FR_TYPE_FLOAT64, dpc_segment_config_t, rate), .dflt = "0", FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("rate_start", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_start), .dflt = "0", FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("rate_end", FR_TYPE_FLOAT64, dpc_segment_config_t, rate_end), .dflt = "0", FLOAT64_NOT_NEGATIVE },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -143,21 +141,6 @@ void _cf_rules_fix_strings(CONF_PARSER const *rules, dpc_config_t *old_config, d
 			*pvalue = old_value;
 		}
 	}
-}
-
-static int float64_positive_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
-{
-	double value;
-
-	if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
-	error:
-		return -1;
-	}
-
-	memcpy(&value, out, sizeof(value));
-	CONF_CI_CHECK_FLOAT(ci, value >= 0, ">= 0");
-
-	return 0;
 }
 
 /**

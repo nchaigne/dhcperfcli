@@ -303,6 +303,9 @@ typedef struct ncc_parse_ctx_t {
 
 } ncc_parse_ctx_t;
 
+#define FLOAT64_NOT_NEGATIVE .func = ncc_conf_item_parse, \
+	.uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, .type_check = NCC_TYPE_NOT_NEGATIVE }
+
 
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
 typedef struct ncc_fr_event_timer {
