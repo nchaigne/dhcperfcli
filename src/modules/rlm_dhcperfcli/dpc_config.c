@@ -61,7 +61,6 @@ static const CONF_PARSER _progress_config[] = {
 		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,
 		.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_FORCE_MIN, ._float.min = 0.1
 	} },
-
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input_digest", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input_digest), .dflt = "no" },
@@ -71,7 +70,10 @@ static const CONF_PARSER _progress_config[] = {
 };
 
 static const CONF_PARSER _transport_config[] = {
-	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout) }, /* No default */
+	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), /* No default */
+		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,
+		.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, ._float.min = 0.01, ._float.max = 3600
+	} },
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
 	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) }, /* No default */
 
@@ -469,7 +471,6 @@ int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
  */
 int dpc_config_check(dpc_config_t *config)
 {
-	CONF_CHECK_FLOAT("request_timeout", config->request_timeout, config->request_timeout >= 0, ">= 0");
 	CONF_CHECK_UINT64("base_xid", config->base_xid, config->base_xid <= UINT32_MAX, "<= 0xffffffff");
 	CONF_CHECK_FLOAT("rate_limit", config->rate_limit, config->rate_limit >= 0, ">= 0");
 	CONF_CHECK_FLOAT("duration_start_max", config->duration_start_max, config->duration_start_max >= 0, ">= 0");
@@ -480,7 +481,7 @@ int dpc_config_check(dpc_config_t *config)
 	 */
 	if (CONF.progress_interval) {
 		if (CONF.progress_interval < 0.1) CONF.progress_interval = 0.1;
-		else if (CONF.progress_interval > 864000) CONF.progress_interval = 0;
+		else if (CONF.progress_interval > 86400) CONF.progress_interval = 0;
 	}
 
 	if (CONF.request_timeout) {
