@@ -227,6 +227,8 @@ extern int ncc_debug_lvl;
 #define NCC_TYPE_NOT_EMPTY     (1 << 10)
 #define NCC_TYPE_NOT_NEGATIVE  (1 << 11)
 #define NCC_TYPE_NOT_ZERO      (1 << 12)
+#define NCC_TYPE_CHECK_MIN     (1 << 13)
+#define NCC_TYPE_CHECK_MAX     (1 << 14)
 
 /* Custom log flags that can extend fr_log_type_t */
 #define NCC_LOG_LOCATION       (1 << 10)
@@ -285,6 +287,23 @@ typedef struct ncc_endpoint_list {
 } ncc_endpoint_list_t;
 
 
+/*
+ *	Context for custom parser function ncc_conf_item_parse (called by FreeRADIUS).
+ */
+typedef struct ncc_parse_ctx_t {
+	uint32_t type;       //<! Base fr_type_t value.
+	uint32_t type_check; //<! Flags to specify the checks to perform on value.
+
+	union {
+		struct {
+			double min;
+			double max;
+		} _float;        //<! Value bounds for float32, float64, time delta.
+	};
+
+} ncc_parse_ctx_t;
+
+
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
 typedef struct ncc_fr_event_timer {
 	fr_event_list_t		*el;			//!< because talloc_parent() is O(N) in number of objects
@@ -333,6 +352,7 @@ FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
 FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);
 int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone);
 
+int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
 VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
 void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth);
 void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth);

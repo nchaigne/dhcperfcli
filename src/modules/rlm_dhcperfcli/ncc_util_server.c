@@ -10,6 +10,91 @@
 #include "ncc_util.h"
 
 
+/**
+ * Custom generic parsing function which performs value checks on a conf item.
+ * TODO: handle more types / checks.
+ */
+int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
+{
+	ncc_parse_ctx_t const *parse_ctx = rule->uctx;
+
+	char const *item_name = cf_pair_attr(cf_item_to_pair(ci));
+
+	if (!parse_ctx) {
+		cf_log_err(ci, "Missing parse context for \"%s\"", item_name);
+		return -1;
+	}
+
+	if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
+		return -1;
+	}
+
+	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
+	uint32_t type_check = parse_ctx->type_check;
+
+	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
+	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
+
+	/* First pass.
+	 * Extract the value, and check the type is handled.
+	 */
+	double value_double;
+
+	switch (type) {
+	case FR_TYPE_FLOAT32:
+	{
+		float v;
+		memcpy(&v, out, sizeof(v));
+		value_double = v;
+	}
+		break;
+
+	case FR_TYPE_FLOAT64:
+	{
+		double v;
+		memcpy(&v, out, sizeof(v));
+		value_double = v;
+	}
+		break;
+
+	case FR_TYPE_TIME_DELTA:
+	{
+		fr_time_delta_t ftd;
+		memcpy(&ftd, out, sizeof(ftd));
+		value_double = ncc_fr_time_to_float(ftd);
+	}
+		break;
+
+	default:
+		cf_log_err(ci, "Invalid type '%s' (%i) in parse context for \"%s\"",
+		           fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type, item_name);
+
+		return -1;
+	}
+
+	/*
+	 * Now check value.
+	 */
+	switch (type) {
+	case FR_TYPE_FLOAT32:
+	case FR_TYPE_FLOAT64:
+	case FR_TYPE_TIME_DELTA:
+	{
+		if (check_min && value_double < parse_ctx->_float.min) {
+			cf_log_err(ci, "Invalid value for \"%s\" (min: %f)", item_name, parse_ctx->_float.min);
+			return -1;
+		}
+		if (check_max && value_double > parse_ctx->_float.max) {
+			cf_log_err(ci, "Invalid value for \"%s\" (max: %f)", item_name, parse_ctx->_float.max);
+			return -1;
+		}
+	}
+		break;
+	}
+
+	return 0;
+}
+
 /*
  *	Convert a CONF_PAIR to a VALUE_PAIR.
  */
