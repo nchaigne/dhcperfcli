@@ -32,6 +32,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
 	uint32_t type_check = parse_ctx->type_check;
 
+	bool not_negative = (type_check & NCC_TYPE_NOT_NEGATIVE);
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
 
@@ -80,6 +81,10 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	case FR_TYPE_FLOAT64:
 	case FR_TYPE_TIME_DELTA:
 	{
+		if (not_negative && value_double < 0) {
+			cf_log_err(ci, "Invalid value for \"%s\" (cannot be negative)", item_name);
+			return -1;
+		}
 		if (check_min && value_double < parse_ctx->_float.min) {
 			cf_log_err(ci, "Invalid value for \"%s\" (min: %f)", item_name, parse_ctx->_float.min);
 			return -1;
