@@ -55,6 +55,20 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		return -1; \
 	}
 
+#define CHECK_VALUE_MIN(_type, _ctx_type) { \
+	if (check_min && v < parse_ctx->_ctx_type.min) { \
+		cf_log_err(ci, "Invalid value for \"%s\" (min: %pV)", item_name, fr_box_##_type(parse_ctx->_ctx_type.min)); \
+		return -1; \
+	} \
+}
+
+#define CHECK_VALUE_MAX(_type, _ctx_type) { \
+	if (check_max && v > parse_ctx->_ctx_type.max) { \
+		cf_log_err(ci, "Invalid value for \"%s\" (max: %pV)", item_name, fr_box_##_type(parse_ctx->_ctx_type.max)); \
+		return -1; \
+	} \
+}
+
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
 	CHECK_IGNORE_ZERO \
@@ -63,6 +77,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	if (force_min) NCC_CI_VALUE_BOUND_CHECK(ci, _type, item_name, v, >=, parse_ctx->_ctx_type.min); \
 	if (force_max) NCC_CI_VALUE_BOUND_CHECK(ci, _type, item_name, v, <=, parse_ctx->_ctx_type.max); \
 	memcpy(out, &v, sizeof(v)); \
+	CHECK_VALUE_MIN(_type, _ctx_type) \
+	CHECK_VALUE_MAX(_type, _ctx_type) \
 }
 
 #define CHECK_FLOAT_MIN(_v) { \

@@ -96,7 +96,10 @@ static const CONF_PARSER _main_config[] = {
 	// Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
 	{ FR_CONF_OFFSET("ignore_invalid_input", FR_TYPE_BOOL, dpc_config_t, ignore_invalid_input), .dflt = "yes" },
 
-	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid) }, /* No default */
+	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid), /* No default */
+		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT64,
+		.type_check = NCC_TYPE_CHECK_MAX, .uinteger.max = 0xffffffff },
+	},
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 
 	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },
@@ -104,6 +107,13 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_POINTER("progress", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _progress_config },
 	{ FR_CONF_POINTER("transport", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _transport_config },
 	{ FR_CONF_POINTER("load", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _load_config },
+
+	// test
+	{ FR_CONF_OFFSET("ftd_progress_interval", FR_TYPE_TIME_DELTA, dpc_config_t, ftd_progress_interval),
+		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_TIME_DELTA,
+		.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX,
+		._float.min = 0.001, ._float.max = 86400.003002001 }
+	},
 
 	CONF_PARSER_TERMINATOR
 };
