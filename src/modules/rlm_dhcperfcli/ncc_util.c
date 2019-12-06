@@ -1687,38 +1687,38 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	uint32_t type_check = parse_ctx->type_check;
 
 	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
+	bool not_negative = (type_check & NCC_TYPE_NOT_NEGATIVE);
 	bool force_min = (type_check & NCC_TYPE_FORCE_MIN);
 	bool force_max = (type_check & NCC_TYPE_FORCE_MAX);
 
-	/* First pass.
-	 * Extract the value, and check the type is handled.
-	 */
-	double value_double;
+#define CHECK_FLOAT_VALUE { \
+	memcpy(&v, out, sizeof(v)); \
+	if (ignore_zero && !v) return 0; \
+	if (not_negative && v < 0) { \
+		fr_strerror_printf("Invalid value \"%f\" (cannot be negative)", v); \
+		return -1; \
+	} \
+	if (force_min) NCC_FLOAT_BOUND_CHECK(ret, v, >=, parse_ctx->_float.min); \
+	if (force_max) NCC_FLOAT_BOUND_CHECK(ret, v, <=, parse_ctx->_float.max); \
+	memcpy(out, &v, sizeof(v)); \
+}
 
+	/*
+	 * Extract the value, and check the type is handled.
+	 * Perform specified checks.
+	 */
 	switch (type) {
 	case FR_TYPE_FLOAT32:
 	{
 		float v;
-		memcpy(&v, out, sizeof(v));
-
-		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_FLOAT_BOUND_CHECK(ret, v, >=, parse_ctx->_float.min);
-		if (force_max) NCC_FLOAT_BOUND_CHECK(ret, v, <=, parse_ctx->_float.max);
-		memcpy(out, &v, sizeof(v));
-		value_double = v;
+		CHECK_FLOAT_VALUE
 	}
 		break;
 
 	case FR_TYPE_FLOAT64:
 	{
 		double v;
-		memcpy(&v, out, sizeof(v));
-
-		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_FLOAT_BOUND_CHECK(ret, v, >=, parse_ctx->_float.min);
-		if (force_max) NCC_FLOAT_BOUND_CHECK(ret, v, <=, parse_ctx->_float.max);
-		memcpy(out, &v, sizeof(v));
-		value_double = v;
+		CHECK_FLOAT_VALUE
 	}
 		break;
 
