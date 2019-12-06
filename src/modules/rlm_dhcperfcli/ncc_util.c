@@ -1434,7 +1434,6 @@ error:
  */
 int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen)
 {
-	bool not_empty, not_negative, not_zero;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
 	char buffer[4096];
@@ -1460,17 +1459,12 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	char const *end = ncc_strr_notspace(value, -1);
 	ssize_t len = end ? (end - value + 1) : 0;
 
-	/* Optional qualifiers. */
-	not_empty = (type & NCC_TYPE_NOT_EMPTY);
-	not_negative = (type & NCC_TYPE_NOT_NEGATIVE);
-	not_zero = (type & NCC_TYPE_NOT_ZERO);
-
 	type = FR_BASE_TYPE(type);
 
 	/*
 	 *	Check for zero length strings
 	 */
-	if ((value[0] == '\0') && not_empty) {
+	if (value[0] == '\0') {
 		fr_strerror_printf("Value cannot be empty");
 		return -1;
 	}
@@ -1504,18 +1498,6 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 		} \
 	} while (0)
 
-#define CHECK_NOT_ZERO(_v) \
-		if (not_zero && _v == 0) { \
-			fr_strerror_printf("Value cannot be zero"); \
-			return -1; \
-		}
-
-#define CHECK_NOT_NEGATIVE(_v) \
-		if (not_negative && _v < 0) { \
-			fr_strerror_printf("Value cannot be negative"); \
-			return -1; \
-		}
-
 	/*
 	 *	First pass for integers.
 	 */
@@ -1528,8 +1510,6 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
 		if (ncc_strtoull(&uinteger, value) < 0) return -1;
-
-		CHECK_NOT_ZERO(uinteger);
 		break;
 
 	case FR_TYPE_INT8:
@@ -1540,9 +1520,6 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
 		 */
 		if (ncc_strtoll(&sinteger, value) < 0) return -1;
-
-		CHECK_NOT_ZERO(sinteger);
-		CHECK_NOT_NEGATIVE(sinteger);
 		break;
 
 	default:
@@ -1566,8 +1543,6 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	{
 		float v;
 		if (ncc_strtof(&v, value) < 0) return -1;
-		CHECK_NOT_ZERO(v);
-		CHECK_NOT_NEGATIVE(v);
 		if (out) *(float *)out = v;
 	}
 		break;
@@ -1576,8 +1551,6 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	{
 		double v;
 		if (ncc_strtod(&v, value) < 0) return -1;
-		CHECK_NOT_ZERO(v);
-		CHECK_NOT_NEGATIVE(v);
 		if (out) *(double *)out = v;
 	}
 		break;

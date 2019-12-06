@@ -3348,16 +3348,6 @@ static void dpc_options_parse(int argc, char **argv)
 	if (ret < 0) ERROR_PARSE_OPT else if (ret) WARN_PARSE_OPT;\
 }
 
-#define CHECK_OPT(_cond, _expected) \
-		if (!(_cond)) { \
-			ERROR("Invalid value for option \"%s\" (expected: " _expected ")", opt_buf); \
-			usage(EXIT_FAILURE); \
-		}
-
-#define PARSE_OPT_COND(_to, _type, _cond, _expected) \
-		PARSE_OPT(_to, _type); \
-		CHECK_OPT(_cond, _expected);
-
 	/* The getopt API allows for an option with has_arg = "optional_argument"
 	 * to be passed as "--arg" or "--arg=val", but not "--arg val".
 	 * We have to handle this case ourselves: look at the next argument if there is one.
