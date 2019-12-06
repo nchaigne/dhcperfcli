@@ -39,8 +39,28 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
 
-	/* First pass.
+#define CHECK_IGNORE_ZERO \
+	if (ignore_zero && !v) return 0;
+
+#define CHECK_NOT_NEGATIVE \
+	if (not_negative && v < 0) { \
+		cf_log_err(ci, "Invalid value for \"%s\" (cannot be negative)", item_name); \
+		return -1; \
+	}
+
+#define CHECK_FLOAT_VALUE { \
+	memcpy(&v, out, sizeof(v)); \
+	CHECK_IGNORE_ZERO \
+	CHECK_NOT_NEGATIVE \
+	if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min); \
+	if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max); \
+	memcpy(out, &v, sizeof(v)); \
+	value_double = v; \
+}
+
+	/*
 	 * Extract the value, and check the type is handled.
+	 * Perform specified checks.
 	 */
 	double value_double;
 
@@ -48,26 +68,14 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	case FR_TYPE_FLOAT32:
 	{
 		float v;
-		memcpy(&v, out, sizeof(v));
-
-		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
-		if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max);
-		memcpy(out, &v, sizeof(v));
-		value_double = v;
+		CHECK_FLOAT_VALUE
 	}
 		break;
 
 	case FR_TYPE_FLOAT64:
 	{
 		double v;
-		memcpy(&v, out, sizeof(v));
-
-		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
-		if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max);
-		memcpy(out, &v, sizeof(v));
-		value_double = v;
+		CHECK_FLOAT_VALUE
 	}
 		break;
 
@@ -75,8 +83,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	{
 		fr_time_delta_t v;
 		memcpy(&v, out, sizeof(v));
-
-		if (!v && ignore_zero) return 0;
+		CHECK_IGNORE_ZERO
+		CHECK_NOT_NEGATIVE
 		if (force_min) NCC_CI_TIME_DELTA_BOUND_CHECK(ci, item_name, v, >=, ncc_float_to_fr_time(parse_ctx->_float.min));
 		if (force_max) NCC_CI_TIME_DELTA_BOUND_CHECK(ci, item_name, v, <=, ncc_float_to_fr_time(parse_ctx->_float.max));
 		memcpy(out, &v, sizeof(v));
@@ -92,17 +100,13 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	}
 
 	/*
-	 * Now check value.
+	 * Common value checks.
 	 */
 	switch (type) {
 	case FR_TYPE_FLOAT32:
 	case FR_TYPE_FLOAT64:
 	case FR_TYPE_TIME_DELTA:
 	{
-		if (not_negative && value_double < 0) {
-			cf_log_err(ci, "Invalid value for \"%s\" (cannot be negative)", item_name);
-			return -1;
-		}
 		if (check_min && value_double < parse_ctx->_float.min) {
 			cf_log_err(ci, "Invalid value for \"%s\" (min: %f)", item_name, parse_ctx->_float.min);
 			return -1;
