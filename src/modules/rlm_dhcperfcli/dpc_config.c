@@ -69,9 +69,7 @@ static const CONF_PARSER _progress_config[] = {
 
 static const CONF_PARSER _transport_config[] = {
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), /* No default */
-		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,
-		.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, ._float.min = 0.01, ._float.max = 3600
-	} },
+		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_REQUEST_TIMEOUT },
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
 	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) }, /* No default */
 
@@ -471,19 +469,6 @@ int dpc_config_check(dpc_config_t *config)
 {
 	CONF_CHECK_UINT64("base_xid", config->base_xid, config->base_xid <= UINT32_MAX, "<= 0xffffffff");
 	CONF_CHECK_UINT("session_max_active", config->session_max_active, config->session_max_active >= 1, ">= 1");
-
-	/*
-	 *	Check and fix absurd values.
-	 */
-	if (CONF.progress_interval) {
-		if (CONF.progress_interval < 0.1) CONF.progress_interval = 0.1;
-		else if (CONF.progress_interval > 86400) CONF.progress_interval = 0;
-	}
-
-	if (CONF.request_timeout) {
-		if (CONF.request_timeout < 0.01) CONF.request_timeout = 0.01;
-		else if (CONF.request_timeout > 3600) CONF.request_timeout = 3600;
-	}
 
 	return 0;
 }

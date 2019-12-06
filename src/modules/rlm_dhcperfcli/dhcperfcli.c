@@ -3333,7 +3333,7 @@ static void dpc_options_parse(int argc, char **argv)
 	int ret;
 
 #define ERROR_PARSE_OPT { \
-		PERROR("Invalid value for option \"%s\"", opt_buf); \
+		PERROR("Option \"%s\"", opt_buf); \
 		usage(EXIT_FAILURE); \
 	}
 
@@ -3472,7 +3472,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'L':
-			PARSE_OPT(CONF.duration_start_max, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
+			PARSE_OPT_CTX(CONF.duration_start_max, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
 			break;
 
 		case 'M':
@@ -3496,7 +3496,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'r':
-			PARSE_OPT(CONF.rate_limit, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
+			PARSE_OPT_CTX(CONF.rate_limit, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
 			break;
 
 		case 's':
@@ -3504,7 +3504,8 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 't':
-			PARSE_OPT(CONF.request_timeout, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
+			PARSE_OPT_CTX(CONF.request_timeout, FR_TYPE_FLOAT64, PARSE_CTX_REQUEST_TIMEOUT);
+
 			/* 0 is allowed, it means we don't wait for replies, ever.
 			 * This entails that:
 			 * - we won't have "timed out" requests
@@ -3545,7 +3546,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_INPUT_RATE: // --input-rate
-				PARSE_OPT(CONF.input_rate_limit, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
+				PARSE_OPT_CTX(CONF.input_rate_limit, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit

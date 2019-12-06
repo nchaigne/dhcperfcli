@@ -138,3 +138,7 @@ do {\
  */
 #define PARSE_CTX_PROGRESS_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,\
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN, ._float.min = 0.1 }
+
+#define PARSE_CTX_REQUEST_TIMEOUT &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,\
+	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, \
+	._float.min = 0.01, ._float.max = 3600 }
