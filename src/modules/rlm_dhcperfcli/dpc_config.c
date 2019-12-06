@@ -97,9 +97,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("ignore_invalid_input", FR_TYPE_BOOL, dpc_config_t, ignore_invalid_input), .dflt = "yes" },
 
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid), /* No default */
-		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT64,
-		.type_check = NCC_TYPE_CHECK_MAX, .uinteger.max = 0xffffffff },
-	},
+		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_BASE_XID },
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 
 	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },

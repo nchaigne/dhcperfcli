@@ -3453,12 +3453,8 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-		{
 			/* Stored as uint64_t because it is required by the config parser. */
-			uint32_t u32;
-			PARSE_OPT(u32, FR_TYPE_UINT32);
-			CONF.base_xid = u32;
-		}
+			PARSE_OPT_CTX(CONF.base_xid, FR_TYPE_UINT64, PARSE_CTX_BASE_XID);
 			break;
 
 		case 'L':
