@@ -1697,6 +1697,20 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	} \
 }
 
+#define CHECK_FLOAT_MIN(_v) { \
+	if (check_min && v < parse_ctx->_float.min) { \
+		fr_strerror_printf("Invalid value \"%f\" (min: %f)", v, parse_ctx->_float.min); \
+		return -1; \
+	} \
+}
+
+#define CHECK_FLOAT_MAX(_v) { \
+	if (check_max && v > parse_ctx->_float.max) { \
+		fr_strerror_printf("Invalid value \"%f\" (max: %f)", v, parse_ctx->_float.max); \
+		return -1; \
+	} \
+}
+
 #define CHECK_FLOAT_VALUE { \
 	memcpy(&v, out, sizeof(v)); \
 	CHECK_IGNORE_ZERO \
@@ -1708,14 +1722,8 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	if (force_min) NCC_FLOAT_BOUND_CHECK(ret, v, >=, parse_ctx->_float.min); \
 	if (force_max) NCC_FLOAT_BOUND_CHECK(ret, v, <=, parse_ctx->_float.max); \
 	memcpy(out, &v, sizeof(v)); \
-	if (check_min && v < parse_ctx->_float.min) { \
-		fr_strerror_printf("Invalid value \"%f\" (min: %f)", v, parse_ctx->_float.min); \
-		return -1; \
-	} \
-	if (check_max && v > parse_ctx->_float.max) { \
-		fr_strerror_printf("Invalid value \"%f\" (max: %f)", v, parse_ctx->_float.max); \
-		return -1; \
-	} \
+	CHECK_FLOAT_MIN(v) \
+	CHECK_FLOAT_MAX(v) \
 }
 
 	/*

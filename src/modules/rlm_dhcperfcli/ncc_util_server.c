@@ -65,6 +65,20 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	memcpy(out, &v, sizeof(v)); \
 }
 
+#define CHECK_FLOAT_MIN(_v) { \
+	if (check_min && v < parse_ctx->_float.min) { \
+		cf_log_err(ci, "Invalid value for \"%s\" (min: %f)", item_name, parse_ctx->_float.min); \
+		return -1; \
+	} \
+}
+
+#define CHECK_FLOAT_MAX(_v) { \
+	if (check_max && v > parse_ctx->_float.max) { \
+		cf_log_err(ci, "Invalid value for \"%s\" (max: %f)", item_name, parse_ctx->_float.max); \
+		return -1; \
+	} \
+}
+
 #define CHECK_FLOAT_VALUE { \
 	memcpy(&v, out, sizeof(v)); \
 	CHECK_IGNORE_ZERO \
@@ -73,7 +87,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min); \
 	if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max); \
 	memcpy(out, &v, sizeof(v)); \
-	value_double = v; \
+	CHECK_FLOAT_MIN(v) \
+	CHECK_FLOAT_MAX(v) \
 }
 
 	/*
@@ -92,21 +107,21 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 
 	case FR_TYPE_UINT64:
 	{
-		uint32_t v;
+		uint64_t v;
 		CHECK_VALUE(uint64, uinteger)
 	}
 		break;
 
 	case FR_TYPE_INT32:
 	{
-		uint32_t v;
+		int32_t v;
 		CHECK_VALUE(int32, integer)
 	}
 		break;
 
 	case FR_TYPE_INT64:
 	{
-		uint32_t v;
+		int64_t v;
 		CHECK_VALUE(int64, integer)
 	}
 		break;
@@ -135,7 +150,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		if (force_min) NCC_CI_TIME_DELTA_BOUND_CHECK(ci, item_name, v, >=, ncc_float_to_fr_time(parse_ctx->_float.min));
 		if (force_max) NCC_CI_TIME_DELTA_BOUND_CHECK(ci, item_name, v, <=, ncc_float_to_fr_time(parse_ctx->_float.max));
 		memcpy(out, &v, sizeof(v));
-		value_double = ncc_fr_time_to_float(v);
+		CHECK_FLOAT_MIN(ncc_fr_time_to_float(v))
+		CHECK_FLOAT_MAX(ncc_fr_time_to_float(v))
 	}
 		break;
 
@@ -144,26 +160,6 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		           fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type, item_name);
 
 		return -1;
-	}
-
-	/*
-	 * Common value checks.
-	 */
-	switch (type) {
-	case FR_TYPE_FLOAT32:
-	case FR_TYPE_FLOAT64:
-	case FR_TYPE_TIME_DELTA:
-	{
-		if (check_min && value_double < parse_ctx->_float.min) {
-			cf_log_err(ci, "Invalid value for \"%s\" (min: %f)", item_name, parse_ctx->_float.min);
-			return -1;
-		}
-		if (check_max && value_double > parse_ctx->_float.max) {
-			cf_log_err(ci, "Invalid value for \"%s\" (max: %f)", item_name, parse_ctx->_float.max);
-			return -1;
-		}
-	}
-		break;
 	}
 
 	return 0;
