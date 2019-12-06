@@ -1687,13 +1687,37 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	uint32_t type_check = parse_ctx->type_check;
 
 	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
+	bool not_zero = (type_check & NCC_TYPE_NOT_ZERO);
 	bool not_negative = (type_check & NCC_TYPE_NOT_NEGATIVE);
 	bool force_min = (type_check & NCC_TYPE_FORCE_MIN);
 	bool force_max = (type_check & NCC_TYPE_FORCE_MAX);
 
+#define CHECK_IGNORE_ZERO \
+	if (ignore_zero && !v) return 0;
+
+#define CHECK_NOT_ZERO \
+	if (not_zero && !v) { \
+		fr_strerror_printf("Invalid value (cannot be zero)"); \
+		return -1; \
+	}
+
+#define CHECK_VALUE(_type, _ctx_type) { \
+	memcpy(&v, out, sizeof(v)); \
+	CHECK_IGNORE_ZERO \
+	CHECK_NOT_ZERO \
+	if (not_negative && v < 0) { \
+		fr_strerror_printf("Invalid value \"%pV\" (cannot be negative)", fr_box_##_type(v)); \
+		return -1; \
+	} \
+	if (force_min) NCC_VALUE_BOUND_CHECK(ret, _type, v, >=, parse_ctx->_ctx_type.min); \
+	if (force_max) NCC_VALUE_BOUND_CHECK(ret, _type, v, <=, parse_ctx->_ctx_type.max); \
+	memcpy(out, &v, sizeof(v)); \
+}
+
 #define CHECK_FLOAT_VALUE { \
 	memcpy(&v, out, sizeof(v)); \
-	if (ignore_zero && !v) return 0; \
+	CHECK_IGNORE_ZERO \
+	CHECK_NOT_ZERO \
 	if (not_negative && v < 0) { \
 		fr_strerror_printf("Invalid value \"%f\" (cannot be negative)", v); \
 		return -1; \
@@ -1708,6 +1732,34 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	 * Perform specified checks.
 	 */
 	switch (type) {
+	case FR_TYPE_UINT32:
+	{
+		uint32_t v;
+		CHECK_VALUE(uint32, uinteger)
+	}
+		break;
+
+	case FR_TYPE_UINT64:
+	{
+		uint64_t v;
+		CHECK_VALUE(uint64, uinteger)
+	}
+		break;
+
+	case FR_TYPE_INT32:
+	{
+		int32_t v;
+		CHECK_VALUE(int32, integer)
+	}
+		break;
+
+	case FR_TYPE_INT64:
+	{
+		int64_t v;
+		CHECK_VALUE(int64, integer)
+	}
+		break;
+
 	case FR_TYPE_FLOAT32:
 	{
 		float v;

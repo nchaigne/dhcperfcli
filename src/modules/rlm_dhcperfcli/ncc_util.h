@@ -302,6 +302,14 @@ typedef struct ncc_parse_ctx_t {
 			double min;
 			double max;
 		} _float;        //<! Value bounds for float32, float64, time delta.
+		struct {
+			int64_t min;
+			int64_t max;
+		} integer;       //<! Value bounds for signed integers.
+		struct {
+			uint64_t min;
+			uint64_t max;
+		} uinteger;          //<! Value bounds for unsigned integers.
 	};
 
 } ncc_parse_ctx_t;
@@ -487,7 +495,22 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 /*
  *	Check macros for configuration items or string option parsing.
  */
-// similar to FR_INTEGER_*_CHECK defined in cf_parse.h, but for float, and providing _name as a variable.
+// Similar to FR_*_CHECK macros defined in cf_parse.h
+
+// Note: for floats we avoid using box functions (e.g. fr_box_float64).
+// Although they are nice to get "0.1" instead of "0.100000", they can also print "1e-06". We don't want that.
+
+#define NCC_CI_VALUE_COND_CHECK(_ci, _type, _name, _var, _cond, _new)\
+do {\
+	if (!(_cond)) {\
+		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"", _name, fr_box_##_type(_var), _name, fr_box_##_type(_new));\
+		/*else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"", _name, fr_box_##_type(_var), _name, fr_box_##_type(_new));*/\
+		_var = _new;\
+	}\
+} while (0)
+
+#define NCC_CI_VALUE_BOUND_CHECK(_ci, _type, _name, _var, _op, _bound) NCC_CI_VALUE_COND_CHECK(_ci, _type, _name, _var, (_var _op _bound), _bound)
+
 #define NCC_CI_FLOAT_COND_CHECK(_ci, _name, _var, _cond, _new)\
 do {\
 	if (!(_cond)) {\
@@ -509,6 +532,17 @@ do {\
 		_var = _bound;\
 	}\
 } while (0)
+
+#define NCC_VALUE_COND_CHECK(_ret, _type, _var, _cond, _new)\
+do {\
+	if (!(_cond)) {\
+		fr_strerror_printf("Ignoring value \"%pV\", forcing to \"%pV\"", fr_box_##_type(_var), fr_box_##_type(_new));\
+		_var = _new;\
+		_ret = 1;\
+	}\
+} while (0)
+
+#define NCC_VALUE_BOUND_CHECK(_ret, _type, _var, _op, _bound) NCC_VALUE_COND_CHECK(_ret, _type, _var, (_var _op _bound), _bound)
 
 #define NCC_FLOAT_COND_CHECK(_ret, _var, _cond, _new)\
 do {\
