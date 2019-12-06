@@ -16,7 +16,10 @@
  */
 int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
 {
-	ncc_parse_ctx_t const *parse_ctx = rule->uctx;
+	ncc_parse_ctx_t *parse_ctx = (ncc_parse_ctx_t *)rule->uctx;
+	/*
+	 * Note: This is supposed to be const. We allow ourselves to use it for convenience.
+	 */
 
 	char const *item_name = cf_pair_attr(cf_item_to_pair(ci));
 
@@ -160,15 +163,14 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	case FR_TYPE_TIME_DELTA:
 	{
 		fr_time_delta_t v;
-		memcpy(&v, out, sizeof(v));
-		CHECK_IGNORE_ZERO
-		CHECK_NOT_ZERO
-		CHECK_NOT_NEGATIVE
-		if (force_min) NCC_CI_VALUE_BOUND_CHECK(ci, time_delta, item_name, v, >=, ncc_float_to_fr_time(parse_ctx->_float.min));
-		if (force_max) NCC_CI_VALUE_BOUND_CHECK(ci, time_delta, item_name, v, <=, ncc_float_to_fr_time(parse_ctx->_float.max));
-		memcpy(out, &v, sizeof(v));
-		CHECK_FLOAT_MIN(ncc_fr_time_to_float(v))
-		CHECK_FLOAT_MAX(ncc_fr_time_to_float(v))
+
+		/* Convert min/max values from float to fr_time_delta_t, and put them back in the context. */
+		fr_time_delta_t ftd_min = ncc_float_to_fr_time(parse_ctx->_float.min);
+		fr_time_delta_t ftd_max = ncc_float_to_fr_time(parse_ctx->_float.max);
+		parse_ctx->ftd.min = ftd_min;
+		parse_ctx->ftd.max = ftd_max;
+
+		CHECK_VALUE(time_delta, ftd);
 	}
 		break;
 

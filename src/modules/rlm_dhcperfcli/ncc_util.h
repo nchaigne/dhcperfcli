@@ -309,7 +309,11 @@ typedef struct ncc_parse_ctx_t {
 		struct {
 			uint64_t min;
 			uint64_t max;
-		} uinteger;          //<! Value bounds for unsigned integers.
+		} uinteger;      //<! Value bounds for unsigned integers.
+		struct {
+			fr_time_delta_t min;
+			fr_time_delta_t max;
+		} ftd;           //<! Value bounds for time delta (not to be used directly: converted from _float).
 	};
 
 } ncc_parse_ctx_t;
