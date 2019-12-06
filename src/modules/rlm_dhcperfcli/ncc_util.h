@@ -309,30 +309,6 @@ typedef struct ncc_parse_ctx_t {
 #define FLOAT64_NOT_NEGATIVE .func = ncc_conf_item_parse, \
 	.uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, .type_check = NCC_TYPE_NOT_NEGATIVE }
 
-// similar to FR_INTEGER_*_CHECK defined in cf_parse.h, but for float, and providing _name as a variable.
-#define NCC_FLOAT_COND_CHECK(_ci, _name, _var, _cond, _new)\
-do {\
-	if (!(_cond)) {\
-		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %f\", forcing to \"%s = %f\"", _name, _var, _name, _new);\
-		else WARN("Ignoring configured \"%s = %f\", forcing to \"%s = %f\"", _name, _var, _name, _new);\
-		_var = _new;\
-	}\
-} while (0)
-
-#define NCC_FLOAT_BOUND_CHECK(_ci, _name, _var, _op, _bound) NCC_FLOAT_COND_CHECK(_ci, _name, _var, (_var _op _bound), _bound)
-
-#define NCC_TIME_DELTA_BOUND_CHECK(_ci, _name, _var, _op, _bound)\
-do {\
-	if (!(_var _op _bound)) {\
-		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
-			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
-		else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
-			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
-		_var = _bound;\
-	}\
-} while (0)
-
-
 
 /* Get visibility on fr_event_timer_t opaque struct (fr_event_timer is defined in lib/util/event.c) */
 typedef struct ncc_fr_event_timer {
@@ -407,6 +383,7 @@ int ncc_strtof(float *out, char const *value);
 int ncc_strtod(double *out, char const *value);
 int ncc_strtobool(bool *out, char const *value);
 int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
+int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t const *parse_ctx);
 
 double ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *tv, double in);
@@ -504,3 +481,41 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 	} \
 	if (value) _ret = fr_table_value_by_str(_table, value, _def); \
 }
+
+
+/*
+ *	Check macros for configuration items or string option parsing.
+ */
+// similar to FR_INTEGER_*_CHECK defined in cf_parse.h, but for float, and providing _name as a variable.
+#define NCC_CI_FLOAT_COND_CHECK(_ci, _name, _var, _cond, _new)\
+do {\
+	if (!(_cond)) {\
+		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %f\", forcing to \"%s = %f\"", _name, _var, _name, _new);\
+		else WARN("Ignoring configured \"%s = %f\", forcing to \"%s = %f\"", _name, _var, _name, _new);\
+		_var = _new;\
+	}\
+} while (0)
+
+#define NCC_CI_FLOAT_BOUND_CHECK(_ci, _name, _var, _op, _bound) NCC_CI_FLOAT_COND_CHECK(_ci, _name, _var, (_var _op _bound), _bound)
+
+#define NCC_CI_TIME_DELTA_BOUND_CHECK(_ci, _name, _var, _op, _bound)\
+do {\
+	if (!(_var _op _bound)) {\
+		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
+			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
+		else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
+			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
+		_var = _bound;\
+	}\
+} while (0)
+
+#define NCC_FLOAT_COND_CHECK(_ret, _var, _cond, _new)\
+do {\
+	if (!(_cond)) {\
+		fr_strerror_printf("Ignoring value \"%f\", forcing to \"%f\"", _var, _new);\
+		_var = _new;\
+		_ret = 1;\
+	}\
+} while (0)
+
+#define NCC_FLOAT_BOUND_CHECK(_ret, _var, _op, _bound) NCC_FLOAT_COND_CHECK(_ret, _var, (_var _op _bound), _bound)

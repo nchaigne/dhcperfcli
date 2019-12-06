@@ -1659,6 +1659,78 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	return 0;
 }
 
+ /**
+ * Parse a string value into a given FreeRADIUS data type (FR_TYPE_...).
+ * Check that value is valid for the data type, and obtain converted value.
+ * Perform additional checks provided in parse context.
+ *
+ * Note: not all FreeRADIUS types are supported.
+ *
+ * @param[out] out        where to write the parsed value (size depends on the type).
+ *                        NULL allows to discard output (validity check only).
+ * @param[in]  type       type of value being parsed (base type | optional qualifiers).
+ * @param[in]  value      string which contains the value to parse.
+ * @param[in]  inlen      length of value, if value is \0 terminated inlen may be -1.
+ * @param[in]  parse_ctx  parse context which defines checks to perform on the parsed value.
+ *
+ * @return -1 = error, 0 = success and value is not modified, 1 = value is forced.
+ */
+int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t const *parse_ctx)
+{
+	int ret = 0; /* Set to 1 if value is forced. */
+
+	if (ncc_value_from_str(out, type, value, inlen) < 0) return -1;
+
+	if (!parse_ctx) return 0;
+
+	type = FR_BASE_TYPE(parse_ctx->type);
+	uint32_t type_check = parse_ctx->type_check;
+
+	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
+	bool force_min = (type_check & NCC_TYPE_FORCE_MIN);
+	bool force_max = (type_check & NCC_TYPE_FORCE_MAX);
+
+	/* First pass.
+	 * Extract the value, and check the type is handled.
+	 */
+	double value_double;
+
+	switch (type) {
+	case FR_TYPE_FLOAT32:
+	{
+		float v;
+		memcpy(&v, out, sizeof(v));
+
+		if (!v && ignore_zero) return 0;
+		if (force_min) NCC_FLOAT_BOUND_CHECK(ret, v, >=, parse_ctx->_float.min);
+		if (force_max) NCC_FLOAT_BOUND_CHECK(ret, v, <=, parse_ctx->_float.max);
+		memcpy(out, &v, sizeof(v));
+		value_double = v;
+	}
+		break;
+
+	case FR_TYPE_FLOAT64:
+	{
+		double v;
+		memcpy(&v, out, sizeof(v));
+
+		if (!v && ignore_zero) return 0;
+		if (force_min) NCC_FLOAT_BOUND_CHECK(ret, v, >=, parse_ctx->_float.min);
+		if (force_max) NCC_FLOAT_BOUND_CHECK(ret, v, <=, parse_ctx->_float.max);
+		memcpy(out, &v, sizeof(v));
+		value_double = v;
+	}
+		break;
+
+	default:
+		fr_strerror_printf("Invalid type '%s' (%i) in parse context",
+		                   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type);
+		return -1;
+	}
+
+	return ret;
+}
+
 /*
  *	Convert a struct timeval to float.
  */

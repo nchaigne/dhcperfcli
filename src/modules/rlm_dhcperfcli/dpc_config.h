@@ -132,3 +132,9 @@ do {\
 
 #define CONF_CI_CHECK_FLOAT(_ci, _cond, _expected)\
 	CONF_CI_CHECK_FMT(_ci, "f", _cond, _expected)
+
+/*
+ *	Specific parsing contexts.
+ */
+#define PARSE_CTX_PROGRESS_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,\
+	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_FORCE_MIN, ._float.min = 0.1 }

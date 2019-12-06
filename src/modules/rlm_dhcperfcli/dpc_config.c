@@ -58,9 +58,7 @@ static const CONF_PARSER _packet_trace_config[] = {
 
 static const CONF_PARSER _progress_config[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), /* No default */
-		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64,
-		.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_FORCE_MIN, ._float.min = 0.1
-	} },
+		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_INTERVAL },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input_digest", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input_digest), .dflt = "no" },

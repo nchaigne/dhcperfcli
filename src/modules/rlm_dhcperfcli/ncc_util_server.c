@@ -51,8 +51,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		memcpy(&v, out, sizeof(v));
 
 		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
-		if (force_max) NCC_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max);
+		if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
+		if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max);
 		memcpy(out, &v, sizeof(v));
 		value_double = v;
 	}
@@ -64,8 +64,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		memcpy(&v, out, sizeof(v));
 
 		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
-		if (force_max) NCC_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max);
+		if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min);
+		if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max);
 		memcpy(out, &v, sizeof(v));
 		value_double = v;
 	}
@@ -77,8 +77,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		memcpy(&v, out, sizeof(v));
 
 		if (!v && ignore_zero) return 0;
-		if (force_min) NCC_TIME_DELTA_BOUND_CHECK(ci, item_name, v, >=, ncc_float_to_fr_time(parse_ctx->_float.min));
-		if (force_max) NCC_TIME_DELTA_BOUND_CHECK(ci, item_name, v, <=, ncc_float_to_fr_time(parse_ctx->_float.max));
+		if (force_min) NCC_CI_TIME_DELTA_BOUND_CHECK(ci, item_name, v, >=, ncc_float_to_fr_time(parse_ctx->_float.min));
+		if (force_max) NCC_CI_TIME_DELTA_BOUND_CHECK(ci, item_name, v, <=, ncc_float_to_fr_time(parse_ctx->_float.max));
 		memcpy(out, &v, sizeof(v));
 		value_double = ncc_fr_time_to_float(v);
 	}

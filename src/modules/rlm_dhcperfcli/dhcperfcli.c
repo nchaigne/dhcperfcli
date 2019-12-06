@@ -3330,13 +3330,23 @@ static void dpc_options_parse(int argc, char **argv)
 	int argval;
 	int opt_index = -1; /* Stores the option index for long options. */
 	int i, num_arg;
+	int ret;
 
 #define ERROR_PARSE_OPT { \
 		PERROR("Invalid value for option \"%s\"", opt_buf); \
 		usage(EXIT_FAILURE); \
 	}
 
+#define WARN_PARSE_OPT { \
+		PWARN("Option \"%s\"", opt_buf); \
+	}
+
 #define PARSE_OPT(_to, _type) if (ncc_value_from_str(&_to, _type, optarg, -1) < 0) ERROR_PARSE_OPT;
+
+#define PARSE_OPT_CTX(_to, _type, _ctx) {\
+	ret = ncc_parse_value_from_str(&(_to), _type, optarg, -1, _ctx);\
+	if (ret < 0) ERROR_PARSE_OPT else if (ret) WARN_PARSE_OPT;\
+}
 
 #define CHECK_OPT(_cond, _expected) \
 		if (!(_cond)) { \
@@ -3490,7 +3500,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 's':
-			PARSE_OPT(CONF.progress_interval, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE);
+			PARSE_OPT_CTX(CONF.progress_interval, FR_TYPE_FLOAT64, PARSE_CTX_PROGRESS_INTERVAL);
 			break;
 
 		case 't':
