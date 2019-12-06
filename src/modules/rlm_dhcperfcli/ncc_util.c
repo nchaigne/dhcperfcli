@@ -1711,6 +1711,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	} \
 }
 
+// TODO: remove this?
 #define CHECK_FLOAT_VALUE { \
 	memcpy(&v, out, sizeof(v)); \
 	CHECK_IGNORE_ZERO \
@@ -1762,14 +1763,16 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	case FR_TYPE_FLOAT32:
 	{
 		float v;
-		CHECK_FLOAT_VALUE
+		//CHECK_FLOAT_VALUE
+		CHECK_VALUE(float32, _float)
 	}
 		break;
 
 	case FR_TYPE_FLOAT64:
 	{
 		double v;
-		CHECK_FLOAT_VALUE
+		//CHECK_FLOAT_VALUE
+		CHECK_VALUE(float64, _float)
 	}
 		break;
 

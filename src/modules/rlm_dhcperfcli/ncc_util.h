@@ -497,14 +497,16 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
  */
 // Similar to FR_*_CHECK macros defined in cf_parse.h
 
-// Note: for floats we avoid using box functions (e.g. fr_box_float64).
-// Although they are nice to get "0.1" instead of "0.100000", they can also print "1e-06". We don't want that.
+// Note: float64 are printed with "%g" when using FreeRADIUS "%pV" feature.
+// This means we can get "1e-05" instead of "0.00001".
+// But using %f, the default decimal precision is 6, so it's only better for 0.000001 <= v < 0.0001
+// (With fr_time_delta_t we can get "0.000000001".)
 
 #define NCC_CI_VALUE_COND_CHECK(_ci, _type, _name, _var, _cond, _new)\
 do {\
 	if (!(_cond)) {\
 		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"", _name, fr_box_##_type(_var), _name, fr_box_##_type(_new));\
-		/*else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"", _name, fr_box_##_type(_var), _name, fr_box_##_type(_new));*/\
+		else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"", _name, fr_box_##_type(_var), _name, fr_box_##_type(_new));\
 		_var = _new;\
 	}\
 } while (0)
@@ -522,16 +524,7 @@ do {\
 
 #define NCC_CI_FLOAT_BOUND_CHECK(_ci, _name, _var, _op, _bound) NCC_CI_FLOAT_COND_CHECK(_ci, _name, _var, (_var _op _bound), _bound)
 
-#define NCC_CI_TIME_DELTA_BOUND_CHECK(_ci, _name, _var, _op, _bound)\
-do {\
-	if (!(_var _op _bound)) {\
-		if (_ci) cf_log_warn(_ci, "Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
-			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
-		else WARN("Ignoring configured \"%s = %pV\", forcing to \"%s = %pV\"",\
-			_name, fr_box_time_delta(_var), _name, fr_box_time_delta(_bound));\
-		_var = _bound;\
-	}\
-} while (0)
+#define NCC_CI_TIME_DELTA_BOUND_CHECK(_ci, _name, _var, _op, _bound) NCC_CI_VALUE_BOUND_CHECK(_ci, time_delta, _var, _op, _bound)
 
 #define NCC_VALUE_COND_CHECK(_ret, _type, _var, _cond, _new)\
 do {\
