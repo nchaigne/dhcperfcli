@@ -9,6 +9,41 @@
 #include "ncc_util.h"
 
 
+
+/*
+ * Tables which allow to obtain min/max bounds for each of integer types as a string.
+ */
+//#define UINT64_MAX_STR STRINGIFY(UINT64_MAX)
+// => "(18446744073709551615UL)"... not good enough. BTW it's done that way in "inet.c": STRINGIFY(UINT16_MAX)
+
+fr_table_num_ordered_t const fr_type_int_max_table[] = {
+	{ "255",                  FR_TYPE_UINT8 },
+	{ "65536",                FR_TYPE_UINT16 },
+	{ "4294967295",           FR_TYPE_UINT32 },
+	{ "18446744073709551615", FR_TYPE_UINT64 },
+
+	{ "127",                  FR_TYPE_INT8 },
+	{ "32767",                FR_TYPE_INT16 },
+	{ "2147483647",           FR_TYPE_INT32 },
+	{ "9223372036854775807",  FR_TYPE_INT64 },
+};
+size_t fr_type_int_max_table_len = NUM_ELEMENTS(fr_type_int_max_table);
+
+fr_table_num_ordered_t const fr_type_int_min_table[] = {
+	{ "0",                    FR_TYPE_UINT8 },
+	{ "0",                    FR_TYPE_UINT16 },
+	{ "0",                    FR_TYPE_UINT32 },
+	{ "0",                    FR_TYPE_UINT64 },
+
+	{ "-128",                 FR_TYPE_INT8 },
+	{ "-32768",               FR_TYPE_INT16 },
+	{ "-2147483648",          FR_TYPE_INT32 },
+	{ "-9223372036854775808", FR_TYPE_INT64 },
+};
+size_t fr_type_int_min_table_len = NUM_ELEMENTS(fr_type_int_min_table);
+
+
+
 /*
  *	Peek into an event list to retrieve the timestamp of next event.
  *
@@ -1273,7 +1308,7 @@ int ncc_host_addr_resolve(ncc_endpoint_t *ep, char const *host_arg)
  * @param[out] out    where to write the parsed value.
  * @param[in]  value  string which contains the value to parse.
  *
- * @return -1 = error, 0 = success.
+ * @return -2 = range error, -1 = other error, 0 = success.
  */
 int ncc_strtoull(uint64_t *out, char const *value)
 {
@@ -1287,7 +1322,15 @@ int ncc_strtoull(uint64_t *out, char const *value)
 		return -1;
 	}
 
-	if (fr_strtoull(out, &p, value) < 0) return -1;
+	int base = 10;
+	if ((value[0] == '0') && (value[1] == 'x')) base = 16;
+	errno = 0;
+	*out = strtoull(value, &p, base);
+	if (errno == ERANGE) {
+		fr_strerror_printf("Unsigned integer value \"%s\" too large, would overflow", value);
+		return -2;
+	}
+
 	if (*p != '\0' && !is_whitespace(p)) goto error;
 
 	return 0;
@@ -1301,17 +1344,26 @@ int ncc_strtoull(uint64_t *out, char const *value)
  * @param[out] out    where to write the parsed value.
  * @param[in]  value  string which contains the value to parse.
  *
- * @return -1 = error, 0 = success.
+ * @return -2 = range error, -1 = other error, 0 = success.
  */
 int ncc_strtoll(int64_t *out, char const *value)
 {
 	char *p = NULL;
 
-	if (fr_strtoll(out, &p, value) < 0) return -1;
+	int base = 10;
+	if ((value[0] == '0') && (value[1] == 'x')) base = 16;
+	errno = 0;
+	*out = strtoll(value, &p, base);
+	if (errno == ERANGE) {
+		fr_strerror_printf("Signed integer value \"%s\" too large, would overflow", value);
+		return -2;
+	}
+
 	if (*p != '\0' && !is_whitespace(p)) {
 		fr_strerror_printf("Invalid value \"%s\" for integer", value);
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -1434,6 +1486,7 @@ error:
  */
 int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen)
 {
+	int ret;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
 	char buffer[4096];
@@ -1476,26 +1529,23 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 		return -1; \
 	} while (0)
 
+#define INTEGER_OUT_OF_BOUNDS(_fr_type) \
+	do { \
+		fr_strerror_printf("Value out of bounds for type '%s' (range: %s..%s)", \
+			fr_table_str_by_value(fr_value_box_type_table, _fr_type, "<INVALID>"), \
+			fr_table_str_by_value(fr_type_int_min_table, _fr_type, "<INVALID>"), \
+			fr_table_str_by_value(fr_type_int_max_table, _fr_type, "<INVALID>")); \
+		return -1; \
+	} while (0)
+
 #define IN_RANGE_UNSIGNED(_type) \
 	do { \
-		if (uinteger > _type ## _MAX) { \
-			fr_strerror_printf("Invalid value %" PRIu64 " for type '%s' (allowed range: " \
-					   "0..%" PRIu64 ")", \
-					   uinteger, fr_table_str_by_value(fr_value_box_type_table, type, "<INVALID>"), \
-					   (uint64_t) _type ## _MAX); \
-			return -1; \
-		} \
+		if (uinteger > _type ## _MAX) INTEGER_OUT_OF_BOUNDS(type); \
 	} while (0)
 
 #define IN_RANGE_SIGNED(_type) \
 	do { \
-		if ((sinteger > _type ## _MAX) || (sinteger < _type ## _MIN)) { \
-			fr_strerror_printf("Invalid value %" PRId64 " for type '%s' (allowed range: " \
-					   "%" PRId64 "..%" PRId64 ")", \
-					   sinteger, fr_table_str_by_value(fr_value_box_type_table, type, "<INVALID>"), \
-					   (int64_t) _type ## _MIN, (int64_t) _type ## _MAX); \
-			return -1; \
-		} \
+		if ((sinteger > _type ## _MAX) || (sinteger < _type ## _MIN)) INTEGER_OUT_OF_BOUNDS(type); \
 	} while (0)
 
 	/*
@@ -1508,8 +1558,13 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	case FR_TYPE_UINT64:
 		/*
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
+		 *	In case of ERANGE, we set our own error message (which is common to all "out of bounds" cases).
 		 */
-		if (ncc_strtoull(&uinteger, value) < 0) return -1;
+		ret = ncc_strtoull(&uinteger, value);
+		if (ret < 0) {
+			if (ret == -2) INTEGER_OUT_OF_BOUNDS(type);
+			return -1;
+		}
 		break;
 
 	case FR_TYPE_INT8:
@@ -1518,8 +1573,13 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	case FR_TYPE_INT64:
 		/*
 		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
+		 *	In case of ERANGE, we set our own error message (which is common to all "out of bounds" cases).
 		 */
-		if (ncc_strtoll(&sinteger, value) < 0) return -1;
+		ret = ncc_strtoll(&sinteger, value);
+		if (ret < 0) {
+			if (ret == -2) INTEGER_OUT_OF_BOUNDS(type);
+			return -1;
+		}
 		break;
 
 	default:

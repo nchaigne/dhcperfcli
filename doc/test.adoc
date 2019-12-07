@@ -1,0 +1,51 @@
+= Time-data statistics (InfluxDB, Grafana)
+
+dhcperfcli is able to handle time-data statistics, which are collected and reported in real-time.
+This provides much more detail than the other available statistics (ongoing and end report) that are displayed on the console.
+
+Time-data statistics are sent through HTTP to an Influx Database. They can then be displayed in various ways using Grafana dashboards.
+
+Multiple instances of dhcperfcli can send data simultaneously to the same Influx back-end.
+
+
+
+== Prerequisites
+
+To work with InfluxDB, you need to build _dhcperfcli_ with libcurl (and optionally json-c).
+Refer to the xref:INSTALL.md[installation] page for details.
+
+You will also need to set InfluxDB and Grafana servers up. This is pretty straighforward, refer to their respective documentation.
+
+
+=== Authentication
+
+dhcperfcli must be able to perform REST requests serviced by InfluxDB.
+
+The following methods are supported:
+
+* basic authentication (with login and password)
+* bearer authentication (with token)
+
+=== Configuration
+
+Time-data must be specified to dhcperfcli in a configuration file.
+Refer to the sample configuration file provided which details all available parameters.
+
+Configuration example:
+
+`conf/dhcperfcli-influx.conf`
+----
+time-data test-dhcperfcli {
+	destination = influx
+	influx {
+		username = "admin"
+		password = "*****"
+		uri = "http://10.11.12.84:8086/write?db=dpc"
+	}
+}
+----
+
+Usage example:
+----
+echo "DHCP-Client-Hardware-Address=\"%{ethaddr.rand}\"" | dhcperfcli --conf-file conf/dhcperfcli-influx.conf -T -L 60 -p 32 -r 1000 -g 10.11.12.1 10.11.12.42 discover
+----
