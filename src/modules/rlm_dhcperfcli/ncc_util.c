@@ -1319,7 +1319,7 @@ int ncc_strtoull(uint64_t *out, char const *value)
 	if (*value == '-') { /* Don't let strtoull happily process negative values. */
 	error:
 		fr_strerror_printf("Invalid value \"%s\" for unsigned integer", value);
-		return -1;
+		return -2;
 	}
 
 	int base = 10;
