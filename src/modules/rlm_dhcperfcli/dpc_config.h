@@ -145,3 +145,6 @@ do {\
 
 #define PARSE_CTX_BASE_XID &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT64, \
 		.type_check = NCC_TYPE_CHECK_MAX, .uinteger.max = 0xffffffff }
+
+#define PARSE_CTX_SESSION_MAX_ACTIVE &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT32, \
+		.type_check = NCC_TYPE_CHECK_MIN, .uinteger.min = 1 }

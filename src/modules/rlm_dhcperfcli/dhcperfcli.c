@@ -3474,7 +3474,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'p':
-			PARSE_OPT(CONF.session_max_active, FR_TYPE_UINT32);
+			PARSE_OPT_CTX(CONF.session_max_active, FR_TYPE_UINT32, PARSE_CTX_SESSION_MAX_ACTIVE);
 			break;
 
 		case 'P':

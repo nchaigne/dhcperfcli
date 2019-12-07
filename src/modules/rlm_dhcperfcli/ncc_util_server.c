@@ -31,6 +31,9 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
 		return -1;
 	}
+	// For uint64 FreeRADIUS parser handles -1 as max value "18446744073709551615" (i.e. not an error)
+	// For uint32 this is an error: "must be between 0-2147483647" (signed max ? why ??)
+	// TODO: look into this
 
 	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
 	uint32_t type_check = parse_ctx->type_check;
@@ -74,6 +77,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
+	DEBUG3("Configured item \"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", item_name, fr_box_##_type(v)); \
 	CHECK_IGNORE_ZERO \
 	CHECK_NOT_ZERO \
 	CHECK_NOT_NEGATIVE \
