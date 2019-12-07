@@ -1301,7 +1301,7 @@ int ncc_host_addr_resolve(ncc_endpoint_t *ep, char const *host_arg)
 
 /**
  * Parse a uint64 value from a string.
- * Wrapper to fr_strtoull (which in turn is a wrapper to strtoull), with restrictions:
+ * Wrapper to strtoull, with restrictions:
  * - Ensure the provided input is not a negative value (strtoull dubiously allows this).
  * - Check we don't have trailing garbage at the end of the input string (whitespace is allowed).
  *
@@ -1338,7 +1338,7 @@ int ncc_strtoull(uint64_t *out, char const *value)
 
 /**
  * Parse a int64 value from a string.
- * Wrapper to fr_strtoll (which in turn is a wrapper to strtoll), with restrictions:
+ * Wrapper to strtoll, with restrictions:
  * - Check we don't have trailing garbage at the end of the input string (whitespace is allowed).
  *
  * @param[out] out    where to write the parsed value.
