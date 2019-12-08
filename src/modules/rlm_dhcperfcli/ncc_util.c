@@ -1862,16 +1862,25 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 
 #define CONF_SPACE(_depth) ((_depth) * 2)
 
-#define DEBUG_CONF_BOX(_type) do { \
-	if (prefix && prefix[0] != '\0') DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix, rule_p->name, fr_box_##_type(value)); \
-	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), config_spaces, rule_p->name, fr_box_##_type(value)); \
+#define DEBUG_CONF_BOX(_type, _value) do { \
+	if (prefix && prefix[0] != '\0') DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix, rule_p->name, fr_box_##_type(_value)); \
+	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), config_spaces, rule_p->name, fr_box_##_type(_value)); \
 } while (0)
 
 #define _CASE_CONF_TYPE(_fr_type, _c_type, _box_type, _is_ptr) \
 	case _fr_type: \
 	{ \
-		_c_type value = *(_c_type *)((uint8_t *)config + rule_p->offset); \
-		if (!_is_ptr || value) DEBUG_CONF_BOX(_box_type); \
+		if (!(rule_type & FR_TYPE_MULTI)) { \
+			_c_type value = *(_c_type *)((uint8_t *)config + rule_p->offset); \
+			if (!_is_ptr || value) DEBUG_CONF_BOX(_box_type, value); \
+		} else { \
+			_c_type *value_arr = *(_c_type **)((uint8_t *)config + rule_p->offset); \
+			int i; \
+			for (i = 0; i < talloc_array_length(value_arr); i++) { \
+				_c_type value = value_arr[i]; \
+				DEBUG_CONF_BOX(_box_type, value); \
+			} \
+		} \
 	} \
 	break;
 
@@ -1883,7 +1892,8 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 
 
 	for (rule_p = rules; rule_p->name; rule_p++) {
-		int type = FR_BASE_TYPE(rule_p->type);
+		int rule_type = rule_p->type;
+		int type = FR_BASE_TYPE(rule_type);
 
 		switch (type) {
 		CASE_CONF_TYPE_PTR(FR_TYPE_STRING, char *, strvalue);
