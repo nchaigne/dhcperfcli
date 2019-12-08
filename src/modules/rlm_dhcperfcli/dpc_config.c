@@ -130,49 +130,6 @@ static const CONF_PARSER _fix_strings[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-/* Restore strings for which we didn't parse anything.
- * The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
- */
-void _cf_rules_fix_strings(CONF_PARSER const *rules, dpc_config_t *old_config, dpc_config_t *config)
-{
-	CONF_PARSER const *rule_p;
-
-	for (rule_p = rules; rule_p->name; rule_p++) {
-		char **pvalue;
-		char *old_value;
-
-		/* Ensure this is a string. */
-		if (FR_BASE_TYPE(rule_p->type) != FR_TYPE_STRING) continue;
-
-		bool multi = (rule_p->type & FR_TYPE_MULTI);
-
-		DEBUG3("Fixup for configuration string: %s (offset: %u)", rule_p->name, rule_p->offset);
-
-		pvalue = (char**)((uint8_t *)config + rule_p->offset);
-		old_value = *(char**)((uint8_t *)old_config + rule_p->offset);
-
-		/* There was no old value(s), so just leave current as is (NULL or not). */
-		if (!old_value) continue;
-
-		/* If current value is NULL, restore old value.
-		 * It works for single or multi-valued strings.
-		 */
-		if (!*pvalue) {
-			*pvalue = old_value;
-
-		} else if (multi) {
-			/* Multi-valued strings are talloc arrays, we must merge the two arrays (old and current).
-			 */
-			char ***p_array, ***p_array_old;
-
-			p_array = (char ***)(((uint8_t *)config) + rule_p->offset);
-			p_array_old = (char ***)(((uint8_t *)old_config) + rule_p->offset);
-
-			/* Note: we don't need a talloc context here because it's a reallocation. */
-			TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, char *);
-		}
-	}
-}
 
 /**
  * Parse all "input" sections within a configuration section.
@@ -425,7 +382,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	/* Restore strings for which we didn't parse anything.
 	 * The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
 	 */
-	_cf_rules_fix_strings(_fix_strings, &old_config, config);
+	ncc_config_merge(_fix_strings, config, &old_config);
 
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
