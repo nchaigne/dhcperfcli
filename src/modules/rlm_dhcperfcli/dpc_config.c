@@ -437,53 +437,10 @@ int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
 }
 
 /*
- *	Check the configuration.
- */
-int dpc_config_check(dpc_config_t *config)
-{
-	return 0;
-}
-
-/*
  *	Debug the configuration.
  */
 void dpc_config_debug(dpc_config_t *config)
 {
-	#define CONF_DEBUG_FMT(_fmt, _x) \
-		DEBUG("- %s = %" _fmt, STRINGIFY(_x), config->_x);
-
-	#define CONF_DEBUG_INT(_x)\
-		CONF_DEBUG_FMT("d", _x)
-
-	#define CONF_DEBUG_UINT(_x) \
-		CONF_DEBUG_FMT("u", _x)
-
-	#define CONF_DEBUG_UINT64(_x) \
-		CONF_DEBUG_FMT(PRIu64, _x)
-
-	#define CONF_DEBUG_FLOAT(_x) \
-		CONF_DEBUG_FMT("f", _x)
-
-	#define CONF_DEBUG_STR(_x) \
-		if (config->_x) CONF_DEBUG_FMT("s", _x)
-
-	#define CONF_DEBUG_IPADDR(_x) { \
-		char ipaddr_buf[FR_IPADDR_STRLEN] = ""; \
-		if ((config->_x.af == AF_INET) && fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &config->_x)) \
-			DEBUG("- %s = %s", STRINGIFY(_x), ipaddr_buf); \
-	}
-
-	#define CONF_DEBUG_BOOL(_x) \
-		DEBUG("- %s = %s", STRINGIFY(_x), config->_x ? "yes" : "no");
-
-	#define CONF_DEBUG_STR_MULTI(_x) \
-	{ \
-		int i; \
-		for (i = 0; i < talloc_array_length(config->_x); i++) { \
-			DEBUG("- %s[%u] = %s", STRINGIFY(_x), i, config->_x[i]); \
-		} \
-	}
-
 	DEBUG("dhcperfcli: main config {");
 	ncc_parsed_config_debug(_main_config, config, 1, check_config ? "" : NULL);
 	DEBUG("}");

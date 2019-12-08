@@ -3795,7 +3795,6 @@ int main(int argc, char **argv)
 
 	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
 
-	if (dpc_config_check(dpc_config) != 0) exit(EXIT_FAILURE);
 	dpc_config_debug(dpc_config);
 
 	/* Fill in the gaps in the list of global segments. */

@@ -78,7 +78,6 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 void dpc_config_free(dpc_config_t **config);
 int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handle);
 int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list);
-int dpc_config_check(dpc_config_t *config);
 void dpc_config_debug(dpc_config_t *config);
 
 
