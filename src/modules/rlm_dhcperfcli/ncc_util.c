@@ -1921,7 +1921,14 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 		CASE_CONF_TYPE(FR_TYPE_INT32, int32_t, int32);
 
 		CASE_CONF_TYPE(FR_TYPE_TIME_DELTA, fr_time_delta_t, time_delta);
-		CASE_CONF_TYPE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t, ipv4addr);
+
+		//CASE_CONF_TYPE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t, ipv4addr);
+		case FR_TYPE_IPV4_ADDR:
+		{
+			fr_ipaddr_t value = *(fr_ipaddr_t *)((uint8_t *)config + rule_p->offset);
+			if (value.af == AF_INET) DEBUG_CONF_BOX(ipv4addr, value);
+		}
+			break;
 
 		case FR_TYPE_SUBSECTION:
 		{
