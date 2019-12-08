@@ -1946,8 +1946,18 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 		char **pvalue;
 		char *old_value;
 
-		/* Ensure this is a string. */
-		if (FR_BASE_TYPE(rule_p->type) != FR_TYPE_STRING) continue;
+		/* Only strings are handled. */
+		switch (FR_BASE_TYPE(rule_p->type)) {
+		case FR_TYPE_STRING:
+			break;
+
+		case FR_TYPE_SUBSECTION:
+			ncc_config_merge(rule_p->subcs, config, config_old);
+			continue;
+
+		default:
+			continue;
+		}
 
 		bool multi = (rule_p->type & FR_TYPE_MULTI);
 
