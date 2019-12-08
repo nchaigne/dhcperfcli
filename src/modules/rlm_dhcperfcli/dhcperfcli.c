@@ -3443,7 +3443,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'g':
-			dpc_gateway_parse(global_ctx, optarg);
+			TALLOC_REALLOC_ONE_SET(global_ctx, CONF.gateways, char const *, optarg);
 			break;
 
 #ifdef HAVE_LIBPCAP

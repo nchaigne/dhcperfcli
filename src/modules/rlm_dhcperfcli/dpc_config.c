@@ -125,6 +125,7 @@ static const CONF_PARSER _main_config[] = {
 static const CONF_PARSER _fix_strings[] = {
 	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
 	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) },
+	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -143,13 +144,32 @@ void _cf_rules_fix_strings(CONF_PARSER const *rules, dpc_config_t *old_config, d
 		/* Ensure this is a string. */
 		if (FR_BASE_TYPE(rule_p->type) != FR_TYPE_STRING) continue;
 
+		bool multi = (rule_p->type & FR_TYPE_MULTI);
+
 		DEBUG3("Fixup for configuration string: %s (offset: %u)", rule_p->name, rule_p->offset);
 
 		pvalue = (char**)((uint8_t *)config + rule_p->offset);
 		old_value = *(char**)((uint8_t *)old_config + rule_p->offset);
 
-		if (!*pvalue && old_value) {
+		/* There was no old value(s), so just leave current as is (NULL or not). */
+		if (!old_value) continue;
+
+		/* If current value is NULL, restore old value.
+		 * It works for single or multi-valued strings.
+		 */
+		if (!*pvalue) {
 			*pvalue = old_value;
+
+		} else if (multi) {
+			/* Multi-valued strings are talloc arrays, we must merge the two arrays (old and current).
+			 */
+			char ***p_array, ***p_array_old;
+
+			p_array = (char ***)(((uint8_t *)config) + rule_p->offset);
+			p_array_old = (char ***)(((uint8_t *)old_config) + rule_p->offset);
+
+			/* Note: we don't need a talloc context here because it's a reallocation. */
+			TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, char *);
 		}
 	}
 }

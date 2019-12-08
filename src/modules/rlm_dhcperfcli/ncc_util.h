@@ -480,6 +480,38 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 }
 
 /**
+ * Reallocate a talloc array with one more element, and set its memory to zero.
+ */
+#define TALLOC_REALLOC_ONE_ZERO(_ctx, _ptr, _type) \
+{ \
+	size_t len = talloc_array_length(_ptr); \
+	TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, len, len + 1); \
+}
+
+/**
+ * Reallocate a talloc array with one more element, and set it to provided value
+ */
+#define TALLOC_REALLOC_ONE_SET(_ctx, _ptr, _type, _v) \
+{ \
+	size_t len = talloc_array_length(_ptr); \
+	TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, len, len + 1); \
+	_ptr[len] = _v; \
+}
+
+/**
+ * Merge two talloc arrays of the same type.
+ */
+#define TALLOC_ARRAY_MERGE(_ctx, _arr1, _arr2, _type) \
+{ \
+	size_t len1 = talloc_array_length(_arr1); \
+	size_t len2 = talloc_array_length(_arr2); \
+	if (len2) { \
+		TALLOC_REALLOC_ZERO(_ctx, _arr1, _type, len1, len1 + len2); \
+		memcpy(&(_arr1)[len1], &(_arr2)[0], sizeof(_type) * len2); \
+	} \
+}
+
+/**
  * Convert a string to a value using a sorted or ordered table (calls fr_table_value_by_str).
  * Allow to provide the length of string that should be considered (-1 for the entire string).
  * We don't have access to the private definitions in table.h so we'll work with a macro.
