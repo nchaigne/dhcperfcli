@@ -154,6 +154,75 @@ void _cf_rules_fix_strings(CONF_PARSER const *rules, dpc_config_t *old_config, d
 	}
 }
 
+
+// this is not defined in value.h (can't use fr_box_bool, precompiler isn't happy with that)
+#define fr_box_boolean(_val)			_fr_box(FR_TYPE_BOOL, .vb_bool, _val)
+
+static char const parse_spaces[] = "                                                                                                                                                                                                                                              ";
+#define CONF_SPACE(_depth) ((_depth) * 2)
+
+/**
+ * Debug configuration after it is parsed.
+ * Note: this only handles what the configuration parser knows of.
+ */
+static void dpc_parsed_config_debug(CONF_PARSER const *rules, dpc_config_t *config, int depth)
+{
+	CONF_PARSER const *rule_p;
+
+#define DEBUG_CONF_BOX(_type) \
+	DEBUG("%.*s%s = %pV", CONF_SPACE(depth), parse_spaces, rule_p->name, fr_box_##_type(value));
+
+#define _CASE_CONF_TYPE(_fr_type, _c_type, _box_type, _is_ptr) \
+	case _fr_type: \
+	{ \
+		_c_type value = *(_c_type *)((uint8_t *)config + rule_p->offset); \
+		if (!_is_ptr || value) DEBUG_CONF_BOX(_box_type); \
+	} \
+	break;
+
+#define CASE_CONF_TYPE(_fr_type, _c_type, _box_type) \
+	_CASE_CONF_TYPE(_fr_type, _c_type, _box_type, false)
+
+#define CASE_CONF_TYPE_PTR(_fr_type, _c_type, _box_type) \
+	_CASE_CONF_TYPE(_fr_type, _c_type, _box_type, true)
+
+
+	for (rule_p = rules; rule_p->name; rule_p++) {
+		int type = FR_BASE_TYPE(rule_p->type);
+
+		switch (type) {
+		CASE_CONF_TYPE_PTR(FR_TYPE_STRING, char *, strvalue);
+
+		CASE_CONF_TYPE(FR_TYPE_BOOL, bool, boolean);
+
+		CASE_CONF_TYPE(FR_TYPE_FLOAT32, float, float32);
+		CASE_CONF_TYPE(FR_TYPE_FLOAT64, double, float64);
+
+		CASE_CONF_TYPE(FR_TYPE_UINT64, uint64_t, uint64);
+		CASE_CONF_TYPE(FR_TYPE_UINT32, uint64_t, uint32);
+
+		CASE_CONF_TYPE(FR_TYPE_INT64, int64_t, int64);
+		CASE_CONF_TYPE(FR_TYPE_INT32, int32_t, int32);
+
+		CASE_CONF_TYPE(FR_TYPE_TIME_DELTA, fr_time_delta_t, time_delta);
+
+		case FR_TYPE_SUBSECTION:
+		{
+			DEBUG("%.*s%s {", CONF_SPACE(depth), parse_spaces, rule_p->name);
+
+			dpc_parsed_config_debug(rule_p->subcs, config, depth + 1);
+
+			DEBUG("%.*s}", CONF_SPACE(depth), parse_spaces);
+		}
+			break;
+
+		default:
+			WARN("Unhandled type (FIX ME) for: %s", rule_p->name);
+			break;
+		}
+	}
+}
+
 /**
  * Parse all "input" sections within a configuration section.
  * These may contains directly a list of vps, or "pairs" sub-section(s).
@@ -518,6 +587,10 @@ void dpc_config_debug(dpc_config_t *config)
 			DEBUG("- %s[%u] = %s", STRINGIFY(_x), i, config->_x[i]); \
 		} \
 	}
+
+	DEBUG("dhcperfcli: main config {");
+	dpc_parsed_config_debug(_main_config, config, 1);
+	DEBUG("}");
 
 	DEBUG("Configuration values:");
 
