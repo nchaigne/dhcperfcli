@@ -223,6 +223,9 @@ extern int ncc_debug_lvl;
 } while (0)
 
 
+// fr_box macro that is not defined in value.h (can't have "fr_box_bool", precompiler isn't happy with that)
+#define fr_box_boolean(_val) _fr_box(FR_TYPE_BOOL, .vb_bool, _val)
+
 /* Custom flags that can be passed within "type" to ncc_value_from_str */
 #define NCC_TYPE_NOT_EMPTY     (1 << 10)
 #define NCC_TYPE_NOT_NEGATIVE  (1 << 11)
@@ -397,6 +400,7 @@ int ncc_strtod(double *out, char const *value);
 int ncc_strtobool(bool *out, char const *value);
 int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
 int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t const *parse_ctx);
+void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);
 
 double ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *tv, double in);
