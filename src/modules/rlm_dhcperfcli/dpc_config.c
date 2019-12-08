@@ -165,12 +165,14 @@ static char const parse_spaces[] = "                                            
  * Debug configuration after it is parsed.
  * Note: this only handles what the configuration parser knows of.
  */
-static void dpc_parsed_config_debug(CONF_PARSER const *rules, dpc_config_t *config, int depth)
+static void dpc_parsed_config_debug(CONF_PARSER const *rules, dpc_config_t *config, int depth, char const *prefix)
 {
 	CONF_PARSER const *rule_p;
 
-#define DEBUG_CONF_BOX(_type) \
-	DEBUG("%.*s%s = %pV", CONF_SPACE(depth), parse_spaces, rule_p->name, fr_box_##_type(value));
+#define DEBUG_CONF_BOX(_type) do { \
+	if (prefix && prefix[0] != '\0') DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), parse_spaces, prefix, rule_p->name, fr_box_##_type(value)); \
+	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), parse_spaces, rule_p->name, fr_box_##_type(value)); \
+} while (0)
 
 #define _CASE_CONF_TYPE(_fr_type, _c_type, _box_type, _is_ptr) \
 	case _fr_type: \
@@ -210,7 +212,7 @@ static void dpc_parsed_config_debug(CONF_PARSER const *rules, dpc_config_t *conf
 		{
 			DEBUG("%.*s%s {", CONF_SPACE(depth), parse_spaces, rule_p->name);
 
-			dpc_parsed_config_debug(rule_p->subcs, config, depth + 1);
+			dpc_parsed_config_debug(rule_p->subcs, config, depth + 1, prefix ? rule_p->name : NULL);
 
 			DEBUG("%.*s}", CONF_SPACE(depth), parse_spaces);
 		}
@@ -589,7 +591,7 @@ void dpc_config_debug(dpc_config_t *config)
 	}
 
 	DEBUG("dhcperfcli: main config {");
-	dpc_parsed_config_debug(_main_config, config, 1);
+	dpc_parsed_config_debug(_main_config, config, 1, check_config ? "" : NULL);
 	DEBUG("}");
 
 	/*
