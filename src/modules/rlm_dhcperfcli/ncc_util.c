@@ -1867,12 +1867,21 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), config_spaces, rule_p->name, fr_box_##_type(_value)); \
 } while (0)
 
+/* Attempt to handle the various config types in a generic fashion. This is a bit ugly...
+ * (probably doesn't work for everything - but we don't need all)
+ *
+ * If it's not multi-valued, and unless it's a NULL pointer, print it using the fr_box_* function.
+ * We have "_is_ptr = true" if we're handling a pointer. The NULL check is performed by converting the value to a uint8_t *
+ * (it's a hack, but otherwise the compiler won't agree for anonymous structs such as fr_ipaddr_t).
+ *
+ * If it's multi-valued, iterate over all values and print them using the fr_box_* function.
+ */
 #define _CASE_CONF_TYPE(_fr_type, _c_type, _box_type, _is_ptr) \
 	case _fr_type: \
 	{ \
 		if (!(rule_type & FR_TYPE_MULTI)) { \
 			_c_type value = *(_c_type *)((uint8_t *)config + rule_p->offset); \
-			if (!_is_ptr || value) DEBUG_CONF_BOX(_box_type, value); \
+			if ( !_is_ptr || /* value */ *(uint8_t *)&(value) ) DEBUG_CONF_BOX(_box_type, value); \
 		} else { \
 			_c_type *value_arr = *(_c_type **)((uint8_t *)config + rule_p->offset); \
 			int i; \
@@ -1890,7 +1899,9 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 #define CASE_CONF_TYPE_PTR(_fr_type, _c_type, _box_type) \
 	_CASE_CONF_TYPE(_fr_type, _c_type, _box_type, true)
 
-
+	/*
+	 * Iterate over parser rules.
+	 */
 	for (rule_p = rules; rule_p->name; rule_p++) {
 		int rule_type = rule_p->type;
 		int type = FR_BASE_TYPE(rule_type);
@@ -1910,6 +1921,7 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 		CASE_CONF_TYPE(FR_TYPE_INT32, int32_t, int32);
 
 		CASE_CONF_TYPE(FR_TYPE_TIME_DELTA, fr_time_delta_t, time_delta);
+		CASE_CONF_TYPE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t, ipv4addr);
 
 		case FR_TYPE_SUBSECTION:
 		{
@@ -1976,7 +1988,8 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 			*pvalue = old_value;
 
 		} else if (multi) {
-			/* Multi-valued strings are talloc arrays, we must merge the two arrays (old and current).
+			/*
+			 * Multi-valued strings are talloc arrays, we must merge the two arrays (old and current).
 			 */
 			char ***p_array, ***p_array_old;
 

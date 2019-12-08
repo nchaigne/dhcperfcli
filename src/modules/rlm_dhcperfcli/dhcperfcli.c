@@ -2983,7 +2983,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 
 		fp = fopen(CONF.file_input, "r");
 		if (!fp) {
-			ERROR("Failed to open file \"%s\": %s", CONF.file_input, strerror(errno));
+			ERROR("Failed to open input file \"%s\": %s", CONF.file_input, strerror(errno));
 			return -1;
 		}
 
@@ -3552,9 +3552,7 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 
 			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
-				if (ncc_xlat_file_add(optarg) != 0) {
-					exit(EXIT_FAILURE);
-				}
+				TALLOC_REALLOC_ONE_SET(global_ctx, CONF.xlat_files, char const *, optarg);
 				break;
 
 			default:

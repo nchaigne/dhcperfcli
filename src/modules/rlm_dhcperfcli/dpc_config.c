@@ -100,6 +100,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_BASE_XID },
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
+	{ FR_CONF_OFFSET("allowed_server", FR_TYPE_IPV4_ADDR, dpc_config_t, allowed_server) }, /* No default */
 
 	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },
 	{ FR_CONF_POINTER("packet_trace", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_trace_config },
@@ -486,11 +487,4 @@ void dpc_config_debug(dpc_config_t *config)
 	DEBUG("dhcperfcli: main config {");
 	ncc_parsed_config_debug(_main_config, config, 1, check_config ? "" : NULL);
 	DEBUG("}");
-
-	/*
-	 * Configuration not handled by parser.
-	 */
-	CONF_DEBUG_STR_MULTI(xlat_files);
-	CONF_DEBUG_STR_MULTI(gateways);
-	CONF_DEBUG_IPADDR(allowed_server);
 }
