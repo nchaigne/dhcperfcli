@@ -592,39 +592,10 @@ void dpc_config_debug(dpc_config_t *config)
 	dpc_parsed_config_debug(_main_config, config, 1);
 	DEBUG("}");
 
-	DEBUG("Configuration values:");
-
-	CONF_DEBUG_UINT(debug_level);
-	CONF_DEBUG_BOOL(debug_dev);
-	CONF_DEBUG_BOOL(debug_basename);
-	CONF_DEBUG_BOOL(log_timestamp);
-
-	CONF_DEBUG_INT(packet_trace_lvl);
-	CONF_DEBUG_BOOL(packet_trace_elapsed);
-	CONF_DEBUG_BOOL(packet_trace_timestamp);
-
-	CONF_DEBUG_FLOAT(progress_interval);
-	CONF_DEBUG_BOOL(pr_stat_timestamp);
-	CONF_DEBUG_BOOL(pr_stat_per_input);
-	CONF_DEBUG_UINT(pr_stat_per_input_max);
-
-	CONF_DEBUG_BOOL(template);
-	CONF_DEBUG_BOOL(xlat);
-	CONF_DEBUG_STR(file_input);
+	/*
+	 * Configuration not handled by parser.
+	 */
 	CONF_DEBUG_STR_MULTI(xlat_files);
-	CONF_DEBUG_UINT64(base_xid);
-
-	CONF_DEBUG_STR(interface);
 	CONF_DEBUG_STR_MULTI(gateways);
 	CONF_DEBUG_IPADDR(allowed_server);
-
-	CONF_DEBUG_FLOAT(request_timeout);
-	CONF_DEBUG_UINT(retransmit_max);
-
-	CONF_DEBUG_FLOAT(rate_limit);
-	CONF_DEBUG_FLOAT(input_rate_limit);
-	CONF_DEBUG_FLOAT(duration_start_max);
-	CONF_DEBUG_UINT(input_num_use);
-	CONF_DEBUG_UINT(session_max_num);
-	CONF_DEBUG_UINT(session_max_active);
 }
