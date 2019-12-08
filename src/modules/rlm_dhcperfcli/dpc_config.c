@@ -118,19 +118,6 @@ static const CONF_PARSER _main_config[] = {
 };
 
 
-/*
- *	Our list of strings for which we want to restore the initial value we provided, if no new value was set.
- *	To do so we reuse FreeRADIUS "CONF_PARSER" structure.
- */
-static const CONF_PARSER _fix_strings[] = {
-	{ FR_CONF_OFFSET("file_input", FR_TYPE_STRING, dpc_config_t, file_input) },
-	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) },
-	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
-
-	CONF_PARSER_TERMINATOR
-};
-
-
 /**
  * Parse all "input" sections within a configuration section.
  * These may contains directly a list of vps, or "pairs" sub-section(s).
@@ -379,10 +366,10 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
 
-	/* Restore strings for which we didn't parse anything.
-	 * The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
+	/* Merge current and old configuration.
+	 * Restore strings for which we didn't parse anything, and merge multi-valued strings.
 	 */
-	ncc_config_merge(_fix_strings, config, &old_config);
+	ncc_config_merge(_main_config, config, &old_config);
 
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
