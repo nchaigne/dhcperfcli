@@ -3793,27 +3793,33 @@ int main(int argc, char **argv)
 	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
 	dpc_segment_list_debug(segment_list);
 
-	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
-
 	dpc_config_debug(dpc_config);
 
-	/* Fill in the gaps in the list of global segments. */
+	/* Parse configured gateway(s).
+	 * Note: This *must* be done before any input is parsed (either from configuration file, or from input file or stdin).
+	 */
+	for (i = 0; i < talloc_array_length(CONF.gateways); i++) {
+		dpc_gateway_parse(global_ctx, CONF.gateways[i]);
+	}
+
+	/* Read input from configuration.
+	 */
+	if (dpc_config_load_input(dpc_config, dpc_input_handle) < 0) exit(EXIT_FAILURE);
+
+	/* Fill in the gaps in the list of global segments.
+	 */
 	if (ncc_segment_list_complete(global_ctx, segment_list, CONF.rate_limit) < 0) {
 		PERROR("Failed to complete global segment list");
 		exit(EXIT_FAILURE);
 	}
 
 	/*
-	 *	Perform configuration-related initializations.
+	 *	Other configuration-related initializations.
 	 */
 	for (i = 0; i < talloc_array_length(CONF.xlat_files); i++) {
 		if (ncc_xlat_file_add(CONF.xlat_files[i]) != 0) {
 			exit(EXIT_FAILURE);
 		}
-	}
-
-	for (i = 0; i < talloc_array_length(CONF.gateways); i++) {
-		dpc_gateway_parse(global_ctx, CONF.gateways[i]);
 	}
 
 	if (CONF.retransmit_max > 0) {
