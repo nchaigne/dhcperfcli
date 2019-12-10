@@ -1845,6 +1845,82 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	return ret;
 }
 
+
+/**
+ * Debug a configuration item. If multi-valued, iterate over all values and print each of them.
+ * Items are printed using the fr_box_* macro corresponding to their type.
+ */
+static char const config_spaces[] = "                                                                                ";
+void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, int depth, char const *prefix)
+{
+	if (!pvalue) return;
+
+	bool multi = (type & FR_TYPE_MULTI);
+	int base_type = FR_BASE_TYPE(type);
+
+#define CONF_SPACE(_depth) ((_depth) * 2)
+
+#define DEBUG_CONF_BOX(_type) do { \
+	if (prefix && prefix[0] != '\0') DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix, name, fr_box_##_type(value)); \
+	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), config_spaces, name, fr_box_##_type(value)); \
+} while (0)
+
+#define CASE_CONF_BOX_VALUE(_fr_type, _c_type, _box_type) \
+	case _fr_type: \
+	{ \
+		_c_type value = *(_c_type *)pvalue; \
+		DEBUG_CONF_BOX(_box_type); \
+	} \
+	break;
+
+	if (multi) {
+		/*
+		 * "pvalue" is a talloc array. Size of items is provided in parameter "vsize".
+		 * This allows to iterate on each item without having the actual type.
+		 */
+		int i;
+		void *value_arr = *(void **)pvalue;
+
+		/* Cannot use talloc_array_size directly here. */
+		size_t len = talloc_get_size(value_arr) / vsize;
+
+		for (i = 0; i < len; i++) {
+			ncc_parser_config_item_debug(base_type, name, (void *)(value_arr + (i * vsize)), vsize, depth, prefix);
+		}
+
+	} else {
+		switch (base_type) {
+		CASE_CONF_BOX_VALUE(FR_TYPE_BOOL, bool, boolean);
+
+		CASE_CONF_BOX_VALUE(FR_TYPE_FLOAT64, double, float64);
+		CASE_CONF_BOX_VALUE(FR_TYPE_FLOAT32, float, float32);
+
+		CASE_CONF_BOX_VALUE(FR_TYPE_UINT64, uint64_t, uint64);
+		CASE_CONF_BOX_VALUE(FR_TYPE_UINT32, uint32_t, uint32);
+
+		CASE_CONF_BOX_VALUE(FR_TYPE_INT64, int64_t, int64);
+		CASE_CONF_BOX_VALUE(FR_TYPE_INT32, int32_t, int32);
+
+		case FR_TYPE_STRING:
+		{
+			char *value = *(char **)pvalue;
+			if (value) DEBUG_CONF_BOX(strvalue);
+		}
+			break;
+
+		case FR_TYPE_IPV4_ADDR:
+		{
+			fr_ipaddr_t value = *(fr_ipaddr_t *)pvalue;
+			if (value.af == AF_INET) DEBUG_CONF_BOX(ipv4addr);
+		}
+			break;
+
+		default:
+			break;
+		}
+	}
+}
+
 /**
  * Debug configuration after it has been parsed.
  * Note: this only handles what the configuration parser knows of.
@@ -1854,50 +1930,14 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
  * @param[in] depth   current level in configuration sections.
  * @param[in] prefix  parent section name to display before an item (NULL = don't).
  */
-static char const config_spaces[] = "                                                                                                                        ";
-
-void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix)
+void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix)
 {
 	CONF_PARSER const *rule_p;
 
-#define CONF_SPACE(_depth) ((_depth) * 2)
-
-#define DEBUG_CONF_BOX(_type, _value) do { \
-	if (prefix && prefix[0] != '\0') DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix, rule_p->name, fr_box_##_type(_value)); \
-	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), config_spaces, rule_p->name, fr_box_##_type(_value)); \
-} while (0)
-
-/* Attempt to handle the various config types in a generic fashion. This is a bit ugly...
- * (probably doesn't work for everything - but we don't need all)
- *
- * If it's not multi-valued, and unless it's a NULL pointer, print it using the fr_box_* function.
- * We have "_is_ptr = true" if we're handling a pointer. The NULL check is performed by converting the value to a uint8_t *
- * (it's a hack, but otherwise the compiler won't agree for anonymous structs such as fr_ipaddr_t).
- *
- * If it's multi-valued, iterate over all values and print them using the fr_box_* function.
- */
-#define _CASE_CONF_TYPE(_fr_type, _c_type, _box_type, _is_ptr) \
+#define CASE_PARSER_CONF_TYPE(_fr_type, _c_type) \
 	case _fr_type: \
-	{ \
-		if (!(rule_type & FR_TYPE_MULTI)) { \
-			_c_type value = *(_c_type *)((uint8_t *)config + rule_p->offset); \
-			if ( !_is_ptr || /* value */ *(uint8_t *)&(value) ) DEBUG_CONF_BOX(_box_type, value); \
-		} else { \
-			_c_type *value_arr = *(_c_type **)((uint8_t *)config + rule_p->offset); \
-			int i; \
-			for (i = 0; i < talloc_array_length(value_arr); i++) { \
-				_c_type value = value_arr[i]; \
-				DEBUG_CONF_BOX(_box_type, value); \
-			} \
-		} \
-	} \
-	break;
-
-#define CASE_CONF_TYPE(_fr_type, _c_type, _box_type) \
-	_CASE_CONF_TYPE(_fr_type, _c_type, _box_type, false)
-
-#define CASE_CONF_TYPE_PTR(_fr_type, _c_type, _box_type) \
-	_CASE_CONF_TYPE(_fr_type, _c_type, _box_type, true)
+		ncc_parser_config_item_debug(rule_type, rule_p->name, ((uint8_t *)config + rule_p->offset), sizeof(_c_type), depth, prefix); \
+		break;
 
 	/*
 	 * Iterate over parser rules.
@@ -1907,34 +1947,26 @@ void ncc_parsed_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 		int type = FR_BASE_TYPE(rule_type);
 
 		switch (type) {
-		CASE_CONF_TYPE_PTR(FR_TYPE_STRING, char *, strvalue);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_STRING, char *);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_BOOL, bool);
 
-		CASE_CONF_TYPE(FR_TYPE_BOOL, bool, boolean);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_FLOAT64, double);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_FLOAT32, float);
 
-		CASE_CONF_TYPE(FR_TYPE_FLOAT32, float, float32);
-		CASE_CONF_TYPE(FR_TYPE_FLOAT64, double, float64);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT64, uint64_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT32, uint32_t);
 
-		CASE_CONF_TYPE(FR_TYPE_UINT64, uint64_t, uint64);
-		CASE_CONF_TYPE(FR_TYPE_UINT32, uint64_t, uint32);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_INT64, int64_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_INT32, int32_t);
 
-		CASE_CONF_TYPE(FR_TYPE_INT64, int64_t, int64);
-		CASE_CONF_TYPE(FR_TYPE_INT32, int32_t, int32);
-
-		CASE_CONF_TYPE(FR_TYPE_TIME_DELTA, fr_time_delta_t, time_delta);
-
-		//CASE_CONF_TYPE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t, ipv4addr);
-		case FR_TYPE_IPV4_ADDR:
-		{
-			fr_ipaddr_t value = *(fr_ipaddr_t *)((uint8_t *)config + rule_p->offset);
-			if (value.af == AF_INET) DEBUG_CONF_BOX(ipv4addr, value);
-		}
-			break;
+		CASE_PARSER_CONF_TYPE(FR_TYPE_TIME_DELTA, fr_time_delta_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t);
 
 		case FR_TYPE_SUBSECTION:
 		{
 			DEBUG("%.*s%s {", CONF_SPACE(depth), config_spaces, rule_p->name);
 
-			ncc_parsed_config_debug(rule_p->subcs, config, depth + 1, prefix ? rule_p->name : NULL);
+			ncc_parser_config_debug(rule_p->subcs, config, depth + 1, prefix ? rule_p->name : NULL);
 
 			DEBUG("%.*s}", CONF_SPACE(depth), config_spaces);
 		}

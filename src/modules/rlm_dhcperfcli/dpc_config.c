@@ -442,6 +442,6 @@ int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
 void dpc_config_debug(dpc_config_t *config)
 {
 	DEBUG("dhcperfcli: main config {");
-	ncc_parsed_config_debug(_main_config, config, 1, check_config ? "" : NULL);
+	ncc_parser_config_debug(_main_config, config, 1, check_config ? "" : NULL);
 	DEBUG("}");
 }
