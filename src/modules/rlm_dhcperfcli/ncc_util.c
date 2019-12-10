@@ -1905,6 +1905,8 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 		{
 			char *value = *(char **)pvalue;
 			if (value) DEBUG_CONF_BOX(strvalue);
+			/*
+			 * Note: fr_box_strvalue must never be called with a NULL value (it uses "strlen"). */
 		}
 			break;
 

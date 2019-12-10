@@ -226,6 +226,9 @@ extern int ncc_debug_lvl;
 // fr_box macro that is not defined in value.h (can't have "fr_box_bool", precompiler isn't happy with that)
 #define fr_box_boolean(_val) _fr_box(FR_TYPE_BOOL, .vb_bool, _val)
 
+// a "safe" version of fr_box_strvalue that can be used with a NULL value.
+#define fr_box_str(_val) _fr_box_with_len(FR_TYPE_STRING, .vb_strvalue, _val, _val ? strlen(_val) : 0)
+
 /* Custom flags that can be passed within "type" to ncc_value_from_str */
 #define NCC_TYPE_NOT_EMPTY     (1 << 10)
 #define NCC_TYPE_NOT_NEGATIVE  (1 << 11)
