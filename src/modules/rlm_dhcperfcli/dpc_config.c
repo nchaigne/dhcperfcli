@@ -100,7 +100,7 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_BASE_XID },
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
-	{ FR_CONF_OFFSET("authorized_server", FR_TYPE_IPV4_ADDR, dpc_config_t, authorized_server) }, /* No default */
+	{ FR_CONF_OFFSET("authorized_server", FR_TYPE_IPV4_ADDR | FR_TYPE_MULTI, dpc_config_t, authorized_servers) },
 
 	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },
 	{ FR_CONF_POINTER("packet_trace", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_trace_config },

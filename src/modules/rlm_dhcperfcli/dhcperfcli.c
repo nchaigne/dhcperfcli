@@ -1199,16 +1199,14 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
 	            dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
 
-	if (is_ipaddr_defined(CONF.authorized_server)) {
-		/*
-		 *	Only allow replies from a specific server (overall policy set through option -a).
-		 */
-		if (fr_ipaddr_cmp(&packet->src_ipaddr, &CONF.authorized_server) != 0) {
-			DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
-			      packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
-			fr_radius_packet_free(&packet);
-			return -1;
-		}
+	/*
+	 *	Only allow replies from specific servers (overall policy set through option -a).
+	 */
+	if (CONF.authorized_servers && ncc_ipaddr_array_find(CONF.authorized_servers, &packet->src_ipaddr) < 0) {
+		DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
+			  packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+		fr_radius_packet_free(&packet);
+		return -1;
 	}
 
 	/*
@@ -3419,7 +3417,11 @@ static void dpc_options_parse(int argc, char **argv)
 
 		switch (argval) {
 		case 'a':
-			PARSE_OPT(CONF.authorized_server, FR_TYPE_IPV4_ADDR);
+		{
+			fr_ipaddr_t server;
+			PARSE_OPT(server, FR_TYPE_IPV4_ADDR);
+			TALLOC_REALLOC_ONE_SET(global_ctx, CONF.authorized_servers, fr_ipaddr_t, server);
+		}
 			break;
 
 		case 'A':
