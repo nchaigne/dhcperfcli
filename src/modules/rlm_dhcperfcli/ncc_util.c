@@ -44,13 +44,13 @@ size_t fr_type_int_min_table_len = NUM_ELEMENTS(fr_type_int_min_table);
 
 
 
-/*
- *	Peek into an event list to retrieve the timestamp of next event.
+/**
+ * Peek into an event list to retrieve the timestamp of next event.
  *
- *	Note: structures fr_event_list_t and fr_event_timer_t are opaque, so we have to partially redefine them
- *	so we can access what we need.
- *	(I know, this is dangerous. We'll be fine as long as they do not change.)
- *	Ideally, this should be provided by FreeRADIUS lib. TODO: ask them ?
+ * Note: structures fr_event_list_t and fr_event_timer_t are opaque, so we have to partially redefine them
+ * so we can access what we need.
+ * (I know, this is dangerous. We'll be fine as long as they do not change.)
+ * Ideally, this should be provided by FreeRADIUS lib. TODO: ask them ?
  */
 int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
 {
@@ -395,9 +395,9 @@ void ncc_log_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, .
 	va_end(ap);
 }
 
-/*
- *	Print a debug log message.
- *	Now merely invoke ncc_vlog_printf which does the real work.
+/**
+ * Print a debug log message.
+ * Now merely invoke ncc_vlog_printf which does the real work.
  */
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...)
 {
@@ -412,8 +412,8 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 	fflush(ncc_log_fp); // is this needed ?
 }
 
-/*
- *	Provide our own version of "vlog_request" so we can handle FreeRADIUS "REQUEST" logs.
+/**
+ * Provide our own version of "vlog_request" so we can handle FreeRADIUS "REQUEST" logs.
  */
 void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 		  char const *file, int line,
@@ -522,8 +522,8 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 }
 
 
-/*
- *	Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
+/**
+ * Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
 // now redundant with fr_pair_find_by_da: TODO: remove this.
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
@@ -532,9 +532,9 @@ VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
 	return fr_pair_find_by_da(head, da, TAG_ANY);
 }
 
-/*
- *	Create a value pair and add it to a list of value pairs.
- *	This is a copy of (now defunct) FreeRADIUS function radius_pair_create (from src/main/pair.c)
+/**
+ * Create a value pair and add it to a list of value pairs.
+ * This is a copy of (now defunct) FreeRADIUS function radius_pair_create (from src/main/pair.c)
  */
 VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 			                unsigned int attribute, unsigned int vendor)
@@ -547,8 +547,8 @@ VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 	return vp;
 }
 
-/*
- *	Create a value pair from a dictionary attribute, and add it to a list of value pairs.
+/**
+ * Create a value pair from a dictionary attribute, and add it to a list of value pairs.
  */
 VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da)
 {
@@ -562,8 +562,8 @@ VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_att
 	return vp;
 }
 
-/*
- *	Copy the value from a pair to another, and the type also (e.g. VT_DATA).
+/**
+ * Copy the value from a pair to another, and the type also (e.g. VT_DATA).
  */
 int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
 {
@@ -571,9 +571,9 @@ int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
 	return fr_value_box_copy(to, &to->data, &from->data);
 }
 
-/*
- *	Set value of a pair (of any data type) from a string.
- *	If the conversion is not possible, an error will be returned.
+/**
+ * Set value of a pair (of any data type) from a string.
+ * If the conversion is not possible, an error will be returned.
  */
 int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
 {
@@ -583,9 +583,9 @@ int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
 	return fr_value_box_from_str(vp, &vp->data, &type, NULL, value, strlen(value), '\0', false);
 }
 
-/*
- *	Copy a single VP.
- *	(FreeRADIUS's fr_pair_copy, altered to work with pre-compiled xlat)
+/**
+ * Copy a single VP.
+ * (FreeRADIUS's fr_pair_copy, altered to work with pre-compiled xlat)
  */
 VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 {
@@ -629,9 +629,9 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 	return n;
 }
 
-/*
- *	Copy a list of VP.
- *	(FreeRADIUS's fr_pair_list_copy, altered to work with pre-compiled xlat)
+/**
+ * Copy a list of VP.
+ * (FreeRADIUS's fr_pair_list_copy, altered to work with pre-compiled xlat)
  */
 int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
 {
@@ -665,9 +665,9 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
 	return cnt;
 }
 
-/*
- *	Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
- *	Note: contrary to fr_pair_list_copy, this preserves the order of the value pairs.
+/**
+ * Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
+ * Note: contrary to fr_pair_list_copy, this preserves the order of the value pairs.
  */
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
 {
@@ -696,8 +696,8 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 	return *to;
 }
 
-/*
- *	Print a list of VP.
+/**
+ * Print a list of VP.
  */
 void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 {
@@ -714,10 +714,10 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 	}
 }
 
-/*
- *	Print one attribute and value to a string.
- *	Similar to FreeRADIUS fr_pair_snprint, but prints 'x' for XLAT, '=' for DATA instead of the operator.
- *	Also, we don't handle tags here.
+/**
+ * Print one attribute and value to a string.
+ * Similar to FreeRADIUS fr_pair_snprint, but prints 'x' for XLAT, '=' for DATA instead of the operator.
+ * Also, we don't handle tags here.
  */
 size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
 {
@@ -833,11 +833,11 @@ FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
 	return ret;
 }
 
-/*
- *	Read one line of values into a list.
- *	The line may specify multiple values separated by commas.
- *	All VP's are created using the same (provided) dictionary attribute.
- *	Inspired from FreeRADIUS function fr_pair_list_afrom_str.
+/**
+ * Read one line of values into a list.
+ * The line may specify multiple values separated by commas.
+ * All VP's are created using the same (provided) dictionary attribute.
+ * Inspired from FreeRADIUS function fr_pair_list_afrom_str.
  */
 FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list)
 {
@@ -898,9 +898,9 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
 	return last_token;
 }
 
-/*
- *	Read values from one line using the fp.
- *	Inspired from FreeRADIUS function fr_pair_list_afrom_file.
+/**
+ * Read values from one line using the fp.
+ * Inspired from FreeRADIUS function fr_pair_list_afrom_file.
  */
 int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone)
 {
@@ -1220,7 +1220,8 @@ char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t *from, fr_ti
 	return _ncc_delta_time_snprint(out, outlen, decimals, hour, min, sec, usec);
 }
 
-/** Print to a string buffer the current absolute date/time, with specified format for strftime.
+/**
+ * Print to a string buffer the current absolute date/time, with specified format for strftime.
  *
  * @param[out] out       where to write the output string.
  * @param[in]  outlen    size of output buffer, which should be consistent with the specified time format.
@@ -2044,8 +2045,8 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 }
 
 
-/*
- *	Convert a struct timeval to float.
+/**
+ * Convert a struct timeval to float.
  */
 double ncc_timeval_to_float(struct timeval *in)
 {
@@ -2053,8 +2054,8 @@ double ncc_timeval_to_float(struct timeval *in)
 	return value;
 }
 
-/*
- *	Convert a float to struct timeval.
+/**
+ * Convert a float to struct timeval.
  */
 int ncc_float_to_timeval(struct timeval *tv, double in)
 {
@@ -2069,26 +2070,26 @@ int ncc_float_to_timeval(struct timeval *tv, double in)
 	return 0;
 }
 
-/*
- *	Convert a fr_time to float.
+/**
+ * Convert a fr_time to float.
  */
 double ncc_fr_time_to_float(fr_time_delta_t in)
 {
 	return (double)in / NSEC;
 }
 
-/*
- *	Convert a float to fr_time.
+/**
+ * Convert a float to fr_time.
  */
 fr_time_t ncc_float_to_fr_time(double in)
 {
 	return (in * NSEC);
 }
 
-/*
- *	Check that a string represents a valid floating point number (e.g. 3, 2.5, .542).
- *	If so convert it to float64.
- *	"out" may be NULL, in which case this is just a format check.
+/**
+ * Check that a string represents a valid floating point number (e.g. 3, 2.5, .542).
+ * If so convert it to float64.
+ * "out" may be NULL, in which case this is just a format check.
  */
 bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 {
@@ -2112,10 +2113,10 @@ bool ncc_str_to_float32(float *out, char const *in, bool allow_negative)
 	return ret;
 }
 
-/*
- *	Trim a string from spaces (left and right), while complying with an input length limit.
- *	Output buffer must be large enough to store the resulting string.
- *	Returns the number of characters printed, excluding the terminating '\0'.
+/**
+ * Trim a string from spaces (left and right), while complying with an input length limit.
+ * Output buffer must be large enough to store the resulting string.
+ * Returns the number of characters printed, excluding the terminating '\0'.
  */
 size_t ncc_str_trim(char *out, char const *in, size_t inlen)
 {
@@ -2180,8 +2181,8 @@ int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_
 }
 
 
-/*
- *	Add an item entry to the tail of the list.
+/**
+ * Add an item entry to the tail of the list.
  */
 void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry)
 {
@@ -2203,8 +2204,8 @@ void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry)
 	list->size ++;
 }
 
-/*
- *	Remove an item entry from its list.
+/**
+ * Remove an item entry from its list.
  */
 ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry)
 {
@@ -2246,8 +2247,8 @@ ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry)
 	return entry;
 }
 
-/*
- *	Get the head item entry from a list.
+/**
+ * Get the head item entry from a list.
  */
 ncc_list_item_t *ncc_list_get_head(ncc_list_t *list)
 {
@@ -2259,9 +2260,9 @@ ncc_list_item_t *ncc_list_get_head(ncc_list_t *list)
 	return ncc_list_item_draw(list->head);
 }
 
-/*
- *	Get reference on a list item from its index (position in the list, starting at 0).
- *	Item is not removed from the list.
+/**
+ * Get reference on a list item from its index (position in the list, starting at 0).
+ * Item is not removed from the list.
  */
 ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index)
 {
@@ -2276,8 +2277,8 @@ ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index)
 }
 
 
-/*
- *	Add a new endpoint to a list.
+/**
+ * Add a new endpoint to a list.
  */
 ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
                                 char *addr, ncc_endpoint_t *default_ep)
@@ -2304,8 +2305,8 @@ ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
 	return ep_new; /* Valid only until list is expanded. */
 }
 
-/*
- *	Get next endpoint from the list (use in round robin fashion).
+/**
+ * Get next endpoint from the list (use in round robin fashion).
  */
 ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list)
 {
@@ -2316,8 +2317,8 @@ ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list)
 	return ep;
 }
 
-/*
- *	Print the endpoints in list.
+/**
+ * Print the endpoints in list.
  */
 char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list)
 {
@@ -2342,8 +2343,8 @@ char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list
 	return out;
 }
 
-/*
- *	Peek at stdin (fd 0) to see if it has input.
+/**
+ * Peek at stdin (fd 0) to see if it has input.
  */
 bool ncc_stdin_peek()
 {
@@ -2362,9 +2363,9 @@ bool ncc_stdin_peek()
 	return true;
 }
 
-/*
- *	Search for a value in an array of string, add it if not found. Return its index.
- *	Note: this is unefficient, but it's meant for only a handful of elements so it doesn't matter.
+/**
+ * Search for a value in an array of string, add it if not found. Return its index.
+ * Note: this is unefficient, but it's meant for only a handful of elements so it doesn't matter.
  */
 uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char const *value)
 {
@@ -2379,4 +2380,24 @@ uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char const *valu
 	TALLOC_REALLOC_ZERO(ctx, *pt_array, char *, size_pre, size_pre + 1);
 	(*pt_array)[size_pre] = talloc_strdup(ctx, value);
 	return size_pre;
+}
+
+/**
+ * Search for an IP address in an array. If found return its index.
+ *
+ * @param[in] ipaddr_array  talloc array of IP addresses
+ * @param[in] ipaddr        address to look for.
+ *
+ * @return -1 if not found, index in array if found.
+ */
+int ncc_ipaddr_array_find(fr_ipaddr_t *ipaddr_array, fr_ipaddr_t *ipaddr)
+{
+	size_t len = talloc_array_length(ipaddr_array);
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if (fr_ipaddr_cmp(ipaddr, &ipaddr_array[i]) == 0) return i;
+	}
+
+	return -1;
 }
