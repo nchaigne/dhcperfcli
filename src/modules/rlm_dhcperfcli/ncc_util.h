@@ -478,8 +478,8 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
  */
 #define TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, _count_pre, _count) \
 { \
-	_ptr = talloc_realloc(_ctx, _ptr, _type, _count); \
 	if (_count > _count_pre) { \
+		_ptr = talloc_realloc(_ctx, _ptr, _type, _count); \
 		memset(&(_ptr)[_count_pre], 0, sizeof(_type) * (_count - _count_pre)); \
 	} \
 }
@@ -508,11 +508,13 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
  */
 #define TALLOC_ARRAY_MERGE(_ctx, _arr1, _arr2, _type) \
 { \
-	size_t len1 = talloc_array_length(_arr1); \
-	size_t len2 = talloc_array_length(_arr2); \
-	if (len2) { \
-		TALLOC_REALLOC_ZERO(_ctx, _arr1, _type, len1, len1 + len2); \
-		memcpy(&(_arr1)[len1], &(_arr2)[0], sizeof(_type) * len2); \
+	if (_arr2) { \
+		size_t len1 = talloc_array_length(_arr1); \
+		size_t len2 = talloc_array_length(_arr2); \
+		if (len2) { \
+			TALLOC_REALLOC_ZERO(_ctx, _arr1, _type, len1, len1 + len2); \
+			memcpy(&(_arr1)[len1], &(_arr2)[0], sizeof(_type) * len2); \
+		} \
 	} \
 }
 

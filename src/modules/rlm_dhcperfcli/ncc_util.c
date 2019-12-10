@@ -1983,10 +1983,10 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 }
 
 /**
- * Merge string values from two configurations (current, old).
+ * Merge values from two configurations (current, old).
+ * - Merge multi-valued items.
  * - Restore strings for which we didn't parse anything (current is NULL, old is not).
  *   The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
- * - Merge multi-valued strings.
  *
  * @param[in]     rules       parser rules.
  * @param[in,out] config      configuration (current) structure (fields are only accessed through offset).
@@ -1997,50 +1997,68 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 	CONF_PARSER const *rule_p;
 
 	for (rule_p = rules; rule_p->name; rule_p++) {
-		char **pvalue;
-		char *old_value;
+		int base_type = FR_BASE_TYPE(rule_p->type);
 
-		/* Only strings are handled. */
-		switch (FR_BASE_TYPE(rule_p->type)) {
-		case FR_TYPE_STRING:
-			break;
-
-		case FR_TYPE_SUBSECTION:
-			ncc_config_merge(rule_p->subcs, config, config_old);
-			continue;
-
-		default:
-			continue;
-		}
-
-		bool multi = (rule_p->type & FR_TYPE_MULTI);
-
-		DEBUG3("Fixup for configuration string: %s (offset: %u)", rule_p->name, rule_p->offset);
-
-		pvalue = (char**)((uint8_t *)config + rule_p->offset);
-		old_value = *(char**)((uint8_t *)config_old + rule_p->offset);
-
-		/* There was no old value(s), so just leave current as is (NULL or not). */
-		if (!old_value) continue;
-
-		/* If current value is NULL, restore old value.
-		 * It works for single or multi-valued strings.
-		 */
-		if (!*pvalue) {
-			*pvalue = old_value;
-
-		} else if (multi) {
+		if (base_type == FR_TYPE_SUBSECTION) {
 			/*
-			 * Multi-valued strings are talloc arrays, we must merge the two arrays (old and current).
+			 * Note: we don't handle multiple sub-sections.
 			 */
-			char ***p_array, ***p_array_old;
+			ncc_config_merge(rule_p->subcs, config, config_old);
 
-			p_array = (char ***)(((uint8_t *)config) + rule_p->offset);
-			p_array_old = (char ***)(((uint8_t *)config_old) + rule_p->offset);
+		} else if (rule_p->type & FR_TYPE_MULTI) {
+			/*
+			 * Multi-valued items are talloc arrays, we must merge the two arrays (old and current).
+			 */
+			void *array_old = *(void **)((uint8_t *)config_old + rule_p->offset);
+			if (!array_old) continue;
 
-			/* Note: we don't need a talloc context here because it's a reallocation. */
-			TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, char *);
+			DEBUG3("Merging configuration values: %s (offset: %u)", rule_p->name, rule_p->offset);
+
+			switch (base_type) {
+			case FR_TYPE_STRING:
+			{
+				char ***p_array, ***p_array_old;
+
+				p_array = (char ***)(((uint8_t *)config) + rule_p->offset);
+				p_array_old = (char ***)(((uint8_t *)config_old) + rule_p->offset);
+
+				/* Note: we don't need a talloc context here because it's a reallocation. */
+				TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, char *);
+			}
+				break;
+
+			case FR_TYPE_IPV4_ADDR:
+			{
+				fr_ipaddr_t **p_array, **p_array_old;
+
+				p_array = (fr_ipaddr_t **)(((uint8_t *)config) + rule_p->offset);
+				p_array_old = (fr_ipaddr_t **)(((uint8_t *)config_old) + rule_p->offset);
+
+				/* Note: we don't need a talloc context here because it's a reallocation. */
+				TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, fr_ipaddr_t);
+			}
+				break;
+
+			default:
+				break;
+			}
+
+		} else if (base_type == FR_TYPE_STRING) {
+			/*
+			 * A single value string is set to NULL if we did not parse anything and no default was provided.
+			 * In this case restore old value if there was one.
+			 */
+			char **p_value;
+			char *value_old;
+
+			p_value = (char**)((uint8_t *)config + rule_p->offset);
+			value_old = *(char**)((uint8_t *)config_old + rule_p->offset);
+
+			if (value_old && !*p_value) {
+				*p_value = value_old;
+			}
 		}
+
 	}
 }
 

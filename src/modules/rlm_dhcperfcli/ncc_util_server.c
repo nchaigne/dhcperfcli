@@ -77,7 +77,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
-	DEBUG3("Configured item \"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", item_name, fr_box_##_type(v)); \
+	DEBUG3("Checking configured item \"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", item_name, fr_box_##_type(v)); \
 	CHECK_IGNORE_ZERO \
 	CHECK_NOT_ZERO \
 	CHECK_NOT_NEGATIVE \
