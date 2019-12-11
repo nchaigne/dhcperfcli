@@ -4018,7 +4018,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fp, "  -c <num>         Use each input item up to <num> times.\n");
 	fprintf(fp, "  -C               Check configuration and exit.\n");
 	fprintf(fp, "  -D <dictdir>     Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
-	fprintf(fp, "  -f <file>        Read input items from <file>, in addition to stdin.\n");
+	fprintf(fp, "  -f <file>        Read input items from <file>, in addition to stdin. Can be set more than once.\n");
 	fprintf(fp, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
 	fprintf(fp, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
 	fprintf(fp, "                   of those gateways in a round-robin fashion.\n");
