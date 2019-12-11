@@ -738,6 +738,9 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 	/* Copy the list of vps (preserving pre-compiled xlat) */
 	MEM(ncc_pair_list_copy(out, &out->vps, in->vps) >= 0);
 
+	/* Reparent so this won't be freed along with the original input. */
+	talloc_steal(ctx, in->authorized_servers);
+
 	return out;
 }
 
