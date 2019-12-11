@@ -1161,7 +1161,6 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	fd_set set;
 	struct timeval tvi_wait = { 0 };
 	DHCP_PACKET *packet = NULL, **packet_p;
-	VALUE_PAIR *vp;
 	dpc_session_ctx_t *session;
 	int max_fd;
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
@@ -4009,7 +4008,7 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fp, "                   Or (workflow): dora, doradec (DORA / Decline), dorarel (DORA / Release).\n");
 	fprintf(fp, "                   If omitted, message type must be specified in input items.\n");
 	fprintf(fp, " Options:\n");
-	fprintf(fp, "  -a <ipaddr>      Authorized server. Only allow replies from this server.\n");
+	fprintf(fp, "  -a <ipaddr>      Authorized server. Only allow replies from this server. Can be set more than once.\n");
 #ifdef HAVE_LIBPCAP
 	fprintf(fp, "  -A               Wait for multiple Offer replies to a broadcast Discover (requires option -i).\n");
 #endif
