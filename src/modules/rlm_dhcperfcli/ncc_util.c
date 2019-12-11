@@ -1984,7 +1984,7 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 
 /**
  * Merge values from two configurations (current, old).
- * - Merge multi-valued items.
+ * - Merge multi-valued items (talloc arrays).
  * - Restore strings for which we didn't parse anything (current is NULL, old is not).
  *   The pointer is set to NULL in this case even though we did not set "dflt" (bug ?)
  *
@@ -2009,34 +2009,23 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 			/*
 			 * Multi-valued items are talloc arrays, we must merge the two arrays (old and current).
 			 */
-			void *array_old = *(void **)((uint8_t *)config_old + rule_p->offset);
-			if (!array_old) continue;
+			void **p_array = (void **)((uint8_t *)config + rule_p->offset);
+			void **p_array_old = (void **)((uint8_t *)config_old + rule_p->offset);
+
+			/* Do not merge if there is no "old" array
+			 * Or if it is the same array as "current" (which means we did not parse anything).
+			 */
+			if (!*p_array_old || *p_array_old == *p_array) continue;
 
 			DEBUG3("Merging configuration values: %s (offset: %u)", rule_p->name, rule_p->offset);
 
 			switch (base_type) {
 			case FR_TYPE_STRING:
-			{
-				char ***p_array, ***p_array_old;
-
-				p_array = (char ***)(((uint8_t *)config) + rule_p->offset);
-				p_array_old = (char ***)(((uint8_t *)config_old) + rule_p->offset);
-
-				/* Note: we don't need a talloc context here because it's a reallocation. */
-				TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, char *);
-			}
+				TALLOC_ARRAY_MERGE(NULL, *(char ***)p_array, *(char ***)p_array_old, char *);
 				break;
 
 			case FR_TYPE_IPV4_ADDR:
-			{
-				fr_ipaddr_t **p_array, **p_array_old;
-
-				p_array = (fr_ipaddr_t **)(((uint8_t *)config) + rule_p->offset);
-				p_array_old = (fr_ipaddr_t **)(((uint8_t *)config_old) + rule_p->offset);
-
-				/* Note: we don't need a talloc context here because it's a reallocation. */
-				TALLOC_ARRAY_MERGE(NULL, *p_array, *p_array_old, fr_ipaddr_t);
-			}
+				TALLOC_ARRAY_MERGE(NULL, *(fr_ipaddr_t **)p_array, *(fr_ipaddr_t **)p_array_old, fr_ipaddr_t);
 				break;
 
 			default:
