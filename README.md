@@ -29,16 +29,18 @@ To build and install *dhcperfcli*, refer to [INSTALL.md](https://github.com/ncha
 dhcperfcli [options] [<server>[:<port>] [<command>]]
 ```
 
+Note: some options can be provided more than once. They are identified by an asterisk (*) in the table below.
+
 Arguments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|Description
 -|-
 `<server>:[<port>]` | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
 `<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`DHCP-Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
-`-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.<br>Option `-a` can be provided multiple times, to authorize a list of servers.
+`-a <ipaddr>` * | Authorized servers. Only allow replies from one of these.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
 `-c <num>` | Use each input item up to `<num>` times.<br>Default: unlimited in template mode, or 1 otherwise.
 `-D <dir>` | Dictionaries main directory.<br>Default: directory `share/freeradius/dictionary` of FreeRADIUS installation.
 `-f <file>` | Read input items from `<file>`, in addition to stdin.<br>An input item is a list of *attribute/value pairs*. At least one such item is required, so one packet can be built.
-`-g <gw>[:<port>]` | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>A comma-separated list may be specified, in which case packets will be sent using all of those gateways in a round-robin fashion.<br>Alternatively, option `-g` can be provided multiple times.
+`-g <gw>[:<port>]` * | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>Multiple gateways may be specified, in which case packets will be sent using all of these gateways in a round-robin fashion.
 `-i <interface>` | Use this interface for unconfigured clients to broadcast through a raw socket. (This requires libpcap.)
 `-I <num>` | Start generating `xid` values with `<num>`.<br>Default: 0.
 `-L <seconds>` | Limit duration for starting new input sessions.
@@ -111,7 +113,7 @@ Attribute|Description
 `Max-Duration` | Limit duration (seconds) for starting new sessions from this input item (relative to the time it started being used).<br>If a global limit is set (option `-L`), then the earliest limit applies.
 `Max-Use` | Maximum number of sessions that can be initialized from this input item. (Same as option `-c` for this input item only.)
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
-`DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for this input item only.<br>Can be provided multiple times, to authorize a list of servers.
+`DHCP-Authorized-Server` * | Authorized servers. Only allow replies from one of these.<br>Same as option `-a`, but for this input item only.<br>Can be provided multiple times, to authorize a list of servers.
 `DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `DHCP-Message-Type` is provided.
 
 Input items can be used more than once with option `-c`. All input items are used in the order in which they are provided. If they are reused this will also be in the same sequential order.
