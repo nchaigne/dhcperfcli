@@ -33,7 +33,7 @@ Arguments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp
 -|-
 `<server>:[<port>]` | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
 `<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`DHCP-Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
-`-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
+`-a <ipaddr>` | Authorized server. Only allow replies from this server.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.<br>Option `-a` can be provided multiple times, to authorize a list of servers.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
 `-c <num>` | Use each input item up to `<num>` times.<br>Default: unlimited in template mode, or 1 otherwise.
 `-D <dir>` | Dictionaries main directory.<br>Default: directory `share/freeradius/dictionary` of FreeRADIUS installation.
@@ -111,7 +111,7 @@ Attribute|Description
 `Max-Duration` | Limit duration (seconds) for starting new sessions from this input item (relative to the time it started being used).<br>If a global limit is set (option `-L`), then the earliest limit applies.
 `Max-Use` | Maximum number of sessions that can be initialized from this input item. (Same as option `-c` for this input item only.)
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
-`DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for a single packet.
+`DHCP-Authorized-Server` | Authorized server. Only allow replies from this server.<br>Same as option `-a`, but for this input item only.<br>Can be provided multiple times, to authorize a list of servers.
 `DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `DHCP-Message-Type` is provided.
 
 Input items can be used more than once with option `-c`. All input items are used in the order in which they are provided. If they are reused this will also be in the same sequential order.
