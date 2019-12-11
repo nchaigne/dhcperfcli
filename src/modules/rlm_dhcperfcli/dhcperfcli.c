@@ -2953,13 +2953,14 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 	return 0;
 }
 
-/*
- *	Load input vps: first, from stdin (if there is something to read), then from input file (if one is specified).
+/**
+ * Load input vps: first, from stdin (if there is something to read), then from input files (if provided).
  */
 static int dpc_input_load(TALLOC_CTX *ctx)
 {
 	FILE *fp = NULL;
-	int ret;
+	int ret, i;
+	size_t len;
 
 	/*
 	 *	If there's something on stdin, read it.
@@ -2970,27 +2971,29 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 		DEBUG("Reading input from stdin");
 		if (dpc_input_load_from_fp(ctx, stdin, &input_list, "stdin") < 0) return -1;
 	} else {
-		DEBUG_TRACE("Nothing to read on stdin");
+		DEBUG3("Nothing to read on stdin");
 	}
 
 	/*
-	 *	If an input file is provided, read it.
+	 *	Read input from all provided input files.
 	 */
-	if (CONF.file_input && strcmp(CONF.file_input, "-") != 0) {
-		DEBUG("Reading input from file: %s", CONF.file_input);
+	len = talloc_array_length(CONF.input_files);
+	for (i = 0; i < len; i++) {
+		char const *filename = CONF.input_files[i];
+		if (strcmp(filename, "-") != 0) {
+			DEBUG("Reading input from file: %s", filename);
 
-		fp = fopen(CONF.file_input, "r");
-		if (!fp) {
-			ERROR("Failed to open input file \"%s\": %s", CONF.file_input, strerror(errno));
-			return -1;
+			fp = fopen(filename, "r");
+			if (!fp) {
+				ERROR("Failed to open input file \"%s\": %s", filename, strerror(errno));
+				return -1;
+			}
+
+			ret = dpc_input_load_from_fp(ctx, fp, &input_list, filename);
+			fclose(fp);
+			if (ret < 0) return -1;
 		}
-
-		ret = dpc_input_load_from_fp(ctx, fp, &input_list, CONF.file_input);
-		fclose(fp);
-		if (ret < 0) return -1;
 	}
-
-	DEBUG("Done reading input, list size: %u", input_list.size);
 
 	return 0;
 }
@@ -3441,7 +3444,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'f':
-			CONF.file_input = optarg;
+			TALLOC_REALLOC_ONE_SET(global_ctx, CONF.input_files, char const *, optarg);
 			break;
 
 		case 'g':
@@ -3878,6 +3881,7 @@ int main(int argc, char **argv)
 	if (dpc_input_load(global_ctx) < 0) {
 		exit(EXIT_FAILURE);
 	}
+	DEBUG("Loaded input list size: %u", input_list.size);
 
 	/*
 	 *	If packet trace level is unspecified, figure out something automatically.
