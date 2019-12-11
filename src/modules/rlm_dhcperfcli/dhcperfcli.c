@@ -2006,8 +2006,6 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 	dpc_session_set_transport(session, input);
 
-	if (!CONF.template) talloc_steal(session, input);
-
 	/*
 	 *	Prepare a DHCP packet to send for this session.
 	 */
@@ -2029,7 +2027,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	session->request = packet;
 	talloc_steal(session, packet);
 
-	session->input = input; /* Reference to the input (note: it doesn't belong to us). */
+	session->input = input; /* Reference to the input (note: in template mode it doesn't belong to us). */
+	if (!CONF.template) talloc_steal(session, input);
 
 	/*
 	 *	Prepare dealing with reply and workflow sequence.
