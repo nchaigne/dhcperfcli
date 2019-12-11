@@ -1203,8 +1203,8 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	 *	Only allow replies from specific servers (overall policy set through option -a).
 	 */
 	if (CONF.authorized_servers && ncc_ipaddr_array_find(CONF.authorized_servers, &packet->src_ipaddr) < 0) {
-		DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
-			  packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+		DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored",
+		      packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
 		fr_radius_packet_free(&packet);
 		return -1;
 	}
@@ -1236,19 +1236,18 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 
 	DEBUG_TRACE("Packet belongs to session id: %d", session->id);
 
-	if ((vp = ncc_pair_find_by_da(session->request->vps, attr_authorized_server))) {
-		/*
-		 *	Only allow replies from a specific server (per-packet policy set through attribute).
-		 */
-		if (fr_ipaddr_cmp(&packet->src_ipaddr, &vp->vp_ip) != 0) {
-			SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored.",
-			       packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
-			fr_radius_packet_free(&packet);
-			return -1;
-		}
-		// note: we can get "unexpected packets" with this.
-		// TODO: keep a context of broadcast packets for a little while so we can wait for all responses ?
+	/*
+	 *	Only allow replies from a specific server (per-packet policy set through attribute).
+	 */
+	if (session->input->authorized_servers && ncc_ipaddr_array_find(session->input->authorized_servers, &packet->src_ipaddr) < 0) {
+		SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored",
+		       packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+		fr_radius_packet_free(&packet);
+		return -1;
 	}
+
+	/* Note: after a reply has been accepted, if we get more replies (from other DHCP servers) they will be "unexpected packets".
+	 */
 
 	/*
 	 *	Decode the reply packet.
@@ -2751,6 +2750,9 @@ static int dpc_input_parse(dpc_input_t *input)
 				input->segments = talloc_zero(input, ncc_dlist_t);
 			}
 			if (ncc_segment_parse(input, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
+
+		} else if (vp->da == attr_authorized_server) { /* DHCP-Authorized-Server = <ipaddr> */
+			TALLOC_REALLOC_ONE_SET(input, input->authorized_servers, fr_ipaddr_t, vp->vp_ip);
 
 		}
 

@@ -266,7 +266,7 @@ struct dpc_input {
 	double max_duration;      //!< Maximum duration of starting sessions with this input (relative to input start use).
 	fr_time_t fte_max_start;  // fte_start + max_duration
 
-	char *request_label;      //<! Request custom label.
+	fr_ipaddr_t *authorized_servers; //<! Only allow replies from explicitly authorized servers.
 
 	dpc_input_ext_t ext;      //!< Input pre-parsed information.
 };
