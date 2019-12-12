@@ -1,6 +1,7 @@
 TARGET := libncc-util.a
 
 SOURCES := \
+	ncc_parse.c \
 	ncc_segment.c \
 	ncc_util.c
 

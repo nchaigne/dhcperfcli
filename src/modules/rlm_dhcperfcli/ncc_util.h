@@ -396,16 +396,6 @@ char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 
-int ncc_strtoull(uint64_t *out, char const *value);
-int ncc_strtoll(int64_t *out, char const *value);
-int ncc_strtof(float *out, char const *value);
-int ncc_strtod(double *out, char const *value);
-int ncc_strtobool(bool *out, char const *value);
-int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
-int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t const *parse_ctx);
-void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);
-void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old);
-
 double ncc_timeval_to_float(struct timeval *in);
 int ncc_float_to_timeval(struct timeval *tv, double in);
 double ncc_fr_time_to_float(fr_time_delta_t in);
@@ -433,6 +423,21 @@ bool ncc_stdin_peek();
 
 uint32_t ncc_str_array_index(TALLOC_CTX *ctx, char ***pt_array, char const *value);
 int ncc_ipaddr_array_find(fr_ipaddr_t *ipaddr_array, fr_ipaddr_t *ipaddr);
+
+
+/*
+ * Functions from ncc_parse.c
+ */
+int ncc_strtoull(uint64_t *out, char const *value);
+int ncc_strtoll(int64_t *out, char const *value);
+int ncc_strtof(float *out, char const *value);
+int ncc_strtod(double *out, char const *value);
+int ncc_strtobool(bool *out, char const *value);
+int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
+int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t const *parse_ctx);
+void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);
+void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old);
+
 
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
