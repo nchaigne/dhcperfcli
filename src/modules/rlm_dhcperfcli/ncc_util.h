@@ -405,16 +405,6 @@ bool ncc_str_to_float32(float *out, char const *in, bool allow_negative);
 size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_t inlen);
 
-void ncc_list_add(ncc_list_t *list, ncc_list_item_t *entry);
-ncc_list_item_t *ncc_list_item_draw(ncc_list_item_t *entry);
-ncc_list_item_t *ncc_list_get_head(ncc_list_t *list);
-ncc_list_item_t *ncc_list_index(ncc_list_t *list, uint32_t index);
-
-#define NCC_LIST_ENQUEUE(_l, _e) ncc_list_add(_l, (ncc_list_item_t *)_e);
-#define NCC_LIST_DEQUEUE(_l) (void *)ncc_list_get_head(_l);
-#define NCC_LIST_INDEX(_l, _i) (void *)ncc_list_index(_l, _i);
-#define NCC_LIST_DRAW(_e) (void *)ncc_list_item_draw((ncc_list_item_t *)_e);
-
 ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list, char *addr, ncc_endpoint_t *default_ep);
 ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list);
 char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list);
