@@ -488,7 +488,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 int ncc_segment_list_override_start(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delta_t ftd_start)
 {
 	/* Nothing to do. */
-	if (!ftd_start) return 0;
+	if (!dlist || !ftd_start) return 0;
 
 	ncc_segment_t *segment, *prev;
 	segment = NCC_DLIST_HEAD(dlist);
