@@ -2260,6 +2260,8 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc
 		return false;
 	}
 
+	ncc_assert(segment->type != NCC_SEGMENT_RATE_INVALID);
+
 	if (segment->type == NCC_SEGMENT_RATE_UNBOUNDED
 	   || (segment->type == NCC_SEGMENT_RATE_FIXED && !segment->rate_limit) ) {
 		/* No limit. */
@@ -2350,6 +2352,8 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 static void dpc_end_start_sessions(void)
 {
 	if (start_sessions_flag) {
+		DEBUG2("Stop starting new sessions");
+
 		start_sessions_flag = false;
 		fte_sessions_ini_end = fr_time();
 
@@ -2398,20 +2402,20 @@ static uint32_t dpc_loop_start_sessions(void)
 		/* Max session limit reached. */
 		if (CONF.session_max_num && session_num >= CONF.session_max_num) {
 			INFO("Max number of sessions (%u) reached: will not start any new session.", CONF.session_max_num);
-			start_sessions_flag = false;
+			dpc_end_start_sessions();
 			break;
 		}
 
 		/* Time limit reached. */
 		if (CONF.duration_start_max && dpc_job_elapsed_time_get() >= CONF.duration_start_max) {
 			INFO("Max duration (%.3f s) reached: will not start any new session.", CONF.duration_start_max);
-			start_sessions_flag = false;
+			dpc_end_start_sessions();
 			break;
 		}
 
 		/* No more input. */
 		if (!CONF.template && input_list.size == 0) {
-			start_sessions_flag = false;
+			dpc_end_start_sessions();
 			break;
 		}
 
@@ -3615,7 +3619,7 @@ static void dpc_signal(int sig)
 		INFO("Received signal [%d] (%s): will not start any new session.", sig, strsignal(sig));
 		INFO("Send another signal if you wish to terminate immediately.");
 		signal_done = true;
-		start_sessions_flag = false;
+		dpc_end_start_sessions();
 	} else {
 		/* ... unless someone's getting really impatient. */
 		INFO("Received signal [%d] (%s): Aborting.", sig, strsignal(sig));

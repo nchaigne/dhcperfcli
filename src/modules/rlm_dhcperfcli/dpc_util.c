@@ -742,6 +742,7 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 	 */
 	talloc_steal(ctx, in->authorized_servers);
 	talloc_steal(ctx, in->segments);
+	talloc_steal(ctx, in->segment_dflt);
 
 	return out;
 }
