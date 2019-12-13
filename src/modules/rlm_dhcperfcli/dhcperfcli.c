@@ -353,7 +353,7 @@ static uint32_t dpc_loop_start_sessions(void);
 static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
-static int dpc_input_parse(dpc_input_t *input);
+static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input);
 static void dpc_input_debug(dpc_input_t *input);
 static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
@@ -2565,11 +2565,12 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
  * Parse and validate an input item.
  * Parse provided attributes, and prepare information necessary to build a packet.
  *
+ * @param[in]     ctx    talloc context for allocations (may be the input itself, or global context).
  * @param[in,out] input  item to parse and validate.
  *
  * @return -1 = invalid input (discarded), 0 = success.
  */
-static int dpc_input_parse(dpc_input_t *input)
+static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 {
 	fr_cursor_t cursor;
 	VALUE_PAIR *vp;
@@ -2644,7 +2645,7 @@ static int dpc_input_parse(dpc_input_t *input)
 				ssize_t slen;
 				char *value;
 
-				value = talloc_typed_strdup(input, vp->xlat); /* modified by xlat_tokenize */
+				value = talloc_typed_strdup(ctx, vp->xlat); /* modified by xlat_tokenize */
 
 				slen = xlat_tokenize(global_ctx, &xlat, value, NULL);
 				/* Notes:
@@ -2725,7 +2726,7 @@ static int dpc_input_parse(dpc_input_t *input)
 			memcpy(&input->ext.src.ipaddr, &vp->vp_ip, sizeof(input->ext.src.ipaddr));
 
 		} else if (vp->da == attr_input_name) { /* Input-Name = <string> */
-			input->name = talloc_strdup(input, vp->vp_strvalue);
+			input->name = talloc_strdup(ctx, vp->vp_strvalue);
 
 		} else if (vp->da == attr_start_delay) { /* Start-Delay = <n> */
 			if (!ncc_str_to_float(&input->start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
@@ -2745,12 +2746,12 @@ static int dpc_input_parse(dpc_input_t *input)
 				return -1;
 			}
 			if (!input->segments) {
-				input->segments = talloc_zero(input, ncc_dlist_t);
+				input->segments = talloc_zero(ctx, ncc_dlist_t);
 			}
-			if (ncc_segment_parse(input, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
+			if (ncc_segment_parse(ctx, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
 
 		} else if (vp->da == attr_authorized_server) { /* DHCP-Authorized-Server = <ipaddr> */
-			TALLOC_REALLOC_ONE_SET(input, input->authorized_servers, fr_ipaddr_t, vp->vp_ip);
+			TALLOC_REALLOC_ONE_SET(ctx, input->authorized_servers, fr_ipaddr_t, vp->vp_ip);
 
 		}
 
@@ -2814,7 +2815,7 @@ static int dpc_input_parse(dpc_input_t *input)
 	/* Set a default segment for this input.
 	 * This segment will enforce the input rate limit when no other input scoped segment is active.
 	 */
-	MEM(input->segment_dflt = talloc_zero(input, ncc_segment_t));
+	MEM(input->segment_dflt = talloc_zero(ctx, ncc_segment_t));
 	input->segment_dflt->name = "dflt";
 
 	if (input->rate_limit) {
@@ -2831,7 +2832,7 @@ static int dpc_input_parse(dpc_input_t *input)
 		input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
 
 		/* Override the start of segment list. */
-		if (ncc_segment_list_override_start(input, input->segments, ncc_float_to_fr_time(input->start_delay)) < 0) {
+		if (ncc_segment_list_override_start(ctx, input->segments, ncc_float_to_fr_time(input->start_delay)) < 0) {
 			PWARN("Failed to override segment list start. Discarding input (id: %u)", input->id);
 			return -1;
 		}
@@ -2887,10 +2888,17 @@ static void dpc_input_debug(dpc_input_t *input)
  */
 static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 {
+	TALLOC_CTX *ctx;
+
+	/* Provide a talloc context, which is *not* the input if we're not in template mode.
+	 * This makes it easier to duplicate input item without having to handle reparenting.
+	 */
+	ctx = (CONF.template ? input : global_ctx);
+
 	input->id = input_num ++;
 	input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
-	if (dpc_input_parse(input) < 0) {
+	if (dpc_input_parse(ctx, input) < 0) {
 		/*
 		 *	Invalid item. Discard.
 		 */
