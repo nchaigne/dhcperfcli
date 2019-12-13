@@ -337,6 +337,7 @@ static bool dpc_item_available(dpc_input_t *item, fr_time_t *when);
 static char dpc_item_get_status(dpc_input_t *input);
 static double dpc_item_get_elapsed(dpc_input_t *input);
 static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input);
+static ncc_segment_t *dpc_input_get_segment(dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
 static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
@@ -1789,22 +1790,53 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 }
 
 
-/*
- *	Check if a given input item is available for starting sessions.
- *	Return true if it is.
+/**
+ * Check if a given input item is currently available for starting sessions.
+ * If not get the time when it will be.
+ *
+ * @param[in]  input     item considered.
+ * @param[out] fte_when  time when it will be available (0 if available now).
+ *
+ * @return true = input is available, false = input is not available.
  */
-static bool dpc_item_available(dpc_input_t *item, fr_time_t *when)
+static bool dpc_item_available(dpc_input_t *input, fr_time_t *fte_when)
 {
 	fr_time_delta_t ftd_elapsed = dpc_job_elapsed_fr_time_get();
+	fr_time_delta_t ftd_avail = 0;
 
-	/* Check if this input is available for starting sessions. */
-	if (!item->ftd_start_delay || ftd_elapsed >= item->ftd_start_delay) {
-		*when = 0;
-		return true;
+	*fte_when = 0;
+
+	/* Check for start delay.
+	 */
+	if (ftd_elapsed < input->ftd_start_delay) {
+		ftd_avail = input->ftd_start_delay;
 	}
 
-	*when = item->ftd_start_delay - ftd_elapsed;
-	return false;
+	/* Check for null input segment.
+	 */
+	ncc_segment_t *segment = dpc_input_get_segment(input);
+	if (segment && segment->type == NCC_SEGMENT_RATE_NULL) {
+		if (segment->ftd_end > ftd_avail) {
+			ftd_avail = segment->ftd_end;
+
+		} else if (!segment->ftd_end) {
+			/* This input will never be available again.
+			 * We cannot return "infinity" so we arbitrarily add 10 seconds.
+			 * And mark input as done.
+			 */
+			ftd_avail += ncc_float_to_fr_time(10);
+
+			input->done = true;
+			input->fte_end = fr_time();
+		}
+	}
+
+	if (ftd_avail) {
+		*fte_when = fte_job_start + ftd_avail;
+		return false;
+	}
+
+	return true;
 }
 
 /*
@@ -1858,15 +1890,13 @@ static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input)
 	return true;
 }
 
-/*
- *	Check if an item is currently rate limited or not.
- *	Return: true = item is not allowed to start new sessions at the moment (rate limit enforced).
+/**
+ * Get input current segment (or default).
+ *
+ * @return the segment.
  */
-static bool dpc_item_rate_limited(dpc_input_t *input)
+static ncc_segment_t *dpc_input_get_segment(dpc_input_t *input)
 {
-	uint32_t max_new_sessions = 0;
-	bool limit;
-
 	input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
 
 	ncc_segment_t *segment = input->segment_cur;
@@ -1876,6 +1906,20 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 		 */
 		segment = input->segment_dflt;
 	}
+
+	return segment;
+}
+
+/*
+ *	Check if an item is currently rate limited or not.
+ *	Return: true = item is not allowed to start new sessions at the moment (rate limit enforced).
+ */
+static bool dpc_item_rate_limited(dpc_input_t *input)
+{
+	uint32_t max_new_sessions = 0;
+	bool limit;
+
+	ncc_segment_t *segment = dpc_input_get_segment(input);
 
 	limit = dpc_rate_limit_calc_gen(&max_new_sessions, false, segment, segment->num_use);
 
@@ -1932,18 +1976,20 @@ static dpc_input_t *dpc_get_input(void)
 			continue;
 		}
 
-		not_done++;
-
-		/* Check if item cannot be used to start new sessions.
+		/* Check if item can be used to start new sessions.
 		 */
 		fr_time_t when;
 		if (!dpc_item_available(input, &when)) {
 
-			/* Keep track of when input will be available at the soonest. */
+			/* Keep track of when any input will be available at the soonest. */
 			if (!fte_input_available || when < fte_input_available) fte_input_available = when;
 
+			/* Called function might have decided this input is done. */
+			if (!input->done) not_done++;
 			continue;
 		}
+
+		not_done++;
 
 		if (dpc_item_rate_limited(input)) continue;
 
