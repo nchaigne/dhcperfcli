@@ -2218,8 +2218,10 @@ static void dpc_loop_recv(void)
 		/* Whether we are ready to start new sessions right now. */
 		start_ready = (start_sessions_flag && session_num_parallel < CONF.session_max_active && !fte_input_available);
 
-		/* Don't wait if we are ready to start new sessions. */
-		if (start_ready) {
+		/* Don't wait if we are ready to start new sessions.
+		 * Or if we're not starting new sessions.
+		 */
+		if (start_ready || !start_sessions_flag) {
 			wait_max = 0;
 
 		} else {
