@@ -336,7 +336,6 @@ static char dpc_item_get_status(dpc_input_t *input);
 static double dpc_item_get_elapsed(dpc_input_t *input);
 static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input);
 static bool dpc_item_rate_limited(dpc_input_t *input);
-static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx);
 static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
@@ -1880,10 +1879,15 @@ static bool dpc_item_rate_limited(dpc_input_t *input)
 	else return (max_new_sessions == 0);
 }
 
-/*
- *	Get an input item from template (round robin on all template inputs).
+/**
+ * Get an eligible input item from input list (round robin on all inputs).
+ * Ensure it can be used for starting new sessions.
+ *
+ * In non template mode, the selected item is removed from the list.
+ *
+ * @return input item, NULL if none is eligible at this time.
  */
-static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
+static dpc_input_t *dpc_get_input(void)
 {
 	uint32_t checked = 0, not_done = 0;
 	fr_time_t now = fr_time();
@@ -1915,9 +1919,15 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 
 		not_done++;
 
-		if (!dpc_item_available(input)) continue; /* Item is not yet available. */
+		/* Check if item cannot be used to start new sessions.
+		 */
+		if (!dpc_item_available(input) || dpc_item_rate_limited(input)) continue;
 
-		if (!dpc_item_rate_limited(input)) return input;
+		if (!CONF.template) {
+			/* In non-template mode, item is removed from the list. */
+			NCC_DLIST_DRAW(&input_list, input);
+		}
+		return input;
 	}
 
 	if (not_done == 0) {
@@ -1926,20 +1936,6 @@ static dpc_input_t *dpc_get_input_from_template(TALLOC_CTX *ctx)
 	}
 
 	return NULL;
-}
-
-/*
- *	Get an input item. If using a template, dynamically generate a new item.
- */
-static dpc_input_t *dpc_get_input()
-{
-	dpc_input_t *input = NULL;
-	if (!CONF.template) {
-		NCC_DLIST_DEQUEUE(&input_list, input);
-	} else {
-		input = dpc_get_input_from_template(global_ctx);
-	}
-	return input;
 }
 
 /*
