@@ -256,7 +256,7 @@ struct dpc_input {
 
 	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
-	double start_delay;       //!< Delay after which this input can be used to start sessions.
+	fr_time_delta_t ftd_start_delay; //!< Delay after which this input can be used to start sessions.
 	fr_time_t fte_start;      //!< Timestamp of first use.
 	fr_time_t fte_end;        //!< Timestamp of last use once input is done.
 

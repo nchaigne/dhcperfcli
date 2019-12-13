@@ -201,6 +201,8 @@ static fr_time_t fte_sessions_ini_start; /* Start timestamp of starting new sess
 static fr_time_t fte_sessions_ini_end; /* End timestamp of starting new sessions. */
 static fr_time_t fte_last_session_in; /* Last time a session has been initialized from input. */
 
+static fr_time_t fte_input_available; /* No item will be available before that point in time. */
+
 static fr_time_t fte_snapshot; /* Snapshot of current time (for consistency when reporting linked values). */
 
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
@@ -331,7 +333,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet);
 
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input);
 
-static bool dpc_item_available(dpc_input_t *item);
+static bool dpc_item_available(dpc_input_t *item, fr_time_t *when);
 static char dpc_item_get_status(dpc_input_t *input);
 static double dpc_item_get_elapsed(dpc_input_t *input);
 static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input);
@@ -1791,12 +1793,17 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
  *	Check if a given input item is available for starting sessions.
  *	Return true if it is.
  */
-static bool dpc_item_available(dpc_input_t *item)
+static bool dpc_item_available(dpc_input_t *item, fr_time_t *when)
 {
+	fr_time_delta_t ftd_elapsed = dpc_job_elapsed_fr_time_get();
+
 	/* Check if this input is available for starting sessions. */
-	if (!item->start_delay || dpc_job_elapsed_time_get() >= item->start_delay) {
+	if (!item->ftd_start_delay || ftd_elapsed >= item->ftd_start_delay) {
+		*when = 0;
 		return true;
 	}
+
+	*when = item->ftd_start_delay - ftd_elapsed;
 	return false;
 }
 
@@ -1892,6 +1899,14 @@ static dpc_input_t *dpc_get_input(void)
 	uint32_t checked = 0, not_done = 0;
 	fr_time_t now = fr_time();
 
+	if (fte_input_available && fte_input_available > now) {
+		/*
+		 * We've already determined that no input is available at this time.
+		 */
+		return NULL;
+	}
+	fte_input_available = 0;
+
 	while (checked < NCC_DLIST_SIZE(&input_list)) {
 		dpc_input_t *input;
 		NCC_DLIST_USE_NEXT(&input_list, input);
@@ -1921,7 +1936,16 @@ static dpc_input_t *dpc_get_input(void)
 
 		/* Check if item cannot be used to start new sessions.
 		 */
-		if (!dpc_item_available(input) || dpc_item_rate_limited(input)) continue;
+		fr_time_t when;
+		if (!dpc_item_available(input, &when)) {
+
+			/* Keep track of when input will be available at the soonest. */
+			if (!fte_input_available || when < fte_input_available) fte_input_available = when;
+
+			continue;
+		}
+
+		if (dpc_item_rate_limited(input)) continue;
 
 		if (!CONF.template) {
 			/* In non-template mode, item is removed from the list. */
@@ -2130,19 +2154,41 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 static void dpc_loop_recv(void)
 {
 	bool done = false;
+	fr_time_t now, when;
+	fr_time_delta_t wait_max;
+	int ev_peek;
+	bool start_ready;
 
 	while (!done) {
 		/*
-		 *	If we're limited because the max parallelism is currently reached,
-		 *	allow to block waiting until the next scheduled event.
-		 *	We know we don't have anything else to do until then. It will avoid needlessly hogging one full CPU.
+		 * Do not listen with no delay if we don't have to.
+		 * It will avoid needlessly hogging one full CPU, which is bad form.
 		 */
-		fr_time_t now, when;
-		fr_time_delta_t wait_max = 0;
+		now = fr_time();
 
-		if (session_num_parallel >= CONF.session_max_active && ncc_fr_event_timer_peek(event_list, &when)) {
-			now = fr_time();
-			if (when > now) wait_max = when - now; /* No negative. */
+		/* Next scheduled event (if there is one). */
+		ev_peek = ncc_fr_event_timer_peek(event_list, &when);
+
+		/* Whether we are ready to start new sessions right now. */
+		start_ready = (start_sessions_flag && session_num_parallel < CONF.session_max_active && !fte_input_available);
+
+		/* Don't wait if we are ready to start new sessions. */
+		if (start_ready) {
+			wait_max = 0;
+
+		} else {
+			/* Do not wait past a scheduled event.
+			 * If we're waiting for a reply, we have at least one scheduled event.
+			 */
+			if (ev_peek) {
+				if (when > now) wait_max = when - now; /* No negative. */
+			}
+
+			/* If we would like to start sessions, but cannot because no input is available at this point. */
+			if (fte_input_available > now) {
+				fr_time_delta_t delta = fte_input_available - now;
+				if (!wait_max || delta < wait_max) wait_max = delta;
+			}
 		}
 
 		/*
@@ -2728,16 +2774,18 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		} else if (vp->da == attr_input_name) { /* Input-Name = <string> */
 			input->name = talloc_strdup(ctx, vp->vp_strvalue);
 
-		} else if (vp->da == attr_start_delay) { /* Start-Delay = <n> */
-			if (!ncc_str_to_float(&input->start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
+		} else if (vp->da == attr_start_delay) { /* Start-Delay = <float> */
+			double start_delay;
+			if (!ncc_str_to_float(&start_delay, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
+			input->ftd_start_delay = ncc_float_to_fr_time(start_delay);
 
-		} else if (vp->da == attr_rate_limit) { /* Rate-Limit = <n> */
+		} else if (vp->da == attr_rate_limit) { /* Rate-Limit = <float> */
 			if (!ncc_str_to_float(&input->rate_limit, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
 
-		} else if (vp->da == attr_max_duration) { /* Max-Duration = <n> */
+		} else if (vp->da == attr_max_duration) { /* Max-Duration = <float> */
 			if (!ncc_str_to_float(&input->max_duration, vp->vp_strvalue, false)) WARN_ATTR_VALUE;
 
-		} else if (vp->da == attr_max_use) { /* Max-Use = <n> */
+		} else if (vp->da == attr_max_use) { /* Max-Use = <int> */
 			input->max_use = vp->vp_uint32;
 
 		} else if (vp->da == attr_segment) { /* Segment = <string> */
@@ -2828,11 +2876,11 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	/* Handle "Start-Delay" if set. Do not allow any traffic to start before that.
 	 * Adjust segments so that rate calculations are relative to this new start.
 	 */
-	if (input->start_delay) {
-		input->segment_dflt->ftd_start = ncc_float_to_fr_time(input->start_delay);
+	if (input->ftd_start_delay) {
+		input->segment_dflt->ftd_start = input->ftd_start_delay;
 
 		/* Override the start of segment list. */
-		if (ncc_segment_list_override_start(ctx, input->segments, ncc_float_to_fr_time(input->start_delay)) < 0) {
+		if (ncc_segment_list_override_start(ctx, input->segments, input->ftd_start_delay) < 0) {
 			PWARN("Failed to override segment list start. Discarding input (id: %u)", input->id);
 			return -1;
 		}
