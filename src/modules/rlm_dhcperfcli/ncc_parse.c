@@ -658,6 +658,10 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 		int rule_type = rule_p->type;
 		int type = FR_BASE_TYPE(rule_type);
 
+		/* Be silent if it is marked as "secret" (unless debug level >= 3).
+		 */
+		if ((rule_type & FR_TYPE_SECRET) && (!NCC_DEBUG_ENABLED(3))) continue;
+
 		switch (type) {
 		CASE_PARSER_CONF_TYPE(FR_TYPE_STRING, char *);
 		CASE_PARSER_CONF_TYPE(FR_TYPE_BOOL, bool);

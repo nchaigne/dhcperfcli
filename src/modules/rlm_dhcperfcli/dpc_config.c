@@ -91,7 +91,7 @@ static const CONF_PARSER _load_config[] = {
 static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("template", FR_TYPE_BOOL, dpc_config_t, template) }, /* No default */
 	{ FR_CONF_OFFSET("xlat", FR_TYPE_BOOL, dpc_config_t, xlat) }, /* No default */
-	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
+	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI | FR_TYPE_SECRET, dpc_config_t, xlat_files) },
 
 	{ FR_CONF_OFFSET("input_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, input_files) },
 	// Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
