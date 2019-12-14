@@ -316,8 +316,9 @@ typedef struct ncc_parse_ctx_t {
 			int64_t min;
 			int64_t max;
 
-			fr_table_num_ordered_t *fr_table;
-			size_t fr_table_len; //<! must be set to NUM_ELEMENTS(table)
+			fr_table_num_ordered_t *fr_table; //<! Table of allowed values.
+			size_t fr_table_len;    //<! Size of fr_table. Will be set automatically if pointer is provided.
+			size_t *p_fr_table_len; //<! Pointer because NUM_ELEMENTS (sizeof) cannot work on an extern array with no specified size.
 
 		} integer;       //<! Value bounds for signed integers.
 		struct {

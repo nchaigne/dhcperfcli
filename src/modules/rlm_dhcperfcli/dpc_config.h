@@ -8,6 +8,11 @@ typedef struct dpc_config_s dpc_config_t;
 extern dpc_config_t *dpc_config; //!< Global configuration singleton.
 #define CONF (*dpc_config)
 
+
+extern fr_table_num_ordered_t dpc_packet_trace_table[];
+extern size_t dpc_packet_trace_table_len;
+
+
 /*
  *	Main configuration
  */
@@ -150,4 +155,4 @@ do {\
 
 #define PARSE_CTX_PACKET_TRACE_LEVEL &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 		.type_check = NCC_TYPE_CHECK_TABLE, \
-		.integer.fr_table = dpc_packet_trace_table, .integer.fr_table_len = NUM_ELEMENTS(dpc_packet_trace_table) }
+		.integer.fr_table = dpc_packet_trace_table, .integer.p_fr_table_len = &dpc_packet_trace_table_len }
