@@ -147,3 +147,7 @@ do {\
 
 #define PARSE_CTX_SESSION_MAX_ACTIVE &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT32, \
 		.type_check = NCC_TYPE_CHECK_MIN, .uinteger.min = 1 }
+
+#define PARSE_CTX_PACKET_TRACE_LEVEL &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
+		.type_check = NCC_TYPE_CHECK_TABLE, \
+		.integer.fr_table = dpc_packet_trace_table, .integer.fr_table_len = NUM_ELEMENTS(dpc_packet_trace_table) }

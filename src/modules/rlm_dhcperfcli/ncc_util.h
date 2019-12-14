@@ -229,15 +229,19 @@ extern int ncc_debug_lvl;
 // a "safe" version of fr_box_strvalue that can be used with a NULL value.
 #define fr_box_str(_val) _fr_box_with_len(FR_TYPE_STRING, .vb_strvalue, _val, _val ? strlen(_val) : 0)
 
-/* Custom flags that can be passed within "type" to ncc_value_from_str */
+/*
+ * Custom flags that can be passed within "type_check" in ncc_parse_ctx_t.
+ * Used by ncc_conf_item_parse and ncc_parse_value_from_str.
+ */
 #define NCC_TYPE_NOT_EMPTY     (1 << 10)
 #define NCC_TYPE_NOT_NEGATIVE  (1 << 11)
 #define NCC_TYPE_NOT_ZERO      (1 << 12)
 #define NCC_TYPE_CHECK_MIN     (1 << 13)
 #define NCC_TYPE_CHECK_MAX     (1 << 14)
-#define NCC_TYPE_FORCE_MIN     (1 << 15)
-#define NCC_TYPE_FORCE_MAX     (1 << 16)
-#define NCC_TYPE_IGNORE_ZERO   (1 << 17)
+#define NCC_TYPE_CHECK_TABLE   (1 << 15)
+#define NCC_TYPE_FORCE_MIN     (1 << 16)
+#define NCC_TYPE_FORCE_MAX     (1 << 17)
+#define NCC_TYPE_IGNORE_ZERO   (1 << 18)
 
 /* Custom log flags that can extend fr_log_type_t */
 #define NCC_LOG_LOCATION       (1 << 10)
@@ -311,6 +315,10 @@ typedef struct ncc_parse_ctx_t {
 		struct {
 			int64_t min;
 			int64_t max;
+
+			fr_table_num_ordered_t *fr_table;
+			size_t fr_table_len; //<! must be set to NUM_ELEMENTS(table)
+
 		} integer;       //<! Value bounds for signed integers.
 		struct {
 			uint64_t min;

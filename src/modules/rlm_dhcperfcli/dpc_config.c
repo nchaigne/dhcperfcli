@@ -12,6 +12,19 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_config_t *segment_config, ncc_dlist_t *segments);
 static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, ncc_dlist_t *segments);
 
+
+/* Allowed values for packet trace level
+ */
+fr_table_num_ordered_t dpc_packet_trace_table[] = {
+	{ "auto",    -1 },
+	{ "none",    0  },
+	{ "digest",  1  },
+	{ "pairs",   2  },
+	{ "data",    3  },
+};
+size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
+
+
 /* Notes:
  *
  * - Some parameters may be defined through command-line options and configuration files.
@@ -49,7 +62,8 @@ static const CONF_PARSER _log_config[] = {
 };
 
 static const CONF_PARSER _packet_trace_config[] = {
-	{ FR_CONF_OFFSET("level", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl) }, /* No default */
+	{ FR_CONF_OFFSET("level", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl), /* No default */
+		.func = ncc_conf_item_parse, PARSE_CTX_PACKET_TRACE_LEVEL },
 	{ FR_CONF_OFFSET("elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, packet_trace_timestamp), .dflt = "no" },
 

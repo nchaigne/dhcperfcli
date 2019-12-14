@@ -45,6 +45,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	bool force_max = (type_check & NCC_TYPE_FORCE_MAX);
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
+	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
 
 #define CHECK_IGNORE_ZERO \
 	if (ignore_zero && !v) return 0;
@@ -75,6 +76,13 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	} \
 }
 
+#define CHECK_VALUE_TABLE(_ctx_type) { \
+	if (check_table && parse_ctx->integer.fr_table && fr_table_str_by_value(parse_ctx->integer.fr_table, v, NULL) == NULL) { \
+		cf_log_err(ci, "Invalid value for \"%s\" (unknown)", item_name); \
+		return -1; \
+	} \
+}
+
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
 	DEBUG3("Checking configured item \"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", item_name, fr_box_##_type(v)); \
@@ -86,33 +94,6 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	memcpy(out, &v, sizeof(v)); \
 	CHECK_VALUE_MIN(_type, _ctx_type) \
 	CHECK_VALUE_MAX(_type, _ctx_type) \
-}
-
-#define CHECK_FLOAT_MIN(_v) { \
-	if (check_min && v < parse_ctx->_float.min) { \
-		cf_log_err(ci, "Invalid value for \"%s\" (min: %f)", item_name, parse_ctx->_float.min); \
-		return -1; \
-	} \
-}
-
-#define CHECK_FLOAT_MAX(_v) { \
-	if (check_max && v > parse_ctx->_float.max) { \
-		cf_log_err(ci, "Invalid value for \"%s\" (max: %f)", item_name, parse_ctx->_float.max); \
-		return -1; \
-	} \
-}
-
-// TODO: remove this?
-#define CHECK_FLOAT_VALUE { \
-	memcpy(&v, out, sizeof(v)); \
-	CHECK_IGNORE_ZERO \
-	CHECK_NOT_ZERO \
-	CHECK_NOT_NEGATIVE \
-	if (force_min) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, >=, parse_ctx->_float.min); \
-	if (force_max) NCC_CI_FLOAT_BOUND_CHECK(ci, item_name, v, <=, parse_ctx->_float.max); \
-	memcpy(out, &v, sizeof(v)); \
-	CHECK_FLOAT_MIN(v) \
-	CHECK_FLOAT_MAX(v) \
 }
 
 	/*
@@ -138,6 +119,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	{
 		int32_t v;
 		CHECK_VALUE(int32, integer)
+		CHECK_VALUE_TABLE(integer)
 	}
 		break;
 
@@ -151,7 +133,6 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	case FR_TYPE_FLOAT32:
 	{
 		float v;
-		//CHECK_FLOAT_VALUE
 		CHECK_VALUE(float32, _float)
 	}
 		break;
@@ -159,7 +140,6 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	case FR_TYPE_FLOAT64:
 	{
 		double v;
-		//CHECK_FLOAT_VALUE
 		CHECK_VALUE(float64, _float)
 	}
 		break;
