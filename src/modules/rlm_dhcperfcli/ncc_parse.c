@@ -450,7 +450,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
  *
  * @return -1 = error, 0 = success and value is not modified, 1 = value is forced.
  */
-int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t const *parse_ctx)
+int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx)
 {
 	int ret = 0; /* Set to 1 if value is forced. */
 
@@ -468,6 +468,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	bool force_max = (type_check & NCC_TYPE_FORCE_MAX);
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
+	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
 
 #define CHECK_IGNORE_ZERO \
 	if (ignore_zero && !v) return 0;
@@ -477,6 +478,16 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 		fr_strerror_printf("Invalid value (cannot be zero)"); \
 		return -1; \
 	}
+
+#define CHECK_VALUE_TABLE(_type, _ctx_type) { \
+	if (check_table && parse_ctx->integer.fr_table) { \
+		if (parse_ctx->integer.p_fr_table_len) parse_ctx->integer.fr_table_len = *(parse_ctx->integer.p_fr_table_len); \
+		if (fr_table_str_by_value(parse_ctx->integer.fr_table, v, NULL) == NULL) { \
+			fr_strerror_printf("Invalid value \"%pV\" (unknown)", fr_box_##_type(v)); \
+			return -1; \
+		} \
+	} \
+}
 
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
@@ -522,6 +533,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	{
 		int32_t v;
 		CHECK_VALUE(int32, integer)
+		CHECK_VALUE_TABLE(int32, integer)
 	}
 		break;
 
