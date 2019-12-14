@@ -481,7 +481,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 
 #define CHECK_VALUE_TABLE(_type, _ctx_type) { \
 	if (check_table && parse_ctx->integer.fr_table) { \
-		if (parse_ctx->integer.p_fr_table_len) parse_ctx->integer.fr_table_len = *(parse_ctx->integer.p_fr_table_len); \
+		FR_TABLE_LEN_FROM_PTR(parse_ctx->integer.fr_table); \
 		if (fr_table_str_by_value(parse_ctx->integer.fr_table, v, NULL) == NULL) { \
 			fr_strerror_printf("Invalid value \"%pV\" (unknown)", fr_box_##_type(v)); \
 			return -1; \
@@ -569,11 +569,42 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 
 
 /**
+ * If parser rule has a parse context with a "check table" rule,
+ * get the table string value that corresponds to the integer value.
+ */
+char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *parse_ctx)
+{
+	if (!parse_ctx
+	 || !(parse_ctx->type_check & NCC_TYPE_CHECK_TABLE)) return NULL;
+
+	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
+	char const *table_str = NULL;
+
+	switch (type) {
+	case FR_TYPE_INT32:
+	{
+		int32_t value = *(int32_t *)pvalue;
+		if (parse_ctx->integer.fr_table) {
+			FR_TABLE_LEN_FROM_PTR(parse_ctx->integer.fr_table);
+			table_str = fr_table_str_by_value(parse_ctx->integer.fr_table, value, NULL);
+		}
+	}
+		break;
+
+	default:
+		break;
+	}
+
+	return table_str;
+}
+
+/**
  * Debug a configuration item. If multi-valued, iterate over all values and print each of them.
  * Items are printed using the fr_box_* macro corresponding to their type.
  */
 static char const config_spaces[] = "                                                                                ";
-void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, int depth, char const *prefix)
+void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, ncc_parse_ctx_t *parse_ctx,
+                                  int depth, char const *prefix)
 {
 	if (!pvalue) return;
 
@@ -583,8 +614,11 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 #define CONF_SPACE(_depth) ((_depth) * 2)
 
 #define DEBUG_CONF_BOX(_type) do { \
-	if (prefix && prefix[0] != '\0') DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix, name, fr_box_##_type(value)); \
-	else DEBUG("%.*s%s = %pV", CONF_SPACE(depth), config_spaces, name, fr_box_##_type(value)); \
+	if (!value_str) { \
+		DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix ? prefix : "", name, fr_box_##_type(value)); \
+	} else { \
+		DEBUG("%.*s%s.%s = %pV (%s)", CONF_SPACE(depth), config_spaces, prefix ? prefix : "", name, fr_box_##_type(value), value_str); \
+	} \
 } while (0)
 
 #define CASE_CONF_BOX_VALUE(_fr_type, _c_type, _box_type) \
@@ -607,10 +641,13 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 		size_t len = talloc_get_size(value_arr) / vsize;
 
 		for (i = 0; i < len; i++) {
-			ncc_parser_config_item_debug(base_type, name, (void *)(value_arr + (i * vsize)), vsize, depth, prefix);
+			ncc_parser_config_item_debug(base_type, name, (void *)(value_arr + (i * vsize)), vsize, parse_ctx, depth, prefix);
 		}
 
 	} else {
+		/* Get corresponding string value if relevant. */
+		char const *value_str = ncc_parser_config_get_table_value(pvalue, parse_ctx);
+
 		switch (base_type) {
 		CASE_CONF_BOX_VALUE(FR_TYPE_BOOL, bool, boolean);
 
@@ -660,7 +697,7 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 
 #define CASE_PARSER_CONF_TYPE(_fr_type, _c_type) \
 	case _fr_type: \
-		ncc_parser_config_item_debug(rule_type, rule_p->name, ((uint8_t *)config + rule_p->offset), sizeof(_c_type), depth, prefix); \
+		ncc_parser_config_item_debug(rule_type, rule_p->name, ((uint8_t *)config + rule_p->offset), sizeof(_c_type), parse_ctx, depth, prefix); \
 		break;
 
 	/*
@@ -669,6 +706,8 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 	for (rule_p = rules; rule_p->name; rule_p++) {
 		int rule_type = rule_p->type;
 		int type = FR_BASE_TYPE(rule_type);
+
+		ncc_parse_ctx_t *parse_ctx = (ncc_parse_ctx_t *)rule_p->uctx;
 
 		/* Be silent if it is marked as "secret" (unless debug level >= 3).
 		 */

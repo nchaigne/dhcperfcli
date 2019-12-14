@@ -318,7 +318,7 @@ typedef struct ncc_parse_ctx_t {
 
 			fr_table_num_ordered_t *fr_table; //<! Table of allowed values.
 			size_t fr_table_len;    //<! Size of fr_table. Will be set automatically if pointer is provided.
-			size_t *p_fr_table_len; //<! Pointer because NUM_ELEMENTS (sizeof) cannot work on an extern array with no specified size.
+			size_t *fr_table_len_p; //<! Pointer because NUM_ELEMENTS (sizeof) cannot work on an extern array with no specified size.
 
 		} integer;       //<! Value bounds for signed integers.
 		struct {
@@ -332,6 +332,9 @@ typedef struct ncc_parse_ctx_t {
 	};
 
 } ncc_parse_ctx_t;
+
+#define FR_TABLE_LEN_FROM_PTR(_fr_table) \
+	if (_fr_table ## _len_p) _fr_table ## _len = *(_fr_table ## _len_p);
 
 #define PARSE_CTX_FLOAT64_NOT_NEGATIVE &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, .type_check = NCC_TYPE_NOT_NEGATIVE }
 
@@ -434,6 +437,9 @@ int ncc_strtod(double *out, char const *value);
 int ncc_strtobool(bool *out, char const *value);
 int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
 int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx);
+char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *parse_ctx);
+void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, ncc_parse_ctx_t *parse_ctx,
+                                  int depth, char const *prefix);
 void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);
 void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old);
 
