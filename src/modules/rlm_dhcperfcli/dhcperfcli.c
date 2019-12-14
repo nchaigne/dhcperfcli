@@ -3587,7 +3587,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'P':
-			PARSE_OPT(CONF.packet_trace_lvl, FR_TYPE_INT32);
+			PARSE_OPT_CTX(CONF.packet_trace_lvl, FR_TYPE_INT32, PARSE_CTX_PACKET_TRACE_LEVEL);
 			break;
 
 		case 'r':
