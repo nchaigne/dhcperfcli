@@ -22,9 +22,21 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	 */
 
 	char const *item_name = cf_pair_attr(cf_item_to_pair(ci));
+	char const *section = "";
+	char *sp_section = "";
+
+	CONF_SECTION *cs = cf_item_to_section(cf_parent(ci));
+
+	/* The item section is not top level if it has a parent.
+	 * In this case, print section name along with the item.
+	 */
+	if (cf_parent(cs)) {
+		section = cf_section_name1(cs);
+		sp_section = " ";
+	}
 
 	if (!parse_ctx) {
-		cf_log_err(ci, "Missing parse context for \"%s\"", item_name);
+		cf_log_err(ci, "Missing parse context for %s%s\"%s\"", section, sp_section, item_name);
 		return -1;
 	}
 
@@ -52,26 +64,28 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 
 #define CHECK_NOT_ZERO \
 	if (not_zero && !v) { \
-		cf_log_err(ci, "Invalid value for \"%s\" (cannot be zero)", item_name); \
+		cf_log_err(ci, "Invalid value for %s%s\"%s\" (cannot be zero)", section, sp_section, item_name); \
 		return -1; \
 	}
 
 #define CHECK_NOT_NEGATIVE \
 	if (not_negative && v < 0) { \
-		cf_log_err(ci, "Invalid value for \"%s\" (cannot be negative)", item_name); \
+		cf_log_err(ci, "Invalid value for %s%s\"%s\" (cannot be negative)", section, sp_section, item_name); \
 		return -1; \
 	}
 
 #define CHECK_VALUE_MIN(_type, _ctx_type) { \
 	if (check_min && v < parse_ctx->_ctx_type.min) { \
-		cf_log_err(ci, "Invalid value for \"%s\" (min: %pV)", item_name, fr_box_##_type(parse_ctx->_ctx_type.min)); \
+		cf_log_err(ci, "Invalid value for %s%s\"%s\" (min: %pV)", section, sp_section, item_name, \
+		           fr_box_##_type(parse_ctx->_ctx_type.min)); \
 		return -1; \
 	} \
 }
 
 #define CHECK_VALUE_MAX(_type, _ctx_type) { \
 	if (check_max && v > parse_ctx->_ctx_type.max) { \
-		cf_log_err(ci, "Invalid value for \"%s\" (max: %pV)", item_name, fr_box_##_type(parse_ctx->_ctx_type.max)); \
+		cf_log_err(ci, "Invalid value for %s%s\"%s\" (max: %pV)", section, sp_section, item_name, \
+		           fr_box_##_type(parse_ctx->_ctx_type.max)); \
 		return -1; \
 	} \
 }
@@ -80,7 +94,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	if (check_table && parse_ctx->fr_table) { \
 		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
 		if (fr_table_str_by_value(parse_ctx->fr_table, v, NULL) == NULL) { \
-			cf_log_err(ci, "Invalid value for \"%s\" (unknown)", item_name); \
+			cf_log_err(ci, "Invalid value for %s%s\"%s\" (unknown)", section, sp_section, item_name); \
 			return -1; \
 		} \
 	} \
@@ -90,7 +104,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	if (check_table && parse_ctx->fr_table) { \
 		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
 		if (fr_table_value_by_str(parse_ctx->fr_table, v, -100) == -100) { \
-			cf_log_err(ci, "Invalid value for \"%s\" (unknown)", item_name); \
+			cf_log_err(ci, "Invalid value for %s%s\"%s\" (unknown)", section, sp_section, item_name); \
 			return -1; \
 		} \
 	} \
@@ -99,7 +113,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
-	DEBUG3("Checking configured item \"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", item_name, fr_box_##_type(v)); \
+	DEBUG3("Checking configured item %s%s\"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", \
+	       section, sp_section, item_name, fr_box_##_type(v)); \
 	CHECK_IGNORE_ZERO \
 	CHECK_NOT_ZERO \
 	CHECK_NOT_NEGATIVE \
