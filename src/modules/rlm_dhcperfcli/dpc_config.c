@@ -49,6 +49,7 @@ size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
  * For example it doesn't compain if there is a mismatch between integer types.
  *
  * To bypass it we could just use a simpler "CONF_OFFSET" macro.
+ * Nope. We can't, actually, because they are also not handled at runtime. So just don't use them.
  */
 #define _CONF_OFFSET(_n, _t, _s, _f) \
 	.name = _n, \
