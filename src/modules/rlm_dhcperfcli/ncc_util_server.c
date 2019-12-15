@@ -86,6 +86,17 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	} \
 }
 
+#define CHECK_STR_TABLE { \
+	if (check_table && parse_ctx->fr_table) { \
+		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
+		if (fr_table_value_by_str(parse_ctx->fr_table, v, -100) == -100) { \
+			cf_log_err(ci, "Invalid value for \"%s\" (unknown)", item_name); \
+			return -1; \
+		} \
+	} \
+}
+/* Note: this assumes -100 is *not* a value in the table... */
+
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
 	DEBUG3("Checking configured item \"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", item_name, fr_box_##_type(v)); \
@@ -148,6 +159,14 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		parse_ctx->ftd.max = ftd_max;
 
 		CHECK_VALUE(time_delta, ftd);
+	}
+		break;
+
+	case FR_TYPE_STRING:
+	{
+		char *v;
+		memcpy(&v, out, sizeof(v));
+		CHECK_STR_TABLE
 	}
 		break;
 

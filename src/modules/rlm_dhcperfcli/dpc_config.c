@@ -15,7 +15,7 @@ static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, nc
 
 /* Allowed values for packet trace level
  */
-fr_table_num_ordered_t dpc_packet_trace_table[] = {
+fr_table_num_ordered_t const dpc_packet_trace_table[] = {
 	{ "auto",    -1 },
 	{ "none",    0  },
 	{ "digest",  1  },
