@@ -510,39 +510,29 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	} \
 }
 
+#define CASE_CHECK_BOX_VALUE(_fr_type, _c_type, _box_type, _ctx_type) \
+	case _fr_type: \
+	{ \
+		_c_type v; \
+		CHECK_VALUE(_box_type, _ctx_type) \
+		CHECK_VALUE_TABLE(_box_type, _ctx_type) \
+	} \
+	break;
+
 	/*
 	 * Extract the value, and check the type is handled.
 	 * Perform specified checks.
 	 */
 	switch (type) {
-	case FR_TYPE_UINT32:
-	{
-		uint32_t v;
-		CHECK_VALUE(uint32, uinteger)
-	}
-		break;
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT8, uint8_t, uint8, uinteger)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT16, uint16_t, uint16, uinteger)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT32, uint32_t, uint32, uinteger)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT64, uint64_t, uint64, uinteger)
 
-	case FR_TYPE_UINT64:
-	{
-		uint64_t v;
-		CHECK_VALUE(uint64, uinteger)
-	}
-		break;
-
-	case FR_TYPE_INT32:
-	{
-		int32_t v;
-		CHECK_VALUE(int32, integer)
-		CHECK_VALUE_TABLE(int32, integer)
-	}
-		break;
-
-	case FR_TYPE_INT64:
-	{
-		int64_t v;
-		CHECK_VALUE(int64, integer)
-	}
-		break;
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT8, int8_t, int8, integer)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT16, int16_t, int16, integer)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT32, int32_t, int32, integer)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT64, int64_t, int64, integer)
 
 	case FR_TYPE_FLOAT32:
 	{
@@ -649,16 +639,20 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 		char const *value_str = ncc_parser_config_get_table_value(pvalue, parse_ctx);
 
 		switch (base_type) {
-		CASE_CONF_BOX_VALUE(FR_TYPE_BOOL, bool, boolean);
+		CASE_CONF_BOX_VALUE(FR_TYPE_BOOL, bool, boolean)
 
-		CASE_CONF_BOX_VALUE(FR_TYPE_FLOAT64, double, float64);
-		CASE_CONF_BOX_VALUE(FR_TYPE_FLOAT32, float, float32);
+		CASE_CONF_BOX_VALUE(FR_TYPE_FLOAT32, float, float32)
+		CASE_CONF_BOX_VALUE(FR_TYPE_FLOAT64, double, float64)
 
-		CASE_CONF_BOX_VALUE(FR_TYPE_UINT64, uint64_t, uint64);
-		CASE_CONF_BOX_VALUE(FR_TYPE_UINT32, uint32_t, uint32);
+		CASE_CONF_BOX_VALUE(FR_TYPE_UINT8, uint8_t, uint8)
+		CASE_CONF_BOX_VALUE(FR_TYPE_UINT16, uint16_t, uint16)
+		CASE_CONF_BOX_VALUE(FR_TYPE_UINT32, uint32_t, uint32)
+		CASE_CONF_BOX_VALUE(FR_TYPE_UINT64, uint64_t, uint64)
 
-		CASE_CONF_BOX_VALUE(FR_TYPE_INT64, int64_t, int64);
-		CASE_CONF_BOX_VALUE(FR_TYPE_INT32, int32_t, int32);
+		CASE_CONF_BOX_VALUE(FR_TYPE_INT8, int8_t, int8)
+		CASE_CONF_BOX_VALUE(FR_TYPE_INT16, int16_t, int16)
+		CASE_CONF_BOX_VALUE(FR_TYPE_INT32, int32_t, int32)
+		CASE_CONF_BOX_VALUE(FR_TYPE_INT64, int64_t, int64)
 
 		case FR_TYPE_STRING:
 		{
@@ -717,14 +711,18 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 		CASE_PARSER_CONF_TYPE(FR_TYPE_STRING, char *);
 		CASE_PARSER_CONF_TYPE(FR_TYPE_BOOL, bool);
 
-		CASE_PARSER_CONF_TYPE(FR_TYPE_FLOAT64, double);
 		CASE_PARSER_CONF_TYPE(FR_TYPE_FLOAT32, float);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_FLOAT64, double);
 
-		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT64, uint64_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT8, uint8_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT16, uint16_t);
 		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT32, uint32_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_UINT64, uint64_t);
 
-		CASE_PARSER_CONF_TYPE(FR_TYPE_INT64, int64_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_INT8, int8_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_INT16, int16_t);
 		CASE_PARSER_CONF_TYPE(FR_TYPE_INT32, int32_t);
+		CASE_PARSER_CONF_TYPE(FR_TYPE_INT64, int64_t);
 
 		CASE_PARSER_CONF_TYPE(FR_TYPE_TIME_DELTA, fr_time_delta_t);
 		CASE_PARSER_CONF_TYPE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t);

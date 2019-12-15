@@ -99,39 +99,29 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	CHECK_VALUE_MAX(_type, _ctx_type) \
 }
 
+#define CASE_CHECK_BOX_VALUE(_fr_type, _c_type, _box_type, _ctx_type) \
+	case _fr_type: \
+	{ \
+		_c_type v; \
+		CHECK_VALUE(_box_type, _ctx_type) \
+		CHECK_VALUE_TABLE(_ctx_type) \
+	} \
+	break;
+
 	/*
 	 * Extract the value, and check the type is handled.
 	 * Perform specified checks.
 	 */
 	switch (type) {
-	case FR_TYPE_UINT32:
-	{
-		uint32_t v;
-		CHECK_VALUE(uint32, uinteger)
-	}
-		break;
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT8, uint8_t, uint8, uinteger)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT16, uint16_t, uint16, uinteger)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT32, uint32_t, uint32, uinteger)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT64, uint64_t, uint64, uinteger)
 
-	case FR_TYPE_UINT64:
-	{
-		uint64_t v;
-		CHECK_VALUE(uint64, uinteger)
-	}
-		break;
-
-	case FR_TYPE_INT32:
-	{
-		int32_t v;
-		CHECK_VALUE(int32, integer)
-		CHECK_VALUE_TABLE(integer)
-	}
-		break;
-
-	case FR_TYPE_INT64:
-	{
-		int64_t v;
-		CHECK_VALUE(int64, integer)
-	}
-		break;
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT8, int8_t, int8, integer)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT16, int16_t, int16, integer)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT32, int32_t, int32, integer)
+	CASE_CHECK_BOX_VALUE(FR_TYPE_INT64, int64_t, int64, integer)
 
 	case FR_TYPE_FLOAT32:
 	{
