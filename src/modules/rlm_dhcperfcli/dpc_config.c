@@ -41,6 +41,20 @@ size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
  *   Probably because the value pointer dynamically allocated - so we'll have to handle this.
  */
 
+/* Not all types are supported by the parser (cf. FR_CONF_OFFSET -> FR_CONF_TYPE_CHECK in cf_parse.h)
+ * The following do not work ("error: void value not ignored as it ought to be"):
+ * FR_TYPE_INT16, FR_TYPE_INT8
+ *
+ * Validation macro FR_CONF_TYPE_CHECK does not seem to work in all cases.
+ * For example it doesn't compain if there is a mismatch between integer types.
+ *
+ * To bypass it we could just use a simpler "CONF_OFFSET" macro.
+ */
+#define _CONF_OFFSET(_n, _t, _s, _f) \
+	.name = _n, \
+	.type = _t, \
+	.offset = offsetof(_s, _f)
+
 static CONF_PARSER _segment_config[] = {
 	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed" },
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", FLOAT64_NOT_NEGATIVE },
