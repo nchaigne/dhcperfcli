@@ -77,9 +77,9 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 }
 
 #define CHECK_VALUE_TABLE(_ctx_type) { \
-	if (check_table && parse_ctx->integer.fr_table) { \
-		FR_TABLE_LEN_FROM_PTR(parse_ctx->integer.fr_table); \
-		if (fr_table_str_by_value(parse_ctx->integer.fr_table, v, NULL) == NULL) { \
+	if (check_table && parse_ctx->fr_table) { \
+		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
+		if (fr_table_str_by_value(parse_ctx->fr_table, v, NULL) == NULL) { \
 			cf_log_err(ci, "Invalid value for \"%s\" (unknown)", item_name); \
 			return -1; \
 		} \

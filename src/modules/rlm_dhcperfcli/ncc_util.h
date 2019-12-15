@@ -315,11 +315,6 @@ typedef struct ncc_parse_ctx_t {
 		struct {
 			int64_t min;
 			int64_t max;
-
-			fr_table_num_ordered_t *fr_table; //<! Table of allowed values.
-			size_t fr_table_len;    //<! Size of fr_table. Will be set automatically if pointer is provided.
-			size_t *fr_table_len_p; //<! Pointer because NUM_ELEMENTS (sizeof) cannot work on an extern array with no specified size.
-
 		} integer;       //<! Value bounds for signed integers.
 		struct {
 			uint64_t min;
@@ -330,6 +325,10 @@ typedef struct ncc_parse_ctx_t {
 			fr_time_delta_t max;
 		} ftd;           //<! Value bounds for time delta (not to be used directly: converted from _float).
 	};
+
+	fr_table_num_ordered_t *fr_table; //<! Table of allowed integer values.
+	size_t fr_table_len;    //<! Size of fr_table. Will be set automatically if pointer is provided.
+	size_t *fr_table_len_p; //<! Pointer because NUM_ELEMENTS (sizeof) cannot work on an extern array with no specified size.
 
 } ncc_parse_ctx_t;
 

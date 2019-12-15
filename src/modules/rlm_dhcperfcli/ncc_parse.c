@@ -480,9 +480,9 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	}
 
 #define CHECK_VALUE_TABLE(_type, _ctx_type) { \
-	if (check_table && parse_ctx->integer.fr_table) { \
-		FR_TABLE_LEN_FROM_PTR(parse_ctx->integer.fr_table); \
-		if (fr_table_str_by_value(parse_ctx->integer.fr_table, v, NULL) == NULL) { \
+	if (check_table && parse_ctx->fr_table) { \
+		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
+		if (fr_table_str_by_value(parse_ctx->fr_table, v, NULL) == NULL) { \
 			fr_strerror_printf("Invalid value \"%pV\" (unknown)", fr_box_##_type(v)); \
 			return -1; \
 		} \
@@ -578,9 +578,9 @@ char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *par
 	case _fr_type: \
 	{ \
 		_c_type value = *(_c_type *)pvalue; \
-		if (parse_ctx->integer.fr_table) { \
-			FR_TABLE_LEN_FROM_PTR(parse_ctx->integer.fr_table); \
-			table_str = fr_table_str_by_value(parse_ctx->integer.fr_table, value, NULL); \
+		if (parse_ctx->fr_table) { \
+			FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
+			table_str = fr_table_str_by_value(parse_ctx->fr_table, value, NULL); \
 		} \
 	} \
 	break;

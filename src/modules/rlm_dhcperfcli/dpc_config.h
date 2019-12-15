@@ -155,4 +155,4 @@ do {\
 
 #define PARSE_CTX_PACKET_TRACE_LEVEL &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 		.type_check = NCC_TYPE_CHECK_TABLE, \
-		.integer.fr_table = dpc_packet_trace_table, .integer.p_fr_table_len = &dpc_packet_trace_table_len }
+		.fr_table = dpc_packet_trace_table, .fr_table_len_p = &dpc_packet_trace_table_len }
