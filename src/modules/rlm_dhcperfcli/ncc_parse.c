@@ -479,7 +479,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 		return -1; \
 	}
 
-#define CHECK_VALUE_TABLE(_type, _ctx_type) { \
+#define CHECK_VALUE_TABLE(_type) { \
 	if (check_table && parse_ctx->fr_table) { \
 		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
 		if (fr_table_str_by_value(parse_ctx->fr_table, v, NULL) == NULL) { \
@@ -515,7 +515,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	{ \
 		_c_type v; \
 		CHECK_VALUE(_box_type, _ctx_type) \
-		CHECK_VALUE_TABLE(_box_type, _ctx_type) \
+		CHECK_VALUE_TABLE(_box_type) \
 	} \
 	break;
 

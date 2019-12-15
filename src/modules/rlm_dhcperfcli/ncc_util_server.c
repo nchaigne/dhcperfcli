@@ -76,7 +76,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	} \
 }
 
-#define CHECK_VALUE_TABLE(_ctx_type) { \
+#define CHECK_VALUE_TABLE { \
 	if (check_table && parse_ctx->fr_table) { \
 		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
 		if (fr_table_str_by_value(parse_ctx->fr_table, v, NULL) == NULL) { \
@@ -104,7 +104,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	{ \
 		_c_type v; \
 		CHECK_VALUE(_box_type, _ctx_type) \
-		CHECK_VALUE_TABLE(_ctx_type) \
+		CHECK_VALUE_TABLE \
 	} \
 	break;
 
