@@ -614,13 +614,23 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 	bool multi = (type & FR_TYPE_MULTI);
 	int base_type = FR_BASE_TYPE(type);
 
+	/* prefix (if not NULL) is the item section name that we want to print. */
+	char const *section = "";
+	char *sp_section = "";
+	if (prefix && prefix[0] != '\0') {
+		section = prefix;
+		sp_section = ".";
+	}
+
 #define CONF_SPACE(_depth) ((_depth) * 2)
 
 #define DEBUG_CONF_BOX(_type) do { \
 	if (!value_str) { \
-		DEBUG("%.*s%s.%s = %pV", CONF_SPACE(depth), config_spaces, prefix ? prefix : "", name, fr_box_##_type(value)); \
+		DEBUG("%.*s%s%s%s = %pV", CONF_SPACE(depth), config_spaces, section, sp_section, name, \
+		      fr_box_##_type(value)); \
 	} else { \
-		DEBUG("%.*s%s.%s = %pV (%s)", CONF_SPACE(depth), config_spaces, prefix ? prefix : "", name, fr_box_##_type(value), value_str); \
+		DEBUG("%.*s%s%s%s = %pV (%s)", CONF_SPACE(depth), config_spaces, section, sp_section, name, \
+		      fr_box_##_type(value), value_str); \
 	} \
 } while (0)
 
