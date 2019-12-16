@@ -9,7 +9,7 @@ extern dpc_config_t *dpc_config; //!< Global configuration singleton.
 #define CONF (*dpc_config)
 
 
-extern fr_table_num_ordered_t dpc_packet_trace_table[];
+extern fr_table_num_ordered_t const dpc_packet_trace_table[];
 extern size_t dpc_packet_trace_table_len;
 
 
@@ -105,3 +105,7 @@ void dpc_config_debug(dpc_config_t *config);
 #define PARSE_CTX_PACKET_TRACE_LEVEL &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 		.type_check = NCC_TYPE_CHECK_TABLE, \
 		.fr_table = dpc_packet_trace_table, .fr_table_len_p = &dpc_packet_trace_table_len }
+
+#define PARSE_CTX_SEGMENT_TYPE &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+		.type_check = NCC_TYPE_CHECK_TABLE, \
+		.fr_table = segment_types, .fr_table_len_p = &segment_types_len }
