@@ -87,57 +87,6 @@ void dpc_config_debug(dpc_config_t *config);
 
 
 /*
- *	Configuration checks.
-*/
-#define CONF_CHECK_FMT(_fmt, _name, _var, _cond, _expected)\
-do {\
-	if (!(_cond)) {\
-		ERROR("Invalid configuration \"" _name " = %" _fmt "\" (expected: " _expected ")", _var);\
-		return 1;\
-	}\
-} while (0)
-
-#define CONF_CHECK_FLOAT(_name, _var, _cond, _expected)\
-	CONF_CHECK_FMT("f", _name, _var, _cond, _expected)
-
-#define CONF_CHECK_UINT(_name, _var, _cond, _expected)\
-	CONF_CHECK_FMT("u", _name, _var, _cond, _expected)
-
-#define CONF_CHECK_UINT64(_name, _var, _cond, _expected)\
-	CONF_CHECK_FMT(PRIu64, _name, _var, _cond, _expected)
-
-/*
- *	Configuration checks when parsing.
- *
- *	Note: Failed checks are handled as errors. So this is different from FreeRADIUS
- *	FR_..._COND_CHECK (cf_parse.h) macros which warn and provide a default value if necessary.
- */
-#define CONF_CS_CHECK_FMT(_cs, _fmt, _name, _var, _cond, _expected)\
-do {\
-	if (!(_cond)) {\
-		cf_log_err(_cs, "Invalid \"" _name " = %" _fmt "\" (expected: " _expected ")", _var);\
-		goto error;\
-	}\
-} while (0)
-
-#define CONF_CS_CHECK_FLOAT(_cs, _name, _var, _cond, _expected)\
-	CONF_CS_CHECK_FMT(_cs, "f", _name, _var, _cond, _expected)
-
-#define CONF_CI_CHECK_FMT(_ci, _fmt, _cond, _expected)\
-do {\
-	if (!(_cond)) {\
-		char const *item_name = cf_pair_attr(cf_item_to_pair(_ci));\
-		char const *item_value = cf_pair_value(cf_item_to_pair(_ci));\
-		char const *parent_name = cf_section_name1(cf_item_to_section(cf_parent(_ci)));\
-		cf_log_err(_ci, "Invalid value \"%s.%s = %s\" (expected: " _expected ")", parent_name, item_name, item_value);\
-		goto error;\
-	}\
-} while (0)
-
-#define CONF_CI_CHECK_FLOAT(_ci, _cond, _expected)\
-	CONF_CI_CHECK_FMT(_ci, "f", _cond, _expected)
-
-/*
  *	Specific parsing contexts.
  */
 #define PARSE_CTX_PROGRESS_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
