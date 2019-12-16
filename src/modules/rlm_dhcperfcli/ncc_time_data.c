@@ -21,6 +21,7 @@
 static ncc_timedata_config_t timedata_config;
 static ncc_timedata_context_t **contexts;
 
+static FILE *timedata_fp;
 static pthread_t worker_thread;
 static sem_t worker_semaphore;
 static bool worker_started;
@@ -36,7 +37,7 @@ static ncc_curl_mod_t *influx_config;
 
 
 
-fr_table_num_sorted_t const ncc_timedata_str2dst[] = {
+fr_table_num_ordered_t const ncc_timedata_str2dst[] = {
 	{ "file",   TIMEDATA_DST_FILE },
 	{ "influx", TIMEDATA_DST_INFLUX },
 	{ "null",   TIMEDATA_DST_NULL },
@@ -46,6 +47,7 @@ size_t ncc_timedata_str2dst_len = NUM_ELEMENTS(ncc_timedata_str2dst);
 
 static CONF_PARSER _timedata_config[] = {
 	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, ncc_timedata_config_t, destination), .dflt = "influx" },
+	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, ncc_timedata_config_t, file), .dflt = "" },
 	{ FR_CONF_OFFSET("max_history", FR_TYPE_UINT32, ncc_timedata_config_t, max_history), .dflt = "300" },
 
 	{ FR_CONF_OFFSET("time_interval", FR_TYPE_TIME_DELTA, ncc_timedata_config_t, time_interval), .dflt = "1.0",
@@ -151,7 +153,9 @@ int ncc_timedata_write(char const *data)
 		break;
 
 	case TIMEDATA_DST_FILE:
-		// TODO
+		if (timedata_fp) {
+			fprintf(timedata_fp, "%s\n", data);
+		}
 		break;
 
 #ifdef HAVE_LIBCURL
@@ -281,8 +285,14 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 
 	case TIMEDATA_DST_NULL:
 	case TIMEDATA_DST_STDOUT:
+		break;
+
 	case TIMEDATA_DST_FILE:
-		// TODO
+		timedata_fp = fopen(timedata_config.file, "a");
+		if (!timedata_fp) {
+			ERROR("Failed to open time-data output file \"%s\": %s", timedata_config.file, fr_syserror(errno));
+			goto error;
+		}
 		break;
 
 	case TIMEDATA_DST_INFLUX:
