@@ -155,6 +155,7 @@ int ncc_timedata_write(char const *data)
 	case TIMEDATA_DST_FILE:
 		if (timedata_fp) {
 			fprintf(timedata_fp, "%s\n", data);
+			fflush(timedata_fp);
 		}
 		break;
 
@@ -687,4 +688,6 @@ void ncc_timedata_stop()
 	} else if (timedata_config.dst == TIMEDATA_DST_INFLUX) {
 		INFO("Time-data: All data succesfully sent to 'influx'");
 	}
+
+	if (timedata_fp) fclose(timedata_fp);
 }
