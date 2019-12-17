@@ -548,15 +548,15 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 }
 
 
-/*
- *	Check macros for configuration items or string option parsing.
+/**
+ * Check macros for configuration items or string option parsing.
+ *
+ * Note: float64 are printed with "%g" when using FreeRADIUS "%pV" feature.
+ * This means we can get "1e-05" instead of "0.00001". Or "1e+06" instead of "1000000".
+ * Using %f, the default decimal precision is 6, so it's only better for 0.000001 <= v < 0.0001
+ * (and for v >= 1000000, which if storing seconds is more than 10 days)
+ * With fr_time_delta_t we can get "0.000000001".
  */
-// Similar to FR_*_CHECK macros defined in cf_parse.h
-
-// Note: float64 are printed with "%g" when using FreeRADIUS "%pV" feature.
-// This means we can get "1e-05" instead of "0.00001".
-// But using %f, the default decimal precision is 6, so it's only better for 0.000001 <= v < 0.0001
-// (With fr_time_delta_t we can get "0.000000001".)
 
 #define NCC_CI_VALUE_COND_CHECK(_ci, _type, _name, _var, _cond, _new)\
 do {\

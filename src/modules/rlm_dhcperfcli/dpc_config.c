@@ -39,6 +39,8 @@ size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
  * - Type 'string' with no configuration and no default ("dflt") will result in a NULL pointer,
  *   even if we had a value in target variable.
  *   Probably because the value pointer dynamically allocated - so we'll have to handle this.
+ *
+ * - Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
  */
 
 /* Not all types are supported by the parser (cf. FR_CONF_OFFSET -> FR_CONF_TYPE_CHECK in cf_parse.h)
@@ -124,7 +126,6 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI | FR_TYPE_SECRET, dpc_config_t, xlat_files) },
 
 	{ FR_CONF_OFFSET("input_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, input_files) },
-	// Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
 	{ FR_CONF_OFFSET("ignore_invalid_input", FR_TYPE_BOOL, dpc_config_t, ignore_invalid_input), .dflt = "yes" },
 
 	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid), /* No default */
