@@ -289,6 +289,10 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		break;
 
 	case TIMEDATA_DST_FILE:
+		if (!timedata_config.file || timedata_config.file[0] == '\0') {
+			ERROR("No file provided for time-data file destination");
+			goto error;
+		}
 		timedata_fp = fopen(timedata_config.file, "a");
 		if (!timedata_fp) {
 			ERROR("Failed to open time-data output file \"%s\": %s", timedata_config.file, fr_syserror(errno));
