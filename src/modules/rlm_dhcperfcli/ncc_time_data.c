@@ -48,7 +48,7 @@ size_t ncc_timedata_str2dst_len = NUM_ELEMENTS(ncc_timedata_str2dst);
 static CONF_PARSER _timedata_config[] = {
 	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, ncc_timedata_config_t, destination), .dflt = "influx" },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, ncc_timedata_config_t, file), .dflt = "" },
-	{ FR_CONF_OFFSET("max_history", FR_TYPE_UINT32, ncc_timedata_config_t, max_history), .dflt = "300" },
+	{ FR_CONF_OFFSET("max_backlog", FR_TYPE_UINT32, ncc_timedata_config_t, max_backlog), .dflt = "300" },
 
 	{ FR_CONF_OFFSET("time_interval", FR_TYPE_TIME_DELTA, ncc_timedata_config_t, time_interval), .dflt = "1.0",
 		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_TIME_DELTA,
@@ -391,14 +391,14 @@ void ncc_timedata_list_cleanup(ncc_timedata_context_t *context, bool force)
 	/* Only keep a max number of entries.
 	 * (Or force remove all when stopping.)
 	 */
-	if ( (timedata_config.max_history && NCC_DLIST_SIZE(dlist) > timedata_config.max_history)
+	if ( (timedata_config.max_backlog && NCC_DLIST_SIZE(dlist) > timedata_config.max_backlog)
 	    || force) {
 		stat = NCC_DLIST_HEAD(dlist);
 
 		if (!force) {
-			/* Skip the first "max_history" entries, which we keep.
+			/* Skip the first "max_backlog" entries, which we keep.
 			 */
-			uint32_t skip = timedata_config.max_history;
+			uint32_t skip = timedata_config.max_backlog;
 			while (stat && skip) {
 				skip--;
 				stat = NCC_DLIST_NEXT(dlist, stat);

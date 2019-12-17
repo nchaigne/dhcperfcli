@@ -26,7 +26,7 @@ typedef struct {
 	char const *file;              //<! File name (for "file" destination).
 
 	fr_time_delta_t time_interval; //<! Timespan of a data point (default: 1 s).
-	uint32_t max_history;          //<! Limit entries stored in the time-data lists.
+	uint32_t max_backlog;          //<! Limit backlog of entries stored in the time-data lists.
 
 	char const *instance;
 	char const *instance_esc;      //<! Escaped instance which can safely be used for writing to Influx.
