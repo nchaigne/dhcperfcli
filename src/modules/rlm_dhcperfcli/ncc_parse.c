@@ -601,11 +601,35 @@ char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *par
 	return table_str;
 }
 
+
+static char const config_spaces[] = "                                                                                ";
+
+#define CONF_SPACE(_depth) ((_depth) * 2)
+
+/**
+ * Debug the start of a section.
+ */
+void ncc_section_debug_start(int depth, char const *name1, char const *name2)
+{
+	if (!name2) {
+		DEBUG("%.*s%s {", CONF_SPACE(depth), config_spaces, name1);
+	} else {
+		DEBUG("%.*s%s %s {", CONF_SPACE(depth), config_spaces, name1, name2);
+	}
+}
+
+/**
+ * Debug the end of a section.
+ */
+void ncc_section_debug_end(int depth)
+{
+	DEBUG("%.*s}", CONF_SPACE(depth), config_spaces);
+}
+
 /**
  * Debug a configuration item. If multi-valued, iterate over all values and print each of them.
  * Items are printed using the fr_box_* macro corresponding to their type.
  */
-static char const config_spaces[] = "                                                                                ";
 void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, ncc_parse_ctx_t *parse_ctx,
                                   int depth, char const *prefix)
 {
@@ -621,8 +645,6 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 		section = prefix;
 		sp_section = ".";
 	}
-
-#define CONF_SPACE(_depth) ((_depth) * 2)
 
 #define DEBUG_CONF_BOX(_type) do { \
 	if (!value_str) { \
@@ -754,11 +776,11 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 
 		case FR_TYPE_SUBSECTION:
 		{
-			DEBUG("%.*s%s {", CONF_SPACE(depth), config_spaces, rule_p->name);
+			ncc_section_debug_start(depth, rule_p->name, NULL);
 
 			ncc_parser_config_debug(rule_p->subcs, config, depth + 1, prefix ? rule_p->name : NULL);
 
-			DEBUG("%.*s}", CONF_SPACE(depth), config_spaces);
+			ncc_section_debug_end(depth);
 		}
 			break;
 

@@ -5,6 +5,7 @@
 
 #include "dhcperfcli.h"
 #include "dpc_config.h"
+#include "dpc_time_data.h"
 
 #define MAX_ATTR_INPUT 128
 

@@ -77,7 +77,6 @@ int dpc_timedata_config_load(dpc_config_t *config)
 	return 0;
 }
 
-
 /**
  * Debug time-data configuration.
  */
