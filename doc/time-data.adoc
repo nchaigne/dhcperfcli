@@ -29,7 +29,7 @@ The following methods are supported:
 === Configuration
 
 Time-data must be specified to _dhcperfcli_ through a configuration file.
-Refer to the xref:conf/dhcperfcli.time-data.conf[sample configuration file] provided which details all available parameters.
+Refer to the xref:../conf/dhcperfcli.time-data.conf[sample configuration file] provided which details all available parameters.
 
 Configuration example:
 
