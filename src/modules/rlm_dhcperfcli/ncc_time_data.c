@@ -427,8 +427,10 @@ void ncc_timedata_list_cleanup(ncc_timedata_context_t *context, bool force)
 		/* Then remove everything after that.
 		 */
 		while (stat) {
-			/* Warn when we first start discarding. */
-			if (!num_discard) {
+			/* Warn when we first start discarding.
+			 * Except if we are stopping.
+			 */
+			if (!num_discard && !force) {
 				WARN("Time-data: History full (destination unavailable), now discarding extra data points");
 			}
 			num_discard++;
