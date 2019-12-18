@@ -12,7 +12,7 @@ Multiple instances of _dhcperfcli_ can send data simultaneously to the same Infl
 == Prerequisites
 
 To work with InfluxDB, you need to build _dhcperfcli_ with libcurl (and optionally json-c).
-Refer to the xref:INSTALL.md[installation] page for details.
+Refer to the xref:../INSTALL.md[installation] page for details.
 
 You will also need to set InfluxDB and Grafana servers up. This is pretty straighforward, refer to their respective documentation.
 
