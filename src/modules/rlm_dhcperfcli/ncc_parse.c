@@ -704,7 +704,7 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 		case FR_TYPE_STRING:
 		{
 			char *value = *(char **)pvalue;
-			if (value) DEBUG_CONF_BOX(strvalue);
+			if (value && value[0] != '\0') DEBUG_CONF_BOX(strvalue);
 			/*
 			 * Note: fr_box_strvalue must never be called with a NULL value (it uses "strlen"). */
 		}
