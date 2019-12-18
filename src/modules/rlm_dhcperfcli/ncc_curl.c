@@ -1366,7 +1366,7 @@ void ncc_curl_unload(void)
 }
 
 
-static const CONF_PARSER _section_config[] = {
+static const CONF_PARSER ncc_curl_section_conf_parser[] = {
 	{ FR_CONF_OFFSET("method", FR_TYPE_STRING, ncc_curl_mod_section_t, method_str), .dflt = "POST" },
 	{ FR_CONF_OFFSET("body", FR_TYPE_STRING, ncc_curl_mod_section_t, body_str), .dflt = "plain" },
 
@@ -1382,7 +1382,7 @@ static const CONF_PARSER _section_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _module_config[] = {
+static const CONF_PARSER ncc_curl_conf_parser[] = {
 	{ FR_CONF_OFFSET("connect_uri", FR_TYPE_STRING | FR_TYPE_XLAT, ncc_curl_mod_t, connect_uri), .dflt = "" },
 	{ FR_CONF_OFFSET("connect_timeout", FR_TYPE_TIME_DELTA, ncc_curl_mod_t, connect_timeout), .dflt = "1.0" },
 
@@ -1470,17 +1470,17 @@ int ncc_curl_section_parse(TALLOC_CTX *ctx, CONF_SECTION *parent, ncc_curl_mod_t
 
 	/* Parse this.
 	 */
-	if (cf_section_rules_push(cs, _module_config) < 0) goto error;
+	if (cf_section_rules_push(cs, ncc_curl_conf_parser) < 0) goto error;
 	if (cf_section_parse(ctx, config, cs) < 0) goto error;
 
 	/* Parse sub-section custom configuration.
 	 */
-	ret = ncc_curl_sub_section_parse(ctx, cs, _section_config, &config->custom, "custom");
+	ret = ncc_curl_sub_section_parse(ctx, cs, ncc_curl_section_conf_parser, &config->custom, "custom");
 	if (ret == 0) {
 		/*
 		 * Maybe all is in the same section ?
 		 */
-		ret = ncc_curl_sub_section_parse(ctx, parent, _section_config, &config->custom, name);
+		ret = ncc_curl_sub_section_parse(ctx, parent, ncc_curl_section_conf_parser, &config->custom, name);
 	}
 
 	return ret;

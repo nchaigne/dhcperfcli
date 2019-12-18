@@ -58,7 +58,7 @@ size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
 	.type = _t, \
 	.offset = offsetof(_s, _f)
 
-static CONF_PARSER _segment_config[] = {
+static CONF_PARSER segment_conf_parser[] = {
 	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed",
 		.func = ncc_conf_item_parse, PARSE_CTX_SEGMENT_TYPE },
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", FLOAT64_NOT_NEGATIVE },
@@ -70,7 +70,7 @@ static CONF_PARSER _segment_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _log_config[] = {
+static const CONF_PARSER log_conf_parser[] = {
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
@@ -79,7 +79,7 @@ static const CONF_PARSER _log_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _packet_trace_config[] = {
+static const CONF_PARSER packet_trace_conf_parser[] = {
 	{ FR_CONF_OFFSET("level", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl), /* No default */
 		.func = ncc_conf_item_parse, PARSE_CTX_PACKET_TRACE_LEVEL },
 	{ FR_CONF_OFFSET("elapsed", FR_TYPE_BOOL, dpc_config_t, packet_trace_elapsed), .dflt = "no" },
@@ -88,7 +88,7 @@ static const CONF_PARSER _packet_trace_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _progress_config[] = {
+static const CONF_PARSER progress_conf_parser[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_INTERVAL },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
@@ -99,7 +99,7 @@ static const CONF_PARSER _progress_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _transport_config[] = {
+static const CONF_PARSER transport_conf_parser[] = {
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_REQUEST_TIMEOUT },
 	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
@@ -108,7 +108,7 @@ static const CONF_PARSER _transport_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _load_config[] = {
+static const CONF_PARSER load_conf_parser[] = {
 	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), FLOAT64_NOT_NEGATIVE }, /* No default */
 	{ FR_CONF_OFFSET("input_rate_limit", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .dflt = "0", FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), FLOAT64_NOT_NEGATIVE }, /* No default */
@@ -120,7 +120,7 @@ static const CONF_PARSER _load_config[] = {
 	CONF_PARSER_TERMINATOR
 };
 
-static const CONF_PARSER _main_config[] = {
+static const CONF_PARSER dhcperfcli_conf_parser[] = {
 	{ FR_CONF_OFFSET("template", FR_TYPE_BOOL, dpc_config_t, template) }, /* No default */
 	{ FR_CONF_OFFSET("xlat", FR_TYPE_BOOL, dpc_config_t, xlat) }, /* No default */
 	{ FR_CONF_OFFSET("xlat_file", FR_TYPE_STRING | FR_TYPE_MULTI | FR_TYPE_SECRET, dpc_config_t, xlat_files) },
@@ -133,11 +133,11 @@ static const CONF_PARSER _main_config[] = {
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 	{ FR_CONF_OFFSET("authorized_server", FR_TYPE_IPV4_ADDR | FR_TYPE_MULTI, dpc_config_t, authorized_servers) },
 
-	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _log_config },
-	{ FR_CONF_POINTER("packet_trace", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _packet_trace_config },
-	{ FR_CONF_POINTER("progress", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _progress_config },
-	{ FR_CONF_POINTER("transport", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _transport_config },
-	{ FR_CONF_POINTER("load", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) _load_config },
+	{ FR_CONF_POINTER("log", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) log_conf_parser },
+	{ FR_CONF_POINTER("packet_trace", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) packet_trace_conf_parser },
+	{ FR_CONF_POINTER("progress", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) progress_conf_parser },
+	{ FR_CONF_POINTER("transport", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) transport_conf_parser },
+	{ FR_CONF_POINTER("load", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) load_conf_parser },
 
 	// test
 	{ FR_CONF_OFFSET("ftd_progress_interval", FR_TYPE_TIME_DELTA, dpc_config_t, ftd_progress_interval),
@@ -290,7 +290,7 @@ static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, nc
 
 		/* Parse this segment sub-section.
 		 */
-		if (cf_section_rules_push(cs, _segment_config) < 0) goto error;
+		if (cf_section_rules_push(cs, segment_conf_parser) < 0) goto error;
 		if (cf_section_parse(ctx, &segment_config, cs) < 0) goto error;
 
 		segment_config.name = cf_section_name2(cs);
@@ -394,7 +394,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	/* Backup initial configuration before parsing. */
 	dpc_config_t old_config = *config;
 
-	if (cf_section_rules_push(cs, _main_config) < 0) goto failure;
+	if (cf_section_rules_push(cs, dhcperfcli_conf_parser) < 0) goto failure;
 
 	/* Parse main configuration. */
 	if (cf_section_parse(config, config, cs) < 0) goto failure;
@@ -402,7 +402,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	/* Merge current and old configuration.
 	 * Restore strings for which we didn't parse anything, and merge multi-valued strings.
 	 */
-	ncc_config_merge(_main_config, config, &old_config);
+	ncc_config_merge(dhcperfcli_conf_parser, config, &old_config);
 
 	/* Debug level (overriden by command-line option -x). */
 	if (dpc_debug_lvl == 0) dpc_debug_lvl = config->debug_level;
@@ -478,6 +478,6 @@ int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
 void dpc_config_debug(dpc_config_t *config)
 {
 	DEBUG("dhcperfcli: main config {");
-	ncc_parser_config_debug(_main_config, config, 1, check_config ? "" : NULL);
+	ncc_parser_config_debug(dhcperfcli_conf_parser, config, 1, check_config ? "" : NULL);
 	DEBUG("}");
 }
