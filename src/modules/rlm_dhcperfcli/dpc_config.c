@@ -478,8 +478,12 @@ int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
  */
 void dpc_config_debug(dpc_config_t *config)
 {
-	DEBUG("dhcperfcli: main config {");
-	ncc_parser_config_debug(dhcperfcli_conf_parser, config, 1, check_config ? "" : NULL);
-	dpc_timedata_config_debug(config);
-	DEBUG("}");
+	int depth = 0;
+
+	ncc_section_debug_start(depth, "dhcperfcli", "config");
+
+	ncc_parser_config_debug(dhcperfcli_conf_parser, config, depth + 1, check_config ? "" : NULL);
+	dpc_timedata_config_debug(config, depth + 1);
+
+	ncc_section_debug_end(depth);
 }

@@ -80,13 +80,15 @@ int dpc_timedata_config_load(dpc_config_t *config)
 /**
  * Debug time-data configuration.
  */
-void dpc_timedata_config_debug(dpc_config_t *config)
+void dpc_timedata_config_debug(dpc_config_t *config, int depth)
 {
 	if (!config->with_timedata) return;
 
-	DEBUG("  time-data {");
-	ncc_parser_config_debug(timedata_conf_parser, &ncc_timedata_config, 2, check_config ? "time-data" : NULL);
-	DEBUG("  }");
+	char const *name = "time-data";
+
+	ncc_section_debug_start(depth, name, NULL);
+	ncc_parser_config_debug(timedata_conf_parser, &ncc_timedata_config, depth + 1, check_config ? name : NULL);
+	ncc_section_debug_end(depth);
 }
 
 /**
