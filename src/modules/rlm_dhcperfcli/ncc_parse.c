@@ -677,6 +677,8 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 		CASE_CONF_BOX_VALUE(FR_TYPE_INT32, int32_t, int32)
 		CASE_CONF_BOX_VALUE(FR_TYPE_INT64, int64_t, int64)
 
+		CASE_CONF_BOX_VALUE(FR_TYPE_TIME_DELTA, fr_time_delta_t, time_delta)
+
 		case FR_TYPE_STRING:
 		{
 			char *value = *(char **)pvalue;
