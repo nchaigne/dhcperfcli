@@ -87,7 +87,10 @@ void dpc_timedata_config_debug(dpc_config_t *config, int depth)
 	char const *name = "time-data";
 
 	ncc_section_debug_start(depth, name, NULL);
+
 	ncc_parser_config_debug(timedata_conf_parser, &ncc_timedata_config, depth + 1, check_config ? name : NULL);
+	ncc_timedata_config_debug(depth + 1);
+
 	ncc_section_debug_end(depth);
 }
 

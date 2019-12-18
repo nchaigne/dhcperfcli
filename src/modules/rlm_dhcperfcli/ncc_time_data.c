@@ -252,6 +252,18 @@ static int ncc_timedata_config_influx(TALLOC_CTX *ctx, CONF_SECTION *cs_parent)
 }
 
 /**
+ * Debug 'influx' configuration, if it is defined.
+ */
+void ncc_timedata_config_debug(int depth)
+{
+#ifdef HAVE_LIBCURL
+	if (influx_config) {
+		ncc_curl_config_debug(influx_config, "influx", depth);
+	}
+#endif
+}
+
+/**
  * Parse 'time-data' section.
  * If successful, start the worker thread.
  */

@@ -257,4 +257,6 @@ int ncc_curl_mod_perform_custom(void *instance, char const *data);
 
 int ncc_curl_section_parse(TALLOC_CTX *ctx, CONF_SECTION *parent, ncc_curl_mod_t *config, char const *name);
 
+void ncc_curl_config_debug(ncc_curl_mod_t *config, char const *name, int depth);
+
 #endif // HAVE_LIBCURL

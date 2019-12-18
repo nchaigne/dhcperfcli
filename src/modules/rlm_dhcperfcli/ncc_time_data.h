@@ -84,6 +84,7 @@ typedef struct ncc_timedata_context_t {
 
 size_t ncc_influx_data_escape(char *out, size_t outlen, char const *in, char const *escape_chars);
 
+void ncc_timedata_config_debug(int depth);
 int ncc_timedata_config_init(CONF_SECTION *cs, char const *name);
 char const *ncc_timedata_get_inst_esc(void);
 int ncc_timedata_write(char const *data);
