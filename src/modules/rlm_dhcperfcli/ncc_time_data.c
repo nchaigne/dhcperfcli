@@ -37,23 +37,30 @@ static ncc_curl_mod_t *influx_config;
 
 
 
-fr_table_num_ordered_t const ncc_timedata_str2dst[] = {
+fr_table_num_ordered_t const ncc_timedata_dst_table[] = {
 	{ "file",   TIMEDATA_DST_FILE },
 	{ "influx", TIMEDATA_DST_INFLUX },
 	{ "null",   TIMEDATA_DST_NULL },
 	{ "stdout", TIMEDATA_DST_STDOUT },
 };
-size_t ncc_timedata_str2dst_len = NUM_ELEMENTS(ncc_timedata_str2dst);
+size_t ncc_timedata_dst_table_len = NUM_ELEMENTS(ncc_timedata_dst_table);
+
+
+#define PARSE_CTX_TIME_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_TIME_DELTA, \
+		.type_check = NCC_TYPE_CHECK_TABLE, \
+		.type_check = NCC_TYPE_CHECK_MIN, ._float.min = 0.1 }
+
+#define PARSE_CTX_TIMEDATA_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+		.type_check = NCC_TYPE_CHECK_TABLE, \
+		.fr_table = ncc_timedata_dst_table, .fr_table_len_p = &ncc_timedata_dst_table_len }
 
 static CONF_PARSER _timedata_config[] = {
-	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, ncc_timedata_config_t, destination), .dflt = "influx" },
+	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, ncc_timedata_config_t, destination), .dflt = "influx",
+		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_TIMEDATA_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, ncc_timedata_config_t, file), .dflt = "" },
 	{ FR_CONF_OFFSET("max_backlog", FR_TYPE_UINT32, ncc_timedata_config_t, max_backlog), .dflt = "300" },
-
 	{ FR_CONF_OFFSET("time_interval", FR_TYPE_TIME_DELTA, ncc_timedata_config_t, time_interval), .dflt = "1.0",
-		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_TIME_DELTA,
-		.type_check = NCC_TYPE_CHECK_MIN, ._float.min = 0.1
-	} },
+		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_TIME_INTERVAL },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -277,7 +284,7 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		timedata_config.instance_esc = talloc_strdup(ctx, buf);
 	}
 
-	timedata_config.dst = fr_table_value_by_str(ncc_timedata_str2dst, timedata_config.destination, TIMEDATA_DST_NUM_DEST);
+	timedata_config.dst = fr_table_value_by_str(ncc_timedata_dst_table, timedata_config.destination, TIMEDATA_DST_NUM_DEST);
 
 	switch (timedata_config.dst) {
 	case TIMEDATA_DST_NUM_DEST:
