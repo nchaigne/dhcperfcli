@@ -1496,6 +1496,7 @@ void ncc_curl_config_debug(ncc_curl_mod_t *config, char const *name, int depth)
 {
 	ncc_section_debug_start(depth, name, NULL);
 	ncc_parser_config_debug(ncc_curl_conf_parser, config, depth + 1, check_config ? name : NULL);
+	ncc_parser_config_debug(ncc_curl_section_conf_parser, &config->custom, depth + 1, check_config ? name : NULL);
 	ncc_section_debug_end(depth);
 }
 
