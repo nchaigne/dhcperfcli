@@ -479,5 +479,6 @@ void dpc_config_debug(dpc_config_t *config)
 {
 	DEBUG("dhcperfcli: main config {");
 	ncc_parser_config_debug(dhcperfcli_conf_parser, config, 1, check_config ? "" : NULL);
+	dpc_timedata_config_debug(config);
 	DEBUG("}");
 }

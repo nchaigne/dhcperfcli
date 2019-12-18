@@ -77,6 +77,19 @@ int dpc_timedata_config_load(dpc_config_t *config)
 	return 0;
 }
 
+
+/**
+ * Debug time-data configuration.
+ */
+void dpc_timedata_config_debug(dpc_config_t *config)
+{
+	if (!config->with_timedata) return;
+
+	DEBUG("  time-data {");
+	ncc_parser_config_debug(timedata_conf_parser, &ncc_timedata_config, 2, check_config ? "time-data" : NULL);
+	DEBUG("  }");
+}
+
 /**
  * Store packet statistics into time-data.
  */

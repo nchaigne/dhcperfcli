@@ -18,7 +18,7 @@
 #include "ncc_time_data.h"
 
 
-static ncc_timedata_config_t timedata_config;
+ncc_timedata_config_t ncc_timedata_config;
 static ncc_timedata_context_t **contexts;
 
 static FILE *timedata_fp;
@@ -54,7 +54,7 @@ size_t ncc_timedata_dst_table_len = NUM_ELEMENTS(ncc_timedata_dst_table);
 		.type_check = NCC_TYPE_CHECK_TABLE, \
 		.fr_table = ncc_timedata_dst_table, .fr_table_len_p = &ncc_timedata_dst_table_len }
 
-static CONF_PARSER _timedata_config[] = {
+CONF_PARSER timedata_conf_parser[] = {
 	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, ncc_timedata_config_t, destination), .dflt = "influx",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_TIMEDATA_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, ncc_timedata_config_t, file), .dflt = "" },
@@ -151,7 +151,7 @@ int ncc_timedata_write(char const *data)
 {
 	int ret = 0;
 
-	switch (timedata_config.dst) {
+	switch (ncc_timedata_config.dst) {
 	case TIMEDATA_DST_NULL:
 		break;
 
@@ -195,8 +195,8 @@ static int ncc_process_exec_send(bool ending)
 	len = snprintf(p, freespace, "process");
 	p += len; freespace -= len;
 
-	if (timedata_config.instance) {
-		len = snprintf(p, freespace, ",instance=%s", timedata_config.instance);
+	if (ncc_timedata_config.instance) {
+		len = snprintf(p, freespace, ",instance=%s", ncc_timedata_config.instance);
 		p += len; freespace -= len;
 	}
 
@@ -262,33 +262,33 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 
 	/* Parse 'time-data' section.
 	*/
-	if (cf_section_rules_push(cs, _timedata_config) < 0) goto error;
-	if (cf_section_parse(ctx, &timedata_config, cs) < 0) goto error;
+	if (cf_section_rules_push(cs, timedata_conf_parser) < 0) goto error;
+	if (cf_section_parse(ctx, &ncc_timedata_config, cs) < 0) goto error;
 
 	/* Use section instance name if defined.
 	 */
 	char const *instance = cf_section_name2(cs);
 	if (instance) {
-		timedata_config.instance = talloc_strdup(ctx, instance);
+		ncc_timedata_config.instance = talloc_strdup(ctx, instance);
 	}
 
 	/* If we don't have an instance set, use provided name.
 	 */
-	if (!timedata_config.instance) {
-		timedata_config.instance = name;
+	if (!ncc_timedata_config.instance) {
+		ncc_timedata_config.instance = name;
 	}
 
-	if (timedata_config.instance) {
+	if (ncc_timedata_config.instance) {
 		/* Handle escaping so it can safely be sent to Influx. */
-		NCC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), timedata_config.instance);
-		timedata_config.instance_esc = talloc_strdup(ctx, buf);
+		NCC_INFLUX_ESCAPE_KEY(buf, sizeof(buf), ncc_timedata_config.instance);
+		ncc_timedata_config.instance_esc = talloc_strdup(ctx, buf);
 	}
 
-	timedata_config.dst = fr_table_value_by_str(ncc_timedata_dst_table, timedata_config.destination, TIMEDATA_DST_NUM_DEST);
+	ncc_timedata_config.dst = fr_table_value_by_str(ncc_timedata_dst_table, ncc_timedata_config.destination, TIMEDATA_DST_NUM_DEST);
 
-	switch (timedata_config.dst) {
+	switch (ncc_timedata_config.dst) {
 	case TIMEDATA_DST_NUM_DEST:
-		ERROR("Unknown time-data destination: %s", timedata_config.destination);
+		ERROR("Unknown time-data destination: %s", ncc_timedata_config.destination);
 		goto error;
 
 	case TIMEDATA_DST_NULL:
@@ -296,13 +296,13 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		break;
 
 	case TIMEDATA_DST_FILE:
-		if (!timedata_config.file || timedata_config.file[0] == '\0') {
+		if (!ncc_timedata_config.file || ncc_timedata_config.file[0] == '\0') {
 			ERROR("No file provided for time-data file destination");
 			goto error;
 		}
-		timedata_fp = fopen(timedata_config.file, "a");
+		timedata_fp = fopen(ncc_timedata_config.file, "a");
 		if (!timedata_fp) {
-			ERROR("Failed to open time-data output file \"%s\": %s", timedata_config.file, fr_syserror(errno));
+			ERROR("Failed to open time-data output file \"%s\": %s", ncc_timedata_config.file, fr_syserror(errno));
 			goto error;
 		}
 		break;
@@ -330,7 +330,7 @@ error:
  */
 char const *ncc_timedata_get_inst_esc()
 {
-	return timedata_config.instance_esc;
+	return ncc_timedata_config.instance_esc;
 }
 
 /**
@@ -398,14 +398,14 @@ void ncc_timedata_list_cleanup(ncc_timedata_context_t *context, bool force)
 	/* Only keep a max number of entries.
 	 * (Or force remove all when stopping.)
 	 */
-	if ( (timedata_config.max_backlog && NCC_DLIST_SIZE(dlist) > timedata_config.max_backlog)
+	if ( (ncc_timedata_config.max_backlog && NCC_DLIST_SIZE(dlist) > ncc_timedata_config.max_backlog)
 	    || force) {
 		stat = NCC_DLIST_HEAD(dlist);
 
 		if (!force) {
 			/* Skip the first "max_backlog" entries, which we keep.
 			 */
-			uint32_t skip = timedata_config.max_backlog;
+			uint32_t skip = ncc_timedata_config.max_backlog;
 			while (stat && skip) {
 				skip--;
 				stat = NCC_DLIST_NEXT(dlist, stat);
@@ -460,7 +460,7 @@ ncc_timedata_stat_t *ncc_timedata_context_get_storage(ncc_timedata_context_t *co
 
 	ncc_timedata_stat_t *stat = context->stat_cur;
 	if (stat) {
-		if (now >= stat->start + timedata_config.time_interval) {
+		if (now >= stat->start + ncc_timedata_config.time_interval) {
 			/*
 			 * Stop using this. Prepare a new item.
 			 */
@@ -468,7 +468,7 @@ ncc_timedata_stat_t *ncc_timedata_context_get_storage(ncc_timedata_context_t *co
 			work = true;
 
 			/* Have new data point start at "previous" start + interval, to avoid drifting. */
-			fte_start = stat->start + timedata_config.time_interval;
+			fte_start = stat->start + ncc_timedata_config.time_interval;
 
 			/* Push item to worker list.
 			 */
@@ -696,7 +696,7 @@ void ncc_timedata_stop()
 	if (num_discard) {
 		WARN("Time-data: Discarded %u data point(s) (of %u) due to destination unavailability",
 		     num_discard, num_points);
-	} else if (timedata_config.dst == TIMEDATA_DST_INFLUX) {
+	} else if (ncc_timedata_config.dst == TIMEDATA_DST_INFLUX) {
 		INFO("Time-data: All data succesfully sent to 'influx'");
 	}
 

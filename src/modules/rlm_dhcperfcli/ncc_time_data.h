@@ -7,6 +7,11 @@
 #include <semaphore.h>
 
 
+typedef struct ncc_timedata_config_t ncc_timedata_config_t;
+
+extern ncc_timedata_config_t ncc_timedata_config;
+extern CONF_PARSER timedata_conf_parser[];
+
 
 typedef enum {
 	TIMEDATA_DST_NULL = 0, //!< Discard.
@@ -20,7 +25,7 @@ typedef enum {
 /*
  *	Time-data configuration
  */
-typedef struct {
+typedef struct ncc_timedata_config_t {
 	ncc_timedata_dst_t dst;        //<! Type of destination where data points are sent.
 	char const *destination;       //<! Type of destination (string).
 	char const *file;              //<! File name (for "file" destination).
