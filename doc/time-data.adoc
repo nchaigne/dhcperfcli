@@ -1,0 +1,148 @@
+= Time-data statistics (InfluxDB, Grafana)
+
+_dhcperfcli_ is able to handle time-data statistics, which are collected and reported in real-time.
+This provides much more detail than the other available statistics (ongoing and end report) that are displayed on the console.
+
+Time-data statistics are sent through HTTP to an Influx database. They can then be displayed in various ways through Grafana dashboards.
+
+Multiple instances of _dhcperfcli_ can send data simultaneously to the same Influx back-end.
+
+
+
+== Prerequisites
+
+To work with InfluxDB, you need to build _dhcperfcli_ with libcurl (and optionally json-c).
+Refer to the xref:INSTALL.md[installation] page for details.
+
+You will also need to set InfluxDB and Grafana servers up. This is pretty straighforward, refer to their respective documentation.
+
+
+=== Authentication
+
+_dhcperfcli_ must be able to perform REST requests serviced by an Influx server.
+
+The following methods are supported:
+
+* basic authentication (with login and password)
+* bearer authentication (with token)
+
+=== Configuration
+
+Time-data must be specified to _dhcperfcli_ through a configuration file.
+Refer to the xref:conf/dhcperfcli.time-data.conf[sample configuration file] provided which details all available parameters.
+
+Configuration example:
+
+`conf/dhcperfcli-influx.conf`
+----
+time-data test-dhcperfcli {
+	destination = influx
+	time_interval = 1.0
+	max_backlog = 300
+	influx {
+		server = "10.11.12.84:8086"
+		username = "admin"
+		password = "*****"
+		database = "dpc"
+		uri = "http://${server}/write?db=${database}"
+	}
+}
+----
+
+The Influx database (here `dpc`) must be created beforehand.
+Optionally, you can create a retention policy which will take care of automatically removing old statistics (by default, data are retained indefinitely).
+
+For example (using InfluxQL):
+----
+> CREATE DATABASE "dpc"
+> CREATE RETENTION POLICY "one_day" ON "dpc" DURATION 1d REPLICATION 1 DEFAULT
+----
+
+
+== Usage example
+
+Execute _dhcperfcli_ as usual, with the added time-data configuration.
+
+For example:
+----
+echo "DHCP-Client-Hardware-Address=\"%{ethaddr.rand}\"" | dhcperfcli --conf-file conf/dhcperfcli-influx.conf -T -L 60 -p 32 -r 1000 -g 10.11.12.1 10.11.12.42 discover
+----
+
+Statistics will be automatically collected, and written once every second (or the configured `time_interval`) to the specified destination.
+
+If that destination is an Influx database, it must be available when the program starts. It can become unavailable later on, in which case a backlog of the time-data statistics is retained, so it can be written once Influx becomes available again. Reconnection is handled automatically.
+
+An error is logged once when the Influx server becomes unavailable. Subsequent errors are suppressed until the connection is restored.
+If that never happens, when the program stops it will log a warning about discarded data points.
+
+For example:
+----
+Error : Time-data: Failed to write to InfluxDB: Request failed: curl error (7) [Couldn't connect to server]
+Info  : Time-data: Further errors will be suppressed until destination is available again
+(...)
+Warn  : Time-data: Discarded 22 data point(s) (of 63) due to destination unavailability
+----
+
+
+== Time-data statistics
+
+=== Packets
+
+Packets statistics store information about each type of DHCP packet handled during the considered time interval.
+
+Only known DHCP packet types (from option 53 _Message-Type_) are handled.
+
+If there is no activity for a given packet type during the time interval, no data is written.
+
+*Table:* `packet`
+
+*Tags:*
+
+- `instance`: instance name (either configured or set automatically)
+- `type`: DHCP packet type (`Discover`, `Offer`, `Request`...)
+
+*Fields:*
+
+- `recv`: number of packets received
+- `sent`: number of packets sent
+- `retr`: number of retransmissions
+- `lost`: number of requests for which no response was received
+
+Example:
+----
+packet,instance=test-dhcperfcli,type=Discover recv=0i,sent=6037i,retr=0i,lost=0i 1576664961016119000
+packet,instance=test-dhcperfcli,type=Offer recv=6037i,sent=0i,retr=0i,lost=0i 1576664961016119000
+----
+
+
+=== Transactions
+
+Transaction statistics store information about each type of transaction handled during the considered time interval.
+
+A transaction is a request for which a reply was received.
+It may be prefixed with the input name, if one is provided.
+
+*Table:* `transaction`
+
+*Tags:*
+
+- `instance`: instance name (either configured or set automatically)
+- `type`: transaction type (e.g. `Discover:Offer`)
+
+*Fields:*
+
+- `num`: number of such transactions
+- `rtt.avg`: average response time (ms)
+- `rtt.min`: min response time (ms)
+- `rtt.max`: max response time (ms)
+
+Example:
+----
+transaction,instance=test-dhcperfcli,type=Discover:Offer num=6158i,rtt.avg=0.152,rtt.min=0.140,rtt.max=20.938 1576664961036957000
+----
+
+
+=== Sessions
+
+TODO.
+
