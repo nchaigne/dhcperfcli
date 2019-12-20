@@ -2904,7 +2904,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	}
 
 	/* Fill in the gaps in the list of segments. */
-	if (ncc_segment_list_complete(input, input->segments, input->rate_limit) < 0) {
+	if (ncc_segment_list_complete(ctx, input->segments, input->rate_limit) < 0) {
 		PWARN("Failed to complete segment list. Discarding input (id: %u)", input->id);
 		return -1;
 	}
