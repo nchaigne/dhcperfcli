@@ -1,0 +1,62 @@
+= Visualizing time-data statistics with Grafana
+
+
+Writing xref:time-data.adoc[time-data statistics] to InfluxDB, by itself, is not that helpful.
+You need the means to visualize what's happening. The purpose of Grafana is to make that happen.
+
+This page shows examples of what you can get from _dhcperfcli_ time-data.
+
+
+== Grafana configuration
+
+First you need to configure a datasource for your InfluxDB.
+
+For example:
+
+* Name: `InfluxDB-dpc`
+* HTTP / URL: `http://10.11.12.84:8086`
+* Auth: as appropriate for your Influx setup
+* InfluxDB Details / Database: `dpc`
+
+
+== Dashboard examples
+
+=== Packets (Discover, Offer, Request, Ack)
+
+The following dashboard gets data from the `packet` table.
+
+It is composed of four queries:
+----
+SELECT sum("sent") FROM "packet" WHERE ("type" = 'Discover') AND $timeFilter GROUP BY time(1s) fill(null)
+SELECT sum("recv") FROM "packet" WHERE ("type" = 'Offer') AND $timeFilter GROUP BY time(1s) fill(null)
+SELECT sum("sent") FROM "packet" WHERE ("type" = 'Request') AND $timeFilter GROUP BY time(1s) fill(null)
+SELECT sum("recv") FROM "packet" WHERE ("type" = 'Ack') AND $timeFilter GROUP BY time(1s) fill(null)
+----
+
+The example is from a 5 minutes DORA benchmark, composed of two segments: the first with a rate of 500 DORA/s first, and the second a rate of 1000 DORA/s.
+
+Notice that there are four curves in this graph (which correspond to the Grafana queries), but they all are all exactly superimposed (`Discover.sent` and `Ack.recv` are currently selected, but Offer and Request are just the same). This is what is expected in nominal case, with one client and one server: each Discover sent is replied with an Offer, and each Request with an Ack.
+
+image::https://user-images.githubusercontent.com/6780490/71166239-8eff9a80-2252-11ea-8f8f-6b55bbabc7f9.png[packet DORA example]
+
+{sp} +
+This is just an example. Other types of packets can be graphed, if needed. Just add more queries to handle them, perhaps also new dashboards to avoid clutter.
+
+
+=== Transactions response time
+
+The following dashboard gets data from the `transaction` table.
+
+It is composed of the following query:
+----
+SELECT mean("rtt.avg") AS "rtt.avg" FROM "transaction" WHERE $timeFilter GROUP BY time(1s), "type" fill(null)
+----
+
+The example is from a 5 minutes benchmark, sending DHCP Discover to two servers (Kea, and a dummy FreeRADIUS DHCP server) at the same rate for each.
+
+The resulting graph allows to easily compare response times (shown in milliseconds).
+
+Notice that even though we provided only one query, there are two graphs shown. This is achieved through a "GROUP BY type" which allows to automatically display all types found in the selected time range.
+
+image::https://user-images.githubusercontent.com/6780490/71266874-98b7f980-2349-11ea-9bbf-a02d31d5a6f2.png[transaction RTT example]
+
