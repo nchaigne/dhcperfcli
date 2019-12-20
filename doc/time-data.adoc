@@ -3,7 +3,7 @@
 _dhcperfcli_ is able to handle time-data statistics, which are collected and reported in real-time.
 This provides much more detail than the other available statistics (ongoing and end report) that are displayed on the console.
 
-Time-data statistics are sent through HTTP to an Influx database. They can then be displayed in various ways through Grafana dashboards.
+Time-data statistics are sent through HTTP to an Influx database. They can then be displayed in various ways through xref:grafana.adoc[Grafana dashboards].
 
 Multiple instances of _dhcperfcli_ can send data simultaneously to the same Influx back-end.
 

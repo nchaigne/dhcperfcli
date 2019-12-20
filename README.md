@@ -14,6 +14,7 @@ Its core function is to send a DHCP request and receive the reply. Beyond that, 
 - Build packets with input read from a file or stdin, or generate them dynamically from a template.
 - Create malformed packets, to observe how the DHCP server behaves when handling them.
 - Show statistics such as packets sent / received and response time, as a whole or broken down by message type.
+- Collect time-data statistics, send them to InfluxDB, visualize the data through Grafana dashboards... all in real-time!
 
 And more!
 
@@ -66,6 +67,10 @@ Refer to [usage-examples.md](https://github.com/nchaigne/dhcperfcli/blob/master/
 
 Refer to [performance-testing.md](https://github.com/nchaigne/dhcperfcli/blob/master/doc/performance-testing.md).
 
+
+# Time-data statistics (InfluxDB, Grafana)
+
+Refer to [time-data.adoc](doc/time-data.adoc) and [grafana.adoc](doc/grafana.adoc).
 
 # Guide
 
