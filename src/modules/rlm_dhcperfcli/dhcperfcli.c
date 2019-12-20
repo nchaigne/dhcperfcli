@@ -498,9 +498,11 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 				fprintf(fp, ", rate (/s): %.3f", rate);
 			}
 
-			/* Print the current input scoped segment, if any. */
+			/* Print the current input scoped segment, if explicitly defined.
+			 */
 			input->segment_cur = dpc_get_current_segment(input->segments, input->segment_cur);
-			if (input->segment_cur) {
+
+			if (input->segment_cur && input->segment_cur->alloc == NCC_SEGMENT_ALLOC_MANUAL) {
 				fprintf(fp, " - ");
 				dpc_segment_stats_fprint(fp, input->segment_cur);
 			}
@@ -521,7 +523,7 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
 
 /**
  * Print ongoing job statistics summary.
- * Also print an additionnal line with the current global segment (if applicable).
+ * Also print an additional line with the current global segment (if applicable).
  * E.g.:
  * (*) 17:14:20 t(8.000) (80.0%) sessions: [in: 39259 (31.8%), ongoing: 10], session rate (/s): 4905.023
  *  └─ segment #0 (0.000 - INF) use: 5792, rate (/s): 5791.051
@@ -586,9 +588,12 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 
 	fprintf(fp, "\n");
 
-	/* Segment statistics line. */
+	/* Segment statistics line.
+	 * Print the current global segment, if explicitly defined.
+	 */
 	segment_cur = dpc_get_current_segment(segment_list, segment_cur);
-	if (segment_cur) {
+
+	if (segment_cur && segment_cur->alloc == NCC_SEGMENT_ALLOC_MANUAL) {
 		fprintf(fp, " └─ ");
 		dpc_segment_stats_fprint(fp, segment_cur);
 		fprintf(fp, "\n");
