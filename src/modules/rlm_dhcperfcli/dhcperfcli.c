@@ -2702,6 +2702,10 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		vp_workflow_type = ncc_pair_find_by_da(input->vps, attr_workflow_type);
 	}
 
+	/* Allocate and initialize input segments list. */
+	input->segments = talloc_zero(ctx, ncc_dlist_t);
+	NCC_DLIST_INIT(input->segments, ncc_segment_t);
+
 	/*
 	 *	Pre-process attributes (1: xlat).
 	 */
@@ -2840,9 +2844,6 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 			if (!CONF.template) {
 				WARN("Input segments are not allowed in non template mode. Discarding input (id: %u)", input->id);
 				return -1;
-			}
-			if (!input->segments) {
-				input->segments = talloc_zero(ctx, ncc_dlist_t);
 			}
 			if (ncc_segment_parse(ctx, input->segments, vp->vp_strvalue) < 0) WARN_ATTR_VALUE;
 
