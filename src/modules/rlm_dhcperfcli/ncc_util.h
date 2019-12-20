@@ -256,28 +256,6 @@ extern int ncc_debug_lvl;
 #define IS_VP_DATA(_vp) (_vp && _vp->type == VT_DATA)
 
 
-typedef struct ncc_list_item ncc_list_item_t;
-
-/*
- *	Chained list of data elements.
- */
-typedef struct ncc_list {
-	ncc_list_item_t *head;
-	ncc_list_item_t *tail;
-	uint32_t size;
-} ncc_list_t;
-
-/*
- *	Chained list item.
- */
-struct ncc_list_item {
-	ncc_list_t *list;       //!< The list to which this entry belongs (NULL for an unchained entry).
-	ncc_list_item_t *prev;
-	ncc_list_item_t *next;
-
-	void *data;             //!< User-specific item data.
-};
-
 /*
  *	Transport endpoint (IP address, port).
  */
