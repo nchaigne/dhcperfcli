@@ -524,8 +524,8 @@ int ncc_segment_list_override_start(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time
 
 		/* Remove this segment altogether. */
 		DEBUG3("Removing segment (%.3f - %.3f) - it ends before start override (%.3f)",
-				ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
-				ncc_fr_time_to_float(ftd_start));
+		       ncc_fr_time_to_float(segment->ftd_start), ncc_fr_time_to_float(segment->ftd_end),
+		       ncc_fr_time_to_float(ftd_start));
 
 		/* Then iterate to the next segment. */
 		prev = segment;

@@ -701,7 +701,7 @@ unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 	}
 
 end:
-	DEBUG_TRACE("Extracted message code: %u", code);
+	DEBUG3("Extracted message code: %u", code);
 	return code;
 }
 

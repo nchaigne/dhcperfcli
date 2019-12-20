@@ -77,8 +77,8 @@ static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 {
 	int rcode = 0;
 
-	DEBUG_TRACE("id: (%u <-> %u), sockfd: (%d <-> %d), src_port: (%d <-> %d), dst_port: (%d <-> %d)",
-	            a->id, b->id, a->sockfd, b->sockfd, a->src_port, b->src_port, a->dst_port, b->dst_port);
+	DEBUG3("id: (%u <-> %u), sockfd: (%d <-> %d), src_port: (%d <-> %d), dst_port: (%d <-> %d)",
+	       a->id, b->id, a->sockfd, b->sockfd, a->src_port, b->src_port, a->dst_port, b->dst_port);
 
 	if (a->id < b->id) return -1;
 	if (a->id > b->id) return +1;
@@ -160,7 +160,7 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 		       sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
 	}
 
-	DEBUG_TRACE("Now managing %d socket(s)", pl->num_sockets);
+	DEBUG3("Now managing %d socket(s)", pl->num_sockets);
 
 	return ps;
 }
@@ -239,13 +239,13 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 		ps = &pl->sockets[i];
 
 		if (ps->src_port == src_port && (fr_ipaddr_cmp(&ps->src_ipaddr, src_ipaddr) == 0)) {
-			DEBUG_TRACE("Found suitable managed socket, fd: %d", ps->sockfd);
+			DEBUG3("Found suitable managed socket, fd: %d", ps->sockfd);
 			return ps->sockfd;
 		}
 	}
 
 	/* No socket found, we need a new one. */
-	DEBUG_TRACE("No suitable managed socket found, need a new one...");
+	DEBUG3("No suitable managed socket found, need a new one...");
 
 	/* Open a connectionless UDP socket for sending and receiving. */
 	int sockfd = fr_socket_server_udp(src_ipaddr, &src_port, NULL, false);
@@ -341,8 +341,8 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 	bool r = rbtree_insert(pl->tree, request_p);
 	if (r) {
 		char from_to_buf[DPC_FROM_TO_STRLEN] = "";
-		DEBUG_TRACE("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
-		            dpc_packet_from_to_sprint(from_to_buf, *request_p, true));
+		DEBUG3("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
+		       dpc_packet_from_to_sprint(from_to_buf, *request_p, true));
 	}
 
 	return r;
@@ -396,7 +396,7 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	 */
 #ifdef HAVE_LIBPCAP
 	if (ps->pcap) {
-		DEBUG_TRACE("Reply received through raw socket: looking for broadcast packet.");
+		DEBUG3("Reply received through raw socket: looking for broadcast packet.");
 		my_request.src_ipaddr.addr.v4.s_addr = htonl(INADDR_ANY);
 		my_request.dst_ipaddr.addr.v4.s_addr = htonl(INADDR_BROADCAST);
 		my_request.src_port = 0; /* Match all. This allows to handle multiple source ports with a single pcap socket. */
@@ -406,8 +406,8 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	request = &my_request;
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
-	DEBUG_TRACE("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
-	            dpc_packet_from_to_sprint(from_to_buf, request, true));
+	DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
+	       dpc_packet_from_to_sprint(from_to_buf, request, true));
 
 	return rbtree_finddata(pl->tree, &request);
 }
@@ -476,7 +476,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 		fr_strerror_printf("Failed to find socket allocated with fd: %d", sockfd);
 		return false;
 	}
-	DEBUG_TRACE("Socket retrieved (fd: %d), now trying to get an id", sockfd);
+	DEBUG3("Socket retrieved (fd: %d), now trying to get an id", sockfd);
 
 	/*
 	 *	Set the ID, source IP, and source port.
@@ -507,7 +507,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 			 *	Try to insert into the packet list. If successful, it means the ID was available.
 			*/
 			if (dpc_packet_list_insert(pl, request_p)) {
-				DEBUG_TRACE("Successful insert into packet list (allocated xid: %d)", request->id);
+				DEBUG3("Successful insert into packet list (allocated xid: %d)", request->id);
 				ps->num_outgoing ++;
 				pl->num_outgoing ++;
 				return true;
@@ -520,7 +520,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 		request->id = id;
 	}
 
-	DEBUG_TRACE("Giving up after %d tries, last xid tried: %d", tries, pl->prev_id);
+	DEBUG3("Giving up after %d tries, last xid tried: %d", tries, pl->prev_id);
 
 	/*
 	 *	We failed to allocate an ID. Reset information in the packet before returning.
@@ -631,7 +631,7 @@ DHCP_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 		 *	We've received a packet, but are not guaranteed this was an expected reply.
 		 *	Call fr_packet_list_find_byreply(). If it doesn't find anything, discard the reply.
 		 */
-		DEBUG_TRACE("Received packet on socket fd: %d (index in array: %d)", ps->sockfd, start);
+		DEBUG3("Received packet on socket fd: %d (index in array: %d)", ps->sockfd, start);
 
 		pl->last_recv = start;
 		return packet;

@@ -875,9 +875,9 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t 
 
 	dpc_tr_stats_update_values(my_stats, rtt);
 
-	DEBUG_TRACE("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
-	            tr_type, my_stats->num, ncc_fr_time_to_float(rtt),
-	            ncc_fr_time_to_float(my_stats->rtt_min), ncc_fr_time_to_float(my_stats->rtt_max));
+	DEBUG3("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
+	       tr_type, my_stats->num, ncc_fr_time_to_float(rtt),
+	       ncc_fr_time_to_float(my_stats->rtt_min), ncc_fr_time_to_float(my_stats->rtt_max));
 }
 
 /*
@@ -995,9 +995,9 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 		 *	We have received at least one reply. We've been waiting for more from other DHCP servers.
 		 *	So do not track this as "packet lost".
 		 */
-		DEBUG_TRACE("Stop waiting for more replies");
+		DEBUG3("Stop waiting for more replies");
 	} else {
-		DEBUG_TRACE("Request timed out (retransmissions so far: %u)", session->retransmit);
+		DEBUG3("Request timed out (retransmissions so far: %u)", session->retransmit);
 
 		if (!signal_done && dpc_retransmit(session)) {
 			/* Packet has been successfully retransmitted. */
@@ -1054,7 +1054,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	int sockfd;
 	int ret;
 
-	DEBUG_TRACE("Preparing to send one packet");
+	DEBUG3("Preparing to send one packet");
 
 	/* Get a socket to send this over.
 	 */
@@ -1103,7 +1103,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		 * Encode the packet.
 		 * Note: it's already encoded if retransmitting.
 		 */
-		DEBUG_TRACE("Encoding packet");
+		DEBUG3("Encoding packet");
 		if (dpc_dhcp_encode(packet) < 0) { /* Should never happen. */
 			SERROR("Failed to encode request packet");
 			exit(EXIT_FAILURE);
@@ -1183,7 +1183,7 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 
 	if (ftd_wait_time) {
 		tvi_wait = fr_time_delta_to_timeval(*ftd_wait_time);
-		//DEBUG_TRACE("Max wait time: %.6f", ncc_timeval_to_float(&tvi_wait));
+		//DEBUG3("Max wait time: %.6f", ncc_timeval_to_float(&tvi_wait));
 	}
 
 	/*
@@ -1202,8 +1202,8 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 		return -1;
 	}
 
-	DEBUG_TRACE("Received packet %s, id: %u (0x%08x)",
-	            dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
+	DEBUG3("Received packet %s, id: %u (0x%08x)",
+	       dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
 
 	/*
 	 *	Only allow replies from specific servers (overall policy set through option -a).
@@ -1240,7 +1240,7 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	 */
 	session = fr_packet2myptr(dpc_session_ctx_t, request, packet_p);
 
-	DEBUG_TRACE("Packet belongs to session id: %d", session->id);
+	DEBUG3("Packet belongs to session id: %d", session->id);
 
 	/*
 	 *	Only allow replies from a specific server (per-packet policy set through attribute).
@@ -1301,7 +1301,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		 *	This means someone acquired the lease before us. A DHCP server can offer the same lease more than once.
 		 *	This is more likely to happen if the pool of remaining available addresses is small.
 		 */
-		DEBUG_TRACE("Discarding received reply code %d (session state: %d)", reply->code, session->state);
+		DEBUG3("Discarding received reply code %d (session state: %d)", reply->code, session->state);
 
 		dpc_packet_digest_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED_DISCARD);
 		//TODO: print configurable? but not based on packet trace lvl (because this should not happen)
@@ -1364,7 +1364,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	 *	There may be more Offer replies, from other DHCP servers. Wait for them.
 	 */
 	if (multi_offer && session->input->ext.with_pcap && session->reply->code == FR_DHCP_OFFER) {
-		DEBUG_TRACE("Waiting for more replies from other DHCP servers");
+		DEBUG3("Waiting for more replies from other DHCP servers");
 		session->state = DPC_STATE_WAIT_OTHER_REPLIES;
 		/* Note: there is no need to arm a new event timeout. The initial timer is still running. */
 
@@ -1407,7 +1407,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	/*
 	 *	Prepare a new DHCP Request packet.
 	 */
-	DEBUG_TRACE("DORA: received valid Offer, now preparing Request");
+	DEBUG3("DORA: received valid Offer, now preparing Request");
 
 	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
@@ -1495,7 +1495,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	/*
 	 *	Prepare a new DHCP Release packet.
 	 */
-	DEBUG_TRACE("DORA-Release: received valid Ack, now preparing Release");
+	DEBUG3("DORA-Release: received valid Ack, now preparing Release");
 
 	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
@@ -1583,7 +1583,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	/*
 	 *	Prepare a new DHCP Decline packet.
 	 */
-	DEBUG_TRACE("DORA-Decline: received valid Ack, now preparing Decline");
+	DEBUG3("DORA-Decline: received valid Ack, now preparing Decline");
 
 	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
@@ -1645,7 +1645,7 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	if (!gateway) return;
 
 	char ep_buf[NCC_ENDPOINT_STRLEN] = "";
-	DEBUG_TRACE("Assigning packet to gateway: %s", ncc_endpoint_sprint(ep_buf, gateway));
+	DEBUG3("Assigning packet to gateway: %s", ncc_endpoint_sprint(ep_buf, gateway));
 
 	/*
 	 *	We've been told to handle sent packets as if relayed through a gateway.
@@ -1718,8 +1718,8 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	request->dst_ipaddr = session->dst.ipaddr;
 
 	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
-	DEBUG_TRACE("New packet allocated (code: %u, %s)", request->code,
-	            dpc_packet_from_to_sprint(from_to_buf, request, false));
+	DEBUG3("New packet allocated (code: %u, %s)", request->code,
+	       dpc_packet_from_to_sprint(from_to_buf, request, false));
 
 	return request;
 }
@@ -2027,7 +2027,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		return NULL;
 	}
 
-	DEBUG_TRACE("Initializing a new session (id: %u)", session_num);
+	DEBUG3("Initializing a new session (id: %u)", session_num);
 
 	/* Store time of first session initialized. */
 	if (!fte_sessions_ini_start) {
@@ -2060,8 +2060,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	 *	If not using a template, copy this input item if it has to be used again.
 	 */
 	if (!CONF.template && input->num_use < input->max_use) {
-		DEBUG_TRACE("Input (id: %u) will be reused (num use: %u, max: %u)",
-		            input->id, input->num_use, input->max_use);
+		DEBUG3("Input (id: %u) will be reused (num use: %u, max: %u)",
+		       input->id, input->num_use, input->max_use);
 		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
 		if (input_dup) {
 			/*
@@ -2171,7 +2171,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 {
 	if (!session) return;
 
-	DEBUG_TRACE("Terminating session (id: %u)", session->id);
+	DEBUG3("Terminating session (id: %u)", session->id);
 
 	/* Remove the packet from the list, and free the id we've been using. */
 	if (session->request && session->request->id != DPC_PACKET_ID_UNASSIGNED) {
@@ -2494,7 +2494,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		/* Max loop time limit reached. */
 		fr_time_t now = fr_time();
 		if (now > fte_loop_max) {
-			DEBUG_TRACE("Loop time limit reached, started: %u", num_started);
+			DEBUG3("Loop time limit reached, started: %u", num_started);
 			break;
 		}
 
@@ -2632,7 +2632,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	if (CONF.interface && (fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr) == 1)
 	    && (dpc_ipaddr_is_broadcast(&input->ext.dst.ipaddr) == 1)
 	   ) {
-		DEBUG_TRACE("Input (id: %u) involves broadcast using pcap raw socket", input->id);
+		DEBUG3("Input (id: %u) involves broadcast using pcap raw socket", input->id);
 
 		input->ext.with_pcap = true;
 		return;
@@ -3142,7 +3142,7 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
 
 			vp->vp_ptr = NULL; /* Otherwise fr_pair_value_strcpy would free our compiled xlat! */
 
-			DEBUG_TRACE("xlat %s = [%s] => (len: %u) [%s]", vp->da->name, vp->xlat, len, buffer);
+			DEBUG3("xlat %s = [%s] => (len: %u) [%s]", vp->da->name, vp->xlat, len, buffer);
 
 			/* Convert the xlat'ed string to the appropriate type. */
 			if (ncc_pair_value_from_str(vp, buffer) < 0) {
@@ -3356,7 +3356,7 @@ static int dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char c
 			exit(EXIT_FAILURE);
 		}
 		char ep_buf[NCC_ENDPOINT_STRLEN] = "";
-		DEBUG_TRACE("Added endpoint list item #%u: [%s]", NCC_DLIST_SIZE(*ep_dlist_p) - 1, ncc_endpoint_sprint(ep_buf, ep));
+		DEBUG3("Added endpoint list item #%u: [%s]", NCC_DLIST_SIZE(*ep_dlist_p) - 1, ncc_endpoint_sprint(ep_buf, ep));
 
 		p = strsep(&str, ",");
 	}
@@ -3370,7 +3370,7 @@ static int dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char c
  */
 static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in)
 {
-	DEBUG_TRACE("Parsing list of gateway endpoints: [%s]", in);
+	DEBUG3("Parsing list of gateway endpoints: [%s]", in);
 	dpc_addr_list_parse(global_ctx, &gateway_list, in, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
 }
 
