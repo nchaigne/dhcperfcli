@@ -111,7 +111,7 @@ static const CONF_PARSER transport_conf_parser[] = {
 
 static const CONF_PARSER load_conf_parser[] = {
 	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), FLOAT64_NOT_NEGATIVE }, /* No default */
-	{ FR_CONF_OFFSET("input_rate_limit", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .dflt = "0", FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("input_rate_limit", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), FLOAT64_NOT_NEGATIVE }, /* No default */
 	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), FLOAT64_NOT_NEGATIVE }, /* No default */
 	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use) }, /* No default */
 	{ FR_CONF_OFFSET("session_max_num", FR_TYPE_UINT32, dpc_config_t, session_max_num) }, /* No default */
