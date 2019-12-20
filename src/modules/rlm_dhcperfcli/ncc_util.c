@@ -1405,7 +1405,7 @@ int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_
 /**
  * Add a new endpoint to a list.
  */
-ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
+ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
                                 char *addr, ncc_endpoint_t *default_ep)
 {
 	ncc_endpoint_t this = { .ipaddr = { .af = AF_UNSPEC, .prefix = 32 } };
@@ -1420,49 +1420,39 @@ ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list,
 		return NULL;
 	}
 
-	ep_list->num ++;
-	ep_list->eps = talloc_realloc(ctx, ep_list->eps, ncc_endpoint_t, ep_list->num);
-	/* Note: ctx is used only on first allocation. */
-
-	ep_new = &ep_list->eps[ep_list->num - 1];
+	MEM(ep_new = talloc_zero(ctx, ncc_endpoint_t));
+	NCC_DLIST_ENQUEUE(ep_dlist, ep_new);
 	memcpy(ep_new, &this, sizeof(this));
 
-	return ep_new; /* Valid only until list is expanded. */
-}
-
-/**
- * Get next endpoint from the list (use in round robin fashion).
- */
-ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list)
-{
-	if (!ep_list || !ep_list->eps) return NULL;
-
-	ncc_endpoint_t *ep = &ep_list->eps[ep_list->next];
-	ep_list->next = (ep_list->next + 1) % ep_list->num;
-	return ep;
+	return ep_new;
 }
 
 /**
  * Print the endpoints in list.
  */
-char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list)
+char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist)
 {
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	int i;
 	size_t len;
 	char *p = out;
 
-	if (!ep_list) {
+	if (!ep_dlist) {
 		fr_strerror_printf("Invalid argument");
 		return NULL;
 	}
 
-	for (i = 0; i < ep_list->num; i++) {
+	i = 0;
+	ncc_endpoint_t *ep = NCC_DLIST_HEAD(ep_dlist);
+	while (ep) {
 		len = snprintf(p, outlen, "%s%s:%u", (i > 0 ? ", " : ""),
 		               fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf),
-		               &ep_list->eps[ep_list->next].ipaddr), ep_list->eps[ep_list->next].port);
+		               &ep->ipaddr), ep->port);
 
 		ERR_IF_TRUNCATED_LEN(p, outlen, len);
+
+		ep = NCC_DLIST_NEXT(ep_dlist, ep);
+		i++;
 	}
 
 	return out;

@@ -189,7 +189,7 @@ static ncc_endpoint_t client_ep = {
 	.port = DHCP_PORT_CLIENT
 };
 
-static ncc_endpoint_list_t *gateway_list; /* List of gateways. */
+static ncc_dlist_t *gateway_list; /* List of gateways. */
 
 static int packet_code = FR_CODE_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
@@ -358,8 +358,8 @@ static void dpc_main_loop(void);
 
 static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input);
 static void dpc_input_debug(dpc_input_t *input);
-static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list);
-static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename);
+static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist);
+static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *dlist, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
@@ -368,8 +368,8 @@ static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
-static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
-                                                ncc_endpoint_t *default_ep);
+static int dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
+                               ncc_endpoint_t *default_ep);
 static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in);
 static void dpc_options_parse(int argc, char **argv);
 
@@ -1789,7 +1789,7 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
 	 *	Associate session to gateway, if one is defined (or several).
 	 */
 	if (!is_ipaddr_defined(session->src.ipaddr) && gateway_list) {
-		session->gateway = ncc_ep_list_get_next(gateway_list);
+		NCC_DLIST_USE_NEXT(gateway_list, session->gateway);
 		session->src = *(session->gateway);
 	}
 }
@@ -2988,7 +2988,7 @@ static void dpc_input_debug(dpc_input_t *input)
 /*
  *	Handle a list of input vps we've just read.
  */
-static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
+static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist)
 {
 	TALLOC_CTX *ctx;
 
@@ -3018,7 +3018,7 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *list)
 	/*
 	 *	Add it to the list of input items.
 	 */
-	NCC_DLIST_ENQUEUE(list, input);
+	NCC_DLIST_ENQUEUE(dlist, input);
 	return 0;
 }
 
@@ -3331,13 +3331,14 @@ static int dpc_command_parse(char const *command)
  *	Parse a list of endpoint addresses (gateways, option -g).
  *	Create and populate an endpoint list (sic_endpoint_list_t) with the results.
  */
-static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_list_t **ep_list, char const *in,
-                                                ncc_endpoint_t *default_ep)
+static int dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
+                               ncc_endpoint_t *default_ep)
 {
-	if (!ep_list || !in) return NULL;
+	if (!ep_dlist_p || !in) return -1;
 
-	if (!*ep_list) {
-		MEM(*ep_list = talloc_zero(ctx, ncc_endpoint_list_t));
+	if (!*ep_dlist_p) {
+		MEM(*ep_dlist_p = talloc_zero(global_ctx, ncc_dlist_t));
+		NCC_DLIST_INIT(*ep_dlist_p, ncc_endpoint_t);
 	}
 
 	char *in_dup = talloc_strdup(ctx, in); /* Working copy (strsep alters the string it's dealing with). */
@@ -3349,18 +3350,19 @@ static ncc_endpoint_list_t *dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_endpoint_li
 		ncc_str_trim(p, p, strlen(p));
 
 		/* Add this to our list of endpoints. */
-		ncc_endpoint_t *ep = ncc_ep_list_add(ctx, *ep_list, p, default_ep);
+		ncc_endpoint_t *ep = ncc_ep_list_add(ctx, *ep_dlist_p, p, default_ep);
 		if (!ep) {
 			PERROR("Failed to create endpoint \"%s\"", p);
 			exit(EXIT_FAILURE);
 		}
 		char ep_buf[NCC_ENDPOINT_STRLEN] = "";
-		DEBUG_TRACE("Added endpoint list item #%u: [%s]", (*ep_list)->num - 1, ncc_endpoint_sprint(ep_buf, ep));
+		DEBUG_TRACE("Added endpoint list item #%u: [%s]", NCC_DLIST_SIZE(*ep_dlist_p) - 1, ncc_endpoint_sprint(ep_buf, ep));
 
 		p = strsep(&str, ",");
 	}
 	talloc_free(in_dup);
-	return *ep_list;
+
+	return 0;
 }
 
 /*
@@ -3954,16 +3956,17 @@ int main(int argc, char **argv)
 	 *	Allocate sockets for gateways.
 	 */
 	if (gateway_list) {
-		for (i = 0; i < gateway_list->num; i++) {
-			ncc_endpoint_t *this = &gateway_list->eps[i];
-
-			if (dpc_socket_provide(pl, &this->ipaddr, this->port) < 0) {
+		ncc_endpoint_t *ep = NCC_DLIST_HEAD(gateway_list);
+		while (ep) {
+			if (dpc_socket_provide(pl, &ep->ipaddr, ep->port) < 0) {
 				char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 				PERROR("Failed to provide a suitable socket for gateway \"%s:%u\"",
-				       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &this->ipaddr) ? src_ipaddr_buf : "(undef)",
-				       this->port);
+				       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &ep->ipaddr) ? src_ipaddr_buf : "(undef)",
+				       ep->port);
 				exit(EXIT_FAILURE);
 			}
+
+			ep = NCC_DLIST_NEXT(gateway_list, ep);
 		}
 	}
 

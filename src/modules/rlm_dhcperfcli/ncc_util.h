@@ -260,22 +260,16 @@ extern int ncc_debug_lvl;
  *	Transport endpoint (IP address, port).
  */
 typedef struct ncc_endpoint {
+	/* Generic chaining */
+	fr_dlist_t dlist;          //!< Our entry into the linked list.
+
 	fr_ipaddr_t ipaddr;
 	uint16_t port;
 } ncc_endpoint_t;
 
 #define NCC_EP_MAKE(_ep, _ipaddr, _port) \
-	ncc_endpoint_t _ep; \
+	ncc_endpoint_t _ep = { 0 }; \
 	_ep.ipaddr = _ipaddr; _ep.port = _port;
-
-/*
- *	List of endpoints (used in round-robin fashion).
- */
-typedef struct ncc_endpoint_list {
-	ncc_endpoint_t *eps;   //<! List of endpoints.
-	uint32_t num;          //<! Number of endpoints in the list.
-	uint32_t next;         //<! Number of next endpoint to be used.
-} ncc_endpoint_list_t;
 
 
 /*
@@ -394,9 +388,9 @@ bool ncc_str_to_float32(float *out, char const *in, bool allow_negative);
 size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_t inlen);
 
-ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_endpoint_list_t *ep_list, char *addr, ncc_endpoint_t *default_ep);
-ncc_endpoint_t *ncc_ep_list_get_next(ncc_endpoint_list_t *ep_list);
-char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_endpoint_list_t *ep_list);
+ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
+                                char *addr, ncc_endpoint_t *default_ep);
+char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist);
 
 bool ncc_stdin_peek();
 
