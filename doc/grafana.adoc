@@ -59,4 +59,26 @@ The resulting graph allows to easily compare response times (shown in millisecon
 Notice that even though we provided only one query, there are two graphs shown. This is achieved through a "GROUP BY type" which allows to automatically display all types found in the selected time range.
 
 image::https://user-images.githubusercontent.com/6780490/71266874-98b7f980-2349-11ea-9bbf-a02d31d5a6f2.png[transaction RTT example]
+{sp} +
 
+
+=== Sessions and target rate
+
+The following dashboard gets data from the `session` table.
+
+It is composed of the following queries:
+----
+SELECT sum("num") FROM "session" WHERE $timeFilter GROUP BY time(1s), "input" fill(null)
+SELECT sum("target") AS "target" FROM "session" WHERE $timeFilter GROUP BY time(1s), "input" fill(null)
+SELECT sum("target") FROM "session" WHERE $timeFilter GROUP BY time(1s) fill(null)
+  ALIAS BY session.target.all
+----
+
+The example is from a 5 minutes Discover benchmark, composed of five segments with increasing intended (target) rate: 8k Discover/s, then 10k, 12k, 14k and 16k.
+
+The graphs shows the target rate, which is what _dhcperfcli_ expects, and the sad reality of a DHCP server that is unable to keep up beyond about 12k Discover/s.
+
+image::https://user-images.githubusercontent.com/6780490/71280409-63b4a280-235b-11ea-9196-e820596a351b.png[session with input segments]
+
+{sp} +
+Note: the curve `session.target.all` would be useful if there were more than a single input. In this example, it is the same as `session.target` for that lone input.
