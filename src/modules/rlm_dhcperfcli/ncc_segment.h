@@ -35,6 +35,15 @@ typedef enum {
 } ncc_segment_type_t;
 
 /*
+ *	How segments are allocated.
+ */
+typedef enum {
+	NCC_SEGMENT_ALLOC_MANUAL = 0,
+	NCC_SEGMENT_ALLOC_AUTOFILL,
+	NCC_SEGMENT_ALLOC_DEFAULT
+} ncc_segment_alloc_t;
+
+/*
  *	Time segment.
  */
 typedef struct ncc_segment {
@@ -46,6 +55,7 @@ typedef struct ncc_segment {
 	uint32_t num_use;           //!< How many times has this segment been used to start sessions.
 	uint32_t target;            //!< How many times should this segment have been used to meet target rate.
 
+	ncc_segment_alloc_t alloc;  //!< Allocation method.
 	ncc_segment_type_t type;    //!< Type of segment.
 
 	union {

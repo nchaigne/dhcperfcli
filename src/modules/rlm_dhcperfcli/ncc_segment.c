@@ -442,6 +442,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
+		segment_new->alloc = NCC_SEGMENT_ALLOC_DEFAULT;
 		segment_new->name = "dflt";
 
 		return 0;
@@ -458,6 +459,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
+		segment_new->alloc = NCC_SEGMENT_ALLOC_AUTOFILL;
 		segment_new->name = "dflt";
 	}
 
@@ -472,6 +474,7 @@ int ncc_segment_list_complete(TALLOC_CTX *ctx, ncc_dlist_t *dlist, double rate)
 
 		segment_new->type = segment_type;
 		segment_new->rate_limit = rate;
+		segment_new->alloc = NCC_SEGMENT_ALLOC_AUTOFILL;
 		segment_new->name = "dflt";
 	}
 
