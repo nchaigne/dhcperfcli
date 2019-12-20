@@ -2707,8 +2707,12 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		vp_workflow_type = ncc_pair_find_by_da(input->vps, attr_workflow_type);
 	}
 
-	/* Allocate and initialize input segments list. */
-	input->segments = talloc_zero(ctx, ncc_dlist_t);
+	/* Allocate and initialize input segments list.
+	 * Note: it may already have been initialized, if input is read from configuration file.
+	 */
+	if (!input->segments) {
+		input->segments = talloc_zero(ctx, ncc_dlist_t);
+	}
 	NCC_DLIST_INIT(input->segments, ncc_segment_t);
 
 	/*

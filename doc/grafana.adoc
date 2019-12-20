@@ -33,7 +33,7 @@ SELECT sum("sent") FROM "packet" WHERE ("type" = 'Request') AND $timeFilter GROU
 SELECT sum("recv") FROM "packet" WHERE ("type" = 'Ack') AND $timeFilter GROUP BY time(1s) fill(null)
 ----
 
-The example is from a 5 minutes DORA benchmark, composed of two segments: the first with a rate of 500 DORA/s first, and the second a rate of 1000 DORA/s.
+The example is from a 5 minutes DORA benchmark, composed of two segments: the first with a rate of 500 DORA/s, and the second a rate of 1000 DORA/s.
 
 Notice that there are four curves in this graph (which correspond to the Grafana queries), but they all are all exactly superimposed (`Discover.sent` and `Ack.recv` are currently selected, but Offer and Request are just the same). This is what is expected in nominal case, with one client and one server: each Discover sent is replied with an Offer, and each Request with an Ack.
 
