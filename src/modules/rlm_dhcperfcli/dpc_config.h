@@ -50,6 +50,7 @@ struct dpc_config_s {
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
 	bool packet_trace_timestamp;     //<! Prefix packet trace with current timestamp.
 	double request_timeout;          //<! Max time waiting for a reply to a request we've sent.
+	fr_time_delta_t ftd_request_timeout;
 	uint32_t retransmit_max;         //<! Max retransmissions of a request not replied to (not including first packet).
 
 	double rate_limit;               //<! Limit rate/s of sessions initialized from input (global - all transactions combined).
@@ -60,6 +61,8 @@ struct dpc_config_s {
 	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
 
 	bool with_timedata;              //<! Whether time-data statistics are enabled.
+
+	bool talloc_memory_report;       //!< On exit, print a memory report on what's left unfreed.
 };
 
 /*

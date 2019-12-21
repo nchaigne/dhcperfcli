@@ -23,10 +23,6 @@ extern dpc_context_t exe_ctx;
  *	Holds global parameters set at initialization stage.
  */
 struct dpc_context {
-	int talloc_memory_report;        //!< On exit, print a memory report on what's left unfreed.
-
-	fr_time_delta_t ftd_request_timeout;
-
 	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
 
 	uint32_t min_session_for_rps;     //<! Min number of sessions started from input to compute a session rate per second.

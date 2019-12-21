@@ -1023,7 +1023,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in)
 {
 	fr_time_t fte_event = fr_time();
-	fte_event += (timeout_in ? *timeout_in : ECTX.ftd_request_timeout);
+	fte_event += (timeout_in ? *timeout_in : CONF.ftd_request_timeout);
 
 	/* If there is an active event timer for this session, clear it before arming a new one. */
 	if (session->event) {
@@ -3583,7 +3583,7 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 'M':
-			ECTX.talloc_memory_report = true;
+			CONF.talloc_memory_report = true;
 			break;
 
 		case 'n':
@@ -3692,7 +3692,7 @@ static void dpc_options_parse(int argc, char **argv)
 	argv += (optind - 1);
 
 	/* Configure talloc debugging features. */
-	if (ECTX.talloc_memory_report) {
+	if (CONF.talloc_memory_report) {
 		talloc_enable_null_tracking();
 	} else {
 		talloc_disable_null_tracking();
@@ -3804,7 +3804,7 @@ static void dpc_exit(void)
 	 * Anything not cleaned up by the above is allocated in
 	 * the NULL top level context, and is likely leaked memory.
 	 */
-	if (ECTX.talloc_memory_report) {
+	if (CONF.talloc_memory_report) {
 		fprintf(stdout, "--> EXIT talloc memory report:\n");
 		fr_log_talloc_report(NULL);
 		fprintf(stdout, "<-- EXIT talloc memory report END.\n");
@@ -3948,7 +3948,7 @@ int main(int argc, char **argv)
 	}
 
 	CONF.ftd_progress_interval = ncc_float_to_fr_time(CONF.progress_interval);
-	ECTX.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
+	CONF.ftd_request_timeout = ncc_float_to_fr_time(CONF.request_timeout);
 	if (!CONF.template && CONF.input_num_use == 0) CONF.input_num_use = 1;
 
 	if (CONF.rate_limit) {
