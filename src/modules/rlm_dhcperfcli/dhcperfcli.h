@@ -23,8 +23,6 @@ extern dpc_context_t exe_ctx;
  *	Holds global parameters set at initialization stage.
  */
 struct dpc_context {
-	fr_time_t fte_start_max;         //<! Time after which no input session is allowed to be started.
-
 	uint32_t min_session_for_rps;     //<! Min number of sessions started from input to compute a session rate per second.
 	double min_session_time_for_rps;  //<! Min elapsed time to compute a session rate per second.
 	double min_ref_time_rate_limit;   //<! Min reference time considered for rate limit.

@@ -2048,9 +2048,9 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		}
 
 		/* If there is a global max start time, store whichever comes first (input, global). */
-		if (ECTX.fte_start_max
-		    && (!input->fte_max_start || input->fte_max_start > ECTX.fte_start_max)) {
-			input->fte_max_start = ECTX.fte_start_max;
+		if (CONF.fte_start_max
+		    && (!input->fte_max_start || input->fte_max_start > CONF.fte_start_max)) {
+			input->fte_max_start = CONF.fte_start_max;
 		}
 	}
 
@@ -3776,7 +3776,12 @@ static void dpc_end(void)
  */
 static void dpc_exit(void)
 {
-	/* Free memory. */
+	bool talloc_memory_report = false;
+
+	if (dpc_config) talloc_memory_report = dpc_config->talloc_memory_report; /* Grab this before we free the config */
+
+	/* Free memory.
+	 */
 	ncc_xlat_free(); // Note: this removes reference on "internal" (freeradius) dictionary
 	ncc_xlat_core_free();
 
@@ -3790,7 +3795,7 @@ static void dpc_exit(void)
 	fr_dict_autofree(dpc_dict_autoload);
 	// Now all dictionaries have been freed.
 
-	/* Free parsed configuration items.
+	/* Free parsed configuration.
 	 */
 	dpc_config_free(&dpc_config);
 
@@ -3804,7 +3809,7 @@ static void dpc_exit(void)
 	 * Anything not cleaned up by the above is allocated in
 	 * the NULL top level context, and is likely leaked memory.
 	 */
-	if (CONF.talloc_memory_report) {
+	if (talloc_memory_report) {
 		fprintf(stdout, "--> EXIT talloc memory report:\n");
 		fr_log_talloc_report(NULL);
 		fprintf(stdout, "<-- EXIT talloc memory report END.\n");
@@ -4040,7 +4045,7 @@ int main(int argc, char **argv)
 	fte_start = fte_job_start = fr_time(); /* Job start timestamp. */
 
 	if (CONF.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
-		ECTX.fte_start_max = ncc_float_to_fr_time(CONF.duration_start_max) + fte_job_start;
+		CONF.fte_start_max = ncc_float_to_fr_time(CONF.duration_start_max) + fte_job_start;
 	}
 
 	if (!CONF.ignore_invalid_input && num_input_invalid > 0) {
