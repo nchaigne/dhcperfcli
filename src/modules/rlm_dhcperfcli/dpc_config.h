@@ -62,8 +62,12 @@ struct dpc_config_s {
 	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
 
 	bool with_timedata;              //<! Whether time-data statistics are enabled.
-
 	bool talloc_memory_report;       //!< On exit, print a memory report on what's left unfreed.
+
+	double min_time_for_rps;          //<! Min elapsed time to compute a rate per second.
+	uint32_t min_session_for_rps;     //<! Min number of sessions started from input to compute a rate per second.
+	double rate_limit_min_ref_time;   //<! Min reference time considered for rate limit.
+	double rate_limit_time_lookahead; //<! Time lookahead for rate limit enforcement (allows to factor in processing time).
 };
 
 /*

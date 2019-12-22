@@ -42,13 +42,6 @@ fr_time_t fte_program_start; /* Program execution start timestamp. */
 fr_time_t fte_start;
 int dpc_debug_lvl = 0;
 
-dpc_context_t exe_ctx = {
-	.min_session_for_rps = 50,
-	.min_session_time_for_rps = 0.5,
-	.min_ref_time_rate_limit = 0.2,
-	.rate_limit_time_lookahead = 0.02,
-};
-
 static dpc_config_t default_config = {
 	.xlat = true,
 	.session_max_active = 1,
@@ -56,6 +49,11 @@ static dpc_config_t default_config = {
 	.progress_interval = 10.0,
 	.request_timeout = 1.0,
 	.retransmit_max = 2,
+
+	.min_session_for_rps = 50,
+	.min_time_for_rps = 0.5,
+	.rate_limit_min_ref_time = 0.2,
+	.rate_limit_time_lookahead = 0.02,
 };
 
 fr_dict_attr_t const *attr_packet_dst_ip_address;
@@ -576,11 +574,11 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 		fprintf(fp, "]");
 	}
 
-	/* Print input sessions rate, if: we've handled at least a few sessions, with sufficient job elapsed time.
+	/* Print input sessions rate, if: we've handled at least a few sessions, with sufficient elapsed time.
 	 * And we're (still) starting sessions.
 	 */
-	if (session_num_in >= ECTX.min_session_for_rps
-	    && elapsed >= ECTX.min_session_time_for_rps
+	if (session_num_in >= CONF.min_session_for_rps
+	    && elapsed >= CONF.min_time_for_rps
 		&& start_sessions_flag) {
 		bool per_input = CONF.rate_limit ? false : true;
 		fprintf(fp, ", session rate (/s): %.3f", dpc_get_session_in_rate(per_input));
@@ -1888,8 +1886,8 @@ static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input)
 
 	double elapsed = dpc_item_get_elapsed(input);
 
-	if (input->num_use < ECTX.min_session_for_rps
-	    || elapsed < ECTX.min_session_time_for_rps) return false;
+	if (input->num_use < CONF.min_session_for_rps
+	    || elapsed < CONF.min_time_for_rps) return false;
 
 	*out_rate = (double)input->num_use / elapsed;
 	return true;
@@ -2295,8 +2293,8 @@ static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment)
 
 	double elapsed = dpc_segment_get_elapsed(segment);
 
-	if (segment->num_use < ECTX.min_session_for_rps
-	    || elapsed < ECTX.min_session_time_for_rps) return false;
+	if (segment->num_use < CONF.min_session_for_rps
+	    || elapsed < CONF.min_time_for_rps) return false;
 
 	*out_rate = (double)segment->num_use / elapsed;
 	return true;
@@ -2376,16 +2374,16 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc
 	elapsed_ref = dpc_segment_get_elapsed(segment);
 
 	if (!strict) {
-		if (elapsed_ref < ECTX.min_ref_time_rate_limit) {
+		if (elapsed_ref < CONF.rate_limit_min_ref_time) {
 			/*
 			 * Consider a minimum elapsed time interval for the beginning.
 			 * We may start more sessions than the desired rate before this time, but this will be quickly corrected.
 			 */
-			elapsed_ref = ECTX.min_ref_time_rate_limit;
+			elapsed_ref = CONF.rate_limit_min_ref_time;
 		}
 
 		/* Allow to start a bit more right now to compensate for server delay and our own internal tasks. */
-		elapsed_ref += ECTX.rate_limit_time_lookahead;
+		elapsed_ref += CONF.rate_limit_time_lookahead;
 	}
 
 	/* Don't go beyond segment end. */
