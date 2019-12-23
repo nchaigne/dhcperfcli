@@ -5,6 +5,14 @@ AC_DEFUN(modname,[dhcperfcli])
 AC_CONFIG_HEADER(config.h)
 m4_include([m4/libcurl_check_config.m4])
 
+
+AC_MSG_CHECKING([dhcperfcli build version string])
+DHCPERFCLI_VERSION_STRING=`cat VERSION`
+AC_MSG_RESULT($DHCPERFCLI_VERSION_STRING)
+
+AC_DEFINE_UNQUOTED([DHCPERFCLI_VERSION_STRING], ["${DHCPERFCLI_VERSION_STRING}"], [Raw version string from VERSION file])
+
+
 # sources to build only if we have libcurl
 SOURCES_REQ_LIBCURL="ncc_curl.c"
 

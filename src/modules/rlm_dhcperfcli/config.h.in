@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Raw version string from VERSION file */
+#undef DHCPERFCLI_VERSION_STRING
+
 /* Define to 1 if you have a functional curl library. */
 #undef HAVE_LIBCURL
 

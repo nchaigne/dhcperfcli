@@ -1934,6 +1934,20 @@ ac_config_headers="$ac_config_headers config.h"
 
 
 
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking dhcperfcli build version string" >&5
+$as_echo_n "checking dhcperfcli build version string... " >&6; }
+DHCPERFCLI_VERSION_STRING=`cat VERSION`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $DHCPERFCLI_VERSION_STRING" >&5
+$as_echo "$DHCPERFCLI_VERSION_STRING" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define DHCPERFCLI_VERSION_STRING "${DHCPERFCLI_VERSION_STRING}"
+_ACEOF
+
+
+
 # sources to build only if we have libcurl
 SOURCES_REQ_LIBCURL="ncc_curl.c"
 

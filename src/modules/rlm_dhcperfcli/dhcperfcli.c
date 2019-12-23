@@ -19,8 +19,8 @@
 
 #include <getopt.h>
 
-static char const *prog_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
-
+static char const *fr_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
+static char const *prog_version = DHCPERFCLI_VERSION_STRING;
 
 /*
  *	Global variables.
@@ -4103,7 +4103,7 @@ int main(int argc, char **argv)
 
 static void version_print(void)
 {
-	printf("%s: %s\n", progname, prog_version);
+	printf("%s version %s: %s\n", progname, prog_version, fr_version);
 	printf("Program was built with:\n");
 	printf("- libpcap: " BUILT_WITH_LIBPCAP "\n");
 	printf("- libcurl: " BUILT_WITH_LIBCURL "\n");
