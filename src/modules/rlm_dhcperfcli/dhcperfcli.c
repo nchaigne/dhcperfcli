@@ -601,6 +601,8 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 
 	/* Clear snapshot. */
 	dpc_time_snapshot_clear();
+
+	fflush(fp);
 }
 
 
@@ -919,7 +921,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, UNUSED void *ctx)
 {
 	/* Do statistics summary. */
-	dpc_progress_stats_fprint(stdout, false);
+	dpc_progress_stats_fprint(CONF.pr_stat_fp, false);
 
 	/* ... and schedule next time. */
 	dpc_event_add_progress_stats();
@@ -3727,7 +3729,7 @@ static void dpc_end(void)
 
 		/* If we're producing progress statistics, do it one last time. */
 		if (CONF.ftd_progress_interval && dpc_job_elapsed_fr_time_get() > CONF.ftd_progress_interval) {
-			dpc_progress_stats_fprint(stdout, true);
+			dpc_progress_stats_fprint(CONF.pr_stat_fp, true);
 		}
 
 		/* End statistics report.

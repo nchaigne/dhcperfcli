@@ -431,7 +431,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 			ERROR("No file provided for progress file destination");
 			goto error;
 		}
-		config->pr_stat_fp = fopen(config->pr_stat_file, "a");
+		config->pr_stat_fp = fopen(config->pr_stat_file, "w");
 		if (!config->pr_stat_fp) {
 			ERROR("Failed to open progress statistics file \"%s\": %s", config->pr_stat_file, fr_syserror(errno));
 			goto error;
