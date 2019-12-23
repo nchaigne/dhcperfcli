@@ -388,9 +388,11 @@ bool ncc_str_to_float32(float *out, char const *in, bool allow_negative);
 size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_t inlen);
 
-ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
-                                char *addr, ncc_endpoint_t *default_ep);
-char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist);
+int ncc_endpoint_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
+                            ncc_endpoint_t *default_ep);
+ncc_endpoint_t *ncc_endpoint_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
+                                      char *addr, ncc_endpoint_t *default_ep);
+char *ncc_endpoint_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist);
 
 bool ncc_stdin_peek();
 

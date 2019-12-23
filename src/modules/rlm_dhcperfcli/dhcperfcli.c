@@ -367,8 +367,6 @@ static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
-static int dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
-                               ncc_endpoint_t *default_ep);
 static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in);
 static void dpc_options_parse(int argc, char **argv);
 
@@ -2014,8 +2012,12 @@ static dpc_input_t *dpc_get_input(void)
 	return NULL;
 }
 
-/*
- *	Initialize a new session.
+/**
+ * Initialize a new session from input.
+ *
+ * @param[in] ctx  talloc context.
+ *
+ * @return new session, NULL if unable to initialize one.
  */
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 {
@@ -2028,7 +2030,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		return NULL;
 	}
 
-	DEBUG3("Initializing a new session (id: %u)", session_num);
+	DEBUG3("Initializing a new session (id: %u) from input (id: %u)", session_num, input->id);
 
 	/* Store time of first session initialized. */
 	if (!fte_sessions_ini_start) {
@@ -2514,7 +2516,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* No more input. */
-		if (!CONF.template && input_list.size == 0) {
+		if (!CONF.template && NCC_DLIST_SIZE(&input_list) == 0) {
 			dpc_end_start_sessions();
 			break;
 		}
@@ -3333,50 +3335,17 @@ static int dpc_command_parse(char const *command)
 }
 
 /*
- *	Parse a list of endpoint addresses (gateways, option -g).
- *	Create and populate an endpoint list (sic_endpoint_list_t) with the results.
- */
-static int dpc_addr_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
-                               ncc_endpoint_t *default_ep)
-{
-	if (!ep_dlist_p || !in) return -1;
-
-	if (!*ep_dlist_p) {
-		MEM(*ep_dlist_p = talloc_zero(global_ctx, ncc_dlist_t));
-		NCC_DLIST_INIT(*ep_dlist_p, ncc_endpoint_t);
-	}
-
-	char *in_dup = talloc_strdup(ctx, in); /* Working copy (strsep alters the string it's dealing with). */
-	char *str = in_dup;
-
-	char *p = strsep(&str, ",");
-	while (p) {
-		/* First trim string of eventual spaces. */
-		ncc_str_trim(p, p, strlen(p));
-
-		/* Add this to our list of endpoints. */
-		ncc_endpoint_t *ep = ncc_ep_list_add(ctx, *ep_dlist_p, p, default_ep);
-		if (!ep) {
-			PERROR("Failed to create endpoint \"%s\"", p);
-			exit(EXIT_FAILURE);
-		}
-		char ep_buf[NCC_ENDPOINT_STRLEN] = "";
-		DEBUG3("Added endpoint list item #%u: [%s]", NCC_DLIST_SIZE(*ep_dlist_p) - 1, ncc_endpoint_sprint(ep_buf, ep));
-
-		p = strsep(&str, ",");
-	}
-	talloc_free(in_dup);
-
-	return 0;
-}
-
-/*
- *	Parse and handle a configured "gateway".
+ *	Parse and handle configured gateway(s).
  */
 static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in)
 {
 	DEBUG3("Parsing list of gateway endpoints: [%s]", in);
-	dpc_addr_list_parse(global_ctx, &gateway_list, in, &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY });
+
+	if (ncc_endpoint_list_parse(global_ctx, &gateway_list, in,
+	                            &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY }) < 0) {
+		PERROR("Failed to parse gateways");
+		exit(EXIT_FAILURE);
+	}
 }
 
 

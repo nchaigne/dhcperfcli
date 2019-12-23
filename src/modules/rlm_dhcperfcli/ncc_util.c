@@ -1403,10 +1403,48 @@ int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_
 
 
 /**
+ * Parse a list of endpoint addresses.
+ * Create and populate a list of endpoints with the results.
+ */
+int ncc_endpoint_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
+                            ncc_endpoint_t *default_ep)
+{
+	if (!ep_dlist_p || !in) return -1;
+
+	if (!*ep_dlist_p) {
+		MEM(*ep_dlist_p = talloc_zero(ctx, ncc_dlist_t));
+		NCC_DLIST_INIT(*ep_dlist_p, ncc_endpoint_t);
+	}
+
+	char *in_dup = talloc_strdup(ctx, in); /* Working copy (strsep alters the string it's dealing with). */
+	char *str = in_dup;
+
+	char *p = strsep(&str, ",");
+	while (p) {
+		/* First trim string of eventual spaces. */
+		ncc_str_trim(p, p, strlen(p));
+
+		/* Add this to our list of endpoints. */
+		ncc_endpoint_t *ep = ncc_endpoint_list_add(ctx, *ep_dlist_p, p, default_ep);
+		if (!ep) {
+			fr_strerror_printf_push("Failed to create endpoint \"%s\"", p);
+			return -1;
+		}
+		char ep_buf[NCC_ENDPOINT_STRLEN] = "";
+		DEBUG3("Added endpoint list item #%u: [%s]", NCC_DLIST_SIZE(*ep_dlist_p) - 1, ncc_endpoint_sprint(ep_buf, ep));
+
+		p = strsep(&str, ",");
+	}
+	talloc_free(in_dup);
+
+	return 0;
+}
+
+/**
  * Add a new endpoint to a list.
  */
-ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
-                                char *addr, ncc_endpoint_t *default_ep)
+ncc_endpoint_t *ncc_endpoint_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
+                                      char *addr, ncc_endpoint_t *default_ep)
 {
 	ncc_endpoint_t this = { .ipaddr = { .af = AF_UNSPEC, .prefix = 32 } };
 	ncc_endpoint_t *ep_new;
@@ -1430,7 +1468,7 @@ ncc_endpoint_t *ncc_ep_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
 /**
  * Print the endpoints in list.
  */
-char *ncc_ep_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist)
+char *ncc_endpoint_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist)
 {
 	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	int i;
