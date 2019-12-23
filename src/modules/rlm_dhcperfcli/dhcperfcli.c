@@ -321,7 +321,7 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
-static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time);
+static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time);
 static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply);
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
@@ -1162,7 +1162,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
  *	If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
  *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
-static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
+static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 {
 	fd_set set;
 	struct timeval tvi_wait = { 0 };
@@ -1181,8 +1181,8 @@ static int dpc_recv_one_packet(fr_time_delta_t *ftd_wait_time)
 	}
 
 	if (ftd_wait_time) {
-		tvi_wait = fr_time_delta_to_timeval(*ftd_wait_time);
-		//DEBUG3("Max wait time: %.6f", ncc_timeval_to_float(&tvi_wait));
+		tvi_wait = fr_time_delta_to_timeval(ftd_wait_time);
+		DEBUG3("Max wait time: %.6f", ncc_fr_time_to_float(ftd_wait_time));
 	}
 
 	/*
@@ -2207,7 +2207,7 @@ static void dpc_loop_recv(void)
 {
 	bool done = false;
 	fr_time_t now, when;
-	fr_time_delta_t wait_max;
+	fr_time_delta_t wait_max = 0;
 	int ev_peek;
 	bool start_ready;
 
@@ -2248,7 +2248,7 @@ static void dpc_loop_recv(void)
 		/*
 		 *	Receive and process packets until there's nothing left incoming.
 		 */
-		if (dpc_recv_one_packet(&wait_max) < 1) break;
+		if (dpc_recv_one_packet(wait_max) < 1) break;
 	}
 }
 
