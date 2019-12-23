@@ -103,6 +103,7 @@ static const CONF_PARSER progress_conf_parser[] = {
 	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, dpc_config_t, pr_stat_destination), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, pr_stat_file) },
+	{ FR_CONF_OFFSET("file_rewrite", FR_TYPE_BOOL, dpc_config_t, pr_stat_file_rewrite), .dflt = "no" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input_digest", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input_digest), .dflt = "no" },

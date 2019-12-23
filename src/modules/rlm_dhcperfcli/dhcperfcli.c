@@ -527,6 +527,12 @@ static void dpc_per_input_stats_fprint(FILE *fp, bool force)
  */
 static void dpc_progress_stats_fprint(FILE *fp, bool force)
 {
+	/* Rewrite the file (instead of appending to it). */
+	if (CONF.pr_stat_dst == PR_STAT_DST_FILE && CONF.pr_stat_file_rewrite) {
+		fp = freopen(NULL, "w", fp);
+		CONF.pr_stat_fp = fp;
+	}
+
 	/* Prefix to easily distinguish these ongoing statistics from packet traces and other logs. */
 	fprintf(fp, "(*) ");
 

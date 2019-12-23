@@ -37,6 +37,7 @@ struct dpc_config_s {
 	char const *pr_stat_destination; //<! Progress statistics destination type (string).
 	dpc_progress_stat_dst_t pr_stat_dst;
 	char const *pr_stat_file;        //<! Progress statistics file name (for "file" destination).
+	bool pr_stat_file_rewrite;       //<! Rewrite file contents with the latest data (instead of appending).
 	FILE *pr_stat_fp;
 	bool pr_stat_timestamp;          //!< Add timestamp to progress statistics.
 	bool pr_stat_per_input;          //<! Print per-input progress statistics (if multiple input).
