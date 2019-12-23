@@ -200,6 +200,7 @@ static fr_time_t fte_sessions_ini_end; /* End timestamp of starting new sessions
 static fr_time_t fte_last_session_in; /* Last time a session has been initialized from input. */
 
 static fr_time_t fte_input_available; /* No item will be available before that point in time. */
+static bool no_input_available = false; /* If there is currently no input available for starting sessions. */
 
 static fr_time_t fte_snapshot; /* Snapshot of current time (for consistency when reporting linked values). */
 
@@ -1946,12 +1947,13 @@ static dpc_input_t *dpc_get_input(void)
 	uint32_t checked = 0, not_done = 0;
 	fr_time_t now = fr_time();
 
-	if (fte_input_available && fte_input_available > now) {
+	if (no_input_available && fte_input_available > now) {
 		/*
 		 * We've already determined that no input is available at this time.
 		 */
 		return NULL;
 	}
+	no_input_available = false;
 	fte_input_available = 0;
 
 	while (checked < NCC_DLIST_SIZE(&input_list)) {
@@ -2008,6 +2010,7 @@ static dpc_input_t *dpc_get_input(void)
 		dpc_end_start_sessions();
 	}
 
+	no_input_available = true;
 	return NULL;
 }
 
@@ -2219,7 +2222,7 @@ static void dpc_loop_recv(void)
 		ev_peek = ncc_fr_event_timer_peek(event_list, &when);
 
 		/* Whether we are ready to start new sessions right now. */
-		start_ready = (start_sessions_flag && session_num_parallel < CONF.session_max_active && !fte_input_available);
+		start_ready = (start_sessions_flag && session_num_parallel < CONF.session_max_active && !no_input_available);
 
 		/* Don't wait if we are ready to start new sessions.
 		 * Or if we're not starting new sessions.
