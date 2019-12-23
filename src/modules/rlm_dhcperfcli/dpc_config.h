@@ -13,6 +13,11 @@ extern fr_table_num_ordered_t const dpc_packet_trace_table[];
 extern size_t dpc_packet_trace_table_len;
 
 
+typedef enum {
+	PR_STAT_DST_STDOUT = 1, //!< Write to stdout.
+	PR_STAT_DST_FILE,       //!< Write to a file on disk.
+} dpc_progress_stat_dst_t;
+
 /*
  *	Main configuration
  */
@@ -29,6 +34,10 @@ struct dpc_config_s {
 
 	double progress_interval;        //<! Time interval between periodic progress statistics.
 	fr_time_delta_t ftd_progress_interval;
+	char const *pr_stat_destination; //<! Progress statistics destination type (string).
+	dpc_progress_stat_dst_t pr_stat_dst;
+	char const *pr_stat_file;        //<! Progress statistics file name (for "file" destination).
+	FILE *pr_stat_fp;
 	bool pr_stat_timestamp;          //!< Add timestamp to progress statistics.
 	bool pr_stat_per_input;          //<! Print per-input progress statistics (if multiple input).
 	bool pr_stat_per_input_digest;   //<! Print the per-input progress statistics condensed on a single line.
@@ -99,6 +108,10 @@ void dpc_config_debug(dpc_config_t *config);
  */
 #define PARSE_CTX_PROGRESS_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN, ._float.min = 0.1 }
+
+#define PARSE_CTX_PROGRESS_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+		.type_check = NCC_TYPE_CHECK_TABLE, \
+		.fr_table = dpc_progress_stat_dst_table, .fr_table_len_p = &dpc_progress_stat_dst_table_len }
 
 #define PARSE_CTX_REQUEST_TIMEOUT &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, \

@@ -25,6 +25,14 @@ fr_table_num_ordered_t const dpc_packet_trace_table[] = {
 };
 size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
 
+/* Progress statistics destination
+ */
+fr_table_num_ordered_t const dpc_progress_stat_dst_table[] = {
+	{ "stdout", PR_STAT_DST_STDOUT },
+	{ "file",   PR_STAT_DST_FILE },
+};
+size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_table);
+
 
 /* Notes:
  *
@@ -92,6 +100,9 @@ static const CONF_PARSER packet_trace_conf_parser[] = {
 static const CONF_PARSER progress_conf_parser[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_INTERVAL },
+	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, dpc_config_t, pr_stat_destination), .dflt = "stdout",
+		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_DESTINATION },
+	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, pr_stat_file) },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input_digest", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input_digest), .dflt = "no" },
@@ -361,7 +372,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 		tmp_file = mktemp(template);
 		if (!tmp_file || tmp_file[0] == '\0') {
 			ERROR("Failed to generate temporary file name");
-			goto failure;
+			goto error;
 		}
 		// Note: mktemp is considered unsafe because generating the name and opening the file is not atomic.
 		// Should use mkstemp, however it seems to mess with threads writing to stdout for some reason...
@@ -370,7 +381,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 		FILE *fp_tmp = fopen(tmp_file, "w");
 		if (!fp_tmp) {
 			ERROR("Failed to open temporary file \"%s\": %s", tmp_file, fr_syserror(errno));
-			goto failure;
+			goto error;
 		}
 
 		/* Write inline configuration. */
@@ -389,16 +400,16 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	if (conf_file && cf_file_read(cs, conf_file) < 0) {
 		/* Note: FreeRADIUS cf_* functions directly call "ERROR", so we have nothing to pop from the error stack. */
 		ERROR("Failed to read configuration file \"%s\"", conf_file);
-		goto failure;
+		goto error;
 	}
 
 	/* Backup initial configuration before parsing. */
 	dpc_config_t old_config = *config;
 
-	if (cf_section_rules_push(cs, dhcperfcli_conf_parser) < 0) goto failure;
+	if (cf_section_rules_push(cs, dhcperfcli_conf_parser) < 0) goto error;
 
 	/* Parse main configuration. */
-	if (cf_section_parse(config, config, cs) < 0) goto failure;
+	if (cf_section_parse(config, config, cs) < 0) goto error;
 
 	/* Merge current and old configuration.
 	 * Restore strings for which we didn't parse anything, and merge multi-valued strings.
@@ -413,6 +424,22 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	ncc_default_log.line_number = config->debug_dev;
 	ncc_default_log.basename = config->debug_basename;
 
+	/* Progress statistics destination. */
+	config->pr_stat_dst = fr_table_value_by_str(dpc_progress_stat_dst_table, config->pr_stat_destination, -1);
+	if (config->pr_stat_dst == PR_STAT_DST_FILE) {
+		if (!config->pr_stat_file || config->pr_stat_file[0] == '\0') {
+			ERROR("No file provided for progress file destination");
+			goto error;
+		}
+		config->pr_stat_fp = fopen(config->pr_stat_file, "a");
+		if (!config->pr_stat_fp) {
+			ERROR("Failed to open progress statistics file \"%s\": %s", config->pr_stat_file, fr_syserror(errno));
+			goto error;
+		}
+	} else {
+		config->pr_stat_fp = stdout;
+	}
+
 	config->root_cs = cs;
 
 	fr_strerror(); /* Clear the error buffer */
@@ -422,7 +449,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	}
 	return 0;
 
-failure:
+error:
 	talloc_free(cs);
 	if (tmp_file && unlink(tmp_file) < 0) {
 		ERROR("Failed to remove temporary file \"%s\": %s", tmp_file, fr_syserror(errno));

@@ -299,10 +299,6 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 	ncc_timedata_config.dst = fr_table_value_by_str(ncc_timedata_dst_table, ncc_timedata_config.destination, TIMEDATA_DST_NUM_DEST);
 
 	switch (ncc_timedata_config.dst) {
-	case TIMEDATA_DST_NUM_DEST:
-		ERROR("Unknown time-data destination: %s", ncc_timedata_config.destination);
-		goto error;
-
 	case TIMEDATA_DST_NULL:
 	case TIMEDATA_DST_STDOUT:
 		break;
@@ -324,7 +320,8 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		break;
 
 	default:
-		break;
+		ERROR("Unknown time-data destination: %s", ncc_timedata_config.destination);
+		goto error;
 	}
 
 	/* Time-data storage is initialized. Start the worker thread.
