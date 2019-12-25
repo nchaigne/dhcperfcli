@@ -28,8 +28,8 @@ size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
 /* Progress statistics destination
  */
 fr_table_num_ordered_t const dpc_progress_stat_dst_table[] = {
-	{ "stdout", PR_STAT_DST_STDOUT },
 	{ "file",   PR_STAT_DST_FILE },
+	{ "stdout", PR_STAT_DST_STDOUT },
 };
 size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_table);
 
@@ -103,7 +103,7 @@ static const CONF_PARSER packet_trace_conf_parser[] = {
 static const CONF_PARSER progress_conf_parser[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_INTERVAL },
-	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, dpc_config_t, pr_stat_destination), .dflt = "stdout",
+	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, dpc_config_t, pr_stat_dst), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, pr_stat_file) },
 	{ FR_CONF_OFFSET("file_rewrite", FR_TYPE_BOOL, dpc_config_t, pr_stat_file_rewrite), .dflt = "no" },
@@ -429,7 +429,6 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	ncc_default_log.basename = config->debug_basename;
 
 	/* Progress statistics destination. */
-	config->pr_stat_dst = fr_table_value_by_str(dpc_progress_stat_dst_table, config->pr_stat_destination, -1);
 	if (config->pr_stat_dst == PR_STAT_DST_FILE) {
 		if (!config->pr_stat_file || config->pr_stat_file[0] == '\0') {
 			ERROR("No file provided for progress file destination");

@@ -14,7 +14,7 @@ extern size_t dpc_packet_trace_table_len;
 
 
 typedef enum {
-	PR_STAT_DST_STDOUT = 1, //!< Write to stdout.
+	PR_STAT_DST_STDOUT = 0, //!< Write to stdout.
 	PR_STAT_DST_FILE,       //!< Write to a file on disk.
 } dpc_progress_stat_dst_t;
 
@@ -110,30 +110,30 @@ void dpc_config_debug(dpc_config_t *config);
  *	Specific parsing contexts.
  */
 #define PARSE_CTX_LOG_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
-		.type_check = NCC_TYPE_CHECK_TABLE, \
-		.fr_table = ncc_log_dst_table, .fr_table_len_p = &ncc_log_dst_table_len }
+	.type_check = NCC_TYPE_CHECK_TABLE, \
+	.fr_table = ncc_log_dst_table, .fr_table_len_p = &ncc_log_dst_table_len }
 
 #define PARSE_CTX_PROGRESS_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN, ._float.min = 0.1 }
 
-#define PARSE_CTX_PROGRESS_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
-		.type_check = NCC_TYPE_CHECK_TABLE, \
-		.fr_table = dpc_progress_stat_dst_table, .fr_table_len_p = &dpc_progress_stat_dst_table_len }
+#define PARSE_CTX_PROGRESS_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
+	.type_check = NCC_TYPE_CHECK_TABLE, \
+	.fr_table = dpc_progress_stat_dst_table, .fr_table_len_p = &dpc_progress_stat_dst_table_len }
 
 #define PARSE_CTX_REQUEST_TIMEOUT &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, \
 	._float.min = 0.01, ._float.max = 3600 }
 
 #define PARSE_CTX_BASE_XID &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT64, \
-		.type_check = NCC_TYPE_CHECK_MAX, .uinteger.max = 0xffffffff }
+	.type_check = NCC_TYPE_CHECK_MAX, .uinteger.max = 0xffffffff }
 
 #define PARSE_CTX_SESSION_MAX_ACTIVE &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT32, \
-		.type_check = NCC_TYPE_CHECK_MIN, .uinteger.min = 1 }
+	.type_check = NCC_TYPE_CHECK_MIN, .uinteger.min = 1 }
 
 #define PARSE_CTX_PACKET_TRACE_LEVEL &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
-		.type_check = NCC_TYPE_CHECK_TABLE, \
-		.fr_table = dpc_packet_trace_table, .fr_table_len_p = &dpc_packet_trace_table_len }
+	.type_check = NCC_TYPE_CHECK_TABLE, \
+	.fr_table = dpc_packet_trace_table, .fr_table_len_p = &dpc_packet_trace_table_len }
 
 #define PARSE_CTX_SEGMENT_TYPE &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
-		.type_check = NCC_TYPE_CHECK_TABLE, \
-		.fr_table = segment_types, .fr_table_len_p = &segment_types_len }
+	.type_check = NCC_TYPE_CHECK_TABLE, \
+	.fr_table = segment_types, .fr_table_len_p = &segment_types_len }
