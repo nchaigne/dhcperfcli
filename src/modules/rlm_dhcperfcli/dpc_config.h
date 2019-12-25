@@ -34,13 +34,12 @@ struct dpc_config_s {
 	bool debug_basename;             //!< Print only file base name.
 	bool log_timestamp;              //!< Add timestamp to log messages.
 
+	dpc_progress_stat_dst_t pr_stat_dst; //<! Progress statistics destination type.
 	double progress_interval;        //<! Time interval between periodic progress statistics.
 	fr_time_delta_t ftd_progress_interval;
-	char const *pr_stat_destination; //<! Progress statistics destination type (string).
-	dpc_progress_stat_dst_t pr_stat_dst;
 	char const *pr_stat_file;        //<! Progress statistics file name (for "file" destination).
-	bool pr_stat_file_rewrite;       //<! Rewrite file contents with the latest data (instead of appending).
 	FILE *pr_stat_fp;
+	bool pr_stat_file_rewrite;       //<! Rewrite file contents with the latest data (instead of appending).
 	bool pr_stat_timestamp;          //!< Add timestamp to progress statistics.
 	bool pr_stat_per_input;          //<! Print per-input progress statistics (if multiple input).
 	bool pr_stat_per_input_digest;   //<! Print the per-input progress statistics condensed on a single line.
