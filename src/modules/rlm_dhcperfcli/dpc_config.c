@@ -28,8 +28,8 @@ size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
 /* Progress statistics destination
  */
 fr_table_num_ordered_t const dpc_progress_stat_dst_table[] = {
-	{ "file",   PR_STAT_DST_FILE },
 	{ "stdout", PR_STAT_DST_STDOUT },
+	{ "file",   PR_STAT_DST_FILE },
 };
 size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_table);
 
@@ -80,7 +80,7 @@ static CONF_PARSER segment_conf_parser[] = {
 };
 
 static const CONF_PARSER log_conf_parser[] = {
-	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, dpc_config_t, log_destination), .dflt = "stdout",
+	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, dpc_config_t, log_dst), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_LOG_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, log_file) },
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */

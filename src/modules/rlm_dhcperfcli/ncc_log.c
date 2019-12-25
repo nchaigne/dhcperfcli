@@ -15,9 +15,9 @@
  *	Trace / logging.
  */
 fr_table_num_ordered_t const ncc_log_dst_table[] = {
-	{ "file",    LOG_DST_FILE },
 	{ "null",    LOG_DST_NULL },
 	{ "stdout",  LOG_DST_STDOUT },
+	{ "file",    LOG_DST_FILE },
 };
 size_t ncc_log_dst_table_len = NUM_ELEMENTS(ncc_log_dst_table);
 

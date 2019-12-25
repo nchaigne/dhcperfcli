@@ -8,9 +8,9 @@
  *	Trace / logging.
  */
 typedef enum {
-	LOG_DST_STDOUT = 0,            //!< Log to stdout.
+	LOG_DST_NULL = 0,              //!< Discard.
+	LOG_DST_STDOUT,                //!< Log to stdout.
 	LOG_DST_FILE,                  //!< Log to a file on disk.
-	LOG_DST_NULL,                  //!< Discard log messages.
 } ncc_log_dst_t;
 
 typedef struct {

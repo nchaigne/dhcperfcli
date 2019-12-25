@@ -14,7 +14,8 @@ extern size_t dpc_packet_trace_table_len;
 
 
 typedef enum {
-	PR_STAT_DST_STDOUT = 0, //!< Write to stdout.
+	PR_STAT_DST_NULL = 0,   //!< Discard.
+	PR_STAT_DST_STDOUT,     //!< Write to stdout.
 	PR_STAT_DST_FILE,       //!< Write to a file on disk.
 } dpc_progress_stat_dst_t;
 
@@ -27,7 +28,7 @@ struct dpc_config_s {
 	                             ///< was specified by the user on the command line.
 	CONF_SECTION *root_cs;       //!< Root of the main config.
 
-	char const *log_destination;     //<! Log destination type (string).
+	ncc_log_dst_t log_dst;           //<! Log destination type.
 	char const *log_file;            //<! log file name (for "file" destination).
 	int debug_level;                 //!< The base debug level.
 	bool debug_dev;                  //!< Enable extended debug information for developper.
@@ -108,7 +109,7 @@ void dpc_config_debug(dpc_config_t *config);
 /*
  *	Specific parsing contexts.
  */
-#define PARSE_CTX_LOG_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+#define PARSE_CTX_LOG_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 	.type_check = NCC_TYPE_CHECK_TABLE, \
 	.fr_table = ncc_log_dst_table, .fr_table_len_p = &ncc_log_dst_table_len }
 
