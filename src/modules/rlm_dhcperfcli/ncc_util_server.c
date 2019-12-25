@@ -10,6 +10,61 @@
 #include "ncc_util.h"
 
 
+
+static void ncc_item_parent_section(char const **section, char const **sp_section, CONF_ITEM *ci)
+{
+	CONF_SECTION *cs = cf_item_to_section(cf_parent(ci));
+
+	/* The item section is not top level if it has a parent.
+	 * In this case, print section name along with the item.
+	 */
+	if (cf_parent(cs)) {
+		*section = cf_section_name1(cs);
+		*sp_section = " ";
+	} else {
+		*section = "";
+		*sp_section = "";
+	}
+}
+
+/**
+ * Check that a configuration item has its value in the specified table.
+ * If not, return an error and produce a helpful log message.
+ */
+static int ncc_conf_item_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, CONF_ITEM *ci)
+{
+	char *list = NULL;
+	int32_t value;
+	size_t i;
+
+	CONF_PAIR *cp = cf_item_to_pair(ci);
+	char const *item_name = cf_pair_attr(cp);
+	char const *section, *sp_section;
+
+	ncc_item_parent_section(&section, &sp_section, ci);
+
+	value = fr_table_value_by_str(table, cf_pair_value(cp), FR_TABLE_NOT_FOUND);
+	if (value != FR_TABLE_NOT_FOUND) {
+		*out = value;
+		return 0;
+	}
+
+	if (!table_len) {
+		cf_log_err(cp, "Internal error parsing %s%s\"%s\": Table is empty", section, sp_section, item_name);
+		return -1;
+	}
+
+	/* Build a comma-separated list of allowed string values. */
+	for (i = 0; i < table_len; i++) {
+		MEM(list = talloc_asprintf_append_buffer(list, "%s'%s'", i ? ", " : "", table[i].name));
+	}
+
+	cf_log_err(cp, "Invalid value \"%s\" for %s%s\"%s\". Expected one of: %s", cf_pair_value(cp), section, sp_section, item_name, list);
+
+	talloc_free(list);
+	return -1;
+}
+
 /**
  * Custom generic parsing function which performs value checks on a conf item.
  *
@@ -28,19 +83,11 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	 * Note: This is supposed to be const. We allow ourselves to use it for convenience.
 	 */
 
-	char const *item_name = cf_pair_attr(cf_item_to_pair(ci));
-	char const *section = "";
-	char *sp_section = "";
+	CONF_PAIR *cp = cf_item_to_pair(ci);
+	char const *item_name = cf_pair_attr(cp);
+	char const *section, *sp_section;
 
-	CONF_SECTION *cs = cf_item_to_section(cf_parent(ci));
-
-	/* The item section is not top level if it has a parent.
-	 * In this case, print section name along with the item.
-	 */
-	if (cf_parent(cs)) {
-		section = cf_section_name1(cs);
-		sp_section = " ";
-	}
+	ncc_item_parent_section(&section, &sp_section, ci);
 
 	if (!parse_ctx) {
 		cf_log_err(ci, "Missing parse context for %s%s\"%s\"", section, sp_section, item_name);
@@ -62,14 +109,12 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	if (type == FR_TYPE_INT32 && check_table) {
 		/* Value can be provided as integer, or as a string looked up in table.
 		 */
-		CONF_PAIR *cp = cf_item_to_pair(ci);
-
 		if (ncc_value_from_str(out, type, cf_pair_value(cp), -1) < 0) {
 			/* Failed to parse: this is not an integer.
 			 * Try finding string value from table.
 			 */
-			if (cf_pair_in_table(out, (fr_table_num_sorted_t const *)parse_ctx->fr_table,
-			                     *parse_ctx->fr_table_len_p, cp) < 0) {
+			if (ncc_conf_item_in_table(out, parse_ctx->fr_table,
+			                           *parse_ctx->fr_table_len_p, ci) < 0) {
 				return -1;
 			}
 		}
