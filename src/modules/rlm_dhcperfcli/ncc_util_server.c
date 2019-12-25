@@ -12,9 +12,16 @@
 
 /**
  * Custom generic parsing function which performs value checks on a conf item.
- * TODO: handle more types / checks.
+ *
+ * @param[in]  ctx     talloc context.
+ * @param[out] out     where to write parsed value.
+ * @param[in]  parent  (unused) "base" argument passed to cf_pair_parse_value.
+ * @param[in]  ci      configuration item to parse.
+ * @param[in]  rule    parser rule, which must contain a ncc_parse_ctx_t in uctx.
+ *
+ * @return -1 = error, 0 = success.
  */
-int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
+int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_ITEM *ci, CONF_PARSER const *rule)
 {
 	ncc_parse_ctx_t *parse_ctx = (ncc_parse_ctx_t *)rule->uctx;
 	/*
@@ -40,13 +47,6 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 		return -1;
 	}
 
-	if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
-		return -1;
-	}
-	// For uint64 FreeRADIUS parser handles -1 as max value "18446744073709551615" (i.e. not an error)
-	// For uint32 this is an error: "must be between 0-2147483647" (signed max ? why ??)
-	// TODO: look into this
-
 	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
 	uint32_t type_check = parse_ctx->type_check;
 
@@ -58,6 +58,30 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci,
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
 	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
+
+	if (type == FR_TYPE_INT32 && check_table) {
+		/* Value can be provided as integer, or as a string looked up in table.
+		 */
+		CONF_PAIR *cp = cf_item_to_pair(ci);
+
+		if (ncc_value_from_str(out, type, cf_pair_value(cp), -1) < 0) {
+			/* Failed to parse: this is not an integer.
+			 * Try finding string value from table.
+			 */
+			if (cf_pair_in_table(out, (fr_table_num_sorted_t const *)parse_ctx->fr_table,
+			                     *parse_ctx->fr_table_len_p, cp) < 0) {
+				return -1;
+			}
+		}
+
+	} else {
+		if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
+			return -1;
+		}
+		// For uint64 FreeRADIUS parser handles -1 as max value "18446744073709551615" (i.e. not an error)
+		// For uint32 this is an error: "must be between 0-2147483647" (signed max ? why ??)
+		// TODO: look into this
+	}
 
 #define CHECK_IGNORE_ZERO \
 	if (ignore_zero && !v) return 0;
