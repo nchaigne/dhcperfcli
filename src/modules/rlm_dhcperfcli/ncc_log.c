@@ -14,6 +14,14 @@
 /*
  *	Trace / logging.
  */
+fr_table_num_ordered_t const ncc_log_dst_table[] = {
+	{ "file",    LOG_DST_FILE },
+	{ "null",    LOG_DST_NULL },
+	{ "stdout",  LOG_DST_STDOUT },
+};
+size_t ncc_log_dst_table_len = NUM_ELEMENTS(ncc_log_dst_table);
+
+
 FILE *ncc_log_fp = NULL;
 fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;

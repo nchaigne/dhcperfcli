@@ -27,6 +27,7 @@ struct dpc_config_s {
 	                             ///< was specified by the user on the command line.
 	CONF_SECTION *root_cs;       //!< Root of the main config.
 
+	char const *log_destination;     //<! Log destination type (string).
 	int debug_level;                 //!< The base debug level.
 	bool debug_dev;                  //!< Enable extended debug information for developper.
 	bool debug_basename;             //!< Print only file base name.
@@ -107,6 +108,10 @@ void dpc_config_debug(dpc_config_t *config);
 /*
  *	Specific parsing contexts.
  */
+#define PARSE_CTX_LOG_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+		.type_check = NCC_TYPE_CHECK_TABLE, \
+		.fr_table = ncc_log_dst_table, .fr_table_len_p = &ncc_log_dst_table_len }
+
 #define PARSE_CTX_PROGRESS_INTERVAL &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN, ._float.min = 0.1 }
 

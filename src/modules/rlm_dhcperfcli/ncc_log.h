@@ -7,6 +7,12 @@
 /*
  *	Trace / logging.
  */
+typedef enum {
+	LOG_DST_STDOUT = 0,            //!< Log to stdout.
+	LOG_DST_FILE,                  //!< Log to a file on disk.
+	LOG_DST_NULL,                  //!< Discard log messages.
+} ncc_log_dst_t;
+
 typedef struct {
 	fr_log_timestamp_t timestamp;  //!< Prefix log messages with timestamps.
 
@@ -17,6 +23,9 @@ typedef struct {
 	bool prefix_all;               //<! Repeat prefix on all of the lines.
 
 } ncc_log_t;
+
+extern fr_table_num_ordered_t const ncc_log_dst_table[];
+extern size_t ncc_log_dst_table_len;
 
 extern ncc_log_t ncc_default_log;
 extern ncc_log_t ncc_multiline_log;
