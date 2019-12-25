@@ -82,6 +82,7 @@ static CONF_PARSER segment_conf_parser[] = {
 static const CONF_PARSER log_conf_parser[] = {
 	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, dpc_config_t, log_destination), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_LOG_DESTINATION },
+	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, log_file) },
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },

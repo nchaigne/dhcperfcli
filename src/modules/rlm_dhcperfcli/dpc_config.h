@@ -28,6 +28,7 @@ struct dpc_config_s {
 	CONF_SECTION *root_cs;       //!< Root of the main config.
 
 	char const *log_destination;     //<! Log destination type (string).
+	char const *log_file;            //<! log file name (for "file" destination).
 	int debug_level;                 //!< The base debug level.
 	bool debug_dev;                  //!< Enable extended debug information for developper.
 	bool debug_basename;             //!< Print only file base name.
