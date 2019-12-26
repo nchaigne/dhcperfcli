@@ -115,6 +115,7 @@ extern int ncc_debug_lvl;
 
 
 void ncc_log_init(FILE *log_fp, int debug_lvl);
+int ncc_log_open_file(char const *file);
 void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, int line, char const *fmt, va_list ap);
 void ncc_log_printf(ncc_log_t const *log, fr_log_type_t type, char const *file, int line, char const *fmt, ...);
 int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, int line,

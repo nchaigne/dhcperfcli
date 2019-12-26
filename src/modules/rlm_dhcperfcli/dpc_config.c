@@ -428,10 +428,19 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	ncc_default_log.line_number = config->debug_dev;
 	ncc_default_log.basename = config->debug_basename;
 
+	/* Log destination. */
+	if (config->log_dst == LOG_DST_FILE) {
+		if (!config->log_file || config->log_file[0] == '\0') {
+			ERROR("No file provided for log \"file\" destination");
+			goto error;
+		}
+		if (ncc_log_open_file(config->log_file) < 0) goto error;
+	}
+
 	/* Progress statistics destination. */
 	if (config->pr_stat_dst == PR_STAT_DST_FILE) {
 		if (!config->pr_stat_file || config->pr_stat_file[0] == '\0') {
-			ERROR("No file provided for progress file destination");
+			ERROR("No file provided for progress \"file\" destination");
 			goto error;
 		}
 		config->pr_stat_fp = fopen(config->pr_stat_file, "w");

@@ -62,6 +62,21 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
 }
 
 /**
+ * Open log file.
+ */
+int ncc_log_open_file(char const *file)
+{
+	FILE *fp = fopen(file, "a");
+	if (!fp) {
+		ERROR("Failed to open log file \"%s\": %s", file, fr_syserror(errno));
+		return -1;
+	}
+
+	ncc_log_fp = fp;
+	return 0;
+}
+
+/**
  * Print a log message.
  */
 void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t extended_type, char const *file, int line, char const *fmt, va_list ap)
