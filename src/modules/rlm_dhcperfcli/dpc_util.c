@@ -754,7 +754,7 @@ void dpc_input_debug(dpc_input_t *input)
 	       input->name ? input->name : "", input->name ? " " : "",
 	       input->id);
 
-	ncc_pair_list_fprint(fr_log_fp, input->vps);
+	ncc_pair_list_fprint(ncc_log_fp, input->vps);
 
 	if (dpc_debug_lvl < 3) return;
 
@@ -787,7 +787,7 @@ void dpc_input_list_debug(ncc_dlist_t *list)
 {
 	if (!list || !NCC_DLIST_IS_INIT(list)) return;
 
-	DEBUG("Loaded input list size: %u", list->size);
+	DEBUG("Input list size: %u", NCC_DLIST_SIZE(list));
 
 	dpc_input_t *input = NCC_DLIST_HEAD(list);
 	while (input) {
@@ -808,12 +808,13 @@ void dpc_segment_list_debug(ncc_dlist_t *list)
 	if (!list || dpc_debug_lvl < 2) return;
 
 	DEBUG2("Time segments:");
-	ncc_segment_list_fprint(fr_log_fp, list);
+	ncc_segment_list_fprint(ncc_log_fp, list);
 }
 
 /*
  *	Print the contents of a list of dpc_input_t items.
  */
+//TODO: remove this
 void dpc_input_list_fprint(FILE *fp, ncc_dlist_t *list)
 {
 	fprintf(fp, "List contains %u element(s)\n", NCC_DLIST_SIZE(list));
