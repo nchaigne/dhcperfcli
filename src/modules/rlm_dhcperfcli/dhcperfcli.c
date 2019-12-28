@@ -3813,6 +3813,12 @@ int main(int argc, char **argv)
 	dpc_debug_lvl = 0; /* Our own debug. */
 	fr_log_fp = stdout; /* Everything will go there. */
 
+	/* Ensure stdout is line buffered (it is not if redirected to a file).
+	 * Note: stderr is always unbuffered by default.
+	 */
+	setlinebuf(stdout);
+	setlinebuf(stderr);
+
 	global_ctx = talloc_new(talloc_autofree_context());
 
 	fr_time_start();

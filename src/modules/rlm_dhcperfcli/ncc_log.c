@@ -72,6 +72,9 @@ int ncc_log_open_file(char const *file)
 		return -1;
 	}
 
+	/* Set stream as line buffered. */
+	setlinebuf(fp);
+
 	ncc_log_fp = fp;
 	return 0;
 }
@@ -367,8 +370,6 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 	va_start(ap, fmt);
 	ncc_vlog_printf(log, L_DBG, file, line, fmt, ap);
 	va_end(ap);
-
-	fflush(ncc_log_fp); // is this needed ?
 }
 
 /**
