@@ -342,7 +342,6 @@ static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
-static void dpc_segment_list_debug(ncc_dlist_t *list);
 static double dpc_segment_get_elapsed(ncc_segment_t *segment);
 static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment);
 static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre);
@@ -356,10 +355,10 @@ static bool dpc_loop_check_done(void);
 static void dpc_main_loop(void);
 
 static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input);
-static void dpc_input_debug(dpc_input_t *input);
 static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *dlist, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
+
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
 static int dpc_get_alt_dir(void);
@@ -2263,17 +2262,6 @@ static void dpc_loop_recv(void)
 }
 
 /**
- * Debug a list of time segments.
- */
-static void dpc_segment_list_debug(ncc_dlist_t *list)
-{
-	if (!list || dpc_debug_lvl < 2) return;
-
-	DEBUG2("Time segments:");
-	ncc_segment_list_fprint(fr_log_fp, list);
-}
-
-/**
  * Get elapsed time from the start of a given time segment.
  */
 static double dpc_segment_get_elapsed(ncc_segment_t *segment)
@@ -2961,47 +2949,8 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	return 0;
 }
 
-/*
- *	Debug an input item.
- */
-static void dpc_input_debug(dpc_input_t *input)
-{
-	char ep_buf[NCC_ENDPOINT_STRLEN] = "";
-
-	if (!input || dpc_debug_lvl < 2) return;
-
-	DEBUG2("Input %s%s(id: %u) pairs:",
-	       input->name ? input->name : "", input->name ? " " : "",
-	       input->id);
-
-	ncc_pair_list_fprint(fr_log_fp, input->vps);
-
-	if (dpc_debug_lvl < 3) return;
-
-	if (input->max_use) {
-		DEBUG3("  Max use: %u", input->max_use);
-	}
-
-	if (input->ext.code) {
-		DEBUG3("  Packet code: %u", input->ext.code);
-	}
-	if (input->ext.workflow) {
-		DEBUG3("  Workflow: %u", input->ext.workflow);
-	}
-	if (input->ext.xid != DPC_PACKET_ID_UNASSIGNED) {
-		DEBUG3("  Xid: %u", input->ext.xid);
-	}
-
-	if (is_ipaddr_defined(input->ext.src.ipaddr)) {
-		DEBUG3("  Src: %s", ncc_endpoint_sprint(ep_buf, &input->ext.src));
-	}
-	if (is_ipaddr_defined(input->ext.dst.ipaddr)) {
-		DEBUG3("  Dst: %s", ncc_endpoint_sprint(ep_buf, &input->ext.dst));
-	}
-}
-
-/*
- *	Handle a list of input vps we've just read.
+/**
+ * Handle a list of input vps we've just read.
  */
 static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist)
 {
@@ -3017,21 +2966,15 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist)
 
 	if (dpc_input_parse(ctx, input) < 0) {
 		/*
-		 *	Invalid item. Discard.
+		 * Invalid item. Discard.
 		 */
 		talloc_free(input);
 		num_input_invalid++;
 		return -1;
 	}
 
-	/* Trace what we've read. */
-	dpc_input_debug(input);
-
-	/* Trace the input time segments. */
-	dpc_segment_list_debug(input->segments);
-
 	/*
-	 *	Add it to the list of input items.
+	 * Add it to the list of input items.
 	 */
 	NCC_DLIST_ENQUEUE(dlist, input);
 	return 0;
@@ -3122,6 +3065,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 
 	return 0;
 }
+
 
 /*
  *	Handle xlat expansion on a list of value pairs (within a packet context).
@@ -3987,7 +3931,7 @@ int main(int argc, char **argv)
 	if (dpc_input_load(global_ctx) < 0) {
 		exit(EXIT_FAILURE);
 	}
-	DEBUG("Loaded input list size: %u", input_list.size);
+	dpc_input_list_debug(&input_list);
 
 	/*
 	 *	If packet trace level is unspecified, figure out something automatically.
@@ -4054,7 +3998,6 @@ int main(int argc, char **argv)
 		WARN("No valid input loaded, nothing to do");
 		dpc_exit();
 	}
-	//dpc_input_list_fprint(stdout, &input_list);
 
 	/* Arm a timer to produce periodic statistics. */
 	dpc_event_add_progress_stats();
