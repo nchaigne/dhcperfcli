@@ -77,8 +77,8 @@ ncc_segment_t *ncc_segment_from_elapsed_time(ncc_dlist_t *dlist, ncc_segment_t *
 char *ncc_segment_description_snprint(char *out, size_t outlen, ncc_segment_t *segment, bool with_rate);
 char *ncc_segment_interval_snprint(char *out, size_t outlen, ncc_segment_t *segment);
 void ncc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist);
-void ncc_segment_debug(int depth, ncc_segment_t *segment);
-void ncc_segment_list_debug(int depth, ncc_dlist_t *list);
+void ncc_segment_debug(int depth, ncc_segment_t *segment, bool show_all);
+void ncc_segment_list_debug(int depth, ncc_dlist_t *list, bool show_all);
 
 int ncc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in);
 ncc_segment_t *ncc_segment_add(TALLOC_CTX *ctx, ncc_dlist_t *dlist, fr_time_delta_t ftd_start, fr_time_delta_t ftd_end);

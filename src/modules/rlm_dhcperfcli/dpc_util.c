@@ -762,7 +762,7 @@ void dpc_input_debug(dpc_input_t *input)
 	ncc_section_debug_end(depth + 1);
 
 	/* Trace the input time segments. */
-	ncc_segment_list_debug(depth + 1, input->segments);
+	ncc_segment_list_debug(depth + 1, input->segments, (dpc_debug_lvl >= 4));
 
 	if (dpc_debug_lvl >= 3) {
 		if (input->max_use) {

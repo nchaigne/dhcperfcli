@@ -196,9 +196,12 @@ void ncc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 /**
  * Debug a segment.
  */
-void ncc_segment_debug(int depth, ncc_segment_t *segment)
+void ncc_segment_debug(int depth, ncc_segment_t *segment, bool show_all)
 {
 	if (!segment) return;
+
+	/* Only show if explicitly defined. */
+	if (!show_all && segment->alloc != NCC_SEGMENT_ALLOC_MANUAL) return;
 
 	char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
 	char buf[512];
@@ -234,13 +237,13 @@ void ncc_segment_debug(int depth, ncc_segment_t *segment)
 /**
  * Debug a list of segments.
  */
-void ncc_segment_list_debug(int depth, ncc_dlist_t *list)
+void ncc_segment_list_debug(int depth, ncc_dlist_t *list, bool show_all)
 {
 	if (!list || !NCC_DLIST_IS_INIT(list)) return;
 
 	ncc_segment_t *segment = NCC_DLIST_HEAD(list);
 	while (segment) {
-		ncc_segment_debug(depth, segment);
+		ncc_segment_debug(depth, segment, show_all);
 		segment = NCC_DLIST_NEXT(list, segment);
 	}
 }
