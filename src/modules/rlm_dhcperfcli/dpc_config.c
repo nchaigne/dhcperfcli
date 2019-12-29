@@ -211,12 +211,17 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 				subcs = cf_section_find_next(section, subcs, "pairs", CF_IDENT_ANY);
 			}
 
-			/* Input segments are not allowed in non template mode.
+			/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections.
+			 * Note: segments list is allocated even if there are no segments.
 			 */
-			if (CONF.template) {
-				/* If we have a "pairs" sub-section, then we may also have "segment" sub-sections. Parse them.
-				 * Note: segments list is allocated even if there are no segments.
-				 */
+			if (!CONF.template) {
+				/*
+				 * Input segments are not allowed in non template mode.
+			 	 */
+				if (cf_section_find_next(cs, NULL, "segment", CF_IDENT_ANY)) {
+					cf_log_warn(cs, "Input segments are not allowed in non template mode");
+				}
+			} else {
 				input->segments = talloc_zero(input, ncc_dlist_t);
 				if (dpc_segment_sections_parse(input, cs, input->segments) != 0) goto error;
 			}
