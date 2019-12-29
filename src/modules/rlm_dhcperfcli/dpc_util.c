@@ -806,18 +806,6 @@ void dpc_input_list_debug(ncc_dlist_t *list)
 	}
 }
 
-/**
- * Debug a list of time segments.
- */
-void dpc_segment_list_debug(ncc_dlist_t *list)
-{
-	if (!list || !NCC_DLIST_IS_INIT(list) || dpc_debug_lvl < 2) return;
-
-	DEBUG2("Time segments:");
-	ncc_segment_list_fprint(ncc_log_fp, list);
-}
-
-
 /*
  *	Determine if an IP address is the broadcast address.
  *	Returns: 0 if it is not, 1 if it is, -1 on error.

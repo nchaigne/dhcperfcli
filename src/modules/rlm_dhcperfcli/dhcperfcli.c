@@ -3845,9 +3845,9 @@ int main(int argc, char **argv)
 	if (dpc_timedata_config_load(dpc_config) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
-	dpc_segment_list_debug(segment_list);
 
 	dpc_config_debug(dpc_config);
+	ncc_segment_list_debug(0, segment_list, (dpc_debug_lvl >= 4));
 
 	/* Parse configured gateway(s).
 	 * Note: This *must* be done before any input is parsed (either from configuration file, or from input file or stdin).
