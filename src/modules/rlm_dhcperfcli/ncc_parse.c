@@ -9,6 +9,8 @@
 #include "ncc_util.h"
 
 
+char const config_spaces[] = "                                                                                ";
+
 /*
  * Tables which allow to obtain min/max bounds for each of integer types as a string.
  */
@@ -600,11 +602,6 @@ char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *par
 
 	return table_str;
 }
-
-
-static char const config_spaces[] = "                                                                                ";
-
-#define CONF_SPACE(_depth) ((_depth) * 2)
 
 /**
  * Debug the start of a section.

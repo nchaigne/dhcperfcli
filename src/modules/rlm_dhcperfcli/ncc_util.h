@@ -20,6 +20,9 @@
 #define NCC_TIME_FMT              "%H:%M:%S"
 #define NCC_DATETIME_FMT          NCC_DATE_FMT" "NCC_TIME_FMT
 
+#define CONF_SPACE(_depth)        ((_depth) * 2)
+extern char const config_spaces[];
+
 
 /*
  *	Using rad_assert (which calls fr_assert_exit) defined in lib/server/rad_assert.h

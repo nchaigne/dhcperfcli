@@ -194,6 +194,59 @@ void ncc_segment_list_fprint(FILE *fp, ncc_dlist_t *dlist)
 }
 
 /**
+ * Debug a segment.
+ */
+void ncc_segment_debug(int depth, ncc_segment_t *segment)
+{
+	if (!segment) return;
+
+	char interval_buf[NCC_SEGMENT_INTERVAL_STRLEN];
+	char buf[512];
+
+	snprintf(buf, sizeof(buf), "%s%s(id: %u)",
+	         segment->name ? segment->name : "", segment->name ? " " : "",
+	         segment->id);
+
+	ncc_section_debug_start(depth, "segment", buf);
+
+	DEBUG("%.*s%s = %s", CONF_SPACE(depth + 1), config_spaces, "type", fr_table_str_by_value(segment_types, segment->type, "???"));
+
+	DEBUG("%.*s%s: %s", CONF_SPACE(depth + 1), config_spaces, "interval",
+	      ncc_segment_interval_snprint(interval_buf, sizeof(interval_buf), segment));
+
+	switch (segment->type) {
+	case NCC_SEGMENT_RATE_FIXED:
+		DEBUG("%.*s%s: %.3f", CONF_SPACE(depth + 1), config_spaces, "rate", segment->rate_limit);
+		break;
+
+	case NCC_SEGMENT_RATE_LINEAR:
+		DEBUG("%.*s%s: (%.3f - %.3f)", CONF_SPACE(depth + 1), config_spaces, "rate range",
+		      segment->rate_limit_range.start, segment->rate_limit_range.end);
+		break;
+
+	default:
+		break;
+	}
+
+	ncc_section_debug_end(depth);
+}
+
+/**
+ * Debug a list of segments.
+ */
+void ncc_segment_list_debug(int depth, ncc_dlist_t *list)
+{
+	if (!list || !NCC_DLIST_IS_INIT(list)) return;
+
+	ncc_segment_t *segment = NCC_DLIST_HEAD(list);
+	while (segment) {
+		ncc_segment_debug(depth, segment);
+		segment = NCC_DLIST_NEXT(list, segment);
+	}
+}
+
+
+/**
  * Parse a segment specified from a string.
  * Input format: [<type>:]<start time>;<end time>[;<rate>[;<end rate]]
  */

@@ -756,15 +756,13 @@ void dpc_input_debug(dpc_input_t *input)
 	         input->name ? input->name : "", input->name ? " " : "",
 	         input->id);
 
-	ncc_pair_list_fprint(ncc_log_fp, input->vps);
-
 	ncc_section_debug_start(depth, "input", buf);
 	ncc_section_debug_start(depth + 1, "pairs", NULL);
 	ncc_pair_list_debug(depth + 2, input->vps);
 	ncc_section_debug_end(depth + 1);
 
 	/* Trace the input time segments. */
-	dpc_segment_list_debug(input->segments);
+	ncc_segment_list_debug(depth + 1, input->segments);
 
 	if (dpc_debug_lvl >= 3) {
 		if (input->max_use) {

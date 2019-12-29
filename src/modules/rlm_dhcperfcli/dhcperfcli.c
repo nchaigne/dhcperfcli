@@ -3627,7 +3627,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 	/* Trace remaining (non-option) arguments, which start at argv[1] at this point. */
 	num_arg = argc - 1;
-	for (i = 1; i < argc; i++) DEBUG2("argv[%u]: %s", i, argv[i]);
+	for (i = 1; i < argc; i++) DEBUG4("argv[%u]: %s", i, argv[i]);
 
 	/*
 	 *	Resolve server host address and port.
@@ -3815,7 +3815,7 @@ int main(int argc, char **argv)
 	/*
 	 *	Mismatch between the binary and the libraries it depends on.
 	 */
-	DEBUG2("FreeRADIUS magic number: %016lx", RADIUSD_MAGIC_NUMBER);
+	DEBUG4("FreeRADIUS magic number: %016lx", RADIUSD_MAGIC_NUMBER);
 	if (fr_check_lib_magic(RADIUSD_MAGIC_NUMBER) < 0) {
 		PERROR("Libraries check");
 		exit(EXIT_FAILURE);
