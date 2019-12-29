@@ -797,8 +797,6 @@ void dpc_input_list_debug(ncc_dlist_t *list)
 {
 	if (!list || !NCC_DLIST_IS_INIT(list)) return;
 
-	DEBUG("Input list size: %u", NCC_DLIST_SIZE(list));
-
 	dpc_input_t *input = NCC_DLIST_HEAD(list);
 	while (input) {
 		dpc_input_debug(input);

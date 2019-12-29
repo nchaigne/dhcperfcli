@@ -3846,9 +3846,6 @@ int main(int argc, char **argv)
 
 	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
 
-	dpc_config_debug(dpc_config);
-	ncc_segment_list_debug(0, segment_list, (dpc_debug_lvl >= 4));
-
 	/* Parse configured gateway(s).
 	 * Note: This *must* be done before any input is parsed (either from configuration file, or from input file or stdin).
 	 */
@@ -3916,21 +3913,16 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	/*
-	 *	Set signal handler.
+	/* Read input from stdin and input files.
 	 */
-	if ( (fr_set_signal(SIGHUP, dpc_signal) < 0) ||
-	     (fr_set_signal(SIGINT, dpc_signal) < 0) ||
-	     (fr_set_signal(SIGTERM, dpc_signal) < 0))
-	{
-		PERROR("Failed to install signal handler");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Load input data used to build the packets. */
 	if (dpc_input_load(global_ctx) < 0) {
 		exit(EXIT_FAILURE);
 	}
+
+	/* Debug configuration.
+	 */
+	dpc_config_debug(dpc_config);
+	ncc_segment_list_debug(0, segment_list, (dpc_debug_lvl >= 4));
 	dpc_input_list_debug(&input_list);
 
 	/*
@@ -3992,11 +3984,23 @@ int main(int argc, char **argv)
 	/*
 	 *	Ensure we have something to work with.
 	 */
+	DEBUG3("Input list size: %u", NCC_DLIST_SIZE(&input_list));
 	if (NCC_DLIST_SIZE(&input_list) == 0) {
 		if (!with_stdin_input && argc < 2) usage(EXIT_SUCCESS); /* If no input nor arguments, show usage. */
 
 		WARN("No valid input loaded, nothing to do");
 		dpc_exit();
+	}
+
+	/*
+	 * Set signal handler.
+	 */
+	if ( (fr_set_signal(SIGHUP, dpc_signal) < 0) ||
+	     (fr_set_signal(SIGINT, dpc_signal) < 0) ||
+	     (fr_set_signal(SIGTERM, dpc_signal) < 0))
+	{
+		PERROR("Failed to install signal handler");
+		exit(EXIT_FAILURE);
 	}
 
 	/* Arm a timer to produce periodic statistics. */
