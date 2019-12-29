@@ -302,6 +302,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *parse_ctx);
 void ncc_section_debug_start(int depth, char const *name1, char const *name2);
 void ncc_section_debug_end(int depth);
+void ncc_pair_list_debug(int depth, VALUE_PAIR *vps);
 void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, ncc_parse_ctx_t *parse_ctx,
                                   int depth, char const *prefix);
 void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);

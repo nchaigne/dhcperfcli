@@ -747,37 +747,49 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 void dpc_input_debug(dpc_input_t *input)
 {
 	char ep_buf[NCC_ENDPOINT_STRLEN] = "";
+	int depth = 0;
 
 	if (!input || dpc_debug_lvl < 2) return;
 
-	DEBUG2("Input %s%s(id: %u) pairs:",
-	       input->name ? input->name : "", input->name ? " " : "",
-	       input->id);
+	char buf[512];
+	snprintf(buf, sizeof(buf), "%s%s(id: %u)",
+	         input->name ? input->name : "", input->name ? " " : "",
+	         input->id);
 
 	ncc_pair_list_fprint(ncc_log_fp, input->vps);
 
-	if (dpc_debug_lvl < 3) return;
+	ncc_section_debug_start(depth, "input", buf);
+	ncc_section_debug_start(depth + 1, "pairs", NULL);
+	ncc_pair_list_debug(depth + 2, input->vps);
+	ncc_section_debug_end(depth + 1);
 
-	if (input->max_use) {
-		DEBUG3("  Max use: %u", input->max_use);
+	/* Trace the input time segments. */
+	dpc_segment_list_debug(input->segments);
+
+	if (dpc_debug_lvl >= 3) {
+		if (input->max_use) {
+			DEBUG3("  Max use: %u", input->max_use);
+		}
+
+		if (input->ext.code) {
+			DEBUG3("  Packet code: %u", input->ext.code);
+		}
+		if (input->ext.workflow) {
+			DEBUG3("  Workflow: %u", input->ext.workflow);
+		}
+		if (input->ext.xid != DPC_PACKET_ID_UNASSIGNED) {
+			DEBUG3("  Xid: %u", input->ext.xid);
+		}
+
+		if (is_ipaddr_defined(input->ext.src.ipaddr)) {
+			DEBUG3("  Src: %s", ncc_endpoint_sprint(ep_buf, &input->ext.src));
+		}
+		if (is_ipaddr_defined(input->ext.dst.ipaddr)) {
+			DEBUG3("  Dst: %s", ncc_endpoint_sprint(ep_buf, &input->ext.dst));
+		}
 	}
 
-	if (input->ext.code) {
-		DEBUG3("  Packet code: %u", input->ext.code);
-	}
-	if (input->ext.workflow) {
-		DEBUG3("  Workflow: %u", input->ext.workflow);
-	}
-	if (input->ext.xid != DPC_PACKET_ID_UNASSIGNED) {
-		DEBUG3("  Xid: %u", input->ext.xid);
-	}
-
-	if (is_ipaddr_defined(input->ext.src.ipaddr)) {
-		DEBUG3("  Src: %s", ncc_endpoint_sprint(ep_buf, &input->ext.src));
-	}
-	if (is_ipaddr_defined(input->ext.dst.ipaddr)) {
-		DEBUG3("  Dst: %s", ncc_endpoint_sprint(ep_buf, &input->ext.dst));
-	}
+	ncc_section_debug_end(depth);
 }
 
 /**
@@ -792,10 +804,6 @@ void dpc_input_list_debug(ncc_dlist_t *list)
 	dpc_input_t *input = NCC_DLIST_HEAD(list);
 	while (input) {
 		dpc_input_debug(input);
-
-		/* Trace the input time segments. */
-		dpc_segment_list_debug(input->segments);
-
 		input = NCC_DLIST_NEXT(list, input);
 	}
 }
@@ -805,37 +813,12 @@ void dpc_input_list_debug(ncc_dlist_t *list)
  */
 void dpc_segment_list_debug(ncc_dlist_t *list)
 {
-	if (!list || dpc_debug_lvl < 2) return;
+	if (!list || !NCC_DLIST_IS_INIT(list) || dpc_debug_lvl < 2) return;
 
 	DEBUG2("Time segments:");
 	ncc_segment_list_fprint(ncc_log_fp, list);
 }
 
-/*
- *	Print the contents of a list of dpc_input_t items.
- */
-//TODO: remove this
-void dpc_input_list_fprint(FILE *fp, ncc_dlist_t *list)
-{
-	fprintf(fp, "List contains %u element(s)\n", NCC_DLIST_SIZE(list));
-
-	dpc_input_t *item = NCC_DLIST_HEAD(list);
-	int i = 0;
-	while (item) {
-		fprintf(fp, " - Element #%u:\n", i);
-		fprintf(fp, "   - id: %u\n", item->id);
-		fprintf(fp, "   - vps: %s\n", item->vps ? "" : "NULL");
-
-		fr_cursor_t cursor;
-		VALUE_PAIR *vp;
-		for (vp = fr_cursor_init(&cursor, &item->vps); vp; vp = fr_cursor_next(&cursor)) {
-			fr_pair_fprint(fp, vp);
-		}
-
-		item = NCC_DLIST_NEXT(&input_list, item);
-		i++;
-	}
-}
 
 /*
  *	Determine if an IP address is the broadcast address.

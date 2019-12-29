@@ -43,7 +43,6 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in);
 void dpc_input_debug(dpc_input_t *input);
 void dpc_input_list_debug(ncc_dlist_t *dlist);
 void dpc_segment_list_debug(ncc_dlist_t *list);
-void dpc_input_list_fprint(FILE *fp, ncc_dlist_t *list);
 
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
 
