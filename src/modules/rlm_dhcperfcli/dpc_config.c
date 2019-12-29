@@ -68,7 +68,7 @@ size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_tabl
 	.offset = offsetof(_s, _f)
 
 static CONF_PARSER segment_conf_parser[] = {
-	{ FR_CONF_OFFSET("type", FR_TYPE_STRING, dpc_segment_config_t, type), .dflt = "fixed",
+	{ FR_CONF_OFFSET("type", FR_TYPE_INT32, dpc_segment_config_t, type), .dflt = "fixed",
 		.func = ncc_conf_item_parse, PARSE_CTX_SEGMENT_TYPE },
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0", FLOAT64_NOT_NEGATIVE },
@@ -259,12 +259,8 @@ static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_con
 		return -1;
 	}
 
-	segment->type = fr_table_value_by_str(segment_types, segment_config->type, NCC_SEGMENT_RATE_INVALID);
+	segment->type = segment_config->type;
 	switch (segment->type) {
-	case NCC_SEGMENT_RATE_INVALID:
-		cf_log_err(cs, "Invalid segment type \"%s\"", segment_config->type);
-		goto error;
-
 	case NCC_SEGMENT_RATE_FIXED:
 		segment->rate_limit = segment_config->rate;
 		break;
@@ -273,15 +269,15 @@ static int dpc_segment_handle(TALLOC_CTX *ctx, CONF_SECTION *cs, dpc_segment_con
 		/* A linear rate can only be enforced if we know when the segment will end.
 	 	 */
 		if (!segment->ftd_end) {
-			cf_log_err(cs, "Segment of type \"%s\" must have a finite end", segment_config->type);
+			cf_log_err(cs, "Segment of type \"%s\" must have a finite end",
+			           fr_table_str_by_value(segment_types, segment->type, "???"));
 			goto error;
 		}
 		segment->rate_limit_range.start = segment_config->rate_start;
 		segment->rate_limit_range.end = segment_config->rate_end;
 		break;
 
-	case NCC_SEGMENT_RATE_NULL:
-	case NCC_SEGMENT_RATE_UNBOUNDED:
+	default:
 		break;
 	}
 

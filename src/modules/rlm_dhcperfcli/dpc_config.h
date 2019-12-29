@@ -86,13 +86,13 @@ struct dpc_config_s {
  *	Segment configuration
  */
 typedef struct {
-	char const *name;
-	double start;
-	double end;
-	char const *type;
-	double rate;
-	double rate_start;
-	double rate_end;
+	char const *name;           //!< Name of segment (optional).
+	ncc_segment_type_t type;    //!< Type of segment.
+	double start;               //!< Start of segment.
+	double end;                 //!< End of segment.
+	double rate;                //<! Segment fixed rate.
+	double rate_start;          //<! Linear segment start rate.
+	double rate_end;            //<! Linear segment end rate.
 } dpc_segment_config_t;
 
 typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);
@@ -134,6 +134,6 @@ void dpc_config_debug(dpc_config_t *config);
 	.type_check = NCC_TYPE_CHECK_TABLE, \
 	.fr_table = dpc_packet_trace_table, .fr_table_len_p = &dpc_packet_trace_table_len }
 
-#define PARSE_CTX_SEGMENT_TYPE &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+#define PARSE_CTX_SEGMENT_TYPE &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 	.type_check = NCC_TYPE_CHECK_TABLE, \
 	.fr_table = segment_types, .fr_table_len_p = &segment_types_len }
