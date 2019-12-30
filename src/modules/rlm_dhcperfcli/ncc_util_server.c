@@ -90,8 +90,15 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	ncc_item_parent_section(&section, &sp_section, ci);
 
 	if (!parse_ctx) {
-		cf_log_err(ci, "Missing parse context for %s%s\"%s\"", section, sp_section, item_name);
-		return -1;
+		/*
+		 * If no parse context is provided, just try to convert string value to target type.
+		 */
+		if (ncc_value_from_str(out, rule->type, cf_pair_value(cp), -1) < 0) {
+			cf_log_perr(cp, "Failed to parse %s%s\"%s\"", section, sp_section, item_name);
+			return -1;
+		}
+
+		return 0;
 	}
 
 	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
