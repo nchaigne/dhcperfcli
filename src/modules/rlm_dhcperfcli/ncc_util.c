@@ -1056,13 +1056,17 @@ int ncc_endpoint_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char cons
 		ncc_str_trim(p, p, strlen(p));
 
 		/* Add this to our list of endpoints. */
+		size_t size_pre = NCC_DLIST_SIZE(*ep_dlist_p);
 		ncc_endpoint_t *ep = ncc_endpoint_list_add(ctx, *ep_dlist_p, p, default_ep);
 		if (!ep) {
 			fr_strerror_printf_push("Failed to create endpoint \"%s\"", p);
 			return -1;
 		}
-		char ep_buf[NCC_ENDPOINT_STRLEN] = "";
-		DEBUG3("Added endpoint list item #%u: [%s]", NCC_DLIST_SIZE(*ep_dlist_p) - 1, ncc_endpoint_sprint(ep_buf, ep));
+
+		if (size_pre < NCC_DLIST_SIZE(*ep_dlist_p)) {
+			char ep_buf[NCC_ENDPOINT_STRLEN] = "";
+			DEBUG3("Added endpoint list item #%u: [%s]", size_pre, ncc_endpoint_sprint(ep_buf, ep));
+		}
 
 		p = strsep(&str, ",");
 	}
@@ -1074,7 +1078,7 @@ int ncc_endpoint_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char cons
 /**
  * Add a new endpoint to a list.
  */
-ncc_endpoint_t *ncc_endpoint_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
+ncc_endpoint_t *ncc_endpoint_list_add(TALLOC_CTX *ctx, ncc_dlist_t *list,
                                       char *addr, ncc_endpoint_t *default_ep)
 {
 	ncc_endpoint_t this = { .ipaddr = { .af = AF_UNSPEC, .prefix = 32 } };
@@ -1089,11 +1093,31 @@ ncc_endpoint_t *ncc_endpoint_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
 		return NULL;
 	}
 
-	MEM(ep_new = talloc_zero(ctx, ncc_endpoint_t));
-	NCC_DLIST_ENQUEUE(ep_dlist, ep_new);
-	memcpy(ep_new, &this, sizeof(this));
+	/* Add new endpoint if it is not in list already. */
+	ep_new = ncc_endpoint_find(list, &this);
+	if (!ep_new) {
+		MEM(ep_new = talloc_zero(ctx, ncc_endpoint_t));
+		NCC_DLIST_ENQUEUE(list, ep_new);
+		memcpy(ep_new, &this, sizeof(this));
+	}
 
 	return ep_new;
+}
+
+/**
+ * Look for endpoint in list.
+ */
+ncc_endpoint_t *ncc_endpoint_find(ncc_dlist_t *list, ncc_endpoint_t *ep_find)
+{
+	ncc_endpoint_t *ep = NCC_DLIST_HEAD(list);
+	while (ep) {
+		if (ep->port == ep_find->port && fr_ipaddr_cmp(&ep->ipaddr, &ep_find->ipaddr) == 0) return ep;
+
+		ep = NCC_DLIST_NEXT(list, ep);
+	}
+
+	/* Endpoint not found in list. */
+	return NULL;
 }
 
 /**

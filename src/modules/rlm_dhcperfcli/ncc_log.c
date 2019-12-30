@@ -66,6 +66,8 @@ void ncc_log_init(FILE *log_fp, int debug_lvl)
  */
 int ncc_log_open_file(char const *file)
 {
+	DEBUG("Opening log file: \"%s\"", file);
+
 	FILE *fp = fopen(file, "a");
 	if (!fp) {
 		ERROR("Failed to open log file \"%s\": %s", file, fr_syserror(errno));

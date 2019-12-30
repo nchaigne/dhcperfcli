@@ -284,6 +284,7 @@ int ncc_endpoint_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char cons
                             ncc_endpoint_t *default_ep);
 ncc_endpoint_t *ncc_endpoint_list_add(TALLOC_CTX *ctx, ncc_dlist_t *ep_dlist,
                                       char *addr, ncc_endpoint_t *default_ep);
+ncc_endpoint_t *ncc_endpoint_find(ncc_dlist_t *list, ncc_endpoint_t *ep_find);
 char *ncc_endpoint_list_snprint(char *out, size_t outlen, ncc_dlist_t *ep_dlist);
 
 bool ncc_stdin_peek();
