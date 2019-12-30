@@ -83,6 +83,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	 * Note: This is supposed to be const. We allow ourselves to use it for convenience.
 	 */
 
+	uint32_t type = FR_BASE_TYPE(rule->type);
+
 	CONF_PAIR *cp = cf_item_to_pair(ci);
 	char const *item_name = cf_pair_attr(cp);
 	char const *section, *sp_section;
@@ -101,7 +103,11 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 		return 0;
 	}
 
-	uint32_t type = FR_BASE_TYPE(parse_ctx->type);
+	/* The parse context contains the base type (because it can be used without the CONF_PARSER rule).
+	 * In this function, it must be the same of that from "rule".
+	 */
+	ncc_assert(type == FR_BASE_TYPE(parse_ctx->type));
+
 	uint32_t type_check = parse_ctx->type_check;
 
 	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
@@ -127,12 +133,15 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 		}
 
 	} else {
-		if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
+		//if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
+		//	return -1;
+		//}
+		// Use our own parsing function (catches more errors than "cf_pair_parse_value", which needs some work).
+
+		if (ncc_value_from_str(out, type, cf_pair_value(cp), -1) < 0) {
+			cf_log_perr(cp, "Failed to parse %s%s\"%s\"", section, sp_section, item_name);
 			return -1;
 		}
-		// For uint64 FreeRADIUS parser handles -1 as max value "18446744073709551615" (i.e. not an error)
-		// For uint32 this is an error: "must be between 0-2147483647" (signed max ? why ??)
-		// TODO: look into this
 	}
 
 #define CHECK_IGNORE_ZERO \
