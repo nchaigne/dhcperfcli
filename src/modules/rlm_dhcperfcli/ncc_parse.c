@@ -61,9 +61,10 @@ int ncc_strtoull(uint64_t *out, char const *value)
 
 	fr_skip_whitespace(value);
 
-	if (*value == '-') { /* Don't let strtoull happily process negative values. */
-	error:
-		fr_strerror_printf("Invalid value \"%s\" for unsigned integer", value);
+	if (*value == '-') {
+		/* Don't let strtoull happily process negative values.
+		 */
+		fr_strerror_printf("Invalid negative value \"%s\" for unsigned integer", value);
 		return -2;
 	}
 
@@ -76,7 +77,10 @@ int ncc_strtoull(uint64_t *out, char const *value)
 		return -2;
 	}
 
-	if (*p != '\0' && !is_whitespace(p)) goto error;
+	if (*p != '\0' && !is_whitespace(p)) {
+		fr_strerror_printf("Invalid value \"%s\" for unsigned integer", value);
+		return -1;
+	}
 
 	return 0;
 }
