@@ -227,6 +227,8 @@ struct dpc_input {
 
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
+	ncc_dlist_t *gateway_list;   //<!List of gateways.
+
 	ncc_dlist_t *segments;       //<! List of input scoped segments.
 	ncc_segment_t *segment_cur;  //<! Currently used segment.
 	ncc_segment_t *segment_dflt; //<! Default segment for this input.

@@ -62,6 +62,7 @@ fr_dict_attr_t const *attr_packet_src_ip_address;
 fr_dict_attr_t const *attr_packet_src_port;
 
 fr_dict_attr_t const *attr_input_name;
+fr_dict_attr_t const *attr_gateway; /* this is *not* DHCP-Gateway-IP-Address */
 fr_dict_attr_t const *attr_encoded_data;
 fr_dict_attr_t const *attr_authorized_server;
 fr_dict_attr_t const *attr_workflow_type;
@@ -124,6 +125,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_packet_src_port, .name = "Packet-Src-Port", .type = FR_TYPE_UINT16, .dict = &dict_freeradius },
 
 	{ .out = &attr_input_name, .name = "Input-Name", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
+	{ .out = &attr_gateway, .name = "DHCP-Gateway", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_encoded_data, .name = "DHCP-Encoded-Data", .type = FR_TYPE_OCTETS, .dict = &dict_dhcperfcli },
 	{ .out = &attr_authorized_server, .name = "DHCP-Authorized-Server", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcperfcli },
 	{ .out = &attr_workflow_type, .name = "DHCP-Workflow-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcperfcli },
@@ -366,7 +368,8 @@ static void dpc_dict_init(TALLOC_CTX *ctx);
 static void dpc_event_list_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
-static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in);
+static void dpc_gateway_parse(TALLOC_CTX *ctx, ncc_dlist_t **gateway_list_p, char const *in);
+static void dpc_gateway_socket_alloc(ncc_dlist_t *gateway_list);
 static void dpc_options_parse(int argc, char **argv);
 
 static void dpc_signal(int sig);
@@ -1778,23 +1781,29 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	return r;
 }
 
-/*
- *	Store transport information in session context.
+/**
+ * Store transport information in session context.
  */
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input)
 {
 	/*
-	 *	Default: use source / destination from input, if provided.
+	 * Default: use source / destination from input, if provided.
 	 */
 	session->src = input->ext.src;
 	session->dst = input->ext.dst;
 
 	/*
-	 *	Associate session to gateway, if one is defined (or several).
+	 * If gateways are available, pick one in a round-robin fashion.
+	 * Input gateway list takes precedence over global gateway list.
 	 */
-	if (!is_ipaddr_defined(session->src.ipaddr) && gateway_list) {
-		NCC_DLIST_USE_NEXT(gateway_list, session->gateway);
-		session->src = *(session->gateway);
+	if (!is_ipaddr_defined(session->src.ipaddr)) {
+		ncc_dlist_t *list = input->gateway_list;
+		if (!list) list = gateway_list;
+
+		if (list) {
+			NCC_DLIST_USE_NEXT(list, session->gateway);
+			session->src = *(session->gateway);
+		}
 	}
 }
 
@@ -2693,9 +2702,9 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	input->rate_limit = CONF.input_rate_limit;
 
 	/*
-	 *	Check if we are provided with pre-encoded DHCP data.
-	 *	If so, extract (if there is one) the message type and the xid.
-	 *	All other DHCP attributes provided through value pairs are ignored.
+	 * Check if we are provided with pre-encoded DHCP data.
+	 * If so, extract (if there is one) the message type and the xid.
+	 * All other DHCP attributes provided through value pairs are ignored.
 	 */
 	vp_encoded_data = ncc_pair_find_by_da(input->vps, attr_encoded_data);
 	if (IS_VP_DATA(vp_encoded_data)) {
@@ -2715,7 +2724,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	NCC_DLIST_INIT(input->segments, ncc_segment_t);
 
 	/*
-	 *	Pre-process attributes (1: xlat).
+	 * Pre-process attributes (1: xlat).
 	 */
 	for (vp = fr_cursor_init(&cursor, &input->vps);
 	     vp;
@@ -2736,11 +2745,11 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		vp->op = T_OP_EQ; /* Force to '=' for consistency. */
 
 		/*
-		 *	A value is identified as an xlat expression if it is a double quoted string which contains some %{...}
-		 *	e.g. "foo %{tolower:Bar}"
+		 * A value is identified as an xlat expression if it is a double quoted string which contains some %{...}
+		 * e.g. "foo %{tolower:Bar}"
 		 *
-		 *	In this case, the vp has no value, and keeps its original type (vp->vp_type and vp->da->type), which can be anything.
-		 *	This entails that the result of xlat expansion would not necessarily be suitable for that vp.
+		 * In this case, the vp has no value, and keeps its original type (vp->vp_type and vp->da->type), which can be anything.
+		 * This entails that the result of xlat expansion would not necessarily be suitable for that vp.
 		 */
 		if (vp->type == VT_XLAT) {
 
@@ -2773,15 +2782,14 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 				}
 				talloc_free(value);
 
-				/*
-				 *	Store the compiled xlat (xlat_exp_t).
-				 *	For this we use the "generic pointer" vp_ptr (data.datum.ptr)
+				/* Store the compiled xlat (xlat_exp_t).
+				 * For this we use the "generic pointer" vp_ptr (data.datum.ptr)
 				 */
 				vp->vp_ptr = xlat;
 
 			} else {
 				/*
-				 *	Xlat expansions are not supported. Convert xlat to value box (if possible).
+				 * Xlat expansions are not supported. Convert xlat to value box (if possible).
 				 */
 				if (ncc_pair_value_from_str(vp, vp->xlat) < 0) {
 					WARN("Unsupported xlat expression for attribute '%s'. Discarding input (id: %u)", vp->da->name, input->id);
@@ -2792,15 +2800,15 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	}
 
 	/*
-	 *	Pre-process attributes (2: control attributes).
+	 * Pre-process attributes (2: control attributes).
 	 */
 	for (vp = fr_cursor_init(&cursor, &input->vps);
 	     vp;
 	     vp = fr_cursor_next(&cursor)) {
 
 		/*
-		 *	Process special attributes. They take precedence over command line arguments.
-		 *	Note: xlat is not supported for these.
+		 * Process special attributes. They take precedence over command line arguments.
+		 * Note: xlat is not supported for these.
 		 */
 		if (!IS_VP_DATA(vp)) continue;
 
@@ -2858,17 +2866,25 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		} else if (vp->da == attr_authorized_server) { /* DHCP-Authorized-Server = <ipaddr> */
 			TALLOC_REALLOC_ONE_SET(ctx, input->authorized_servers, fr_ipaddr_t, vp->vp_ip);
 
+		} else if (vp->da == attr_gateway) { /* DHCP-Gateway = <ipaddr>[:<port>] */
+			dpc_gateway_parse(ctx, &input->gateway_list, vp->vp_strvalue);
+printf("HAI\n");
 		}
 
 	} /* loop over the input vps */
 
 	/*
-	 *	If not specified in input vps, use default values.
+	 * Allocate sockets for gateways.
+	 */
+	dpc_gateway_socket_alloc(input->gateway_list);
+
+	/*
+	 * If not specified in input vps, use default values.
 	 */
 	if (!vp_encoded_data) {
 		if (input->ext.code == FR_CODE_UNDEFINED) {
 			/*
-			 *	Handling a workflow. All workflows start with a Discover.
+			 * Handling a workflow. All workflows start with a Discover.
 			 */
 			if (vp_workflow_type && vp_workflow_type->vp_uint8 && vp_workflow_type->vp_uint8 < DPC_WORKFLOW_MAX) {
 				input->ext.workflow = vp_workflow_type->vp_uint8;
@@ -2885,12 +2901,12 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	}
 
 	/*
-	 *	If source (addr / port) is not defined in input vps, use gateway if one is specified.
-	 *	If nothing goes, fall back to default.
+	 * If source (addr / port) is not defined in input vps, use gateway if one is specified.
+	 * If nothing goes, fall back to default.
 	 */
 	if (!input->ext.src.port) input->ext.src.port = client_ep.port;
 	if (   !is_ipaddr_defined(input->ext.src.ipaddr)
-	    && !gateway_list /* If using a gateway, let this unspecified for now. */
+	    && (!gateway_list && !input->gateway_list) /* If using a gateway, let this unspecified for now. */
 	   ) {
 		input->ext.src.ipaddr = client_ep.ipaddr;
 	}
@@ -2903,15 +2919,12 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		return -1;
 	}
 
-	/*
-	 *	Pre-allocate the socket for this input item.
-	 *	Unless: in template mode *and* with gateway(s) (in which case we already have the sockets allocated).
+	/* Pre-allocate the socket for this input source address (if specified).
 	 */
-	if (!CONF.template || !gateway_list) {
-		dpc_input_socket_allocate(input);
-	}
+	dpc_input_socket_allocate(input);
 
-	/* Fill in the gaps in the list of segments. */
+	/* Fill in the gaps in the list of segments.
+	 */
 	if (ncc_segment_list_complete(ctx, input->segments, input->rate_limit) < 0) {
 		PWARN("Failed to complete segment list. Discarding input (id: %u)", input->id);
 		return -1;
@@ -3289,14 +3302,35 @@ static int dpc_command_parse(char const *command)
 /*
  *	Parse and handle configured gateway(s).
  */
-static void dpc_gateway_parse(TALLOC_CTX *ctx, char const *in)
+static void dpc_gateway_parse(TALLOC_CTX *ctx, ncc_dlist_t **gateway_list_p, char const *in)
 {
 	DEBUG3("Parsing list of gateway endpoints: [%s]", in);
 
-	if (ncc_endpoint_list_parse(global_ctx, &gateway_list, in,
+	if (ncc_endpoint_list_parse(global_ctx, gateway_list_p, in,
 	                            &(ncc_endpoint_t) { .port = DHCP_PORT_RELAY }) < 0) {
 		PERROR("Failed to parse gateways");
 		exit(EXIT_FAILURE);
+	}
+}
+
+/*
+ *	Allocate sockets for gateways.
+ */
+static void dpc_gateway_socket_alloc(ncc_dlist_t *gateway_list)
+{
+	if (!gateway_list || !NCC_DLIST_IS_INIT(gateway_list)) return;
+
+	ncc_endpoint_t *ep = NCC_DLIST_HEAD(gateway_list);
+	while (ep) {
+		if (dpc_socket_provide(pl, &ep->ipaddr, ep->port) < 0) {
+			char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+			PERROR("Failed to provide a suitable socket for gateway \"%s:%u\"",
+					fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &ep->ipaddr) ? src_ipaddr_buf : "(undef)",
+					ep->port);
+			exit(EXIT_FAILURE);
+		}
+
+		ep = NCC_DLIST_NEXT(gateway_list, ep);
 	}
 }
 
@@ -3850,7 +3884,7 @@ int main(int argc, char **argv)
 	 * Note: This *must* be done before any input is parsed (either from configuration file, or from input file or stdin).
 	 */
 	for (i = 0; i < talloc_array_length(CONF.gateways); i++) {
-		dpc_gateway_parse(global_ctx, CONF.gateways[i]);
+		dpc_gateway_parse(global_ctx, &gateway_list, CONF.gateways[i]);
 	}
 
 	/* Read input from configuration.
@@ -3889,20 +3923,7 @@ int main(int argc, char **argv)
 	/*
 	 *	Allocate sockets for gateways.
 	 */
-	if (gateway_list) {
-		ncc_endpoint_t *ep = NCC_DLIST_HEAD(gateway_list);
-		while (ep) {
-			if (dpc_socket_provide(pl, &ep->ipaddr, ep->port) < 0) {
-				char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
-				PERROR("Failed to provide a suitable socket for gateway \"%s:%u\"",
-				       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &ep->ipaddr) ? src_ipaddr_buf : "(undef)",
-				       ep->port);
-				exit(EXIT_FAILURE);
-			}
-
-			ep = NCC_DLIST_NEXT(gateway_list, ep);
-		}
-	}
+	dpc_gateway_socket_alloc(gateway_list);
 
 	/*
 	 *	And a pcap raw socket (if we need one).
