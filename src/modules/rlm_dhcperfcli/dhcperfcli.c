@@ -2868,7 +2868,6 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 
 		} else if (vp->da == attr_gateway) { /* DHCP-Gateway = <ipaddr>[:<port>] */
 			dpc_gateway_parse(ctx, &input->gateway_list, vp->vp_strvalue);
-printf("HAI\n");
 		}
 
 	} /* loop over the input vps */

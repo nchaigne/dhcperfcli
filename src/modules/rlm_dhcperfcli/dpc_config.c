@@ -83,7 +83,8 @@ static const CONF_PARSER log_conf_parser[] = {
 	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, dpc_config_t, log_dst), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_LOG_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, log_file) },
-	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level) }, /* No default */
+	{ FR_CONF_OFFSET("debug_level", FR_TYPE_UINT32, dpc_config_t, debug_level), /* No default */
+		.func = ncc_conf_item_parse },
 	{ FR_CONF_OFFSET("debug_dev", FR_TYPE_BOOL, dpc_config_t, debug_dev) }, /* No default */
 	{ FR_CONF_OFFSET("debug_basename", FR_TYPE_BOOL, dpc_config_t, debug_basename), .dflt = "yes" },
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, log_timestamp), .dflt = "yes" },
@@ -110,7 +111,8 @@ static const CONF_PARSER progress_conf_parser[] = {
 	{ FR_CONF_OFFSET("timestamp", FR_TYPE_BOOL, dpc_config_t, pr_stat_timestamp), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input), .dflt = "yes" },
 	{ FR_CONF_OFFSET("per_input_digest", FR_TYPE_BOOL, dpc_config_t, pr_stat_per_input_digest), .dflt = "no" },
-	{ FR_CONF_OFFSET("per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0" },
+	{ FR_CONF_OFFSET("per_input_max", FR_TYPE_UINT32, dpc_config_t, pr_stat_per_input_max), .dflt = "0",
+		.func = ncc_conf_item_parse },
 
 	CONF_PARSER_TERMINATOR
 };
@@ -118,7 +120,8 @@ static const CONF_PARSER progress_conf_parser[] = {
 static const CONF_PARSER transport_conf_parser[] = {
 	{ FR_CONF_OFFSET("timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_REQUEST_TIMEOUT },
-	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) }, /* No default */
+	{ FR_CONF_OFFSET("retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max), /* No default */
+		.func = ncc_conf_item_parse },
 	{ FR_CONF_OFFSET("interface", FR_TYPE_STRING, dpc_config_t, interface) }, /* No default */
 
 	CONF_PARSER_TERMINATOR
