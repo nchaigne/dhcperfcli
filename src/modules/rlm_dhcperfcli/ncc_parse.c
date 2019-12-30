@@ -339,6 +339,16 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	 *	Second pass for all. Integers are already parsed and now just need assignment.
 	 */
 	switch (type) {
+	case FR_TYPE_STRING:
+	{
+		if (out) {
+			char **str = out;
+			talloc_free(*str);
+			*str = talloc_strndup(NULL, value, len);
+		}
+	}
+		break;
+
 	case FR_TYPE_BOOL:
 	{
 		bool v;
@@ -432,7 +442,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 		break;
 
 	default:
-		fr_strerror_printf("Invalid type '%s' (%i)",
+		fr_strerror_printf("Unsupported type '%s' (%i)",
 		                   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type);
 		return -1;
 	}
