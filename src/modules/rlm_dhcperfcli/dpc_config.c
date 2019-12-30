@@ -125,11 +125,16 @@ static const CONF_PARSER transport_conf_parser[] = {
 };
 
 static const CONF_PARSER load_conf_parser[] = {
-	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), FLOAT64_NOT_NEGATIVE }, /* No default */
-	{ FR_CONF_OFFSET("input_rate_limit", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), FLOAT64_NOT_NEGATIVE }, /* No default */
-	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), FLOAT64_NOT_NEGATIVE }, /* No default */
-	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use) }, /* No default */
-	{ FR_CONF_OFFSET("session_max_num", FR_TYPE_UINT32, dpc_config_t, session_max_num) }, /* No default */
+	{ FR_CONF_OFFSET("rate_limit", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), /* No default */
+		FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("input_rate_limit", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), /* No default */
+		FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("duration_start_max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), /* No default */
+		FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("input_num_use", FR_TYPE_UINT32, dpc_config_t, input_num_use), /* No default */
+		.func = ncc_conf_item_parse },
+	{ FR_CONF_OFFSET("session_max_num", FR_TYPE_UINT32, dpc_config_t, session_max_num), /* No default */
+		.func = ncc_conf_item_parse },
 	{ FR_CONF_OFFSET("session_max_active", FR_TYPE_UINT32, dpc_config_t, session_max_active), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_SESSION_MAX_ACTIVE },
 
