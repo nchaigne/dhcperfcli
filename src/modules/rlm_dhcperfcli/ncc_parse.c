@@ -470,9 +470,14 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 {
 	int ret = 0; /* Set to 1 if value is forced. */
 
-	if (ncc_value_from_str(out, type, value, inlen) < 0) return -1;
+	if (!parse_ctx) {
+		/*
+		 * If no parse context is provided, just try to convert string value to target type.
+		 */
+		if (ncc_value_from_str(out, type, value, inlen) < 0) return -1;
 
-	if (!parse_ctx) return 0;
+		return 0;
+	}
 
 	type = FR_BASE_TYPE(parse_ctx->type);
 	uint32_t type_check = parse_ctx->type_check;
@@ -485,6 +490,23 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
 	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
+
+	if (type == FR_TYPE_INT32 && check_table) {
+		/* Value can be provided as integer, or as a string looked up in table.
+		 */
+		if (ncc_value_from_str(out, type, value, -1) < 0) {
+			/* Failed to parse: this is not an integer.
+			 * Try finding string value from table.
+			 */
+			if (ncc_str_in_table(out, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, value) < 0) {
+				fr_strerror_printf_push("Invalid value \"%s\"", value);
+				return -1;
+			}
+		}
+
+	} else {
+		if (ncc_value_from_str(out, type, value, inlen) < 0) return -1;
+	}
 
 #define CHECK_IGNORE_ZERO \
 	if (ignore_zero && !v) return 0;
