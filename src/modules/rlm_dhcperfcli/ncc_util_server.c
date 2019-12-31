@@ -28,26 +28,6 @@ static void ncc_item_parent_section(char const **section, char const **sp_sectio
 }
 
 /**
- * Check that a configuration item has its value in the specified table.
- * If not, return an error and produce a helpful log message.
- */
-static int ncc_conf_item_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, CONF_ITEM *ci)
-{
-	CONF_PAIR *cp = cf_item_to_pair(ci);
-	char const *item_name = cf_pair_attr(cp);
-	char const *section, *sp_section;
-
-	ncc_item_parent_section(&section, &sp_section, ci);
-
-	if (ncc_str_in_table(out, table, table_len, cf_pair_value(cp)) < 0) {
-		cf_log_perr(cp, "Invalid value \"%s\" for %s%s\"%s\"", cf_pair_value(cp), section, sp_section, item_name);
-		return -1;
-	}
-
-	return 0;
-}
-
-/**
  * Custom generic parsing function which performs value checks on a conf item.
  *
  * @param[in]  ctx     talloc context.
@@ -108,8 +88,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 			/* Failed to parse: this is not an integer.
 			 * Try finding string value from table.
 			 */
-			if (ncc_conf_item_in_table(out, parse_ctx->fr_table,
-			                           *parse_ctx->fr_table_len_p, ci) < 0) {
+			if (ncc_str_in_table(out, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, cf_pair_value(cp)) < 0) {
+				cf_log_perr(cp, "Invalid value \"%s\" for %s%s\"%s\"", cf_pair_value(cp), section, sp_section, item_name);
 				return -1;
 			}
 		}
