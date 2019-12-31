@@ -33,36 +33,18 @@ static void ncc_item_parent_section(char const **section, char const **sp_sectio
  */
 static int ncc_conf_item_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, CONF_ITEM *ci)
 {
-	char *list = NULL;
-	int32_t value;
-	size_t i;
-
 	CONF_PAIR *cp = cf_item_to_pair(ci);
 	char const *item_name = cf_pair_attr(cp);
 	char const *section, *sp_section;
 
 	ncc_item_parent_section(&section, &sp_section, ci);
 
-	value = fr_table_value_by_str(table, cf_pair_value(cp), FR_TABLE_NOT_FOUND);
-	if (value != FR_TABLE_NOT_FOUND) {
-		*out = value;
-		return 0;
-	}
-
-	if (!table_len) {
-		cf_log_err(cp, "Internal error parsing %s%s\"%s\": Table is empty", section, sp_section, item_name);
+	if (ncc_str_in_table(out, table, table_len, cf_pair_value(cp)) < 0) {
+		cf_log_perr(cp, "Invalid value \"%s\" for %s%s\"%s\"", cf_pair_value(cp), section, sp_section, item_name);
 		return -1;
 	}
 
-	/* Build a comma-separated list of allowed string values. */
-	for (i = 0; i < table_len; i++) {
-		MEM(list = talloc_asprintf_append_buffer(list, "%s'%s'", i ? ", " : "", table[i].name));
-	}
-
-	cf_log_err(cp, "Invalid value \"%s\" for %s%s\"%s\". Expected one of: %s", cf_pair_value(cp), section, sp_section, item_name, list);
-
-	talloc_free(list);
-	return -1;
+	return 0;
 }
 
 /**

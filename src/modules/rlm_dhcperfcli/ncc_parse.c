@@ -618,6 +618,45 @@ char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *par
 }
 
 /**
+ * Check that a string can be found in the specified table, and return its integer value.
+ * If not, return an error and produce a helpful log message.
+ *
+ * @param[out] out        where to write integer value.
+ * @param[in]  table      fr_table where to look string for.
+ * @param[in]  table_len  table length.
+ * @param[in]  str        string to look for.
+ *
+ * @return -1 = error, 0 = value found.
+ */
+int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, char const *str)
+{
+	char *list = NULL;
+	int32_t value;
+	size_t i;
+
+	value = fr_table_value_by_str(table, str, FR_TABLE_NOT_FOUND);
+	if (value != FR_TABLE_NOT_FOUND) {
+		*out = value;
+		return 0;
+	}
+
+	if (!table_len) {
+		fr_strerror_printf("Table is empty");
+		return -1;
+	}
+
+	/* Build a comma-separated list of allowed string values.
+	 */
+	for (i = 0; i < table_len; i++) {
+		MEM(list = talloc_asprintf_append_buffer(list, "%s'%s'", i ? ", " : "", table[i].name));
+	}
+	fr_strerror_printf("Expected one of %s", list);
+
+	talloc_free(list);
+	return -1;
+}
+
+/**
  * Debug the start of a section.
  */
 void ncc_section_debug_start(int depth, char const *name1, char const *name2)
