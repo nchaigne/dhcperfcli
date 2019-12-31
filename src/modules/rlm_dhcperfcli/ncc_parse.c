@@ -479,7 +479,11 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 		return 0;
 	}
 
-	type = FR_BASE_TYPE(parse_ctx->type);
+	/* The parse context contains the base type, which should match that of "type".
+	 */
+	type = FR_BASE_TYPE(type);
+	ncc_assert(type == FR_BASE_TYPE(parse_ctx->type));
+
 	uint32_t type_check = parse_ctx->type_check;
 
 	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
