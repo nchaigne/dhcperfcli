@@ -495,15 +495,16 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
 	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
 
-	if (type == FR_TYPE_INT32 && check_table) {
+	if (check_table && (type == FR_TYPE_INT32 || type == FR_TYPE_UINT32)) {
 		/* Value can be provided as integer, or as a string looked up in table.
 		 */
 		if (ncc_value_from_str(out, type, value, -1) < 0) {
 			/* Failed to parse: this is not an integer.
 			 * Try finding string value from table.
 			 */
-			if (ncc_str_in_table(out, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, value) < 0) {
-				fr_strerror_printf_push("Invalid value \"%s\"", value);
+			int ret = ncc_value_from_str_table(out, type, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, value);
+			if (ret != 1) { /* Not found or error. */
+				if (ret == 0) fr_strerror_printf_push("Invalid value \"%s\"", value);
 				return -1;
 			}
 		}
@@ -652,7 +653,7 @@ char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *par
  * @param[in]  table_len  table length.
  * @param[in]  str        string to look for.
  *
- * @return -1 = error, 0 = value found.
+ * @return -1 = error, 0 = value not found, 1 = found.
  */
 int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, char const *str)
 {
@@ -663,7 +664,7 @@ int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t t
 	value = fr_table_value_by_str(table, str, FR_TABLE_NOT_FOUND);
 	if (value != FR_TABLE_NOT_FOUND) {
 		*out = value;
-		return 0;
+		return 1;
 	}
 
 	if (!table_len) {
@@ -679,7 +680,40 @@ int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t t
 	fr_strerror_printf("Expected one of %s", list);
 
 	talloc_free(list);
-	return -1;
+	return 0;
+}
+
+/**
+ * Wrapper to ncc_str_in_table, with specified target type.
+ *
+ * @return -1 = error, 0 = value not found, 1 = found.
+ */
+int ncc_value_from_str_table(void *out, uint32_t type,
+                             fr_table_num_ordered_t const *table, size_t table_len, char const *str)
+{
+	int32_t value;
+
+	int ret = ncc_str_in_table(&value, table, table_len, str);
+	if (ret != 1) return ret; /* Not found or error. */
+
+	/* No range check here, just assume values can fit in target type.
+	 */
+	switch (type) {
+	case FR_TYPE_UINT32:
+		*(uint32_t *)out = value;
+		break;
+
+	case FR_TYPE_INT32:
+		*(int32_t *)out = value;
+		break;
+
+	default:
+		fr_strerror_printf("Unsupported type '%s' (%i) for table string to integer",
+		                   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type);
+		return -1;
+	}
+
+	return 0;
 }
 
 /**

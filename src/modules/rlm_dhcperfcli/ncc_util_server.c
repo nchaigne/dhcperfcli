@@ -88,7 +88,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 			/* Failed to parse: this is not an integer.
 			 * Try finding string value from table.
 			 */
-			if (ncc_str_in_table(out, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, cf_pair_value(cp)) < 0) {
+			int ret = ncc_str_in_table(out, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, cf_pair_value(cp));
+			if (ret != 1) {
 				cf_log_perr(cp, "Invalid value \"%s\" for %s%s\"%s\"", cf_pair_value(cp), section, sp_section, item_name);
 				return -1;
 			}

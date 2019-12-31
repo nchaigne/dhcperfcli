@@ -305,6 +305,8 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx);
 char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *parse_ctx);
 int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, char const *str);
+int ncc_value_from_str_table(void *out, uint32_t type,
+                             fr_table_num_ordered_t const *table, size_t table_len, char const *str);
 void ncc_section_debug_start(int depth, char const *name1, char const *name2);
 void ncc_section_debug_end(int depth);
 void ncc_pair_list_debug(int depth, VALUE_PAIR *vps);
