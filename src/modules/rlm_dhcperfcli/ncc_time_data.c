@@ -50,15 +50,16 @@ size_t ncc_timedata_dst_table_len = NUM_ELEMENTS(ncc_timedata_dst_table);
 		.type_check = NCC_TYPE_CHECK_TABLE, \
 		.type_check = NCC_TYPE_CHECK_MIN, ._float.min = 0.1 }
 
-#define PARSE_CTX_TIMEDATA_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_STRING, \
+#define PARSE_CTX_TIMEDATA_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 		.type_check = NCC_TYPE_CHECK_TABLE, \
 		.fr_table = ncc_timedata_dst_table, .fr_table_len_p = &ncc_timedata_dst_table_len }
 
 CONF_PARSER timedata_conf_parser[] = {
-	{ FR_CONF_OFFSET("destination", FR_TYPE_STRING, ncc_timedata_config_t, destination), .dflt = "influx",
+	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, ncc_timedata_config_t, dst), .dflt = "influx",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_TIMEDATA_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, ncc_timedata_config_t, file) },
-	{ FR_CONF_OFFSET("max_backlog", FR_TYPE_UINT32, ncc_timedata_config_t, max_backlog), .dflt = "300" },
+	{ FR_CONF_OFFSET("max_backlog", FR_TYPE_UINT32, ncc_timedata_config_t, max_backlog), .dflt = "300",
+		.func = ncc_conf_item_parse },
 	{ FR_CONF_OFFSET("time_interval", FR_TYPE_TIME_DELTA, ncc_timedata_config_t, time_interval), .dflt = "1.0",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_TIME_INTERVAL },
 
@@ -296,13 +297,7 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		ncc_timedata_config.instance_esc = talloc_strdup(ctx, buf);
 	}
 
-	ncc_timedata_config.dst = fr_table_value_by_str(ncc_timedata_dst_table, ncc_timedata_config.destination, TIMEDATA_DST_NUM_DEST);
-
 	switch (ncc_timedata_config.dst) {
-	case TIMEDATA_DST_NULL:
-	case TIMEDATA_DST_STDOUT:
-		break;
-
 	case TIMEDATA_DST_FILE:
 		if (!ncc_timedata_config.file || ncc_timedata_config.file[0] == '\0') {
 			ERROR("No file provided for time-data file destination");
@@ -320,8 +315,7 @@ int ncc_timedata_config_init(CONF_SECTION *cs, char const *name)
 		break;
 
 	default:
-		ERROR("Unknown time-data destination: %s", ncc_timedata_config.destination);
-		goto error;
+		break;
 	}
 
 	/* Time-data storage is initialized. Start the worker thread.

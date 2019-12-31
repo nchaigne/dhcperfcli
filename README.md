@@ -112,7 +112,7 @@ Attribute|Description
 `Packet-Dst-IP-Address` | The packet destination IP address. Can also be set through argument `<server>`.
 `Packet-Src-Port` | The packet source UDP port. Default is 68 for a client, 67 for a gateway.
 `Packet-Dst-Port` | The packet destination UDP port. Default is 67 for a server or a gateway.
-`DHCP-Gateway <gw>[:<port>]` * | Handle packets sent as if relayed through a gateway.<br>Same as option `-g`, but for this input item only.<br>Can be provided multiple times, in which case packets will be sent using all of these gateways in a round-robin fashion.
+`DHCP-Gateway` * | Handle packets sent as if relayed through a gateway (`<gw>[:<port>]`).<br>Same as option `-g`, but for this input item only.<br>Can be provided multiple times, in which case packets will be sent using all of these gateways in a round-robin fashion.
 `Input-Name` | Name of this item. Used in ongoing statistics, and as a prefix for named transactions shown in end report.
 `Rate-Limit` | Maximum new sessions initialized per second from this input item.<br>Actual rate for a given item is calculated from the time it started being used.
 `Start-Delay` | Delay (seconds) before allowing to use this input item to start new sessions.<br>This is useful to handle synchronization between multiple input items.

@@ -27,7 +27,6 @@ typedef enum {
  */
 typedef struct ncc_timedata_config_t {
 	ncc_timedata_dst_t dst;        //<! Type of destination where data points are sent.
-	char const *destination;       //<! Type of destination (string).
 	char const *file;              //<! File name (for "file" destination).
 
 	fr_time_delta_t time_interval; //<! Timespan of a data point (default: 1 s).
