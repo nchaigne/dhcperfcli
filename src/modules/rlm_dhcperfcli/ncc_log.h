@@ -110,6 +110,8 @@ extern int ncc_debug_lvl;
 #define PERROR(_f, ...) NCC_LOG_STACK(L_ERR, _f, ## __VA_ARGS__)
 #define PERROR_ML(_f, ...) NCC_LOG_STACK_ML(L_ERR, _f, ## __VA_ARGS__)
 
+#define PERROR_CF(_cf, _fmt, ...) ncc_cf_log_perr(L_ERR, CF_TO_ITEM(_cf),  __FILE__, __LINE__, _fmt, ## __VA_ARGS__)
+
 #define DEBUG_TRACE(_f, ...) NCC_DEBUG(3, _f, ## __VA_ARGS__)
 
 
@@ -126,3 +128,4 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
 		  char const *file, int line,
 		  char const *fmt, va_list ap, void *uctx);
+

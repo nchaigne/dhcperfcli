@@ -12,6 +12,40 @@
 
 
 /**
+ * Wrapper to FreeRADIUS function "_cf_log_perr".
+ * Allows to show all messages from FreeRADIUS error stack on the same line.
+ */
+void ncc_cf_log_perr(fr_log_type_t type, CONF_ITEM const *ci, char const *file, int line, char const *fmt, ...)
+{
+	char *tmp = NULL;
+	char const *strerror;
+	bool prefix = (fmt && fmt[0] != '\0');
+
+	strerror = fr_strerror_pop();
+	if (!strerror && !prefix) return; /* No "fmt" prefix and no error stack. */
+
+	/* If we have "fmt", use it as prefix. */
+	if (prefix) {
+		va_list ap;
+		va_start(ap, fmt);
+		tmp = talloc_vasprintf(NULL, fmt, ap);
+		va_end(ap);
+	}
+
+	/*
+	 * Append all errors on the same line, separated with ": ".
+	 */
+	while (strerror) {
+		tmp = talloc_asprintf_append(tmp, "%s%s", (tmp ? ": " : ""), strerror);
+		strerror = fr_strerror_pop();
+	}
+
+	_cf_log_perr(type, ci, file, line, tmp);
+
+	if (tmp) talloc_free(tmp);
+}
+
+/**
  * Get a conf item parent section "name" (and a separator for printing), unless it's top level.
  */
 static void ncc_item_parent_section(char const **section, char const **sp_section, CONF_ITEM *ci)
@@ -59,11 +93,11 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 
 	DEBUG3("Parsing: %s%s\"%s\": uctx ? %s, type: '%s' (%i), value: [%s]",
 	       section, sp_section, name, parse_ctx ? "yes" : "no",
-		   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type,
-		   value);
+	       fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type,
+	       value);
 
 	if (ncc_parse_value_from_str(out, type, value, -1, parse_ctx) < 0) {
-		cf_log_perr(cp, "Failed to parse %s%s\"%s\"", section, sp_section, name);
+		PERROR_CF(cp, "Failed to parse %s%s\"%s\"", section, sp_section, name);
 		return -1;
 	}
 

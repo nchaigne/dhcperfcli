@@ -252,13 +252,6 @@ FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
 FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);
 int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone);
 
-int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
-VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
-void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth);
-void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth);
-int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
-                           CONF_SECTION *cs, int cs_depth, unsigned int max);
-
 char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
                            char const *prefix, int line_max_len);
 int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep,
@@ -315,6 +308,17 @@ void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size
 void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);
 void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old);
 
+
+/*
+ * Functions from ncc_util_server.c
+ */
+void ncc_cf_log_perr(fr_log_type_t type, CONF_ITEM const *ci, char const *file, int line, char const *fmt, ...);
+int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
+VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
+void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth);
+void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth);
+int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
+                           CONF_SECTION *cs, int cs_depth, unsigned int max);
 
 
 /* This is now in protocol/radius/list.h - which we might not want to depend on, so... */
