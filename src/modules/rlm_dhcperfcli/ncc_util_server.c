@@ -11,6 +11,9 @@
 
 
 
+/**
+ * Get a conf item parent section "name" (and a separator for printing), unless it's top level.
+ */
 static void ncc_item_parent_section(char const **section, char const **sp_section, CONF_ITEM *ci)
 {
 	CONF_SECTION *cs = cf_item_to_section(cf_parent(ci));
@@ -48,196 +51,23 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	uint32_t type = FR_BASE_TYPE(rule->type);
 
 	CONF_PAIR *cp = cf_item_to_pair(ci);
-	char const *item_name = cf_pair_attr(cp);
+	char const *name = cf_pair_attr(cp);
+	char const *value = cf_pair_value(cp);
 	char const *section, *sp_section;
 
 	ncc_item_parent_section(&section, &sp_section, ci);
 
-	if (!parse_ctx) {
-		/*
-		 * If no parse context is provided, just try to convert string value to target type.
-		 */
-		if (ncc_value_from_str(out, rule->type, cf_pair_value(cp), -1) < 0) {
-			cf_log_perr(cp, "Failed to parse %s%s\"%s\"", section, sp_section, item_name);
-			return -1;
-		}
+	DEBUG3("Parsing: %s%s\"%s\": uctx ? %s, type: '%s' (%i), value: [%s]",
+	       section, sp_section, name, parse_ctx ? "yes" : "no",
+		   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type,
+		   value);
 
-		return 0;
-	}
-
-	/* The parse context contains the base type (because it can be used without the CONF_PARSER rule).
-	 * In this function, it must be the same of that from "rule".
-	 */
-	ncc_assert(type == FR_BASE_TYPE(parse_ctx->type));
-
-	uint32_t type_check = parse_ctx->type_check;
-
-	bool ignore_zero = (type_check & NCC_TYPE_IGNORE_ZERO);
-	bool not_zero = (type_check & NCC_TYPE_NOT_ZERO);
-	bool not_negative = (type_check & NCC_TYPE_NOT_NEGATIVE);
-	bool force_min = (type_check & NCC_TYPE_FORCE_MIN);
-	bool force_max = (type_check & NCC_TYPE_FORCE_MAX);
-	bool check_min = (type_check & NCC_TYPE_CHECK_MIN);
-	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
-	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
-
-	if (type == FR_TYPE_INT32 && check_table) {
-		/* Value can be provided as integer, or as a string looked up in table.
-		 */
-		if (ncc_value_from_str(out, type, cf_pair_value(cp), -1) < 0) {
-			/* Failed to parse: this is not an integer.
-			 * Try finding string value from table.
-			 */
-			int ret = ncc_str_in_table(out, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, cf_pair_value(cp));
-			if (ret != 1) {
-				cf_log_perr(cp, "Invalid value \"%s\" for %s%s\"%s\"", cf_pair_value(cp), section, sp_section, item_name);
-				return -1;
-			}
-		}
-
-	} else {
-		//if (cf_pair_parse_value(ctx, out, parent, ci, rule) < 0) {
-		//	return -1;
-		//}
-		// Use our own parsing function (catches more errors than "cf_pair_parse_value", which needs some work).
-
-		if (ncc_value_from_str(out, type, cf_pair_value(cp), -1) < 0) {
-			cf_log_perr(cp, "Failed to parse %s%s\"%s\"", section, sp_section, item_name);
-			return -1;
-		}
-	}
-
-#define CHECK_IGNORE_ZERO \
-	if (ignore_zero && !v) return 0;
-
-#define CHECK_NOT_ZERO \
-	if (not_zero && !v) { \
-		cf_log_err(ci, "Invalid value for %s%s\"%s\" (cannot be zero)", section, sp_section, item_name); \
-		return -1; \
-	}
-
-#define CHECK_NOT_NEGATIVE \
-	if (not_negative && v < 0) { \
-		cf_log_err(ci, "Invalid value for %s%s\"%s\" (cannot be negative)", section, sp_section, item_name); \
-		return -1; \
-	}
-
-#define CHECK_VALUE_MIN(_type, _ctx_type) { \
-	if (check_min && v < parse_ctx->_ctx_type.min) { \
-		cf_log_err(ci, "Invalid value for %s%s\"%s\" (min: %pV)", section, sp_section, item_name, \
-		           fr_box_##_type(parse_ctx->_ctx_type.min)); \
-		return -1; \
-	} \
-}
-
-#define CHECK_VALUE_MAX(_type, _ctx_type) { \
-	if (check_max && v > parse_ctx->_ctx_type.max) { \
-		cf_log_err(ci, "Invalid value for %s%s\"%s\" (max: %pV)", section, sp_section, item_name, \
-		           fr_box_##_type(parse_ctx->_ctx_type.max)); \
-		return -1; \
-	} \
-}
-
-#define CHECK_VALUE_TABLE { \
-	if (check_table && parse_ctx->fr_table) { \
-		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
-		if (fr_table_str_by_value(parse_ctx->fr_table, v, NULL) == NULL) { \
-			cf_log_err(ci, "Invalid value for %s%s\"%s\" (unknown)", section, sp_section, item_name); \
-			return -1; \
-		} \
-	} \
-}
-
-#define CHECK_STR_TABLE { \
-	if (check_table && parse_ctx->fr_table) { \
-		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
-		if (fr_table_value_by_str(parse_ctx->fr_table, v, FR_TABLE_NOT_FOUND) == FR_TABLE_NOT_FOUND) { \
-			cf_log_err(ci, "Invalid value for %s%s\"%s\" (unknown)", section, sp_section, item_name); \
-			return -1; \
-		} \
-	} \
-}
-
-#define CHECK_VALUE(_type, _ctx_type) { \
-	memcpy(&v, out, sizeof(v)); \
-	DEBUG3("Checking configured item %s%s\"%s\": type " STRINGIFY(_type) ", value: \"%pV\"", \
-	       section, sp_section, item_name, fr_box_##_type(v)); \
-	CHECK_IGNORE_ZERO \
-	CHECK_NOT_ZERO \
-	CHECK_NOT_NEGATIVE \
-	if (force_min) NCC_CI_VALUE_BOUND_CHECK(ci, _type, item_name, v, >=, parse_ctx->_ctx_type.min); \
-	if (force_max) NCC_CI_VALUE_BOUND_CHECK(ci, _type, item_name, v, <=, parse_ctx->_ctx_type.max); \
-	memcpy(out, &v, sizeof(v)); \
-	CHECK_VALUE_MIN(_type, _ctx_type) \
-	CHECK_VALUE_MAX(_type, _ctx_type) \
-}
-
-#define CASE_CHECK_BOX_VALUE(_fr_type, _c_type, _box_type, _ctx_type) \
-	case _fr_type: \
-	{ \
-		_c_type v; \
-		CHECK_VALUE(_box_type, _ctx_type) \
-		CHECK_VALUE_TABLE \
-	} \
-	break;
-
-	/*
-	 * Extract the value, and check the type is handled.
-	 * Perform specified checks.
-	 */
-	switch (type) {
-	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT8, uint8_t, uint8, uinteger)
-	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT16, uint16_t, uint16, uinteger)
-	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT32, uint32_t, uint32, uinteger)
-	CASE_CHECK_BOX_VALUE(FR_TYPE_UINT64, uint64_t, uint64, uinteger)
-
-	CASE_CHECK_BOX_VALUE(FR_TYPE_INT8, int8_t, int8, integer)
-	CASE_CHECK_BOX_VALUE(FR_TYPE_INT16, int16_t, int16, integer)
-	CASE_CHECK_BOX_VALUE(FR_TYPE_INT32, int32_t, int32, integer)
-	CASE_CHECK_BOX_VALUE(FR_TYPE_INT64, int64_t, int64, integer)
-
-	case FR_TYPE_FLOAT32:
-	{
-		float v;
-		CHECK_VALUE(float32, _float)
-	}
-		break;
-
-	case FR_TYPE_FLOAT64:
-	{
-		double v;
-		CHECK_VALUE(float64, _float)
-	}
-		break;
-
-	case FR_TYPE_TIME_DELTA:
-	{
-		fr_time_delta_t v;
-
-		/* Convert min/max values from float to fr_time_delta_t, and put them back in the context. */
-		fr_time_delta_t ftd_min = ncc_float_to_fr_time(parse_ctx->_float.min);
-		fr_time_delta_t ftd_max = ncc_float_to_fr_time(parse_ctx->_float.max);
-		parse_ctx->ftd.min = ftd_min;
-		parse_ctx->ftd.max = ftd_max;
-
-		CHECK_VALUE(time_delta, ftd);
-	}
-		break;
-
-	case FR_TYPE_STRING:
-	{
-		char *v;
-		memcpy(&v, out, sizeof(v));
-		CHECK_STR_TABLE
-	}
-		break;
-
-	default:
-		cf_log_err(ci, "Invalid type '%s' (%i) in parse context for \"%s\"",
-		           fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type, item_name);
-
+	if (ncc_parse_value_from_str(out, type, value, -1, parse_ctx) < 0) {
+		cf_log_perr(cp, "Failed to parse %s%s\"%s\"", section, sp_section, name);
 		return -1;
 	}
+
+	// Note: Using our own parsing function (catches more errors than "cf_pair_parse_value", which needs some work).
 
 	return 0;
 }
