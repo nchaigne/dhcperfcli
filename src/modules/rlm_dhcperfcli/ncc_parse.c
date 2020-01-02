@@ -222,7 +222,15 @@ error:
  * Parse a string value into a given FreeRADIUS data type (FR_TYPE_...).
  * Check that value is valid for the data type, and obtain converted value.
  *
- * Note: not all FreeRADIUS types are supported.
+ * The following FreeRADIUS types are supported:
+ * - FR_TYPE_UINT* (8, 16, 32, 64)
+ * - FR_TYPE_INT* (8, 16, 32, 64)
+ * - FR_TYPE_FLOAT* (32, 64)
+ * - FR_TYPE_TIME_DELTA
+ * - FR_TYPE_STRING
+ * - FR_TYPE_BOOL
+ * - FR_TYPE_IPV4_ADDR
+ * - FR_TYPE_ETHERNET
  *
  * @param[out] out    where to write the parsed value (size depends on the type).
  *                    NULL allows to discard output (validity check only).
@@ -455,7 +463,12 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
  * Check that value is valid for the data type, and obtain converted value.
  * Perform additional checks provided in parse context.
  *
- * Note: not all FreeRADIUS types are supported.
+ * The following FreeRADIUS types are supported:
+ * - FR_TYPE_UINT* (8, 16, 32, 64)
+ * - FR_TYPE_INT* (8, 16, 32, 64)
+ * - FR_TYPE_FLOAT* (32, 64)
+ * - FR_TYPE_TIME_DELTA
+ * - FR_TYPE_STRING
  *
  * @param[out] out        where to write the parsed value (size depends on the type).
  *                        NULL allows to discard output (validity check only).
@@ -468,7 +481,8 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
  */
 int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx)
 {
-	int ret = 0; /* Set to 1 if value is forced. */
+	int rcode = 0; /* Set to 1 if value is forced. */
+	int ret;
 
 	if (!parse_ctx) {
 		/*
@@ -495,23 +509,27 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	bool check_max = (type_check & NCC_TYPE_CHECK_MAX);
 	bool check_table = (type_check & NCC_TYPE_CHECK_TABLE);
 
-	if (check_table && (type == FR_TYPE_INT32 || type == FR_TYPE_UINT32)) {
-		/* Value can be provided as integer, or as a string looked up in table.
-		 */
-		if (ncc_value_from_str(out, type, value, -1) < 0) {
-			/* Failed to parse: this is not an integer.
-			 * Try finding string value from table.
-			 */
-			int ret = ncc_value_from_str_table(out, type, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, value);
+	/*
+	 * First try parsing according to target type.
+	 */
+	ret = ncc_value_from_str(out, type, value, inlen);
+
+	if (ret < 0) {
+		if (check_table && (type == FR_TYPE_INT32 || type == FR_TYPE_UINT32)) {
+			/* Integer parsing failed.
+			 * Look for string in provided table and obtain corresponding integer value.
+		 	 */
+			ret = ncc_value_from_str_table(out, type, parse_ctx->fr_table, *parse_ctx->fr_table_len_p, value);
 			if (ret != 0) { /* Not found or error. */
 				if (ret == -1) fr_strerror_printf_push("Invalid value \"%s\"", value);
 				return -1;
 			}
 		}
-
-	} else {
-		if (ncc_value_from_str(out, type, value, inlen) < 0) return -1;
 	}
+
+	/* Failed to parse.
+	 */
+	if (ret != 0) return -1;
 
 #define CHECK_IGNORE_ZERO \
 	if (ignore_zero && !v) return 0;
@@ -532,6 +550,16 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	} \
 }
 
+#define CHECK_STR_TABLE { \
+	if (check_table && parse_ctx->fr_table) { \
+		FR_TABLE_LEN_FROM_PTR(parse_ctx->fr_table); \
+		if (fr_table_value_by_str(parse_ctx->fr_table, v, FR_TABLE_NOT_FOUND) == FR_TABLE_NOT_FOUND) { \
+			fr_strerror_printf("Invalid value \"%s\" (unknown)", v); \
+			return -1; \
+		} \
+	} \
+}
+
 #define CHECK_VALUE(_type, _ctx_type) { \
 	memcpy(&v, out, sizeof(v)); \
 	CHECK_IGNORE_ZERO \
@@ -540,8 +568,8 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 		fr_strerror_printf("Invalid value \"%pV\" (cannot be negative)", fr_box_##_type(v)); \
 		return -1; \
 	} \
-	if (force_min) NCC_VALUE_BOUND_CHECK(ret, _type, v, >=, parse_ctx->_ctx_type.min); \
-	if (force_max) NCC_VALUE_BOUND_CHECK(ret, _type, v, <=, parse_ctx->_ctx_type.max); \
+	if (force_min) NCC_VALUE_BOUND_CHECK(rcode, _type, v, >=, parse_ctx->_ctx_type.min); \
+	if (force_max) NCC_VALUE_BOUND_CHECK(rcode, _type, v, <=, parse_ctx->_ctx_type.max); \
 	memcpy(out, &v, sizeof(v)); \
 	if (check_min && v < parse_ctx->_ctx_type.min) { \
 		fr_strerror_printf("Invalid value \"%pV\" (min: %pV)", fr_box_##_type(v), fr_box_##_type(parse_ctx->_ctx_type.min)); \
@@ -591,13 +619,35 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	}
 		break;
 
+	case FR_TYPE_TIME_DELTA:
+	{
+		fr_time_delta_t v;
+
+		/* Convert min/max values from float to fr_time_delta_t, and put them back in the context. */
+		fr_time_delta_t ftd_min = ncc_float_to_fr_time(parse_ctx->_float.min);
+		fr_time_delta_t ftd_max = ncc_float_to_fr_time(parse_ctx->_float.max);
+		parse_ctx->ftd.min = ftd_min;
+		parse_ctx->ftd.max = ftd_max;
+
+		CHECK_VALUE(time_delta, ftd);
+	}
+		break;
+
+	case FR_TYPE_STRING:
+	{
+		char *v;
+		memcpy(&v, out, sizeof(v));
+		CHECK_STR_TABLE
+	}
+		break;
+
 	default:
 		fr_strerror_printf("Invalid type '%s' (%i) in parse context",
 		                   fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type);
 		return -1;
 	}
 
-	return ret;
+	return rcode;
 }
 
 
@@ -648,7 +698,7 @@ char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *par
  * Check that a string can be found in the specified table, and return its integer value.
  * If not, return an error and produce a helpful log message.
  *
- * @param[out] out        where to write integer value.
+ * @param[out] out        where to write integer value (or NULL to just check).
  * @param[in]  table      fr_table where to look string for.
  * @param[in]  table_len  table length.
  * @param[in]  str        string to look for.
@@ -663,7 +713,7 @@ int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t t
 
 	value = fr_table_value_by_str(table, str, FR_TABLE_NOT_FOUND);
 	if (value != FR_TABLE_NOT_FOUND) {
-		*out = value;
+		if (out) *out = value;
 		return 0;
 	}
 
@@ -695,6 +745,9 @@ int ncc_value_from_str_table(void *out, uint32_t type,
 
 	int ret = ncc_str_in_table(&value, table, table_len, str);
 	if (ret != 0) return ret; /* Not found or error. */
+
+	/* If "out" is not provided just check string is in table. */
+	if (!out) return 0;
 
 	/* No range check here, just assume values can fit in target type.
 	 */
