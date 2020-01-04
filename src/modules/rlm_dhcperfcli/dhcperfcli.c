@@ -3333,6 +3333,29 @@ static void dpc_gateway_socket_alloc(ncc_dlist_t *gateway_list)
 	}
 }
 
+/**
+ * Parse additional listening address and allocate socket.
+ */
+static void dpc_listen_addr_parse(char const *in)
+{
+	DEBUG3("Parsing listen addr endpoint: [%s]", in);
+
+	ncc_endpoint_t ep = { .ipaddr = { .af = AF_UNSPEC, .prefix = 32 }, .port = DHCP_PORT_SERVER };
+
+	if (ncc_host_addr_resolve(&ep, in) != 0) {
+		PERROR("Failed to parse listen address");
+		exit(EXIT_FAILURE);
+	}
+
+	if (dpc_socket_provide(pl, &ep.ipaddr, ep.port) < 0) {
+		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+		PERROR("Failed to provide a suitable socket for listen addr \"%s:%u\"",
+		       fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &ep.ipaddr) ? src_ipaddr_buf : "(undef)",
+		       ep.port);
+		exit(EXIT_FAILURE);
+	}
+}
+
 
 /* Short options. */
 #define OPTSTR_BASE "a:c:CD:f:g:hI:L:Mn:N:p:P:r:s:t:TvxX"
@@ -3943,6 +3966,12 @@ int main(int argc, char **argv)
 	 */
 	if (dpc_input_load(global_ctx) < 0) {
 		exit(EXIT_FAILURE);
+	}
+
+	/* Handle additional listening addresses.
+	 */
+	for (i = 0; i < talloc_array_length(CONF.listen_addrs); i++) {
+		dpc_listen_addr_parse(CONF.listen_addrs[i]);
 	}
 
 	/* Debug configuration.
