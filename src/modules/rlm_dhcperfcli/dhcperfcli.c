@@ -3351,6 +3351,7 @@ static struct option long_options[] = {
 	{ "conf-inline",            required_argument, NULL, 1 },
 	{ "debug",                  no_argument,       NULL, 1 },
 	{ "input-rate",             required_argument, NULL, 1 },
+	{ "listen-addr",            required_argument, NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
 	{ "segment",                required_argument, NULL, 1 },
 	{ "xlat",                   optional_argument, NULL, 1 },
@@ -3385,6 +3386,7 @@ typedef enum {
 	LONGOPT_IDX_CONF_INLINE,
 	LONGOPT_IDX_DEBUG,
 	LONGOPT_IDX_INPUT_RATE,
+	LONGOPT_IDX_LISTEN_ADDR,
 	LONGOPT_IDX_RETRANSMIT,
 	LONGOPT_IDX_SEGMENT,
 	LONGOPT_IDX_XLAT,
@@ -3609,6 +3611,10 @@ static void dpc_options_parse(int argc, char **argv)
 
 			case LONGOPT_IDX_INPUT_RATE: // --input-rate
 				PARSE_OPT_CTX(CONF.input_rate_limit, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
+				break;
+
+			case LONGOPT_IDX_LISTEN_ADDR: // --listen-addr
+				TALLOC_REALLOC_ONE_SET(global_ctx, CONF.listen_addrs, char const *, optarg);
 				break;
 
 			case LONGOPT_IDX_RETRANSMIT: // --retransmit

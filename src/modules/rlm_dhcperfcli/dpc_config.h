@@ -56,6 +56,7 @@ struct dpc_config_s {
 
 	char const *interface;           //<! Interface used for unconfigured clients to broadcast through a raw socket.
 	char const **gateways;           //<! Gateways simulated for sending DHCP packets.
+	char const **listen_addrs;       //<! Additional listening addresses.
 	fr_ipaddr_t *authorized_servers; //<! Only allow replies from explicitly authorized servers.
 
 	int32_t packet_trace_lvl;        //<! Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).
