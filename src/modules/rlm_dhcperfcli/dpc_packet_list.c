@@ -69,9 +69,11 @@ typedef struct dpc_packet_list {
 } dpc_packet_list_t;
 
 
-/*
- *	Check if two packets are identical from the packet list perspective.
- *	(ref: function fr_packet_cmp from protocols/radius/list.c)
+/**
+ * Check if two packets are identical from the packet list perspective.
+ * (ref: function fr_packet_cmp from protocols/radius/list.c)
+ *
+ * Elements of "packet" can be set to zero, which allows to bypass comparison.
  */
 static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 {
@@ -80,34 +82,50 @@ static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 	DEBUG3("id: (%u <-> %u), sockfd: (%d <-> %d), src_port: (%d <-> %d), dst_port: (%d <-> %d)",
 	       a->id, b->id, a->sockfd, b->sockfd, a->src_port, b->src_port, a->dst_port, b->dst_port);
 
+	/* xid is always compared. */
 	if (a->id < b->id) return -1;
 	if (a->id > b->id) return +1;
 
 	/*
-	 *	Do *not* compare chaddr. They do not necessarily match.
-	 *	E.g. a Lease-Query where the query type is not "by MAC address" (cf. RFC 4388 and 6148)
+	 * Do *not* compare chaddr. They do not necessarily match.
+	 * E.g. a Lease-Query where the query type is not "by MAC address" (cf. RFC 4388 and 6148)
 	 */
 	//if (a->data && b->data && a->data_len >= 34 && b->data_len >= 34) {
 	//	rcode = memcmp(a->data + 28, b->data + 28, 6);
 	//	if (rcode != 0) return rcode;
 	//}
 
-	if (a->sockfd < b->sockfd) return -1;
-	if (a->sockfd > b->sockfd) return +1;
+	/* Compare socket FD if set. */
+	if (a->sockfd && b->sockfd) {
+		if (a->sockfd < b->sockfd) return -1;
+		if (a->sockfd > b->sockfd) return +1;
+	}
 
-	if (a->src_port && b->src_port) { /* Only compare source port if <> 0. */
+	/* Compare source port if set. */
+	if (a->src_port && b->src_port) {
 		rcode = (int) a->src_port - (int) b->src_port;
 		if (rcode != 0) return rcode;
 	}
 
-	rcode = fr_ipaddr_cmp(&a->src_ipaddr, &b->src_ipaddr);
-	if (rcode != 0) return rcode;
+	/* Compare source IP addr if set. */
+	if (a->src_ipaddr.af && b->src_ipaddr.af) {
+		rcode = fr_ipaddr_cmp(&a->src_ipaddr, &b->src_ipaddr);
+		if (rcode != 0) return rcode;
+	}
 
-	rcode = fr_ipaddr_cmp(&a->dst_ipaddr, &b->dst_ipaddr);
-	if (rcode != 0) return rcode;
+	/* Compare destination IP addr if set. */
+	if (a->dst_ipaddr.af && b->dst_ipaddr.af) {
+		rcode = fr_ipaddr_cmp(&a->dst_ipaddr, &b->dst_ipaddr);
+		if (rcode != 0) return rcode;
+	}
 
-	rcode = (int) a->dst_port - (int) b->dst_port;
-	return rcode;
+	/* Compare destination port if set. */
+	if (a->dst_port && b->dst_port) {
+		rcode = (int) a->dst_port - (int) b->dst_port;
+		if (rcode != 0) return rcode;
+	}
+
+	return 0;
 }
 
 /*
@@ -348,10 +366,10 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 	return r;
 }
 
-/*
- *	For the reply packet we've received, look for the corresponding DHCP request
- *	from the packet list.
- *	(ref: function fr_packet_list_find_byreply from protocols/radius/list.c)
+/**
+ * For the reply packet we've received, look for the corresponding DHCP request
+ * from the packet list.
+ * (ref: function fr_packet_list_find_byreply from protocols/radius/list.c)
  */
 DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *reply)
 {
@@ -368,18 +386,27 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	}
 
 	/*
-	 *	Initialize request from reply, AND from the source IP & port of this socket.
-	 *	The client may have bound the socket to 0, in which case it's some random port,
-	 *	that is NOT in the original request->src_port.
+	 * Initialize request from reply, AND from the source IP & port of this socket.
+	 * The client may have bound the socket to 0, in which case it's some random port,
+	 * that is NOT in the original request->src_port.
 	 */
-	my_request.sockfd = reply->sockfd;
+
+	/*
+	 * DHCP allows a reply to be sent to a destination which is not the source of the request.
+	 * If "giaddr" is provided, a server is expected to send the reply to that giaddr.
+	 */
+
 	my_request.id = reply->id;
 
-	if (ps->src_any) {
-		my_request.src_ipaddr = ps->src_ipaddr;
-	} else {
-		my_request.src_ipaddr = reply->dst_ipaddr;
-	}
+	//my_request.sockfd = reply->sockfd;
+
+	//if (ps->src_any) {
+	//	my_request.src_ipaddr = ps->src_ipaddr;
+	//} else {
+	//	my_request.src_ipaddr = reply->dst_ipaddr;
+	//}
+	// for now allow all. TODO.
+
 	my_request.src_port = ps->src_port;
 
 	my_request.dst_ipaddr = reply->src_ipaddr;
