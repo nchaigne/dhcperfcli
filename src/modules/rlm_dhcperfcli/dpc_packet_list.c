@@ -407,10 +407,10 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	//}
 	// for now allow all. TODO.
 
-	my_request.src_port = ps->src_port;
+	//my_request.src_port = ps->src_port;
 
 	my_request.dst_ipaddr = reply->src_ipaddr;
-	my_request.dst_port = reply->src_port;
+	//my_request.dst_port = reply->src_port;
 
 	/* Allow chaddr to be accessible. */
 	my_request.data = reply->data;
