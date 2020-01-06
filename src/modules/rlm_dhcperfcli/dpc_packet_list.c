@@ -617,7 +617,10 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 	FD_ZERO(set); /* Clear the FD set. */
 
 	for (i = 0; i < DPC_MAX_SOCKETS; i++) {
-		if (pl->sockets[i].sockfd == -1) continue;
+		//if (pl->sockets[i].sockfd == -1) continue;
+		// we never remove sockets, so no need to go beyond that.
+		if (pl->sockets[i].sockfd == -1) break;
+
 		FD_SET(pl->sockets[i].sockfd, set); /* Add the socket fd to the set. */
 		if (pl->sockets[i].sockfd > maxfd) {
 			maxfd = pl->sockets[i].sockfd;
