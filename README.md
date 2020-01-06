@@ -43,7 +43,7 @@ Arguments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp
 `-f <file>` * | Read input items from `<file>`, in addition to stdin.<br>An input item is a list of *attribute/value pairs*. At least one such item is required, so one packet can be built.
 `-g <gw>[:<port>]` * | Handle packets sent as if relayed through giaddr `<gw>` (`hops`: 1, source: `<giaddr>:<port>`).<br>Multiple gateways may be specified, in which case packets will be sent using all of these gateways in a round-robin fashion.
 `-i <interface>` | Use this interface for unconfigured clients to broadcast through a raw socket. (This requires libpcap.)
-`-I <num>` | Start generating `xid` values with `<num>`.<br>Default: 0.
+`-I <num>` | Start generating `xid` values with `<num>`.<br>Default: random value.
 `-L <seconds>` | Limit duration for starting new input sessions.
 `-N <num>` | Start at most `<num>` sessions from input items.
 `-p <num>` | Send up to `<num>` session initial packets in parallel.<br>Default: 1 (packets are sent sequentially).
@@ -127,7 +127,7 @@ Input items can be used more than once with option `-c`. All input items are use
 
 ## Transaction Id
 
-The Transaction Id (field `xid`) is a number used to correlate messages and responses between a client and a server. By default xid values are generated incrementally, starting at 0 (or option `-I`).
+The Transaction Id (field `xid`) is a number used to correlate messages and responses between a client and a server. By default xid values are generated incrementally, starting with a random value (or option `-I`).
 
 Once a reply is received to a message (or the timeout expires), the allocated xid is freed and might be used again.
 
