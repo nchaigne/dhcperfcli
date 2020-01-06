@@ -11,7 +11,7 @@
 
 
 /* We need as many sockets as source IP / port. In most cases, only one will be used. */
-#define DPC_MAX_SOCKETS         32  // Is this enough ?
+#define DPC_MAX_SOCKETS         32  // shoud be enough
 #define DPC_ID_ALLOC_MAX_TRIES  32
 
 
@@ -23,16 +23,16 @@
  * Note: we do not keep track of used ID's.
  */
 typedef struct dpc_packet_socket {
-	int sockfd;
+	int sockfd;             //<! Socket FD.
 
 	uint32_t num_outgoing;  //!< Number of packets to which a reply is expected on this socket.
 
 	int src_any;
-	fr_ipaddr_t src_ipaddr;
-	uint16_t src_port;
+	fr_ipaddr_t src_ipaddr; //<! Socket source IP address (can be 0.0.0.0 for broadcast tests).
+	uint16_t src_port;      //<! Socket source port (should be 67 or 68).
 
 #ifdef HAVE_LIBPCAP
-	fr_pcap_t *pcap;
+	fr_pcap_t *pcap;        //<! For a pcap socket (NULL otherwise).
 #endif
 
 } dpc_packet_socket_t;
@@ -151,9 +151,10 @@ static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
 {
 	dpc_packet_socket_t *ps;
+	char src_ipaddr_buf[FR_IPADDR_STRLEN];
 
 	if (pl->num_sockets >= DPC_MAX_SOCKETS) {
-		fr_strerror_printf("Too many open sockets");
+		fr_strerror_printf("Too many open sockets (%u)", DPC_MAX_SOCKETS);
 		return NULL;
 	}
 
@@ -174,11 +175,8 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 
 	pl->num_sockets ++;
 
-	if (dpc_debug_lvl > 1) {
-		char src_ipaddr_buf[FR_IPADDR_STRLEN];
-		DEBUG2("Adding new managed socket to packet list: fd: %d, src: %s:%i",
-		       sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
-	}
+	DEBUG2("Adding new managed socket to packet list: fd: %d, src: %s:%i",
+	       sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
 
 	DEBUG3("Now managing %d socket(s)", pl->num_sockets);
 
@@ -194,36 +192,32 @@ void dpc_pcap_filter_build(dpc_packet_list_t *pl, fr_pcap_t *pcap)
 {
 	int i;
 	dpc_packet_socket_t *ps;
-	char ipaddr_buf[FR_IPADDR_STRLEN] = "";
-	char pcap_filter[4096] = ""; // TODO: size this dynamically
+	char ipaddr_buf[FR_IPADDR_STRLEN];
+	char pcap_filter[4096]; /* More than enough for our filter: with 32 sockets at most we need 576 octets. */
 	size_t len = 0;
-	char *p = &pcap_filter[0];
+	char *p = pcap_filter;
 
 	len = sprintf(p, "udp");
 	p += len;
 
 	if (pl->num_sockets > 0) {
-		for (i = 0; i<pl->num_sockets; i++) {
+		len = sprintf(p, " and host not (");
+		p += len;
+
+		for (i = 0; i < pl->num_sockets; i++) {
 			ps = &pl->sockets[i];
-
-			if (i == 0) {
-				len = sprintf(p, " and host not (");
-				p += len;
-			} else {
-				len = sprintf(p, " or ");
-				p += len;
-			}
-
-			len = sprintf(p, "%s", fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ps->src_ipaddr));
+			len = sprintf(p, "%s%s", i ? " or " : "",
+			              fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ps->src_ipaddr));
 			p += len;
 		}
+
 		len = sprintf(p, ")");
 		p += len;
 	}
 	DEBUG("Applying pcap filter: %s", pcap_filter);
 
 	if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
-		PERROR("Failing to apply pcap filter");
+		PERROR("Failed to apply pcap filter");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -513,7 +507,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	request = *request_p;
 
 	/*
-	 *	Find the socket.
+	 * Find the socket.
 	 */
 	ps = dpc_socket_find(pl, sockfd);
 	if (ps == NULL) {
