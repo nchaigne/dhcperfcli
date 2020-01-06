@@ -16,11 +16,11 @@
 
 
 /*
- *	Keep track of the socket(s) (along with source and destination IP/port)
- *	associated to the packet list.
- *	(ref: structure fr_packet_socket_t from protocols/radius/list.c)
+ * Keep track of the socket(s) (along with source and destination IP/port)
+ * associated to the packet list.
+ * (ref: structure fr_packet_socket_t from protocols/radius/list.c)
  *
- *	Note: we do not keep track of used ID's.
+ * Note: we do not keep track of used ID's.
  */
 typedef struct dpc_packet_socket {
 	int sockfd;
@@ -72,7 +72,7 @@ typedef struct dpc_packet_list {
 
 
 /**
- * Check if two packets are identical from the packet list perspective.
+ * Check if two packets match from the packet list perspective.
  * (ref: function fr_packet_cmp from protocols/radius/list.c)
  *
  * Elements of "packet" can be set to zero, which allows to bypass comparison.
@@ -130,10 +130,10 @@ static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 	return 0;
 }
 
-/*
- *	From a given socket FD, retrieve the corresponding element of the socket array
- *	associated to the packet list.
- *	(ref: function fr_socket_find from protocols/radius/list.c)
+/**
+ * From a given socket FD, retrieve the corresponding element of the socket array
+ * associated to the packet list.
+ * (ref: function fr_socket_find from protocols/radius/list.c)
  */
 static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 {
@@ -145,8 +145,8 @@ static dpc_packet_socket_t *dpc_socket_find(dpc_packet_list_t *pl, int sockfd)
 	return NULL; /* Socket not found. */
 }
 
-/*
- *	Add a socket to our list of managed sockets.
+/**
+ * Add a socket to our list of managed sockets.
  */
 static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
 {
@@ -164,7 +164,7 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 	}
 
 	/*
-	 *	Fill in the packet list socket.
+	 * Fill in the packet list socket.
 	 */
 	memset(ps, 0, sizeof(*ps));
 
@@ -174,8 +174,8 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 
 	pl->num_sockets ++;
 
-	if (dpc_debug_lvl > 0) {
-		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
+	if (dpc_debug_lvl > 1) {
+		char src_ipaddr_buf[FR_IPADDR_STRLEN];
 		DEBUG2("Adding new managed socket to packet list: fd: %d, src: %s:%i",
 		       sockfd, fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), src_ipaddr), src_port);
 	}
@@ -186,9 +186,9 @@ static dpc_packet_socket_t *dpc_socket_add(dpc_packet_list_t *pl, int sockfd, fr
 }
 
 #ifdef HAVE_LIBPCAP
-/*
- *	Build the pcap filter.
- *	Do not capture packets sent from or to an IP address to which we have an UDP socket bound.
+/**
+ * Build the pcap filter.
+ * Do not capture packets sent from or to an IP address to which we have an UDP socket bound.
  */
 void dpc_pcap_filter_build(dpc_packet_list_t *pl, fr_pcap_t *pcap)
 {
@@ -228,8 +228,8 @@ void dpc_pcap_filter_build(dpc_packet_list_t *pl, fr_pcap_t *pcap)
 	}
 }
 
-/*
- *	Add a pcap socket.
+/**
+ * Add a pcap socket.
  */
 int dpc_pcap_socket_add(dpc_packet_list_t *pl, fr_pcap_t *pcap, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
 {
@@ -243,8 +243,8 @@ int dpc_pcap_socket_add(dpc_packet_list_t *pl, fr_pcap_t *pcap, fr_ipaddr_t *src
 }
 #endif
 
-/*
- *	Provide a suitable socket from our list. If necesary, initialize a new one.
+/**
+ * Provide a suitable socket from our list. If necesary, initialize a new one.
  */
 int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t src_port)
 {
@@ -293,9 +293,8 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 	return sockfd;
 }
 
-/*
- *	Find out if two packet entries are "identical", i.e. same
- *	packet id, socket, src port, src ip, dst ip, dst port.
+/**
+ * Find out if two packet entries match.
  */
 static int dpc_packet_entry_cmp(void const *one, void const *two)
 {
@@ -305,9 +304,9 @@ static int dpc_packet_entry_cmp(void const *one, void const *two)
 	return dpc_packet_cmp(*a, *b);
 }
 
-/*
- *	Free the DHCP packet list.
- *	(ref: function fr_packet_list_free from protocols/radius/list.c)
+/**
+ * Free the DHCP packet list.
+ * (ref: function fr_packet_list_free from protocols/radius/list.c)
  */
 void dpc_packet_list_free(dpc_packet_list_t *pl)
 {
@@ -357,11 +356,11 @@ void dpc_packet_list_set_base_id(dpc_packet_list_t *pl, uint32_t base_id)
 	pl->prev_id = base_id - 1;
 }
 
-/*
- *	Insert an element in the packet list.
- *	Caller is responsible for allocating an ID before calling this.
- *	Or at least trying to: if the provided ID is already allocated, this will return false.
- *	(ref: function fr_packet_list_insert from protocols/radius/list.c)
+/**
+ * Insert an element in the packet list.
+ * Caller is responsible for allocating an ID before calling this.
+ * Or at least trying to: if the provided ID is already allocated, this will return false.
+ * (ref: function fr_packet_list_insert from protocols/radius/list.c)
  */
 bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 {
@@ -370,8 +369,8 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 	ncc_assert(*request_p != NULL);
 
 	bool r = rbtree_insert(pl->tree, request_p);
-	if (r) {
-		char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+	if (r && dpc_debug_lvl > 2) {
+		char from_to_buf[DPC_FROM_TO_STRLEN];
 		DEBUG3("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
 		       dpc_packet_from_to_sprint(from_to_buf, *request_p, true));
 	}
@@ -450,18 +449,20 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 
 	request = &my_request;
 
-	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
-	DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
-	       dpc_packet_from_to_sprint(from_to_buf, request, true));
+	if (dpc_debug_lvl > 2) {
+		char from_to_buf[DPC_FROM_TO_STRLEN];
+		DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
+		       dpc_packet_from_to_sprint(from_to_buf, request, true));
+	}
 
 	return rbtree_finddata(pl->tree, &request);
 }
 
-/*
- *	Remove an element from the packet list.
- *	Note: contrary to RADIUS we don't keep track of allocated ID's per socket.
- *	Caller is responsible to ensure he won't use again the ID previously allocated.
- *	(ref: function fr_packet_list_yank from protocols/radius/list.c)
+/**
+ * Remove an element from the packet list.
+ * Note: contrary to RADIUS we don't keep track of allocated ID's per socket.
+ * Caller is responsible to ensure he won't use again the ID previously allocated.
+ * (ref: function fr_packet_list_yank from protocols/radius/list.c)
  */
 bool dpc_packet_list_yank(dpc_packet_list_t *pl, DHCP_PACKET *request)
 {
@@ -477,9 +478,9 @@ bool dpc_packet_list_yank(dpc_packet_list_t *pl, DHCP_PACKET *request)
 	return true;
 }
 
-/*
- *	Get the number of elements in the packet list.
- *	(ref: function fr_packet_list_num_elements from protocols/radius/list.c)
+/**
+ * Get the number of elements in the packet list.
+ * (ref: function fr_packet_list_num_elements from protocols/radius/list.c)
  */
 uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl)
 {
@@ -488,17 +489,17 @@ uint32_t dpc_packet_list_num_elements(dpc_packet_list_t *pl)
 	return rbtree_num_elements(pl->tree);
 }
 
-/*
- *	Given an initialized DHCP packet, find a suitable UDP socket, and allocate an ID
- *	not yet used for that socket in the packet list.
- *	(ref: function fr_packet_list_id_alloc from protocols/radius/list.c)
+/**
+ * Given an initialized DHCP packet, find a suitable UDP socket, and allocate an ID
+ * not yet used for that socket in the packet list.
+ * (ref: function fr_packet_list_id_alloc from protocols/radius/list.c)
  *
- *	Note: the allocation mechanism for DHCP is different from that of RADIUS. We don't keep
- *	track of used ID stored in the socket structure (that would be impossible since we have
- *	2^32-1 possible ID's for DHCP), instead we allocate xid's in a linear fashion (unless told
- *	otherwise) so we're almost certain to get an ID easily.
- *	If caller wants a specific ID, we try to comply, and if it's not available we fall back to
- *	the linear allocation mechanism.
+ * Note: the allocation mechanism for DHCP is different from that of RADIUS. We don't keep
+ * track of used ID stored in the socket structure (that would be impossible since we have
+ * 2^32-1 possible ID's for DHCP), instead we allocate xid's in a linear fashion (unless told
+ * otherwise) so we're almost certain to get an ID easily.
+ * If caller wants a specific ID, we try to comply, and if it's not available we fall back to
+ * the linear allocation mechanism.
  */
 bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **request_p)
 {
@@ -524,7 +525,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	DEBUG3("Socket retrieved (fd: %d), now trying to get an id", sockfd);
 
 	/*
-	 *	Set the ID, source IP, and source port.
+	 * Set the ID, source IP, and source port.
 	 */
 	request->sockfd = ps->sockfd;
 	request->src_ipaddr = ps->src_ipaddr;
@@ -539,17 +540,17 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	}
 
 	/*
-	 *	Loop trying to allocate an unused ID into the packet list, but not forever.
-	 *	We arbitrary limit the iteration count.
+	 * Loop trying to allocate an unused ID into the packet list, but not forever.
+	 * We arbitrary limit the iteration count.
 	 */
 	while (tries < DPC_ID_ALLOC_MAX_TRIES) {
 
 		/*
-		 *	Make sure we never allocate the reserved ID which means "unassigned".
+		 * Make sure we never allocate the reserved ID which means "unassigned".
 		 */
 		if (id != DPC_PACKET_ID_UNASSIGNED) {
 			/*
-			 *	Try to insert into the packet list. If successful, it means the ID was available.
+			 * Try to insert into the packet list. If successful, it means the ID was available.
 			*/
 			if (dpc_packet_list_insert(pl, request_p)) {
 				DEBUG3("Successful insert into packet list (allocated xid: %d)", request->id);
@@ -568,7 +569,7 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	DEBUG3("Giving up after %d tries, last xid tried: %d", tries, pl->prev_id);
 
 	/*
-	 *	We failed to allocate an ID. Reset information in the packet before returning.
+	 * Failed to allocate an ID. Reset information in the packet before returning.
 	 */
 	request->id = DPC_PACKET_ID_UNASSIGNED;
 	request->sockfd = -1;
@@ -578,10 +579,10 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	return false;
 }
 
-/*
- *	Free the ID previously allocated to a given packet, and remove the packet from
- *	the packet list.
- *	(ref: function fr_packet_list_id_free from protocols/radius/list.c)
+/**
+ * Free the ID previously allocated to a given packet, and remove the packet from
+ * the packet list.
+ * (ref: function fr_packet_list_id_free from protocols/radius/list.c)
  */
 bool dpc_packet_list_id_free(dpc_packet_list_t *pl, DHCP_PACKET *request)
 {
@@ -606,11 +607,11 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, DHCP_PACKET *request)
 	return true;
 }
 
-/*
- *	Loop over the list of sockets tied to the packet list. Prepare each socket
- *	for reception, calling FD_SET to update a fd_set structure.
- *	Return the highest-numbered fd of these sockets + 1.
- *	(ref: function fr_packet_list_fd_set from protocols/radius/list.c)
+/**
+ * Loop over the list of sockets tied to the packet list. Prepare each socket
+ * for reception, calling FD_SET to update a fd_set structure.
+ * Return the highest-numbered fd of these sockets + 1.
+ * (ref: function fr_packet_list_fd_set from protocols/radius/list.c)
  */
 int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 {
@@ -636,11 +637,11 @@ int dpc_packet_list_fd_set(dpc_packet_list_t *pl, fd_set *set)
 	return maxfd + 1;
 }
 
-/*
- *	The FD set is ready for reading.
- *	Loop over the list of sockets tied to the packet list.
- *	Receive the first incoming packet found.
- *	(ref: function fr_packet_list_recv from protocols/radius/list.c)
+/**
+ * The FD set is ready for reading.
+ * Loop over the list of sockets tied to the packet list.
+ * Receive the first incoming packet found.
+ * (ref: function fr_packet_list_recv from protocols/radius/list.c)
  */
 DHCP_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 {
@@ -673,8 +674,8 @@ DHCP_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 		if (!packet) continue;
 
 		/*
-		 *	We've received a packet, but are not guaranteed this was an expected reply.
-		 *	Call fr_packet_list_find_byreply(). If it doesn't find anything, discard the reply.
+		 * We've received a packet, but are not guaranteed this was an expected reply.
+		 * Call fr_packet_list_find_byreply(). If it doesn't find anything, discard the reply.
 		 */
 		DEBUG3("Received packet on socket fd: %d (index in array: %d)", ps->sockfd, start);
 
