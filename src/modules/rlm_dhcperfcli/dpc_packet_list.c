@@ -52,9 +52,8 @@ typedef struct dpc_packet_socket {
 
 
 /*
- *	Structure defining a list of DHCP packets (incoming or outgoing)
- *	that should be managed.
- *	(ref: structure dpc_packet_list_t from protocols/radius/list.c)
+ * Structure defining a list of DHCP packets (incoming or outgoing) that should be managed.
+ * (ref: structure dpc_packet_list_t from protocols/radius/list.c)
  */
 typedef struct dpc_packet_list {
 	rbtree_t *tree;
@@ -64,6 +63,9 @@ typedef struct dpc_packet_list {
 	int num_sockets;        //!< Number of managed sockets.
 
 	dpc_packet_socket_t sockets[DPC_MAX_SOCKETS];
+
+	bool relaxed_ipaddr;
+	bool relaxed_port;
 
 	uint32_t prev_id;       //!< Previously allocated xid. Allows to allocate xid's in a linear fashion.
 } dpc_packet_list_t;
@@ -341,6 +343,9 @@ dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
 	/* Initialize "previously allocated xid", which is used to allocate xid's in a linear fashion. */
 	pl->prev_id = base_id - 1;
 
+	pl->relaxed_ipaddr = true;
+	pl->relaxed_port = true;
+
 	return pl;
 }
 
@@ -367,8 +372,7 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 }
 
 /**
- * For the reply packet we've received, look for the corresponding DHCP request
- * from the packet list.
+ * For the reply packet we've received, look for the corresponding DHCP request from the packet list.
  * (ref: function fr_packet_list_find_byreply from protocols/radius/list.c)
  */
 DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *reply)
@@ -391,35 +395,41 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	 * that is NOT in the original request->src_port.
 	 */
 
-	/*
-	 * DHCP allows a reply to be sent to a destination which is not the source of the request.
-	 * If "giaddr" is provided, a server is expected to send the reply to that giaddr.
-	 */
-
 	my_request.id = reply->id;
 
 	//my_request.sockfd = reply->sockfd;
 
-	//if (ps->src_any) {
-	//	my_request.src_ipaddr = ps->src_ipaddr;
-	//} else {
-	//	my_request.src_ipaddr = reply->dst_ipaddr;
-	//}
-	// for now allow all. TODO.
-
-	//my_request.src_port = ps->src_port;
+	/* DHCP allows a reply to be sent to a destination which is not the source of the request.
+	 * If "giaddr" is provided, a server is expected to send the reply to that giaddr.
+	 */
+	if (!pl->relaxed_ipaddr) {
+		if (ps->src_any) {
+			my_request.src_ipaddr = ps->src_ipaddr;
+		} else {
+			my_request.src_ipaddr = reply->dst_ipaddr;
+		}
+	}
 
 	my_request.dst_ipaddr = reply->src_ipaddr;
-	//my_request.dst_port = reply->src_port;
+
+	/* The reply source port should normally match the request destination port.
+	 * However, when testing with non standard ports, FreeRADIUS will reply using its "server port" as source port.
+	 * So in this case the ports may not match, e.g.:
+	 * Request from port 67 to port 6700, reply from port 6700 to port 6700.
+	 */
+	if (!pl->relaxed_port) {
+		my_request.src_port = ps->src_port;
+		my_request.dst_port = reply->src_port;
+	}
 
 	/* Allow chaddr to be accessible. */
 	my_request.data = reply->data;
 	my_request.data_len = reply->data_len;
 
 	/*
-	 *	If we've received this on the raw socket, this has to be handled specifically, e.g.:
-	 *	The packet we've sent : src = 0.0.0.0:68 -> dst = 255.255.255.255:67
-	 *	The reply we get : src = <DHCP server>:67 -> dst = 255.255.255.255:68
+	 * If we've received this on the raw socket, this has to be handled specifically, e.g.:
+	 * The packet we've sent : src = 0.0.0.0:68 -> dst = 255.255.255.255:67
+	 * The reply we get : src = <DHCP server>:67 -> dst = 255.255.255.255:68
 	 */
 #ifdef HAVE_LIBPCAP
 	if (ps->pcap) {
