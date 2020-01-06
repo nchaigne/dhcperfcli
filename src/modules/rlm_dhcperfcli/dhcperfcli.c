@@ -1165,11 +1165,11 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	return 0;
 }
 
-/*
- *	Receive one packet, maybe.
- *	If ftd_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
- *	If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
- *	Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
+/**
+ * Receive one packet, maybe.
+ * If ftd_wait_time is not NULL, spend at most this time waiting for a packet. Otherwise do not wait.
+ * If a packet is received, it has to be a reply to something we sent. Look for that request in the packet list.
+ * Returns: -1 = error, 0 = nothing to receive, 1 = one packet received.
  */
 static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 {
@@ -1178,7 +1178,7 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	DHCP_PACKET *packet = NULL, **packet_p;
 	dpc_session_ctx_t *session;
 	int max_fd;
-	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
+	char from_to_buf[DPC_FROM_TO_STRLEN];
 
 	/* Wait for packet, timing out as necessary */
 	FD_ZERO(&set);
@@ -1195,14 +1195,14 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	}
 
 	/*
-	 *	No packet was received.
+	 * No packet was received.
 	 */
 	if (select(max_fd, &set, NULL, NULL, &tvi_wait) <= 0) {
 		return 0;
 	}
 
 	/*
-	 *	Fetch one incoming packet.
+	 * Fetch one incoming packet.
 	 */
 	packet = dpc_packet_list_recv(pl, &set); // warning: packet is allocated on NULL context.
 	if (!packet) {
@@ -1214,7 +1214,7 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	       dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->id, packet->id);
 
 	/*
-	 *	Only allow replies from specific servers (overall policy set through option -a).
+	 * Only allow replies from specific servers (overall policy set through option -a).
 	 */
 	if (CONF.authorized_servers && ncc_ipaddr_array_find(CONF.authorized_servers, &packet->src_ipaddr) < 0) {
 		DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored",
@@ -1224,15 +1224,15 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	}
 
 	/*
-	 *	Query the packet list to get the original packet to which this is a reply.
+	 * Query the packet list to get the original packet to which this is a reply.
 	 */
 	packet_p = dpc_packet_list_find_byreply(pl, packet);
 	if (!packet_p) {
 		/*
-		 *	We did not find the packet in the packet list. This can happen in several situations:
-		 *	- The initial packet timed out and we receive the response later (likely the DHCP server is overloaded)
-		 *	- The IP address to which the reply was sent does not match (maybe giaddr / source IP address mixup)
-		 *	- The transaction ID does not match (DHCP server is broken)
+		 * We did not find the packet in the packet list. This can happen in several situations:
+		 * - The initial packet timed out and we receive the response later (likely the DHCP server is overloaded)
+		 * - The IP address to which the reply was sent does not match (maybe giaddr / source IP address mixup)
+		 * - The transaction ID does not match (DHCP server is broken)
 		 */
 		DEBUG("Received unexpected packet Id %u (0x%08x) %s length %zu",
 		      packet->id, packet->id, dpc_packet_from_to_sprint(from_to_buf, packet, false), packet->data_len);
@@ -1243,15 +1243,15 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	}
 
 	/*
-	 *	Retrieve the session to which belongs the original packet.
-	 *	To do so we use fr_packet2myptr, this is a magical macro defined in include/packet.h
+	 * Retrieve the session to which belongs the original packet.
+	 * To do so we use fr_packet2myptr, this is a magical macro defined in include/packet.h
 	 */
 	session = fr_packet2myptr(dpc_session_ctx_t, request, packet_p);
 
 	DEBUG3("Packet belongs to session id: %d", session->id);
 
 	/*
-	 *	Only allow replies from a specific server (per-packet policy set through attribute).
+	 * Only allow replies from a specific server (per-packet policy set through attribute).
 	 */
 	if (session->input->authorized_servers && ncc_ipaddr_array_find(session->input->authorized_servers, &packet->src_ipaddr) < 0) {
 		SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored",
@@ -1264,14 +1264,14 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	 */
 
 	/*
-	 *	Decode the reply packet.
+	 * Decode the reply packet.
 	 */
 	if (fr_dhcpv4_packet_decode(packet) < 0) {
 		SPERROR("Failed to decode reply packet (id: %u)", packet->id);
 		fr_radius_packet_free(&packet);
 		/*
-		 *	Don't give hope and kill the session now. Maybe we'll receive something better.
-		 *	If not, well... the timeout event will do its dirty job.
+		 * Don't give hope and kill the session now. Maybe we'll receive something better.
+		 * If not, well... the timeout event will do its dirty job.
 		 */
 		return -1;
 	}
@@ -1280,7 +1280,7 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	STAT_INCR_PACKET_RECV(packet);
 
 	/*
-	 *	Handle the reply, and decide if the session is finished or not yet.
+	 * Handle the reply, and decide if the session is finished or not yet.
 	 */
 	if (!dpc_session_handle_reply(session, packet)) {
 		dpc_session_finish(session);
@@ -1683,12 +1683,13 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	}
 }
 
-/*
- *	Initialize a DHCP packet from an input item.
+/**
+ * Initialize a DHCP packet from an input item.
  */
 static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input)
 {
 	DHCP_PACKET *request;
+	char from_to_buf[DPC_FROM_TO_STRLEN];
 
 	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
 
@@ -1703,7 +1704,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 
 	if (input->do_xlat) {
 		/*
-		 *	Perform xlat expansions as required.
+		 * Perform xlat expansions as required.
 		 */
 		ncc_xlat_set_num(input->id); /* Initialize xlat context for processing this input. */
 
@@ -1717,7 +1718,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	dpc_request_gateway_handle(request, session->gateway);
 
 	/*
-	 *	Use values prepared earlier.
+	 * Use values prepared earlier.
 	 */
 	request->code = input->ext.code;
 	request->src_port = session->src.port;
@@ -1725,15 +1726,14 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	request->src_ipaddr = session->src.ipaddr;
 	request->dst_ipaddr = session->dst.ipaddr;
 
-	char from_to_buf[DPC_FROM_TO_STRLEN] = "";
 	DEBUG3("New packet allocated (code: %u, %s)", request->code,
 	       dpc_packet_from_to_sprint(from_to_buf, request, false));
 
 	return request;
 }
 
-/*
- *	Encode a DHCP packet.
+/**
+ * Encode a DHCP packet.
  */
 static int dpc_dhcp_encode(DHCP_PACKET *packet)
 {
@@ -1758,9 +1758,9 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	}
 
 	/*
-	 *	Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
-	 *	the requested id may not have been available).
-	 *	Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
+	 * Reset DHCP-Transaction-Id to xid allocated (it may not be what was asked for,
+	 * the requested id may not have been available).
+	 * Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_transaction_id);
 	vp = fr_pair_afrom_da(packet, attr_dhcp_transaction_id);
@@ -1773,10 +1773,10 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	fr_strerror(); /* Clear the error buffer */
 
 	/*
-	 *	Note: if packet data len < 300 (DEFAULT_PACKET_SIZE), fr_dhcpv4_packet_encode will pad with
-	 *	zeroes at the end of the packet data to fill up 300 octets.
-	 *	From protocols/dhcpv4/dhcpv4.h: "Some clients silently ignore responses less than 300 bytes."
-	 *	(We are a client, but not that dumb.)
+	 * Note: if packet data len < 300 (DEFAULT_PACKET_SIZE), fr_dhcpv4_packet_encode will pad with
+	 * zeroes at the end of the packet data to fill up 300 octets.
+	 * From protocols/dhcpv4/dhcpv4.h: "Some clients silently ignore responses less than 300 bytes."
+	 * (We are a client, but not that dumb.)
 	 */
 
 	return r;

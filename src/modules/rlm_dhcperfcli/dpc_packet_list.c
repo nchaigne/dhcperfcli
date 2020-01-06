@@ -369,7 +369,7 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 	ncc_assert(*request_p != NULL);
 
 	bool r = rbtree_insert(pl->tree, request_p);
-	if (r && dpc_debug_lvl > 2) {
+	if (r) {
 		char from_to_buf[DPC_FROM_TO_STRLEN];
 		DEBUG3("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
 		       dpc_packet_from_to_sprint(from_to_buf, *request_p, true));
@@ -386,6 +386,7 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 {
 	DHCP_PACKET my_request = { 0 }, *request = NULL;
 	dpc_packet_socket_t *ps;
+	char from_to_buf[DPC_FROM_TO_STRLEN];
 
 	ncc_assert(pl != NULL);
 	ncc_assert(reply != NULL);
@@ -449,11 +450,8 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 
 	request = &my_request;
 
-	if (dpc_debug_lvl > 2) {
-		char from_to_buf[DPC_FROM_TO_STRLEN];
-		DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
-		       dpc_packet_from_to_sprint(from_to_buf, request, true));
-	}
+	DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
+	       dpc_packet_from_to_sprint(from_to_buf, request, true));
 
 	return rbtree_finddata(pl->tree, &request);
 }
