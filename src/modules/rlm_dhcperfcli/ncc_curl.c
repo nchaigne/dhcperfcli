@@ -1112,6 +1112,14 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 		}
 
 	}
+
+	/*
+	 * Set SSL/TLS authentication parameters
+	 */
+	SET_OPTION(CURLOPT_SSL_VERIFYPEER, (section->tls_check_cert == true) ? 1L : 0L);
+	SET_OPTION(CURLOPT_SSL_VERIFYHOST, (section->tls_check_cert_cn == true) ? 2L : 0L);
+	if (section->tls_extract_cert_attrs) SET_OPTION(CURLOPT_CERTINFO, 1L);
+
 	// we don't handle more authentication (for now).
 
 	/*
@@ -1366,6 +1374,17 @@ void ncc_curl_unload(void)
 }
 
 
+/*
+ * TLS configuration
+ */
+static CONF_PARSER tls_conf_parser[] = {
+	{ FR_CONF_OFFSET("check_cert", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_check_cert), .dflt = "no" },
+	{ FR_CONF_OFFSET("check_cert_cn", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_check_cert_cn), .dflt = "no" },
+	{ FR_CONF_OFFSET("extract_cert_attrs", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_extract_cert_attrs), .dflt = "no" },
+
+	CONF_PARSER_TERMINATOR
+};
+
 static const CONF_PARSER ncc_curl_section_conf_parser[] = {
 	{ FR_CONF_OFFSET("method", FR_TYPE_STRING, ncc_curl_mod_section_t, method_str), .dflt = "POST" },
 	{ FR_CONF_OFFSET("body", FR_TYPE_STRING, ncc_curl_mod_section_t, body_str), .dflt = "plain" },
@@ -1378,6 +1397,8 @@ static const CONF_PARSER ncc_curl_section_conf_parser[] = {
 	{ FR_CONF_OFFSET("bearer_token", FR_TYPE_STRING | FR_TYPE_XLAT, ncc_curl_mod_section_t, bearer_token) },
 
 	{ FR_CONF_OFFSET("error_from_header", FR_TYPE_STRING, ncc_curl_mod_section_t, error_from_header) },
+
+	{ FR_CONF_POINTER("tls", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) tls_conf_parser },
 
 	CONF_PARSER_TERMINATOR
 };

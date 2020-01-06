@@ -115,6 +115,10 @@ typedef struct ncc_curl_mod_section_t {
 	char const *password;            //!< Password for HTTP Authentication.
 	char const *bearer_token;        //<! Token for Bearer Authentication.
 
+	bool tls_check_cert;             //<! Verify the peer's SSL certificate (CURLOPT_SSL_VERIFYPEER).
+	bool tls_check_cert_cn;          //<! Check that Common Name in server certificate matches configured URI (CURLOPT_SSL_VERIFYHOST).
+	bool tls_extract_cert_attrs;
+
 	char const *error_from_header;   //!< Allow to extract error message from a specific HTTP header.
 
 	fr_time_delta_t timeout;         //!< Request timeout.
