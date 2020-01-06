@@ -8,6 +8,7 @@ typedef struct dpc_packet_list dpc_packet_list_t;
 
 void dpc_packet_list_free(dpc_packet_list_t *pl);
 dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id);
+void dpc_packet_list_set_base_id(dpc_packet_list_t *pl, uint32_t base_id);
 
 #ifdef HAVE_LIBPCAP
 void dpc_pcap_filter_build(dpc_packet_list_t *pl, fr_pcap_t *pcap);

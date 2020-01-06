@@ -317,10 +317,10 @@ void dpc_packet_list_free(dpc_packet_list_t *pl)
 	talloc_free(pl);
 }
 
-/*
- *	Create the DHCP packet list.
- *	Caller is responsible for managing the packet entries.
- *	(ref: function fr_packet_list_create from protocols/radius/list.c)
+/**
+ * Create the DHCP packet list.
+ * Caller is responsible for managing the packet entries.
+ * (ref: function fr_packet_list_create from protocols/radius/list.c)
  */
 dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
 {
@@ -347,6 +347,14 @@ dpc_packet_list_t *dpc_packet_list_create(TALLOC_CTX *ctx, uint32_t base_id)
 	pl->relaxed_port = true;
 
 	return pl;
+}
+
+/**
+ * Set packet list "base id".
+ */
+void dpc_packet_list_set_base_id(dpc_packet_list_t *pl, uint32_t base_id)
+{
+	pl->prev_id = base_id - 1;
 }
 
 /*

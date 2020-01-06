@@ -50,8 +50,7 @@ struct dpc_config_s {
 	bool xlat;                       //<! Xlat enabled on input items.
 	char const **input_files;        //<! Files from which input items are read.
 	char const **xlat_files;         //<! Files containing values for xlat "file" expansions.
-	uint64_t base_xid;               //<! Base value for xid generated in DHCP packets.
-	// Note: This is really a uint32_t, but the config parser requires a uint64_t.
+	int64_t base_xid;                //<! Base value for xid generated in DHCP packets.
 	bool ignore_invalid_input;       //<! Ignore invalid input (discard), or exit in error.
 
 	char const *interface;           //<! Interface used for unconfigured clients to broadcast through a raw socket.
@@ -125,8 +124,8 @@ void dpc_config_debug(dpc_config_t *config);
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, \
 	._float.min = 0.01, ._float.max = 3600 }
 
-#define PARSE_CTX_BASE_XID &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT64, \
-	.type_check = NCC_TYPE_CHECK_MAX, .uinteger.max = 0xffffffff }
+#define PARSE_CTX_BASE_XID &(ncc_parse_ctx_t){ .type = FR_TYPE_INT64, \
+	.type_check = NCC_TYPE_CHECK_MIN | NCC_TYPE_CHECK_MAX, .uinteger.min = 0, .uinteger.max = 0xffffffff }
 
 #define PARSE_CTX_SESSION_MAX_ACTIVE &(ncc_parse_ctx_t){ .type = FR_TYPE_UINT32, \
 	.type_check = NCC_TYPE_CHECK_MIN, .uinteger.min = 1 }

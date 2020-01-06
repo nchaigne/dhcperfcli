@@ -44,6 +44,7 @@ int dpc_debug_lvl = 0;
 
 static dpc_config_t default_config = {
 	.xlat = true,
+	.base_xid = -1, /* Default: random value. */
 	.session_max_active = 1,
 	.packet_trace_lvl = -1, /* If unspecified, figure out something automatically. */
 	.progress_interval = 10.0,
@@ -2739,7 +2740,8 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		 * It displays VPs after a "fr_dhcpv4_packet_decode" whichs sets all operators to '='.
 		 */
 		if (vp->op != T_OP_EQ && vp->op != T_OP_SET) {
-			WARN("Invalid operator '%s' in assignment for attribute '%s'. Discarding input (id: %u)", fr_tokens[vp->op], vp->da->name, input->id);
+			WARN("Invalid operator '%s' in assignment for attribute '%s'. Discarding input (id: %u)",
+			     fr_tokens[vp->op], vp->da->name, input->id);
 			return -1;
 		}
 		vp->op = T_OP_EQ; /* Force to '=' for consistency. */
@@ -3555,7 +3557,7 @@ static void dpc_options_parse(int argc, char **argv)
 
 		case 'I':
 			/* Stored as uint64_t because it is required by the config parser. */
-			PARSE_OPT_CTX(CONF.base_xid, FR_TYPE_UINT64, PARSE_CTX_BASE_XID);
+			PARSE_OPT_CTX(CONF.base_xid, FR_TYPE_INT64, PARSE_CTX_BASE_XID);
 			break;
 
 		case 'L':
@@ -3804,8 +3806,8 @@ static void dpc_exit(void)
 }
 
 
-/*
- *	The main guy.
+/**
+ * The main guy.
  */
 int main(int argc, char **argv)
 {
@@ -3832,7 +3834,7 @@ int main(int argc, char **argv)
 	fte_program_start = fr_time(); /* Program start timestamp. */
 
 	/*
-	 *	Allocate the main config structure.
+	 * Allocate the main config structure.
 	 */
 	dpc_config = dpc_config_alloc(global_ctx);
 	if (!dpc_config) {
@@ -3854,7 +3856,7 @@ int main(int argc, char **argv)
 	my_pid = getpid();
 
 	/*
-	 *	Initialize chained lists (input items, global segments).
+	 * Initialize chained lists (input items, global segments).
 	 */
 	NCC_DLIST_INIT(&input_list, dpc_input_t);
 
@@ -3863,7 +3865,7 @@ int main(int argc, char **argv)
 	NCC_DLIST_INIT(segment_list, ncc_segment_t);
 
 	/*
-	 *	Parse the command line options.
+	 * Parse the command line options.
 	 */
 	dpc_options_parse(argc, argv);
 
@@ -3875,7 +3877,7 @@ int main(int argc, char **argv)
 	dpc_config_name_set_default(dpc_config, instance, true);
 
 	/*
-	 *	Mismatch between the binary and the libraries it depends on.
+	 * Mismatch between the binary and the libraries it depends on.
 	 */
 	DEBUG4("FreeRADIUS magic number: %016lx", RADIUSD_MAGIC_NUMBER);
 	if (fr_check_lib_magic(RADIUSD_MAGIC_NUMBER) < 0) {
@@ -3884,23 +3886,23 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 *	Initialize dictionaries and preload attributes.
+	 * Initialize dictionaries and preload attributes.
 	 */
 	dpc_dict_init(global_ctx);
 
 	/*
-	 *	Initialize the xlat framework, and register xlat expansion functions.
+	 * Initialize the xlat framework, and register xlat expansion functions.
 	 */
 	if (ncc_xlat_register() < 0) exit(EXIT_FAILURE);
 
 	/*
-	 *	Initialize event list and packet list.
+	 * Initialize event list and packet list.
 	 */
 	dpc_event_list_init(global_ctx);
 	dpc_packet_list_init(global_ctx);
 
 	/*
-	 *	Read the configuration file (if provided), and parse configuration.
+	 * Read the configuration file (if provided), and parse configuration.
 	 */
 	if (dpc_config_init(dpc_config, file_config, conf_inline) < 0) exit(EXIT_FAILURE);
 
@@ -3927,7 +3929,7 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 *	Other configuration-related initializations.
+	 * Other configuration-related initializations.
 	 */
 	for (i = 0; i < talloc_array_length(CONF.xlat_files); i++) {
 		if (ncc_xlat_file_add(CONF.xlat_files[i]) != 0) {
@@ -3949,12 +3951,12 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 *	Allocate sockets for gateways.
+	 * Allocate sockets for gateways.
 	 */
 	dpc_gateway_socket_alloc(gateway_list);
 
 	/*
-	 *	And a pcap raw socket (if we need one).
+	 * Allocate a pcap raw socket (if we need one).
 	 */
 #ifdef HAVE_LIBPCAP
 	if (CONF.interface) {
@@ -3980,8 +3982,14 @@ int main(int argc, char **argv)
 	ncc_segment_list_debug(0, segment_list, (dpc_debug_lvl >= 4));
 	dpc_input_list_debug(&input_list);
 
+	/* If base xid is unspecified, get a random value. */
+	if (CONF.base_xid < 0) {
+		CONF.base_xid = fr_rand();
+	}
+	dpc_packet_list_set_base_id(pl, CONF.base_xid);
+
 	/*
-	 *	If packet trace level is unspecified, figure out something automatically.
+	 * If packet trace level is unspecified, figure out something automatically.
 	 */
 	if (CONF.packet_trace_lvl < 0) {
 		if (CONF.session_max_num == 1 || (!CONF.template && input_list.size == 1 && CONF.input_num_use == 1)) {
@@ -3989,9 +3997,9 @@ int main(int argc, char **argv)
 			CONF.packet_trace_lvl = 2;
 		} else if (CONF.session_max_active == 1) {
 			/*
-			 *	Several requests, but no parallelism.
-			 *	If the number of sessions, or the max duration, are reasonably small: print packets header.
-			 *	Otherwise: no packet print.
+			 * Several requests, but no parallelism.
+			 * If the number of sessions, or the max duration, are reasonably small: print packets header.
+			 * Otherwise: no packet print.
 			 */
 			if ( (CONF.session_max_num && CONF.session_max_num <= 50)
 			  || (CONF.duration_start_max && CONF.duration_start_max <= 0.5)
@@ -4011,7 +4019,7 @@ int main(int argc, char **argv)
 #ifdef HAVE_LIBPCAP
 	if (CONF.interface) {
 		/*
-		 *	Now that we've opened all the sockets we need, build the pcap filter.
+		 * Now that we've opened all the sockets we need, build the pcap filter.
 		 */
 		dpc_pcap_filter_build(pl, pcap);
 	}
@@ -4029,7 +4037,7 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 *	Everything seems to have loaded OK, exit gracefully.
+	 * Everything seems to have loaded OK, exit gracefully.
 	 */
 	if (check_config) {
 		DEBUG("Configuration appears to be OK");
@@ -4037,7 +4045,7 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 *	Ensure we have something to work with.
+	 * Ensure we have something to work with.
 	 */
 	DEBUG3("Input list size: %u", NCC_DLIST_SIZE(&input_list));
 	if (NCC_DLIST_SIZE(&input_list) == 0) {

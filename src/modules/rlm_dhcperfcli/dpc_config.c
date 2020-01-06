@@ -152,7 +152,7 @@ static const CONF_PARSER dhcperfcli_conf_parser[] = {
 	{ FR_CONF_OFFSET("input_file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, input_files) },
 	{ FR_CONF_OFFSET("ignore_invalid_input", FR_TYPE_BOOL, dpc_config_t, ignore_invalid_input), .dflt = "yes" },
 
-	{ FR_CONF_OFFSET("base_xid", FR_TYPE_UINT64, dpc_config_t, base_xid), /* No default */
+	{ FR_CONF_OFFSET("base_xid", FR_TYPE_INT64, dpc_config_t, base_xid), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_BASE_XID },
 	{ FR_CONF_OFFSET("gateway", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 	{ FR_CONF_OFFSET("listen", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
