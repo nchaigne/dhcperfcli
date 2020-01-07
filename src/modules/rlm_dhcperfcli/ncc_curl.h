@@ -115,13 +115,33 @@ typedef struct ncc_curl_mod_section_t {
 	char const *password;            //!< Password for HTTP Authentication.
 	char const *bearer_token;        //<! Token for Bearer Authentication.
 
+	char const *error_from_header;   //!< Allow to extract error message from a specific HTTP header.
+
+	fr_time_delta_t timeout;         //!< Request timeout.
+
+	/*
+	 * TLS configuration
+	 */
+	char const *tls_ca_file;         //<! File containing a single CA, which is the issuer of the server
+	                                 //<! certificate (CURLOPT_ISSUERCERT).
+	char const *tls_ca_info_file;    //<! File containing a bundle of certificates, which allow to handle
+	                                 //<! certificate chain validation (CURLOPT_CAINFO).
+	char const *tls_ca_path;         //<! Directory holding CA certificates to verify the peer with (CURLOPT_CAPATH).
+
+	/* Note:
+	 *
+	 * CURLOPT_ISSUERCERT by itself is not sufficient, even if the "issuer" is also the root CA.
+	 * CURLOPT_CAINFO must also be set to a file bundle which contains the root CA (and intermediate CA if need be).
+	 * Set by default (on RHEL) to "/etc/pki/tls/certs/ca-bundle.crt".
+	 *
+	 * CURLOPT_ISSUERCERT and CURLOPT_CAINFO can be the same file containing the root CA certificate.
+	 * CURLOPT_ISSUERCERT however can be omitted, it's only useful in multi-level PKI.
+	 */
+
 	bool tls_check_cert;             //<! Verify the peer's SSL certificate (CURLOPT_SSL_VERIFYPEER).
 	bool tls_check_cert_cn;          //<! Check that Common Name in server certificate matches configured URI (CURLOPT_SSL_VERIFYHOST).
 	bool tls_extract_cert_attrs;
 
-	char const *error_from_header;   //!< Allow to extract error message from a specific HTTP header.
-
-	fr_time_delta_t timeout;         //!< Request timeout.
 } ncc_curl_mod_section_t;
 
 /*

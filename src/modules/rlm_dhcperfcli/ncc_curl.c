@@ -475,6 +475,17 @@ end:
 #endif
 
 /**
+ * Extract TLS certificate chain information from the response.
+ *
+ * (cf. rest_response_certinfo from FreeRADIUS "rest.c")
+ */
+int ncc_curl_response_certinfo(ncc_curl_mod_t const *inst, UNUSED ncc_curl_mod_section_t const *section, void *handle)
+{
+	// NOT IMPLEMENTED
+	return 0;
+}
+
+/**
  * Sends the response to the decode function.
  *
  * (cf. rest_response_decode from FreeRADIUS "rest.c")
@@ -959,7 +970,7 @@ static int ncc_curl_debug_log(UNUSED CURL *candle, curl_infotype type, char *dat
 		break;
 
 	default:
-		DEBUG3("curl - debug data (len %zu): %pV", len, fr_box_strvalue_len(data, len));
+		DEBUG4("curl - debug data (len %zu): %pV", len, fr_box_strvalue_len(data, len));
 		break;
 	}
 
@@ -1116,6 +1127,10 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 	/*
 	 * Set SSL/TLS authentication parameters
 	 */
+	if (section->tls_ca_file) SET_OPTION(CURLOPT_ISSUERCERT, section->tls_ca_file);
+	if (section->tls_ca_info_file) SET_OPTION(CURLOPT_CAINFO, section->tls_ca_info_file);
+	if (section->tls_ca_path) SET_OPTION(CURLOPT_CAPATH, section->tls_ca_path);
+
 	SET_OPTION(CURLOPT_SSL_VERIFYPEER, (section->tls_check_cert == true) ? 1L : 0L);
 	SET_OPTION(CURLOPT_SSL_VERIFYHOST, (section->tls_check_cert_cn == true) ? 2L : 0L);
 	if (section->tls_extract_cert_attrs) SET_OPTION(CURLOPT_CERTINFO, 1L);
@@ -1282,6 +1297,8 @@ static int ncc_curl_perform(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 	ret = ncc_curl_request_perform(inst, handle);
 	if (ret < 0) return -1;
 
+	if (section->tls_extract_cert_attrs) ncc_curl_response_certinfo(inst, section, handle);
+
 	/*
 	 * Check the response HTTP code.
 	 */
@@ -1378,6 +1395,9 @@ void ncc_curl_unload(void)
  * TLS configuration
  */
 static CONF_PARSER tls_conf_parser[] = {
+	{ FR_CONF_OFFSET("ca_file", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_file) },
+	{ FR_CONF_OFFSET("ca_info_file", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_info_file) },
+	{ FR_CONF_OFFSET("ca_path", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_path) },
 	{ FR_CONF_OFFSET("check_cert", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_check_cert), .dflt = "no" },
 	{ FR_CONF_OFFSET("check_cert_cn", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_check_cert_cn), .dflt = "no" },
 	{ FR_CONF_OFFSET("extract_cert_attrs", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_extract_cert_attrs), .dflt = "no" },
