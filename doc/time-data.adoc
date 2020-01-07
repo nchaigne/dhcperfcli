@@ -3,7 +3,7 @@
 _dhcperfcli_ is able to handle time-data statistics, which are collected and reported in real-time.
 This provides much more detail than the other available statistics (ongoing and end report) that are displayed on the console.
 
-Time-data statistics are sent through HTTP to an Influx database. They can then be displayed in various ways through xref:grafana.adoc[Grafana dashboards].
+Time-data statistics are sent through HTTP (or HTTPS) to an Influx database. They can then be displayed in various ways through xref:grafana.adoc[Grafana dashboards].
 
 Multiple instances of _dhcperfcli_ can send data simultaneously to the same Influx back-end.
 
@@ -25,6 +25,7 @@ The following methods are supported:
 
 * basic authentication (with login and password)
 * bearer authentication (with token)
+
 
 === Configuration
 
@@ -56,6 +57,34 @@ For example (using InfluxQL):
 ----
 > CREATE DATABASE "dpc"
 > CREATE RETENTION POLICY "one_day" ON "dpc" DURATION 1d REPLICATION 1 DEFAULT
+----
+
+
+=== TLS
+
+TLS is automatically enabled when the configured URI scheme is "https". This is required if InfluxDB is configured with `https-enabled = true` (which is strongly recommended).
+
+In addition, it is possible to handle server certificate chain validation. This allows the client to know that the server can be trusted. This is explained in the xref:../conf/dhcperfcli.time-data.conf[sample configuration file] (see "tls" section).
+
+Configuration example:
+
+`conf/dhcperfcli-influx.conf`
+----
+time-data test-dhcperfcli {
+	destination = influx
+	influx {
+		server = "10.11.12.84:8086"
+		username = "admin"
+		password = "*****"
+		database = "dpc"
+		uri = "https://${server}/write?db=${database}"
+		tls {
+			ca_info_file = "/etc/pki/tls/certs/ca-bundle.crt"
+			check_cert = yes
+			check_cert_cn = yes
+		}
+	}
+}
 ----
 
 
