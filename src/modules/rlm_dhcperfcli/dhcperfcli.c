@@ -4135,8 +4135,8 @@ static void NEVER_RETURNS usage(int status)
 	fprintf(fp, "  -D <dir>         Dictionaries main directory (default: directory share/freeradius/dictionary of FreeRADIUS installation).\n");
 	fprintf(fp, "  -f <file>        Read input items from <file>, in addition to stdin. Can be set more than once.\n");
 	fprintf(fp, "  -g <gw>[:port]   Handle sent packets as if relayed through giaddr <gw> (hops: 1, src: giaddr:port).\n");
-	fprintf(fp, "                   A comma-separated list may be specified, in which case packets will be sent using all\n");
-	fprintf(fp, "                   of those gateways in a round-robin fashion.\n");
+	fprintf(fp, "                   Multiple gateways may be specified, in which case packets will be sent using all\n");
+	fprintf(fp, "                   of these gateways in a round-robin fashion.\n");
 	fprintf(fp, "  -h               Print this help message.\n");
 #ifdef HAVE_LIBPCAP
 	fprintf(fp, "  -i <interface>   Use this interface for unconfigured clients to broadcast through a raw socket.\n");

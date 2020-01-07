@@ -481,7 +481,31 @@ end:
  */
 int ncc_curl_response_certinfo(ncc_curl_mod_t const *inst, UNUSED ncc_curl_mod_section_t const *section, void *handle)
 {
-	// NOT IMPLEMENTED
+	ncc_curl_handle_t *randle = handle;
+	CURL *candle = randle->candle;
+	CURLcode ret;
+	struct curl_certinfo *certinfo;
+	int i;
+
+	ret = curl_easy_getinfo(candle, CURLINFO_CERTINFO, &certinfo);
+	if (ret != CURLE_OK || !certinfo) {
+		DEBUG2("Getting certificate info failed: %i - %s", ret, curl_easy_strerror(ret));
+		return -1;
+	}
+
+	DEBUG2("Chain has %i certificate(s)", certinfo->num_of_certs);
+
+	if (!NCC_DEBUG_ENABLED(3)) return 0;
+
+	for (i = 0; i < certinfo->num_of_certs; i++) {
+		struct curl_slist *cert_attrs;
+
+		DEBUG3("Chain certificate #%u:", i);
+		for (cert_attrs = certinfo->certinfo[i]; cert_attrs; cert_attrs = cert_attrs->next) {
+			printf("%s\n", cert_attrs->data);
+		}
+	}
+
 	return 0;
 }
 
