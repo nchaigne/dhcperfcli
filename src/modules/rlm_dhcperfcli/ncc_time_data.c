@@ -365,12 +365,6 @@ ncc_timedata_context_t *ncc_timedata_context_add(TALLOC_CTX *ctx, char const *na
 	return context_new;
 }
 
-ncc_timedata_context_t *ncc_timedata_context_by_id(uint32_t context_id)
-{
-	if (context_id >= talloc_array_length(contexts)) return NULL;
-	return contexts[context_id];
-}
-
 /**
  * Clean-up a list of time-data.
  * Remove items that have been sent successfully.

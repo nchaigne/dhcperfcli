@@ -32,10 +32,6 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra);
 
-VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp);
-VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp);
-void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t high);
-bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high);
 unsigned int dpc_message_type_extract(VALUE_PAIR *vp);
 uint32_t dpc_xid_extract(VALUE_PAIR *vp);
 
