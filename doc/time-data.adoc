@@ -66,16 +66,12 @@ TLS is automatically enabled when the configured URI scheme is "https". This is 
 
 In addition, it is possible to handle server certificate chain validation. This allows the client to know that the server can be trusted. This is explained in the xref:../conf/dhcperfcli.time-data.conf[sample configuration file] (see "tls" section).
 
-Configuration example:
-
-`conf/dhcperfcli-influx.conf`
+For example:
 ----
 time-data test-dhcperfcli {
 	destination = influx
 	influx {
 		server = "10.11.12.84:8086"
-		username = "admin"
-		password = "*****"
 		database = "dpc"
 		uri = "https://${server}/write?db=${database}"
 		tls {
