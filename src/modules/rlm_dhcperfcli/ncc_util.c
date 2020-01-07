@@ -864,7 +864,7 @@ int ncc_host_addr_resolve(ncc_endpoint_t *ep, char const *host_arg)
 	char const *p = host_arg, *q;
 
 	/*
-	 *	Allow to just have [:]<port> (no host address specified).
+	 * Allow to just have [:]<port> (no host address specified).
 	 */
 	if (*p == ':') p++; /* Port start */
 	q = p;
@@ -883,7 +883,7 @@ int ncc_host_addr_resolve(ncc_endpoint_t *ep, char const *host_arg)
 	}
 
 	/*
-	 *	Otherwise delegate parsing to fr_inet_pton_port.
+	 * Otherwise delegate parsing to fr_inet_pton_port.
 	 */
 	if (fr_inet_pton_port(&ep->ipaddr, &port_fr, host_arg, -1, AF_INET, true, true) < 0) {
 		return -1;

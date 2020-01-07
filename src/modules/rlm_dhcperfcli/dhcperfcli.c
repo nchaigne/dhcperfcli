@@ -23,19 +23,19 @@ static char const *fr_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 static char const *prog_version = DHCPERFCLI_VERSION_STRING;
 
 /*
- *	Global variables.
+ * Global variables.
  */
 TALLOC_CTX *global_ctx;
 dpc_config_t *dpc_config;
 
 /*
- *	Scheduling and time measurement are performed using FreeRADIUS time library, whichs is not susceptible
- *	to drifts that can occur when using gettimeofday.
+ * Scheduling and time measurement are performed using FreeRADIUS time library, whichs is not susceptible
+ * to drifts that can occur when using gettimeofday.
  *
- *	Naming convention for FreeRADIUS time variables, depending on their purpose (for clarity):
- *	fte_ = fr_time_t ("epoch"), ftd_ = fr_time_delta_t ("delta").
+ * Naming convention for FreeRADIUS time variables, depending on their purpose (for clarity):
+ * fte_ = fr_time_t ("epoch"), ftd_ = fr_time_delta_t ("delta").
  *
- *	("epoch" here means: number of nanoseconds since the start of the program)
+ * ("epoch" here means: number of nanoseconds since the start of the program)
  */
 
 fr_time_t fte_program_start; /* Program execution start timestamp. */
@@ -92,7 +92,7 @@ static char const *progname;
 static pid_t my_pid;
 
 /*
- *	Dictionaries and attributes.
+ * Dictionaries and attributes.
  */
 static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
 static char const *dict_dir = DICTDIR;
@@ -232,8 +232,8 @@ static fr_pcap_t *pcap;
 #endif
 
 /*
- *	More concise version of dhcp_message_types defined in protocols/dhcpv4/base.c
- *	(Stripped of the "DHCP-" prefix. We only do DHCP.)
+ * More concise version of dhcp_message_types defined in protocols/dhcpv4/base.c
+ * (Stripped of the "DHCP-" prefix. We only do DHCP.)
  */
 char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE] = {
 	"",
@@ -293,7 +293,7 @@ char elapsed_buf[NCC_TIME_STRLEN];
 
 
 /*
- *	Static functions declaration.
+ * Static functions declaration.
  */
 static void usage(int);
 static void version_print(void);
@@ -378,8 +378,8 @@ static void dpc_end(void);
 static void dpc_exit(void);
 
 
-/*
- *	Print number of each type of message (sent, received, ...).
+/**
+ * Print number of each type of message (sent, received, ...).
  */
 char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type)
 {
@@ -687,9 +687,9 @@ static inline double dpc_start_sessions_elapsed_time_get(void)
 	return ncc_fr_time_to_float(dpc_elapsed_fr_time_get(fte_sessions_ini_start, fte_sessions_ini_end));
 }
 
-/*
- *	Compute the effective rate (reply per second) of a given transaction type (or all).
- *	Note: for a workflow (DORA), this is based on the final reply (Ack).
+/**
+ * Compute the effective rate (reply per second) of a given transaction type (or all).
+ * Note: for a workflow (DORA), this is based on the final reply (Ack).
  */
 static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 {
@@ -699,8 +699,8 @@ static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 	return (double)my_stats->num / elapsed;
 }
 
-/*
- *	Compute the rate of input sessions per second.
+/**
+ * Compute the rate of input sessions per second.
  */
 static double dpc_get_session_in_rate(bool per_input)
 {
@@ -749,8 +749,8 @@ static double dpc_get_session_in_rate(bool per_input)
 	return rate;
 }
 
-/*
- *	Get the longest name of actual transactions.
+/**
+ * Get the longest name of actual transactions.
  */
 static size_t dpc_tr_name_max_len(void)
 {
@@ -765,8 +765,8 @@ static size_t dpc_tr_name_max_len(void)
 	return max_len;
 }
 
-/*
- *	Print statistics for a given transaction type.
+/**
+ * Print statistics for a given transaction type.
  */
 static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name)
 {
@@ -789,8 +789,8 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 	return 1;
 }
 
-/*
- *	Print per-transaction type statistics.
+/**
+ * Print per-transaction type statistics.
  */
 static void dpc_tr_stats_fprint(FILE *fp)
 {
@@ -821,8 +821,8 @@ static void dpc_tr_stats_fprint(FILE *fp)
 	}
 }
 
-/*
- *	Print global statistics.
+/**
+ * Print global statistics.
  */
 static void dpc_stats_fprint(FILE *fp)
 {
@@ -871,8 +871,8 @@ static void dpc_stats_fprint(FILE *fp)
 	        stat_ctx.num_packet_recv_unexpected);
 }
 
-/*
- *	Update statistics for a type of transaction.
+/**
+ * Update statistics for a type of transaction.
  */
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt)
 {
@@ -888,8 +888,8 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t 
 	       ncc_fr_time_to_float(my_stats->rtt_min), ncc_fr_time_to_float(my_stats->rtt_max));
 }
 
-/*
- *	From a session context, update dynamically named transaction statistics.
+/**
+ * From a session context, update dynamically named transaction statistics.
  */
 static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t rtt)
 {
@@ -905,8 +905,8 @@ static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_
 	if (CONF.with_timedata) dpc_timedata_store_tr_stat(name, rtt);
 }
 
-/*
- *	Update statistics.
+/**
+ * Update statistics.
  */
 static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply)
 {
@@ -924,8 +924,8 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 	dpc_tr_stats_update(DPC_TR_ALL, rtt);
 }
 
-/*
- *	Event callback: progress statistics summary.
+/**
+ * Event callback: progress statistics summary.
  */
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, UNUSED void *ctx)
 {
@@ -936,16 +936,16 @@ static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now,
 	dpc_event_add_progress_stats();
 }
 
-/*
- *	Add timer event: progress statistics summary.
+/**
+ * Add timer event: progress statistics summary.
  */
 static void dpc_event_add_progress_stats(void)
 {
 	if (!CONF.ftd_progress_interval) return;
 
 	/*
-	 *	Generate uniformly spaced out statistics.
-	 *	To avoid drifting, schedule next event relatively to the expected trigger of previous one.
+	 * Generate uniformly spaced out statistics.
+	 * To avoid drifting, schedule next event relatively to the expected trigger of previous one.
 	 */
 	fr_time_t now = fr_time();
 
@@ -965,8 +965,8 @@ static void dpc_event_add_progress_stats(void)
 	}
 }
 
-/*
- *	One request timed-out, but maybe we can retransmit.
+/**
+ * One request timed-out, but maybe we can retransmit.
  */
 static bool dpc_retransmit(dpc_session_ctx_t *session)
 {
@@ -985,14 +985,14 @@ static bool dpc_retransmit(dpc_session_ctx_t *session)
 	}
 
 	/*
-	 *	Arm request timeout.
+	 * Arm request timeout.
 	 */
 	dpc_event_add_request_timeout(session, NULL);
 	return true;
 }
 
-/*
- *	Event callback: request timeout.
+/**
+ * Event callback: request timeout.
  */
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, void *uctx)
 {
@@ -1000,8 +1000,8 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 
 	if (session->state == DPC_STATE_WAIT_OTHER_REPLIES) {
 		/*
-		 *	We have received at least one reply. We've been waiting for more from other DHCP servers.
-		 *	So do not track this as "packet lost".
+		 * We have received at least one reply. We've been waiting for more from other DHCP servers.
+		 * So do not track this as "packet lost".
 		 */
 		DEBUG3("Stop waiting for more replies");
 	} else {
@@ -1023,10 +1023,10 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 	dpc_session_finish(session);
 }
 
-/*
- *	Add timer event: request timeout.
- *	Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
- *	If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout.
+/**
+ * Add timer event: request timeout.
+ * Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
+ * If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout.
  */
 static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in)
 {
@@ -1301,13 +1301,13 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	if (   (session->state == DPC_STATE_DORA_EXPECT_OFFER && reply->code != FR_DHCP_OFFER)
 		|| (session->state == DPC_STATE_DORA_EXPECT_ACK && reply->code != FR_DHCP_ACK) ) {
 		/*
-		 *	This is *not* a reply we've been expecting.
-		 *	This can happen legitimately if, when handling a DORA, we've sent the Request and are
-		 *	now expecting an Ack, but then we receive another Offer (from another DHCP server).
+		 * This is *not* a reply we've been expecting.
+		 * This can happen legitimately if, when handling a DORA, we've sent the Request and are
+		 * now expecting an Ack, but then we receive another Offer (from another DHCP server).
 		 *
-		 *	We can also receive a NAK, even though we're requesting a lease that we were offered.
-		 *	This means someone acquired the lease before us. A DHCP server can offer the same lease more than once.
-		 *	This is more likely to happen if the pool of remaining available addresses is small.
+		 * We can also receive a NAK, even though we're requesting a lease that we were offered.
+		 * This means someone acquired the lease before us. A DHCP server can offer the same lease more than once.
+		 * This is more likely to happen if the pool of remaining available addresses is small.
 		 */
 		DEBUG3("Discarding received reply code %d (session state: %d)", reply->code, session->state);
 
@@ -1339,25 +1339,25 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	dpc_statistics_update(session, session->request, session->reply);
 
 	/*
-	 *	If dealing with a DORA transaction, after a valid Offer we need to send a Request.
+	 * If dealing with a DORA transaction, after a valid Offer we need to send a Request.
 	 */
 	if (session->state == DPC_STATE_DORA_EXPECT_OFFER && session->reply->code == FR_DHCP_OFFER) {
 		return dpc_session_dora_request(session);
 	}
 
 	/*
-	 *	We've just completed a DORA transaction.
+	 * We've just completed a DORA transaction.
 	 */
 	if (session->state == DPC_STATE_DORA_EXPECT_ACK && session->reply->code == FR_DHCP_ACK) {
 		/*
-		 *	Update statistics for DORA workflows.
+		 * Update statistics for DORA workflows.
 		 */
 		fr_time_delta_t rtt;
 		rtt = session->reply->timestamp - session->fte_start;
 		dpc_tr_stats_update(DPC_TR_DORA, rtt);
 
 		/*
-		 *	Maybe send a Decline or Release now.
+		 * Maybe send a Decline or Release now.
 		 */
 		if (session->input->ext.workflow == DPC_WORKFLOW_DORA_DECLINE) {
 			return dpc_session_dora_decline(session);
@@ -1369,7 +1369,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	}
 
 	/*
-	 *	There may be more Offer replies, from other DHCP servers. Wait for them.
+	 * There may be more Offer replies, from other DHCP servers. Wait for them.
 	 */
 	if (multi_offer && session->input->ext.with_pcap && session->reply->code == FR_DHCP_OFFER) {
 		DEBUG3("Waiting for more replies from other DHCP servers");
@@ -1382,10 +1382,10 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	return false; /* Session is done. */
 }
 
-/*
- *	Handling of a DORA workflow. After receiving an Offer, try and build a Request.
- *	Encode and send the packet, then wait for the reply.
- *	Returns: true if Request was sent, false otherwise.
+/**
+ * Handling of a DORA workflow. After receiving an Offer, try and build a Request.
+ * Encode and send the packet, then wait for the reply.
+ * Returns: true if Request was sent, false otherwise.
  */
 static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 {
@@ -1424,12 +1424,12 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	session->state = DPC_STATE_DORA_EXPECT_ACK;
 
 	/*
-	 *	Use information from the Offer reply to complete the new packet.
+	 * Use information from the Offer reply to complete the new packet.
 	 */
 
 	/*
-	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
-	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
+	 * Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
+	 * First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
 	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
@@ -1442,7 +1442,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	session->input->ext.xid = vp_xid->vp_uint32;
 
 	/*
-	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+	 * New packet is ready. Free old packet and its reply. Then use the new packet.
 	 */
 	talloc_free(session->reply);
 	session->reply = NULL;
@@ -1463,23 +1463,23 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	session->num_send ++;
 
 	/*
-	 *	Encode and send packet.
+	 * Encode and send packet.
 	 */
 	if (dpc_send_one_packet(session, &session->request) < 0) {
 		return false;
 	}
 
 	/*
-	 *	Arm request timeout.
+	 * Arm request timeout.
 	 */
 	dpc_event_add_request_timeout(session, NULL);
 
 	return true; /* Session is not finished. */
 }
 
-/*
- *	Handling of a DORA workflow. After receiving an Ack, try and build a Release.
- *	Encode and send the packet. (no reply is expected)
+/**
+ * Handling of a DORA workflow. After receiving an Ack, try and build a Release.
+ * Encode and send the packet. (no reply is expected)
  */
 static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 {
@@ -1501,7 +1501,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	}
 
 	/*
-	 *	Prepare a new DHCP Release packet.
+	 * Prepare a new DHCP Release packet.
 	 */
 	DEBUG3("DORA-Release: received valid Ack, now preparing Release");
 
@@ -1512,7 +1512,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	session->state = DPC_STATE_NO_REPLY;
 
 	/*
-	 *	Use information from the Ack reply to complete the new packet.
+	 * Use information from the Ack reply to complete the new packet.
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
@@ -1520,8 +1520,8 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	ncc_pair_copy_value(vp_ciaddr, vp_yiaddr);
 
 	/*
-	 *	Remove eventual option 50 Requested IP Address.
-	 *	(it may be provided for Discover, but must *not* be in Release)
+	 * Remove eventual option 50 Requested IP Address.
+	 * (it may be provided for Discover, but must *not* be in Release)
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
 
@@ -1532,7 +1532,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	session->input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 	/*
-	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+	 * New packet is ready. Free old packet and its reply. Then use the new packet.
 	 */
 	talloc_free(session->reply);
 	session->reply = NULL;
@@ -1553,7 +1553,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	session->num_send ++;
 
 	/*
-	 *	Encode and send packet.
+	 * Encode and send packet.
 	 */
 	if (dpc_send_one_packet(session, &session->request) < 0) {
 		return false;
@@ -1565,9 +1565,9 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	return false; /* Session is done. */
 }
 
-/*
- *	Handling of a DORA workflow. After receiving an Ack, try and build a Decline.
- *	Encode and send the packet. (no reply is expected)
+/**
+ * Handling of a DORA workflow. After receiving an Ack, try and build a Decline.
+ * Encode and send the packet. (no reply is expected)
  */
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 {
@@ -1589,7 +1589,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	}
 
 	/*
-	 *	Prepare a new DHCP Decline packet.
+	 * Prepare a new DHCP Decline packet.
 	 */
 	DEBUG3("DORA-Decline: received valid Ack, now preparing Decline");
 
@@ -1600,7 +1600,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	session->state = DPC_STATE_NO_REPLY;
 
 	/*
-	 *	Use information from the Ack reply to complete the new packet.
+	 * Use information from the Ack reply to complete the new packet.
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
@@ -1608,8 +1608,8 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	ncc_pair_copy_value(vp_ciaddr, vp_yiaddr);
 
 	/*
-	 *	Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
-	 *	First remove previous option 50 if one was provided (server may have offered a different lease).
+	 * Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
+	 * First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
 	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
 	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
@@ -1622,7 +1622,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	session->input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
 
 	/*
-	 *	New packet is ready. Free old packet and its reply. Then use the new packet.
+	 * New packet is ready. Free old packet and its reply. Then use the new packet.
 	 */
 	talloc_free(session->reply);
 	session->reply = NULL;
@@ -1636,7 +1636,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	session->num_send ++;
 
 	/*
-	 *	Encode and send packet.
+	 * Encode and send packet.
 	 */
 	if (dpc_send_one_packet(session, &session->request) < 0) {
 		return false;
@@ -1645,8 +1645,8 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	return false; /* Session is done. */
 }
 
-/*
- *	Prepare a request to be sent as if relayed through a gateway.
+/**
+ * Prepare a request to be sent as if relayed through a gateway.
  */
 static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gateway)
 {
@@ -1656,13 +1656,13 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	DEBUG3("Assigning packet to gateway: %s", ncc_endpoint_sprint(ep_buf, gateway));
 
 	/*
-	 *	We've been told to handle sent packets as if relayed through a gateway.
-	 *	This means:
-	 *	- packet source IP / port = gateway IP / port (those we've already set)
-	 *	- giaddr = gateway IP
-	 *	- hops = 1 (arbitrary)
-	 *	All of these can be overriden (entirely or partially) through input vps.
-	 *	Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
+	 * We've been told to handle sent packets as if relayed through a gateway.
+	 * This means:
+	 * - packet source IP / port = gateway IP / port (those we've already set)
+	 * - giaddr = gateway IP
+	 * - hops = 1 (arbitrary)
+	 * All of these can be overriden (entirely or partially) through input vps.
+	 * Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
 	 */
 	VALUE_PAIR *vp_giaddr, *vp_hops;
 
@@ -1741,7 +1741,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	VALUE_PAIR *vp;
 
 	/*
-	 *	If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
+	 * If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
 	if ((vp = ncc_pair_find_by_da(packet->vps, attr_encoded_data))) {
 		packet->data_len = vp->vp_length;
@@ -1858,8 +1858,8 @@ static bool dpc_item_available(dpc_input_t *input, fr_time_t *fte_when)
 	return true;
 }
 
-/*
- *	Get the usage status of an input item: waiting, active, or terminated.
+/**
+ * Get the usage status of an input item: waiting, active, or terminated.
  */
 static char dpc_item_get_status(dpc_input_t *input)
 {
@@ -1868,8 +1868,8 @@ static char dpc_item_get_status(dpc_input_t *input)
 	return 'A';
 }
 
-/*
- *	Get the elapsed time of an input item from when it started being used.
+/**
+ * Get the elapsed time of an input item from when it started being used.
  */
 static double dpc_item_get_elapsed(dpc_input_t *input)
 {
@@ -1888,9 +1888,9 @@ static double dpc_item_get_elapsed(dpc_input_t *input)
 	return ncc_fr_time_to_float(ftd_elapsed);
 }
 
-/*
- *	Get the use rate of an input item, relative to the point at which it started being used,
- *	up to now (if it's still active) or the last time is was used.
+/**
+ * Get the use rate of an input item, relative to the point at which it started being used,
+ * up to now (if it's still active) or the last time is was used.
  */
 static bool dpc_item_get_rate(double *out_rate, dpc_input_t *input)
 {
@@ -1929,9 +1929,9 @@ static ncc_segment_t *dpc_input_get_segment(dpc_input_t *input)
 	return segment;
 }
 
-/*
- *	Check if an item is currently rate limited or not.
- *	Return: true = item is not allowed to start new sessions at the moment (rate limit enforced).
+/**
+ * Check if an item is currently rate limited or not.
+ * Return: true = item is not allowed to start new sessions at the moment (rate limit enforced).
  */
 static bool dpc_item_rate_limited(dpc_input_t *input)
 {
@@ -2077,7 +2077,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	input->num_use ++;
 
 	/*
-	 *	If not using a template, copy this input item if it has to be used again.
+	 * If not using a template, copy this input item if it has to be used again.
 	 */
 	if (!CONF.template && input->num_use < input->max_use) {
 		DEBUG3("Input (id: %u) will be reused (num use: %u, max: %u)",
@@ -2085,20 +2085,20 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 		dpc_input_t *input_dup = dpc_input_item_copy(ctx, input);
 		if (input_dup) {
 			/*
-			 *	Add it to the list of input items.
+			 * Add it to the list of input items.
 			 */
 			NCC_DLIST_ENQUEUE(&input_list, input_dup);
 		}
 	}
 
 	/*
-	 *	Initialize the new session.
+	 * Initialize the new session.
 	 */
 	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 	dpc_session_set_transport(session, input);
 
 	/*
-	 *	Prepare a DHCP packet to send for this session.
+	 * Prepare a DHCP packet to send for this session.
 	 */
 	packet = dpc_request_init(ctx, session, input);
 	if (!packet) {
@@ -2122,7 +2122,7 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	if (!CONF.template) talloc_steal(session, input);
 
 	/*
-	 *	Prepare dealing with reply and workflow sequence.
+	 * Prepare dealing with reply and workflow sequence.
 	 */
 	session->reply_expected = is_dhcp_reply_expected(packet->code); /* Some messages do not get a reply. */
 
@@ -2184,8 +2184,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	return session;
 }
 
-/*
- *	One session is finished.
+/**
+ * One session is finished.
  */
 static void dpc_session_finish(dpc_session_ctx_t *session)
 {
@@ -2219,8 +2219,8 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	talloc_free(session);
 }
 
-/*
- *	Receive and handle reply packets.
+/**
+ * Receive and handle reply packets.
  */
 static void dpc_loop_recv(void)
 {
@@ -2265,7 +2265,7 @@ static void dpc_loop_recv(void)
 		}
 
 		/*
-		 *	Receive and process packets until there's nothing left incoming.
+		 * Receive and process packets until there's nothing left incoming.
 		 */
 		if (dpc_recv_one_packet(wait_max) < 1) break;
 	}
@@ -2435,8 +2435,8 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc
 	return true;
 }
 
-/*
- *	If a global rate limit is applicable, get the limit of new sessions allowed to be started for now.
+/**
+ * If a global rate limit is applicable, get the limit of new sessions allowed to be started for now.
  */
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 {
@@ -2454,8 +2454,8 @@ static bool dpc_rate_limit_calc(uint32_t *max_new_sessions)
 }
 
 
-/*
- *	Stop starting new sessions.
+/**
+ * Stop starting new sessions.
  */
 static void dpc_end_start_sessions(void)
 {
@@ -2476,9 +2476,9 @@ static void dpc_end_start_sessions(void)
 	}
 }
 
-/*
- *	Start new sessions, if possible.
- *	Returns: number of new sessions effectively started.
+/**
+ * Start new sessions, if possible.
+ * Returns: number of new sessions effectively started.
  */
 static uint32_t dpc_loop_start_sessions(void)
 {
@@ -2566,8 +2566,8 @@ static uint32_t dpc_loop_start_sessions(void)
 	return num_started;
 }
 
-/*
- *	Handle timer events.
+/**
+ * Handle timer events.
  */
 static void dpc_loop_timer_events(fr_event_list_t *el)
 {
@@ -2583,8 +2583,8 @@ static void dpc_loop_timer_events(fr_event_list_t *el)
 	}
 }
 
-/*
- *	Check if we're done with the main processing loop.
+/**
+ * Check if we're done with the main processing loop.
  */
 static bool dpc_loop_check_done(void)
 {
@@ -2605,8 +2605,8 @@ static bool dpc_loop_check_done(void)
 	return true;
 }
 
-/*
- *	Main processing loop.
+/**
+ * Main processing loop.
  */
 static void dpc_main_loop(void)
 {
@@ -2627,8 +2627,8 @@ static void dpc_main_loop(void)
 	}
 }
 
-/*
- *	Pre-allocate a socket for an input item.
+/**
+ * Pre-allocate a socket for an input item.
  */
 static void dpc_input_socket_allocate(dpc_input_t *input)
 {
@@ -2649,7 +2649,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 #endif
 
 	/*
-	 *	Allocate the socket now. If we can't, stop.
+	 * Allocate the socket now. If we can't, stop.
 	 */
 	if (dpc_socket_provide(pl, &input->ext.src.ipaddr, input->ext.src.port) < 0) {
 		char src_ipaddr_buf[FR_IPADDR_STRLEN] = "";
@@ -2659,7 +2659,7 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 	}
 
 	/*
-	 *	If we're using INADDR_ANY, make sure we know what we're doing.
+	 * If we're using INADDR_ANY, make sure we know what we're doing.
 	 */
 	if (warn_inaddr_any && fr_ipaddr_is_inaddr_any(&input->ext.src.ipaddr)) {
 		WARN("You didn't specify a source IP address."
@@ -2994,8 +2994,8 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist)
 	return 0;
 }
 
-/*
- *	Load input vps from the provided file pointer.
+/**
+ * Load input vps from the provided file pointer.
  */
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename)
 {
@@ -3003,7 +3003,7 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 	dpc_input_t *input;
 
 	/*
-	 *	Loop until the file is done.
+	 * Loop until the file is done.
 	 */
 	do {
 		/* Stop reading if we know we won't need it. */
@@ -3022,10 +3022,10 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 		}
 		fr_strerror(); /* Clear the error buffer */
 		/*
-		 *	After calling fr_pair_list_afrom_file we get weird things in FreeRADIUS error buffer, e.g.:
-		 *	"Invalid character ':' in attribute name".
-		 *	This happens apparently when handling an ethernet address (which is a value, not an attribute name).
-		 *	Just ignore this.
+		 * After calling fr_pair_list_afrom_file we get weird things in FreeRADIUS error buffer, e.g.:
+		 * "Invalid character ':' in attribute name".
+		 * This happens apparently when handling an ethernet address (which is a value, not an attribute name).
+		 * Just ignore this.
 		*/
 
 		dpc_input_handle(input, list);
@@ -3045,7 +3045,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	size_t len;
 
 	/*
-	 *	If there's something on stdin, read it.
+	 * If there's something on stdin, read it.
 	 */
 	if (ncc_stdin_peek()) {
 		with_stdin_input = true;
@@ -3057,7 +3057,7 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 	}
 
 	/*
-	 *	Read input from all provided input files.
+	 * Read input from all provided input files.
 	 */
 	len = talloc_array_length(CONF.input_files);
 	for (i = 0; i < len; i++) {
@@ -3081,11 +3081,11 @@ static int dpc_input_load(TALLOC_CTX *ctx)
 }
 
 
-/*
- *	Handle xlat expansion on a list of value pairs (within a packet context).
+/**
+ * Handle xlat expansion on a list of value pairs (within a packet context).
  *
- *	Note: if one of the registered xlat complains (returns -1) the main xlat will consider it's fine.
- *	However, if the main xlat is unhappy, it will return -1 (and an empty string).
+ * Note: if one of the registered xlat complains (returns -1) the main xlat will consider it's fine.
+ * However, if the main xlat is unhappy, it will return -1 (and an empty string).
  */
 static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
 {
@@ -3096,8 +3096,8 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
 
 	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
 		/*
-		 *	Handle xlat expansion for this attribute.
-		 *	Allow any data type. Value will be cast by FreeRADIUS (if possible).
+		 * Handle xlat expansion for this attribute.
+		 * Allow any data type. Value will be cast by FreeRADIUS (if possible).
 		 */
 		if (vp->type == VT_XLAT) {
 			/* Retrieve pre-compiled xlat, and use it to perform expansion. */
@@ -3126,8 +3126,8 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
 	return 0;
 }
 
-/*
- *	Initialize the pcap raw socket.
+/**
+ * Initialize the pcap raw socket.
  */
 #ifdef HAVE_LIBPCAP
 static void dpc_pcap_init(TALLOC_CTX *ctx)
@@ -3147,8 +3147,8 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 
 	sprintf(pcap_filter, "udp");
 	/*
-	 *	Note: destination of a reply to a broadcast request is not necessarily 255.255.255.255.
-	 *	This is the case only if the Broadcast flag is set in the request. See section 4.1 of RFC 2131.
+	 * Note: destination of a reply to a broadcast request is not necessarily 255.255.255.255.
+	 * This is the case only if the Broadcast flag is set in the request. See section 4.1 of RFC 2131.
 	 */
 
 	if (fr_pcap_apply_filter(pcap, pcap_filter) < 0) {
@@ -3157,10 +3157,10 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 	}
 
 	/*
-	 *	Add a raw socket to our list of managed sockets.
-	 *	Note: even though we tag it with source port 68 (the DHCP port for clients), we can really
-	 *	send using any source port with it (it's a raw socket) if we want to. The DHCP server probably
-	 *	won't care, but will send the response using destination port 68.
+	 * Add a raw socket to our list of managed sockets.
+	 * Note: even though we tag it with source port 68 (the DHCP port for clients), we can really
+	 * send using any source port with it (it's a raw socket) if we want to. The DHCP server probably
+	 * won't care, but will send the response using destination port 68.
 	 */
 	if (dpc_pcap_socket_add(pl, pcap, &client_ep.ipaddr, 68) < 0) {
 		exit(EXIT_FAILURE);
@@ -3168,11 +3168,11 @@ static void dpc_pcap_init(TALLOC_CTX *ctx)
 }
 #endif
 
-/*
- *	Get alternate (fallback) dictionaries directory, relative to the program location.
- *	As follows: <prog dir>/../share/freeradius/dictionary
- *	<prog dir> is obtained through a "readlink" on /proc/<pid>/exe
- *	Note: this is *not* portable. It works on Linux, but not on all Unixes.
+/**
+ * Get alternate (fallback) dictionaries directory, relative to the program location.
+ * As follows: <prog dir>/../share/freeradius/dictionary
+ * <prog dir> is obtained through a "readlink" on /proc/<pid>/exe
+ * Note: this is *not* portable. It works on Linux, but not on all Unixes.
  */
 static int dpc_get_alt_dir(void)
 {
@@ -3199,15 +3199,15 @@ static int dpc_get_alt_dir(void)
 #endif
 }
 
-/*
- *	Initialize and load dictionaries.
+/**
+ * Initialize and load dictionaries.
  */
 static void dpc_dict_init(TALLOC_CTX *ctx)
 {
 	/*
-	 *	fr_dict_from_file cannot be called twice (or very bad things happen).
-	 *	Probably need to free stuff for that.
-	 *	To simplify, first check if the default directory exists before doing anything.
+	 * fr_dict_from_file cannot be called twice (or very bad things happen).
+	 * Probably need to free stuff for that.
+	 * To simplify, first check if the default directory exists before doing anything.
 	 */
 	char dict_path_freeradius[PATH_MAX + 1] = "";
 	sprintf(dict_path_freeradius, "%s/%s", dict_dir, dict_fn_freeradius); // no "access_printf" or something!? damn.
@@ -3223,7 +3223,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	}
 
 	/*
-	 *	Initialize dictionaries.
+	 * Initialize dictionaries.
 	 */
 	if (!fr_dict_global_ctx_init(ctx, dict_dir)) {
 		PERROR("Failed to initialize dictionary");
@@ -3251,8 +3251,8 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	fr_strerror(); /* Clear the error buffer */
 }
 
-/*
- *	Initialize event list.
+/**
+ * Initialize event list.
  */
 static void dpc_event_list_init(TALLOC_CTX *ctx)
 {
@@ -3263,8 +3263,8 @@ static void dpc_event_list_init(TALLOC_CTX *ctx)
 	}
 }
 
-/*
- *	Initialize the packet list.
+/**
+ * Initialize the packet list.
  */
 static void dpc_packet_list_init(TALLOC_CTX *ctx)
 {
@@ -3275,8 +3275,8 @@ static void dpc_packet_list_init(TALLOC_CTX *ctx)
 	}
 }
 
-/*
- *	See what kind of request we want to send, or workflow to handle.
+/**
+ * See what kind of request we want to send, or workflow to handle.
  */
 static int dpc_command_parse(char const *command)
 {
@@ -3300,8 +3300,8 @@ static int dpc_command_parse(char const *command)
 	return -1;
 }
 
-/*
- *	Parse and handle configured gateway(s).
+/**
+ * Parse and handle configured gateway(s).
  */
 static void dpc_gateway_parse(TALLOC_CTX *ctx, ncc_dlist_t **gateway_list_p, char const *in)
 {
@@ -3314,8 +3314,8 @@ static void dpc_gateway_parse(TALLOC_CTX *ctx, ncc_dlist_t **gateway_list_p, cha
 	}
 }
 
-/*
- *	Allocate sockets for gateways.
+/**
+ * Allocate sockets for gateways.
  */
 static void dpc_gateway_socket_alloc(ncc_dlist_t *gateway_list)
 {
@@ -3419,10 +3419,10 @@ typedef enum {
 	LONGOPT_IDX_MAX
 } longopt_index_t;
 
-/*
- *	Process command line options and arguments.
- *	Initialize configuration elements that can be set through command-line options.
- *	Note: Those may later be overriden with values read from configuration files.
+/**
+ * Process command line options and arguments.
+ * Initialize configuration elements that can be set through command-line options.
+ * Note: Those may later be overriden with values read from configuration files.
  */
 static void dpc_options_parse(int argc, char **argv)
 {
@@ -3556,7 +3556,6 @@ static void dpc_options_parse(int argc, char **argv)
 #endif
 
 		case 'I':
-			/* Stored as uint64_t because it is required by the config parser. */
 			PARSE_OPT_CTX(CONF.base_xid, FR_TYPE_INT64, PARSE_CTX_BASE_XID);
 			break;
 
@@ -3618,15 +3617,15 @@ static void dpc_options_parse(int argc, char **argv)
 			break;
 
 		case 1:
-			/*	Long options with no short option equivalent.
-			 *	Option is identified by its index in the option[] array.
+			/* Long options with no short option equivalent.
+			 * Option is identified by its index in the option[] array.
 			 */
 			switch (opt_index) {
-			case LONGOPT_IDX_CONF_FILE: // --conf-file
+			case LONGOPT_IDX_CONF_FILE: // --conf-file <file>
 				file_config = optarg;
 				break;
 
-			case LONGOPT_IDX_CONF_INLINE: // --conf-inline
+			case LONGOPT_IDX_CONF_INLINE: // --conf-inline <string>
 				conf_inline = optarg;
 				break;
 
@@ -3634,19 +3633,19 @@ static void dpc_options_parse(int argc, char **argv)
 				CONF.debug_dev = true;
 				break;
 
-			case LONGOPT_IDX_INPUT_RATE: // --input-rate
+			case LONGOPT_IDX_INPUT_RATE: // --input-rate <float>
 				PARSE_OPT_CTX(CONF.input_rate_limit, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
 				break;
 
-			case LONGOPT_IDX_LISTEN_ADDR: // --listen-addr
+			case LONGOPT_IDX_LISTEN_ADDR: // --listen-addr <ipaddr[:port]>
 				TALLOC_REALLOC_ONE_SET(global_ctx, CONF.listen_addrs, char const *, optarg);
 				break;
 
-			case LONGOPT_IDX_RETRANSMIT: // --retransmit
+			case LONGOPT_IDX_RETRANSMIT: // --retransmit <int>
 				PARSE_OPT(CONF.retransmit_max, FR_TYPE_UINT32);
 				break;
 
-			case LONGOPT_IDX_SEGMENT: // --segment
+			case LONGOPT_IDX_SEGMENT: // --segment <string>
 				if (ncc_segment_parse(global_ctx, segment_list, optarg) < 0) {
 					PERROR("Failed to parse segment \"%s\"", optarg);
 					exit(EXIT_FAILURE);
@@ -3658,7 +3657,7 @@ static void dpc_options_parse(int argc, char **argv)
 				PARSE_OPT(CONF.xlat, FR_TYPE_BOOL);
 				break;
 
-			case LONGOPT_IDX_XLAT_FILE: // --xlat-file
+			case LONGOPT_IDX_XLAT_FILE: // --xlat-file <file>
 				TALLOC_REALLOC_ONE_SET(global_ctx, CONF.xlat_files, char const *, optarg);
 				break;
 
@@ -3694,14 +3693,14 @@ static void dpc_options_parse(int argc, char **argv)
 	for (i = 1; i < argc; i++) DEBUG4("argv[%u]: %s", i, argv[i]);
 
 	/*
-	 *	Resolve server host address and port.
+	 * Resolve server host address and port.
 	 */
 	if (num_arg >= 1 && strcmp(argv[1], "-") != 0) {
 		ncc_host_addr_resolve(&server_ep, argv[1]);
 	}
 
 	/*
-	 *	See what kind of request we want to send.
+	 * See what kind of request we want to send.
 	 */
 	if (num_arg >= 2) {
 		if (dpc_command_parse(argv[2]) != 0) {
@@ -3711,8 +3710,8 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 }
 
-/*
- *	Signal handler.
+/**
+ * Signal handler.
  */
 static void dpc_signal(int sig)
 {
@@ -3729,8 +3728,8 @@ static void dpc_signal(int sig)
 	}
 }
 
-/*
- *	The end.
+/**
+ * The end.
  */
 static void dpc_end(void)
 {
@@ -4106,8 +4105,8 @@ static void version_print(void)
 	printf("- libjson: " BUILT_WITH_LIBJSON "\n");
 }
 
-/*
- *	Display the syntax for starting this program.
+/**
+ * Display the syntax for starting this program.
  */
 static void NEVER_RETURNS usage(int status)
 {

@@ -32,9 +32,9 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
 };
 
 
-/*
- *	Update a type of transaction statistics, with one newly completed transaction:
- *	number of such transactions, cumulated rtt, min/max rtt.
+/**
+ * Update a type of transaction statistics, with one newly completed transaction:
+ * number of such transactions, cumulated rtt, min/max rtt.
  */
 void dpc_tr_stats_update_values(dpc_transaction_stats_t *stats, fr_time_delta_t rtt)
 {
@@ -55,8 +55,8 @@ void dpc_tr_stats_update_values(dpc_transaction_stats_t *stats, fr_time_delta_t 
 	stats->num ++;
 }
 
-/*
- *	Update statistics for a dynamically named transaction type.
+/**
+ * Update statistics for a dynamically named transaction type.
  */
 void dpc_dyn_tr_stats_update(TALLOC_CTX *ctx, dpc_dyn_tr_stats_t *dyn_tr_stats, char const *name, fr_time_delta_t rtt)
 {
@@ -102,8 +102,8 @@ char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_
 	return out;
 }
 
-/*
- *	Print the message type from packet code.
+/**
+ * Print the message type from packet code.
  */
 char *dpc_message_type_sprint(char *out, int message)
 {
@@ -121,8 +121,8 @@ char *dpc_message_type_sprint(char *out, int message)
 	return out;
 }
 
-/*
- *	Print retransmissions breakdown by number of retransmissions per request sent.
+/**
+ * Print retransmissions breakdown by number of retransmissions per request sent.
  */
 char *dpc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max)
 // TODO: use outlen
@@ -153,8 +153,8 @@ char *dpc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
 	return out;
 }
 
-/*
- *	Print the packet summary.
+/**
+ * Print the packet summary.
  */
 void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
 {
@@ -201,12 +201,12 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	}
 
 	/*
-	 *	Considerations on packet length:
-	 *	- BOOTP packet length is fixed (300 octets).
-	 *	- DHCP packet length is *at least* 243 octets:
-	 *	  236 (fields) + 4 (magic cookie) + 3 (just enough room for option Message Type - which is required).
+	 * Considerations on packet length:
+	 * - BOOTP packet length is fixed (300 octets).
+	 * - DHCP packet length is *at least* 243 octets:
+	 *   236 (fields) + 4 (magic cookie) + 3 (just enough room for option Message Type - which is required).
 	 *
-	 *	Note: some archaic DHCP relays or servers won't even accept a DHCP packet smaller than 300 octets...
+	 * Note: some archaic DHCP relays or servers won't even accept a DHCP packet smaller than 300 octets...
 	 */
 
 	if (packet->data && packet->data_len < 243) { /* Obviously malformed. */
@@ -248,8 +248,8 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	fprintf(fp, "\n");
 }
 
-/*
- *	Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
+/**
+ * Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
  */
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp)
 {
@@ -262,8 +262,8 @@ void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp)
 	}
 }
 
-/*
- *	Print the "options" of a DHCP packet (from the VPs list).
+/**
+ * Print the "options" of a DHCP packet (from the VPs list).
  */
 int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 {
@@ -299,7 +299,7 @@ int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 	return num;
 }
 
-/*
+/**
  * Print a DHCP packet.
  */
 void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
@@ -344,10 +344,10 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 	}
 }
 
-/*
- *	Print the data of a DHCP packet.
- *	Fields and options are printed in hex, along with their position in the packet.
- *	This allows to see what is exactly in a packet and where.
+/**
+ * Print the data of a DHCP packet.
+ * Fields and options are printed in hex, along with their position in the packet.
+ * This allows to see what is exactly in a packet and where.
  */
 void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 {
@@ -364,12 +364,12 @@ void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 	data_end = packet->data + packet->data_len - 1;
 
 	/*
-	 *	Print fields.
+	 * Print fields.
 	 */
 	for (i = 0; dpc_dhcp_headers[i].name; i++) {
 		if (cur_pos + dpc_dhcp_headers[i].size > packet->data_len) {
 			/*
-			 *	This is malformed. Still print something useful.
+			 * This is malformed. Still print something useful.
 			 */
 			fprintf(fp, "  incomplete/malformed DHCP data (len: %zu)\n", packet->data_len);
 			int remain = packet->data_len - cur_pos;
@@ -391,7 +391,7 @@ void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 	}
 
 	/*
-	 *	Print options.
+	 * Print options.
 	 */
 	dpc_packet_data_options_fprint(fp, cur_pos, p, data_end, true, &overload);
 	if (overload) {
@@ -414,8 +414,8 @@ void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet)
 	}
 }
 
-/*
- *	Print DHCP packet options in hex, along with their position in the packet.
+/**
+ * Print DHCP packet options in hex, along with their position in the packet.
  */
 void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
                                     bool print_end_pad, uint8_t *overload)
@@ -427,7 +427,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 	size_t options_len = data_end - p + 1;
 
 	/*
-	 *	Print options.
+	 * Print options.
 	 */
 	while (p <= data_end) {
 
@@ -457,8 +457,8 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 		}
 
 		/*
-		 *	Option format: <code> <len> <option data>
-		 *	So an option is coded on "1 + 1 + value of <len>" octets.
+		 * Option format: <code> <len> <option data>
+		 * So an option is coded on "1 + 1 + value of <len>" octets.
 		 */
 		if (  ((p + 1) > data_end) /* No room for <len> */
 		   || ((p + 1 + p[1] ) > data_end) /* No room for <option data> */
@@ -490,9 +490,9 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 	}
 }
 
-/*
- *	Print packet source and destination IP/port.
- *	Caller is responsible for passing an output buffer (buf) with sufficient space (DPC_FROM_TO_STRLEN).
+/**
+ * Print packet source and destination IP/port.
+ * Caller is responsible for passing an output buffer (buf) with sufficient space (DPC_FROM_TO_STRLEN).
  */
 char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
 {
@@ -525,8 +525,8 @@ char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
 	return out;
 }
 
-/*
- *	Increment the value of a value pair.
+/**
+ * Increment the value of a value pair.
  */
 VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 {
@@ -599,8 +599,8 @@ VALUE_PAIR *dpc_pair_value_increment(VALUE_PAIR *vp)
 	return vp;
 }
 
-/*
- *	Randomize the value of a value pair.
+/**
+ * Randomize the value of a value pair.
  */
 VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp)
 {
@@ -660,8 +660,8 @@ VALUE_PAIR *dpc_pair_value_randomize(VALUE_PAIR *vp)
 	return vp;
 }
 
-/*
- *	Increment an octet array (starting at the last octet), restricting value of each octet to a bounded interval.
+/**
+ * Increment an octet array (starting at the last octet), restricting value of each octet to a bounded interval.
  */
 void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t high)
 {
@@ -671,9 +671,9 @@ void dpc_octet_array_increment(uint8_t *array, int size, uint8_t low, uint8_t hi
 	}
 }
 
-/*
- *	Increment an octet, restricting its value to a bounded interval.
- *	Returns true if value fell back to the lower bound.
+/**
+ * Increment an octet, restricting its value to a bounded interval.
+ * Returns true if value fell back to the lower bound.
  */
 bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
 {
@@ -684,8 +684,8 @@ bool dpc_octet_increment(uint8_t *value, uint8_t low, uint8_t high)
 	return (*value < in);
 }
 
-/*
- *	Try and extract the message type from the DHCP pre-encoded data provided.
+/**
+ * Try and extract the message type from the DHCP pre-encoded data provided.
  */
 unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
 {
@@ -705,8 +705,8 @@ end:
 	return code;
 }
 
-/*
- *	Extract the xid from the DHCP pre-encoded data provided.
+/**
+ * Extract the xid from the DHCP pre-encoded data provided.
  */
 uint32_t dpc_xid_extract(VALUE_PAIR *vp)
 {
@@ -718,8 +718,8 @@ uint32_t dpc_xid_extract(VALUE_PAIR *vp)
 	return ntohl(value);
 }
 
-/*
- *	Duplicate an input item (copy initially does not belong to any list).
+/**
+ * Duplicate an input item (copy initially does not belong to any list).
  */
 dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 {
@@ -823,9 +823,9 @@ int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr)
 }
 
 
-/*
- *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
- *	which allows access to "control" and "packet" lists of value pairs
+/**
+ * Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
+ * which allows access to "control" and "packet" lists of value pairs
  */
 ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet)
 {
@@ -835,9 +835,9 @@ ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *pa
 	return ncc_xlat_eval(out, outlen, fmt, vps);
 }
 
-/*
- *	Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
- *	which allows access to "control" and "packet" lists of value pairs
+/**
+ * Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
+ * which allows access to "control" and "packet" lists of value pairs
  */
 ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, DHCP_PACKET *packet)
 {

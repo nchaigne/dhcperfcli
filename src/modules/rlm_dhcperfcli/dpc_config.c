@@ -332,9 +332,9 @@ error:
 	return -1;
 }
 
-/*
- *	Set the program instance name.
- *	Cf. FreeRADIUS function main_config_dict_dir_set (src/lib/server/main_config.c)
+/**
+ * Set the program instance name.
+ * Cf. FreeRADIUS function main_config_dict_dir_set (src/lib/server/main_config.c)
  */
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config)
 {
@@ -350,8 +350,8 @@ void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool ov
 	config->overwrite_config_name = overwrite_config;
 }
 
-/*
- *	Allocate a dpc_config_t struct, setting defaults
+/**
+ * Allocate a dpc_config_t struct, setting defaults
  */
 dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 {
@@ -363,9 +363,9 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 	return config;
 }
 
-/*
- *	Read the configuration file (if provided).
- *	Parse the configuration (even without a file: this allows to set the default values).
+/**
+ * Read the configuration file (if provided).
+ * Parse the configuration (even without a file: this allows to set the default values).
  */
 int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *conf_inline)
 {
@@ -522,8 +522,8 @@ int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)
 	return 0;
 }
 
-/*
- *	Debug the configuration.
+/**
+ * Debug the configuration.
  */
 void dpc_config_debug(dpc_config_t *config)
 {

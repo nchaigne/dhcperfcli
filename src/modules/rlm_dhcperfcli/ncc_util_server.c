@@ -106,8 +106,8 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	return 0;
 }
 
-/*
- *	Convert a CONF_PAIR to a VALUE_PAIR.
+/**
+ * Convert a CONF_PAIR to a VALUE_PAIR.
  */
 VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp)
 {

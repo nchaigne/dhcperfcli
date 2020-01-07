@@ -4,8 +4,8 @@
  */
 
 /*
- *	Reuse from FreeRADIUS, see:
- *	src/lib/server/xlat_func.c
+ * Reuse from FreeRADIUS, see:
+ * src/lib/server/xlat_func.c
  */
 
 #include "ncc_util.h"
@@ -15,7 +15,7 @@
 
 
 /*
- *	Xlat names.
+ * Xlat names.
  */
 #define NCC_XLAT_FILE_RAW      "file.raw"
 #define NCC_XLAT_FILE_CSV      "file.csv"
@@ -29,7 +29,7 @@
 
 
 /*
- *	Different kinds of xlat contexts.
+ * Different kinds of xlat contexts.
  */
 typedef enum {
 	NCC_CTX_TYPE_FILE = 1,
@@ -140,8 +140,8 @@ void ncc_xlat_free()
 }
 
 /*
- *	To use FreeRADIUS xlat engine, we need a REQUEST (which is a "typedef struct rad_request").
- *	This is defined in src/lib/server/request.h
+ * To use FreeRADIUS xlat engine, we need a REQUEST (which is a "typedef struct rad_request").
+ * This is defined in src/lib/server/request.h
  */
 REQUEST *FX_request = NULL;
 
@@ -157,8 +157,8 @@ REQUEST *FX_request = NULL;
 static uint32_t request_num_use = 0;
 static uint32_t request_max_use = 10000;
 
-/*
- *	Build a unique fake request for xlat.
+/**
+ * Build a unique fake request for xlat.
  */
 void ncc_xlat_init_request(VALUE_PAIR *vps)
 {
@@ -188,8 +188,8 @@ void ncc_xlat_init_request(VALUE_PAIR *vps)
 }
 
 
-/*
- *	Initialize xlat context in our fake request for processing a list of input vps.
+/**
+ * Initialize xlat context in our fake request for processing a list of input vps.
  */
 void ncc_xlat_set_num(uint64_t num)
 {
@@ -213,17 +213,17 @@ void ncc_xlat_set_num(uint64_t num)
 	}
 }
 
-/*
- *	Retrieve xlat error code stored in our fake request.
+/**
+ * Retrieve xlat error code stored in our fake request.
  */
 int ncc_xlat_get_rcode()
 {
 	return FX_request->rcode;
 }
 
-/*
- *	Add an xlat file from its fp.
- *	Returns the number of managed xlat files.
+/**
+ * Add an xlat file from its fp.
+ * Returns the number of managed xlat files.
  */
 int ncc_xlat_file_add_fp(FILE *fp)
 {
@@ -237,8 +237,8 @@ int ncc_xlat_file_add_fp(FILE *fp)
 	return num + 1;
 }
 
-/*
- *	Add a xlat file from which values will be read sequentially.
+/**
+ * Add a xlat file from which values will be read sequentially.
  */
 int ncc_xlat_file_add(char const *filename)
 {
@@ -260,8 +260,8 @@ int ncc_xlat_file_add(char const *filename)
 	return -1;
 
 
-/*
- *	Retrieve a specific xlat context, using information from our fake request.
+/**
+ * Retrieve a specific xlat context, using information from our fake request.
  */
 static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 {
@@ -297,9 +297,9 @@ static ncc_xlat_frame_t *ncc_xlat_get_ctx(TALLOC_CTX *ctx)
 }
 
 
-/*
- *	Read a list of values from a xlat file.
- *	Rewind if we're at EOF.
+/**
+ * Read a list of values from a xlat file.
+ * Rewind if we're at EOF.
  */
 int ncc_xlat_get_vps_from_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file)
 {
@@ -341,9 +341,9 @@ error:
 	return -1;
 }
 
-/*
- *	Get a value from CSV file. First, read a new line if it has not already been done.
- *	Then extract the Nth value as requested.
+/**
+ * Get a value from CSV file. First, read a new line if it has not already been done.
+ * Then extract the Nth value as requested.
  */
 VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file, uint32_t idx_value)
 {
@@ -368,9 +368,9 @@ VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *x
 	return vp;
 }
 
-/*
- *	Parse csv file "<file index>.<value index>".
- *	Default: <file index> = 0 (first file); <value index> is mandatory.
+/**
+ * Parse csv file "<file index>.<value index>".
+ * Default: <file index> = 0 (first file); <value index> is mandatory.
  */
 int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 {
@@ -418,7 +418,8 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 	return 0;
 }
 
-/** Read comma-separated values sequentially from a file.
+/**
+ * Read comma-separated values sequentially from a file.
  *
  *  %{file.csv:<file index>.<value index>}
  *  <file index> (0, 1, ...) corresponds to xlat files added through ncc_xlat_file_add.
@@ -463,8 +464,8 @@ ssize_t ncc_xlat_file_csv(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, cha
 	return _ncc_xlat_file_csv(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
-/*
- *	Parse file "<index>". Default: <index> = 0 (first file).
+/**
+ * Parse file "<index>". Default: <index> = 0 (first file).
  */
 int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
 {
@@ -486,7 +487,8 @@ int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
 	return 0;
 }
 
-/** Read raw values sequentially from a file.
+/**
+ * Read raw values sequentially from a file.
  *
  *  %{file:<index>} - where <index> (0, 1, ...) corresponds to xlat files added through ncc_xlat_file_add.
  */
@@ -564,8 +566,8 @@ ssize_t ncc_xlat_file_raw(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, cha
 }
 
 
-/*
- *	Parse a num range "<num1>-<num2>" and extract <num1> / <num2> as uint64_t.
+/**
+ * Parse a num range "<num1>-<num2>" and extract <num1> / <num2> as uint64_t.
  */
 int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 {
@@ -615,7 +617,8 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 	return 0;
 }
 
-/** Generate increasing numeric values from a range.
+/**
+ * Generate increasing numeric values from a range.
  *
  *  %{num.range:1000-2000} -> 1000, 1001, etc.
  */
@@ -661,7 +664,8 @@ ssize_t ncc_xlat_num_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, ch
 	return _ncc_xlat_num_range(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
-/** Generate random numeric values from a range.
+/**
+ * Generate random numeric values from a range.
  *
  *  %{num.rand:1000-2000} -> 1594, ...
  */
@@ -709,8 +713,8 @@ ssize_t ncc_xlat_num_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, cha
 }
 
 
-/*
- *	Parse an IPv4 range "<IP1>-<IP2>" and extract <IP1> / <IP2> as fr_ipaddr_t.
+/**
+ * Parse an IPv4 range "<IP1>-<IP2>" and extract <IP1> / <IP2> as fr_ipaddr_t.
  */
 int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char const *in)
 {
@@ -768,7 +772,8 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
 	return 0;
 }
 
-/** Generate increasing IP addr values from a range.
+/**
+ * Generate increasing IP addr values from a range.
  *
  *  %{ipaddr.range:10.0.0.1-10.0.0.255} -> 10.0.0.1, 10.0.0.2, etc.
  */
@@ -822,7 +827,8 @@ ssize_t ncc_xlat_ipaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
 	return _ncc_xlat_ipaddr_range(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
-/** Generate random IP addr values from a range.
+/**
+ * Generate random IP addr values from a range.
  *
  *  %{ipaddr.rand:10.0.0.1-10.0.0.255} -> 10.0.0.120, ...
  *
@@ -881,8 +887,8 @@ ssize_t ncc_xlat_ipaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, 
 }
 
 
-/*
- *	Parse an Ethernet address range "<Ether1>-<Ether2>" and extract <Ether1> / <Ether2> as uint8_t[6].
+/**
+ * Parse an Ethernet address range "<Ether1>-<Ether2>" and extract <Ether1> / <Ether2> as uint8_t[6].
  */
 int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const *in)
 {
@@ -943,7 +949,8 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
 	return 0;
 }
 
-/** Generate increasing Ethernet addr values from a range.
+/**
+ * Generate increasing Ethernet addr values from a range.
  *
  *  %{ethaddr.range:01:02:03:04:05:06-01:02:03:04:05:ff} -> 01:02:03:04:05:06, 01:02:03:04:05:07, etc.
  */
@@ -999,7 +1006,8 @@ ssize_t ncc_xlat_ethaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen
 	return _ncc_xlat_ethaddr_range(ctx, out, outlen, NULL, NULL, NULL, fmt);
 }
 
-/** Generate random Ethernet addr values from a range.
+/**
+ * Generate random Ethernet addr values from a range.
  *
  *  %{ethaddr.rand:01:02:03:04:05:06-01:02:03:04:05:ff} -> 01:02:03:04:05:32, ...
  *
@@ -1060,7 +1068,8 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
 }
 
 
-/** Generate a string of random chars
+/**
+ * Generate a string of random chars
  *
  *  Reuse from FreeRADIUS xlat_func_randstr (src/lib/server/xlat_func.c)
  *  converted to non async - because we can't use that.
@@ -1250,8 +1259,8 @@ ssize_t ncc_xlat_randstr(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, char
 }
 
 
-/*
- *	Register our own xlat functions (and implicitly initialize the xlat framework).
+/**
+ * Register our own xlat functions (and implicitly initialize the xlat framework).
  */
 int ncc_xlat_register(void)
 {

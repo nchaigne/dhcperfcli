@@ -38,16 +38,16 @@ typedef struct dpc_packet_socket {
 } dpc_packet_socket_t;
 
 /*
- *	Note on sockets:
+ * Note on sockets:
  *
- *	If we're using a socket bound to source 0.0.0.0 (INADDR_ANY) to send a packet, the system
- *	will pick an appropriate source IP address for our packet. We *cannot* know which it is.
+ * If we're using a socket bound to source 0.0.0.0 (INADDR_ANY) to send a packet, the system
+ * will pick an appropriate source IP address for our packet. We *cannot* know which it is.
  *
- *	If we bind a socket with source 0.0.0.0, we cannot use another socket with a source IP address
- *	(for the same source port).
+ * If we bind a socket with source 0.0.0.0, we cannot use another socket with a source IP address
+ * (for the same source port).
  *
- *	Conversely, if we first bind a socket with a source IP address, we cannot later bind another
- *	socket with 0.0.0.0. It would fail with "Bind failed: EADDRINUSE: Address already in use".
+ * Conversely, if we first bind a socket with a source IP address, we cannot later bind another
+ * socket with 0.0.0.0. It would fail with "Bind failed: EADDRINUSE: Address already in use".
  */
 
 

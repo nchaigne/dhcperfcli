@@ -4,18 +4,18 @@
  */
 
 /*
- *	Reuse from FreeRADIUS, see:
- *	src/lib/server/xlat_func.c
+ * Reuse from FreeRADIUS, see:
+ * src/lib/server/xlat_func.c
  *
- *	We need that to do our own xlat'ing without pulling the whole server in.
- *	And also, to avoid having unchecked xlat functions which can crash our process. :'(
+ * We need that to do our own xlat'ing without pulling the whole server in.
+ * And also, to avoid having unchecked xlat functions which can crash our process. :'(
  *
- *	Note: we need to link with libfreeradius-server (and libfreeradius-unlang) for xlat_tokenize, xlat_eval, etc.
+ * Note: we need to link with libfreeradius-server (and libfreeradius-unlang) for xlat_tokenize, xlat_eval, etc.
  *
- *	Our xlat_func_find must be called by xlat_tokenize_function, so our own "xlat_root" tree is used instead
- *	of that of FreeRADIUS.
- *	For this to work, our symbols must be processed by the linker before those of "libfreeradius-server".
- *	Which means files must be provided to the linker in the correct order.
+ * Our xlat_func_find must be called by xlat_tokenize_function, so our own "xlat_root" tree is used instead
+ * of that of FreeRADIUS.
+ * For this to work, our symbols must be processed by the linker before those of "libfreeradius-server".
+ * Which means files must be provided to the linker in the correct order.
  */
 
 #include <freeradius-devel/server/base.h>
@@ -26,18 +26,18 @@
 
 
 /*
- *	The following is copied verbatim from src/lib/server/xlat_func.c
+ * The following is copied verbatim from src/lib/server/xlat_func.c
  *
- *	xlat_cmp
- *	xlat_func_find
- *	_xlat_func_talloc_free
- *	_xlat_func_tree_free
+ * xlat_cmp
+ * xlat_func_find
+ * _xlat_func_talloc_free
+ * _xlat_func_tree_free
  *
- *	In addition, the following functions are copied, but altered:
+ * In addition, the following functions are copied, but altered:
  *
- *	xlat_init (ncc_xlat_core_init) - it does not register any of FreeRADIUS unlang / server xlat functions.
- *	xlat_free (ncc_xlat_core_free).
- *	xlat_register (ncc_xlat_core_register) - calls ncc_xlat_core_init.
+ * xlat_init (ncc_xlat_core_init) - it does not register any of FreeRADIUS unlang / server xlat functions.
+ * xlat_free (ncc_xlat_core_free).
+ * xlat_register (ncc_xlat_core_register) - calls ncc_xlat_core_init.
  */
 
 static rbtree_t *xlat_root = NULL;
@@ -215,14 +215,14 @@ void ncc_xlat_core_free(void)
 }
 
 
-/*
- *	Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
- *	which allows access to "control" and "packet" lists of value pairs.
+/**
+ * Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
+ * which allows access to "control" and "packet" lists of value pairs.
  *
- *	In case of parsing error, xlat_eval consumes the error (by calling REMARKER) and returns -1,
- *	which is all we got (no error message we can print).
- *	It's always better to pre-compile the xlat expression with xlat_tokenize, in this case we
- *	get error messages that we can handle ourselves.
+ * In case of parsing error, xlat_eval consumes the error (by calling REMARKER) and returns -1,
+ * which is all we got (no error message we can print).
+ * It's always better to pre-compile the xlat expression with xlat_tokenize, in this case we
+ * get error messages that we can handle ourselves.
  */
 ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps)
 {
@@ -237,10 +237,10 @@ ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, VALUE_PAIR *vps
 	return len;
 }
 
-/*
- *	Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
- *	which allows access to "control" and "packet" lists of value pairs.
- *	The xlat expression must have been compiled beforehand with xlat_tokenize.
+/**
+ * Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
+ * which allows access to "control" and "packet" lists of value pairs.
+ * The xlat expression must have been compiled beforehand with xlat_tokenize.
  */
 ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, VALUE_PAIR *vps)
 {
