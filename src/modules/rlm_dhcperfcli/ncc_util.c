@@ -779,33 +779,32 @@ char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, str
  *
  * @param[out] out       where to write the output string.
  * @param[in]  outlen    size of output buffer. NCC_TIME_STRLEN is sufficient for HH < 100 with 6 decimals.
- * @param[in]  from      pointer on oldest timestamp.
- * @param[in]  when      pointer on most recent timestamp (or NULL to use current time).
+ * @param[in]  fte_from  oldest timestamp.
+ * @param[in]  fte_to    most recent timestamp (or 0 to use current time).
  * @param[in]  decimals  number of decimals to print in output (0-6).
  *
  * @return pointer to the output buffer.
  */
-char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t *from, fr_time_t *when, uint8_t decimals)
+char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t fte_from, fr_time_t fte_to, uint8_t decimals)
 {
 	fr_time_t to;
 	fr_time_delta_t delta;
 	uint32_t delta_sec, hour, min, sec, usec;
 
 	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(NULL, from);
+	FN_ARG_CHECK(0, fte_from);
 
-	if (when && *when && *when < *from) {
+	if (fte_to && fte_to < fte_from) {
 		fr_strerror_printf("Cannot have a negative time difference");
 		return NULL;
 	}
 
 	/* If second timestamp is not specified, use current time. */
-	if (!when || !*when) {
-		to = fr_time();
-		when = &to;
+	if (!fte_to) {
+		fte_to = fr_time();
 	}
 
-	delta = *when - *from;
+	delta = fte_to - fte_from;
 	delta_sec = delta / NSEC;
 
 	hour = delta_sec / 3600;

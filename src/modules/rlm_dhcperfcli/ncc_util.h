@@ -259,7 +259,7 @@ int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep);
 char *ncc_ether_addr_snprint(char *out, size_t outlen, const uint8_t *addr);
 char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, struct timeval *when, uint8_t decimals);
-char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t *from, fr_time_t *when, uint8_t decimals);
+char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t fte_from, fr_time_t fte_to, uint8_t decimals);
 char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
