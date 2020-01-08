@@ -147,7 +147,7 @@ void ncc_vlog_printf(ncc_log_t const *log, fr_log_type_t extended_type, char con
 		/* Print elapsed time, e.g. "t(0.001)". */
 		char time_buf[NCC_TIME_STRLEN];
 		snprintf(fmt_time, sizeof(fmt_time), "t(%s)",
-		         ncc_fr_delta_time_snprint(time_buf, sizeof(fmt_time), &fte_ncc_start, NULL, (ncc_debug_lvl >= 4) ? 6 : 3));
+		         ncc_fr_delta_time_snprint(time_buf, sizeof(fmt_time), fte_ncc_start, 0, (ncc_debug_lvl >= 4) ? 6 : 3));
 
 	} else if (log_location) {
 		/* With flag "log location" just print file name and line number.

@@ -792,7 +792,7 @@ char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t fte_from, fr
 	uint32_t delta_sec, hour, min, sec, usec;
 
 	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(0, fte_from);
+	FN_ARG_CHECK(NULL, fte_from);
 
 	if (fte_to && fte_to < fte_from) {
 		fr_strerror_printf("Cannot have a negative time difference");

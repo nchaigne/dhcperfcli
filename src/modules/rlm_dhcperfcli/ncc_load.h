@@ -4,6 +4,8 @@
  */
 
 extern fr_time_t fte_load_start;
+extern fr_time_t fte_load_end;
+extern fr_time_t fte_load_snapshot;
 
 
 fr_time_t ncc_load_start_time_set();

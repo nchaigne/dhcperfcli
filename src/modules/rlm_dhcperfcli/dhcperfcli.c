@@ -206,8 +206,6 @@ static fr_time_t fte_last_session_in; /* Last time a session has been initialize
 static fr_time_t fte_input_available; /* No item will be available before that point in time. */
 static bool no_input_available = false; /* If there is currently no input available for starting sessions. */
 
-static fr_time_t fte_snapshot; /* Snapshot of current time (for consistency when reporting linked values). */
-
 static uint32_t input_num = 0; /* Number of input entries read. (They may not all be valid.) */
 static uint32_t num_input_invalid = 0; /* Number of invalid input. */
 
@@ -290,7 +288,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_STATS       20
 
 char elapsed_buf[NCC_TIME_STRLEN];
-#define ELAPSED ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), fte_job_start, fte_snapshot, DPC_DELTA_TIME_DECIMALS)
+#define ELAPSED ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), fte_load_start, fte_load_snapshot, DPC_DELTA_TIME_DECIMALS)
 
 
 /*
