@@ -1151,8 +1151,8 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 	/*
 	 * Set SSL/TLS authentication parameters
 	 */
-	if (section->tls_ca_file) SET_OPTION(CURLOPT_ISSUERCERT, section->tls_ca_file);
-	if (section->tls_ca_info_file) SET_OPTION(CURLOPT_CAINFO, section->tls_ca_info_file);
+	if (section->tls_ca_file) SET_OPTION(CURLOPT_CAINFO, section->tls_ca_file);
+	if (section->tls_ca_issuer_file) SET_OPTION(CURLOPT_ISSUERCERT, section->tls_ca_issuer_file);
 	if (section->tls_ca_path) SET_OPTION(CURLOPT_CAPATH, section->tls_ca_path);
 
 	SET_OPTION(CURLOPT_SSL_VERIFYPEER, (section->tls_check_cert == true) ? 1L : 0L);
@@ -1420,7 +1420,7 @@ void ncc_curl_unload(void)
  */
 static CONF_PARSER tls_conf_parser[] = {
 	{ FR_CONF_OFFSET("ca_file", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_file) },
-	{ FR_CONF_OFFSET("ca_info_file", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_info_file) },
+	{ FR_CONF_OFFSET("ca_issuer_file", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_issuer_file) },
 	{ FR_CONF_OFFSET("ca_path", FR_TYPE_FILE_INPUT, ncc_curl_mod_section_t, tls_ca_path) },
 	{ FR_CONF_OFFSET("check_cert", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_check_cert), .dflt = "no" },
 	{ FR_CONF_OFFSET("check_cert_cn", FR_TYPE_BOOL, ncc_curl_mod_section_t, tls_check_cert_cn), .dflt = "no" },

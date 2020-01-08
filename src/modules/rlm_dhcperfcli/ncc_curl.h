@@ -122,10 +122,10 @@ typedef struct ncc_curl_mod_section_t {
 	/*
 	 * TLS configuration
 	 */
-	char const *tls_ca_file;         //<! File containing a single CA, which is the issuer of the server
-	                                 //<! certificate (CURLOPT_ISSUERCERT).
-	char const *tls_ca_info_file;    //<! File containing a bundle of certificates, which allow to handle
+	char const *tls_ca_file;         //<! File containing a bundle of certificates, which allow to handle
 	                                 //<! certificate chain validation (CURLOPT_CAINFO).
+	char const *tls_ca_issuer_file;  //<! File containing a single CA, which is the issuer of the server
+	                                 //<! certificate (CURLOPT_ISSUERCERT).
 	char const *tls_ca_path;         //<! Directory holding CA certificates to verify the peer with (CURLOPT_CAPATH).
 
 	/* Note:
