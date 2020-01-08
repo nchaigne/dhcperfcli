@@ -26,9 +26,11 @@ fr_time_t ncc_load_start_time_set()
 /**
  * Set load end time.
  */
-fr_time_t ncc_load_end_time_set()
+fr_time_t ncc_load_end_time_set(fr_time_t fte_end)
 {
-	fte_load_end = fr_time();
+	if (fte_end) fte_load_end = fte_end;
+	else fte_load_end = fr_time();
+
 	return fte_load_end;
 }
 
@@ -94,4 +96,58 @@ fr_time_delta_t ncc_load_elapsed_fr_time_get()
 double ncc_load_elapsed_time_get()
 {
 	return ncc_fr_time_to_float(ncc_load_elapsed_fr_time_get());
+}
+
+
+/**
+ * Update a type of transaction statistics, with one newly completed transaction:
+ * number of such transactions, cumulated rtt, min/max rtt.
+ */
+void ncc_tr_stats_update_values(ncc_transaction_stats_t *stats, fr_time_delta_t rtt)
+{
+	if (!rtt) return;
+
+	/* Update 'rtt_min'. */
+	if (stats->num == 0 || rtt < stats->rtt_min) {
+		stats->rtt_min = rtt;
+	}
+
+	/* Update 'rtt_max'. */
+	if (stats->num == 0 || rtt > stats->rtt_max) {
+		stats->rtt_max = rtt;
+	}
+
+	/* Update 'rtt_cumul' and 'num'. */
+	stats->rtt_cumul += rtt;
+	stats->num ++;
+}
+
+/**
+ * Update statistics for a dynamically named transaction type.
+ */
+void ncc_dyn_tr_stats_update(TALLOC_CTX *ctx, ncc_dyn_tr_stats_t *dyn_tr_stats, char const *name, fr_time_delta_t rtt)
+{
+	/* Get the transaction name index. */
+	int i = ncc_str_array_index(ctx, &dyn_tr_stats->names, name);
+
+	/* Reallocate if necessary */
+	size_t num_transaction_type = talloc_array_length(dyn_tr_stats->stats);
+	if (i >= num_transaction_type) {
+		TALLOC_REALLOC_ZERO(ctx, dyn_tr_stats->stats,
+		                    ncc_transaction_stats_t, num_transaction_type, i + 1);
+	}
+
+	ncc_transaction_stats_t *my_stats = &(dyn_tr_stats->stats[i]);
+	ncc_tr_stats_update_values(my_stats, rtt);
+}
+
+/**
+ * Compute the effective rate (reply per second) of a given transaction type (or all).
+ */
+double ncc_get_tr_rate(ncc_transaction_stats_t *my_stats)
+{
+	double elapsed = ncc_load_elapsed_time_get();
+
+	if (elapsed <= 0) return 0; /* Should not happen. */
+	return (double)my_stats->num / elapsed;
 }

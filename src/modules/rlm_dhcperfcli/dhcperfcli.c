@@ -303,10 +303,9 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force);
 
 static inline double dpc_start_sessions_elapsed_time_get(void);
 
-static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
 static double dpc_get_session_in_rate(bool per_input);
 static size_t dpc_tr_name_max_len(void);
-static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name);
+static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, ncc_transaction_stats_t *my_stats, char const *name);
 static void dpc_tr_stats_fprint(FILE *fp);
 static void dpc_stats_fprint(FILE *fp);
 static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt);
@@ -617,18 +616,6 @@ static inline double dpc_start_sessions_elapsed_time_get(void)
 }
 
 /**
- * Compute the effective rate (reply per second) of a given transaction type (or all).
- * Note: for a workflow (DORA), this is based on the final reply (Ack).
- */
-static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
-{
-	double elapsed = ncc_load_elapsed_time_get();
-
-	if (elapsed <= 0) return 0; /* Should not happen. */
-	return (double)my_stats->num / elapsed;
-}
-
-/**
  * Compute the rate of input sessions per second.
  */
 static double dpc_get_session_in_rate(bool per_input)
@@ -691,7 +678,7 @@ static size_t dpc_tr_name_max_len(void)
 /**
  * Print statistics for a given transaction type.
  */
-static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_stats_t *my_stats, char const *name)
+static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, ncc_transaction_stats_t *my_stats, char const *name)
 {
 	if (!my_stats || my_stats->num == 0) return 0;
 
@@ -704,7 +691,7 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 
 	/* Print rate if job elapsed time is at least 1 s. */
 	if (ncc_load_elapsed_time_get() >= 1.0) {
-		fprintf(fp, ", rate (avg/s): %.3f", dpc_get_tr_rate(my_stats));
+		fprintf(fp, ", rate (avg/s): %.3f", ncc_get_tr_rate(my_stats));
 	}
 
 	fprintf(fp, "\n");
@@ -757,7 +744,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	/* Job elapsed time, from start to end. */
 	fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "Elapsed time (s)",
-	        ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), fte_job_start, fte_job_end, DPC_DELTA_TIME_DECIMALS));
+	        ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), fte_load_start, fte_load_end, DPC_DELTA_TIME_DECIMALS));
 
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
@@ -802,9 +789,9 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t 
 	if (tr_type < 0 || tr_type >= DPC_TR_MAX) return;
 	if (!rtt) return;
 
-	dpc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type];
+	ncc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type];
 
-	dpc_tr_stats_update_values(my_stats, rtt);
+	ncc_tr_stats_update_values(my_stats, rtt);
 
 	DEBUG3("Updated transaction stats: type: %d, num: %d, this rtt: %.6f, min: %.6f, max: %.6f",
 	       tr_type, my_stats->num, ncc_fr_time_to_float(rtt),
@@ -822,7 +809,7 @@ static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_
 	dpc_session_transaction_snprint(name, sizeof(name), session);
 
 	/* Update transaction statistics. */
-	dpc_dyn_tr_stats_update(global_ctx, &stat_ctx.dyn_tr_stats, name, rtt);
+	ncc_dyn_tr_stats_update(global_ctx, &stat_ctx.dyn_tr_stats, name, rtt);
 
 	/* If time-data is enabled, also store in time-data context. */
 	if (CONF.with_timedata) dpc_timedata_store_tr_stat(name, rtt);
@@ -3646,7 +3633,7 @@ static void dpc_signal(int sig)
 static void dpc_end(void)
 {
 	/* Job end timestamp. */
-	fte_job_end = ncc_load_end_time_set();
+	fte_job_end = ncc_load_end_time_set(0);
 
 	if (!check_config) {
 		/* Stop time-data handler if it is running. */

@@ -160,11 +160,11 @@ void dpc_timedata_store_tr_stat(char const *name, fr_time_delta_t rtt)
 		/* Newly allocated item.
 		 * Now allocate specific data storage.
 		 */
-		stat->data = talloc_zero(stat, dpc_dyn_tr_stats_t);
+		stat->data = talloc_zero(stat, ncc_dyn_tr_stats_t);
 	}
 
-	dpc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
-	dpc_dyn_tr_stats_update(stat, dyn_tr_stats, name, rtt);
+	ncc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
+	ncc_dyn_tr_stats_update(stat, dyn_tr_stats, name, rtt);
 }
 
 /**
@@ -175,7 +175,7 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 	char influx_data[1024];
 	char name_buf[256];
 
-	dpc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
+	ncc_dyn_tr_stats_t *dyn_tr_stats = stat->data;
 
 	size_t num_names = talloc_array_length(dyn_tr_stats->names);
 	size_t num_transaction_type = talloc_array_length(dyn_tr_stats->stats);
@@ -184,7 +184,7 @@ int dpc_timedata_send_tr_stat(ncc_timedata_stat_t *stat)
 	for (i = 0; i < num_transaction_type; i++) {
 		if (i >= num_names) break; /* Should never happen. */
 
-		dpc_transaction_stats_t *transaction_stat = &dyn_tr_stats->stats[i];
+		ncc_transaction_stats_t *transaction_stat = &dyn_tr_stats->stats[i];
 
 		double rtt_avg = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_cumul) / transaction_stat->num;
 		double rtt_min = 1000 * ncc_fr_time_to_float(transaction_stat->rtt_min);

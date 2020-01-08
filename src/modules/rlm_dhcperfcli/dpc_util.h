@@ -15,9 +15,6 @@
 #define DPC_XLAT_MAX_LEN 4096
 
 
-void dpc_tr_stats_update_values(dpc_transaction_stats_t *my_stats, fr_time_delta_t rtt);
-void dpc_dyn_tr_stats_update(TALLOC_CTX *ctx, dpc_dyn_tr_stats_t *dyn_tr_stats, char const *name, fr_time_delta_t rtt);
-
 char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_t *session);
 char *dpc_message_type_sprint(char *out, int code);
 char *dpc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown, uint32_t retransmit_max);
