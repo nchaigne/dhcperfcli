@@ -75,7 +75,7 @@ time-data test-dhcperfcli {
 		database = "dpc"
 		uri = "https://${server}/write?db=${database}"
 		tls {
-			ca_info_file = "/etc/pki/tls/certs/ca-bundle.crt"
+			ca_file = "/etc/pki/tls/certs/ca-bundle.crt"
 			check_cert = yes
 			check_cert_cn = yes
 		}
