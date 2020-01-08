@@ -8,6 +8,7 @@
 #include "config.h"
 
 #include "ncc_util.h"
+#include "ncc_load.h"
 #include "ncc_segment.h"
 #include "ncc_xlat.h"
 
@@ -302,12 +303,7 @@ static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_st
 static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 
-static inline double dpc_job_elapsed_time_snapshot_set(void);
-static inline void dpc_time_snapshot_clear(void);
-static inline fr_time_t dpc_fr_time(void);
-static inline fr_time_t dpc_elapsed_fr_time_get(fr_time_t start, fr_time_t end);
-static inline fr_time_t dpc_job_elapsed_fr_time_get(void);
-static inline double dpc_job_elapsed_time_get(void);
+static inline double dpc_start_sessions_elapsed_time_get(void);
 
 static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stat);
 static double dpc_get_session_in_rate(bool per_input);
@@ -540,7 +536,7 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	fprintf(fp, "(*) ");
 
 	/* Use a fixed reference time for consistency. */
-	double elapsed = dpc_job_elapsed_time_snapshot_set();
+	double elapsed = ncc_load_elapsed_time_snapshot_set();
 
 	/* Absolute date/time. */
 	if (CONF.pr_stat_timestamp) {
@@ -609,74 +605,9 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force)
 	dpc_per_input_stats_fprint(fp, force);
 
 	/* Clear snapshot. */
-	dpc_time_snapshot_clear();
+	ncc_load_time_snapshot_clear();
 
 	fflush(fp);
-}
-
-
-/**
- * Set a snapshot of the current time.
- * Return job elapsed time (up to the snapshot).
- */
-static inline double dpc_job_elapsed_time_snapshot_set(void)
-{
-	if (fte_job_end) {
-		fte_snapshot = fte_job_end;
-	} else {
-		fte_snapshot = fr_time();
-	}
-
-	return ncc_fr_time_to_float(fte_snapshot - fte_job_start);
-}
-
-/**
- * Clear the current time snapshot.
- */
-static inline void dpc_time_snapshot_clear(void)
-{
-	fte_snapshot = 0;
-}
-
-/**
- * Get either the current time snapshot if set, or real current time otherwise.
- */
-static inline fr_time_t dpc_fr_time(void)
-{
-	if (fte_snapshot) return fte_snapshot;
-	else return fr_time();
-}
-
-/**
- * Get an elapsed time (difference between start and end).
- * If end is not set, use instead current time (or time snapshot if set).
- */
-static inline fr_time_t dpc_elapsed_fr_time_get(fr_time_t start, fr_time_t end)
-{
-	if (!start) return 0; /* Start time not initialized yet. */
-
-	if (end) {
-		/* Time delta from start to end.
-		 */
-		return end - start;
-
-	} else {
-		/* Time delta from start to current time (or time snapshot if set).
-		 */
-		return dpc_fr_time() - start;
-	}
-}
-
-/**
- * Obtain the job (either ongoing or finished) elapsed time.
- */
-static inline fr_time_t dpc_job_elapsed_fr_time_get(void)
-{
-	return dpc_elapsed_fr_time_get(fte_job_start, fte_job_end);
-}
-static inline double dpc_job_elapsed_time_get(void)
-{
-	return ncc_fr_time_to_float(dpc_job_elapsed_fr_time_get());
 }
 
 /**
@@ -684,7 +615,7 @@ static inline double dpc_job_elapsed_time_get(void)
  */
 static inline double dpc_start_sessions_elapsed_time_get(void)
 {
-	return ncc_fr_time_to_float(dpc_elapsed_fr_time_get(fte_sessions_ini_start, fte_sessions_ini_end));
+	return ncc_fr_time_to_float(ncc_elapsed_fr_time_get(fte_sessions_ini_start, fte_sessions_ini_end));
 }
 
 /**
@@ -693,7 +624,7 @@ static inline double dpc_start_sessions_elapsed_time_get(void)
  */
 static double dpc_get_tr_rate(dpc_transaction_stats_t *my_stats)
 {
-	double elapsed = dpc_job_elapsed_time_get();
+	double elapsed = ncc_load_elapsed_time_get();
 
 	if (elapsed <= 0) return 0; /* Should not happen. */
 	return (double)my_stats->num / elapsed;
@@ -710,23 +641,17 @@ static double dpc_get_session_in_rate(bool per_input)
 		/* Compute a global session rate, from the start of the job
 		 * up to now (if still starting new sessions) or when the last session was initialized.
 		 */
-		double elapsed;
-		fr_time_t fte_end;
 		fr_time_delta_t ftd_elapsed;
+		double elapsed;
 
 		if (!fte_sessions_ini_start || !fte_last_session_in) return 0;
 
-		/* If not starting new sessions, use last session time as end time.
+		/* Compute elapsed time.
+		 * If not starting new sessions, use last session time as end time.
 		 * Otherwise, use current time.
 		 */
-		if (!start_sessions_flag) {
-			fte_end = fte_last_session_in;
-		} else {
-			fte_end = dpc_fr_time();
-		}
+		ftd_elapsed = ncc_elapsed_fr_time_get(fte_load_start, start_sessions_flag ? 0 : fte_last_session_in);
 
-		/* Compute elapsed time. */
-		ftd_elapsed = fte_end - fte_job_start;
 		elapsed = ncc_fr_time_to_float(ftd_elapsed);
 		if (elapsed > 0) { /* Just to be safe. */
 			rate = (double)session_num_in / elapsed;
@@ -780,7 +705,7 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, dpc_transaction_st
 	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
 
 	/* Print rate if job elapsed time is at least 1 s. */
-	if (dpc_job_elapsed_time_get() >= 1.0) {
+	if (ncc_load_elapsed_time_get() >= 1.0) {
 		fprintf(fp, ", rate (avg/s): %.3f", dpc_get_tr_rate(my_stats));
 	}
 
@@ -1820,7 +1745,7 @@ static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *i
  */
 static bool dpc_item_available(dpc_input_t *input, fr_time_t *fte_when)
 {
-	fr_time_delta_t ftd_elapsed = dpc_job_elapsed_fr_time_get();
+	fr_time_delta_t ftd_elapsed = ncc_load_elapsed_fr_time_get();
 	fr_time_delta_t ftd_avail = 0;
 
 	*fte_when = 0;
@@ -1873,18 +1798,7 @@ static char dpc_item_get_status(dpc_input_t *input)
  */
 static double dpc_item_get_elapsed(dpc_input_t *input)
 {
-	if (!input->fte_start) {
-		return 0; /* Item has not been used yet. */
-	}
-
-	/* Get elapsed time from when this input started being used. */
-	fr_time_delta_t ftd_elapsed;
-	if (input->fte_end) {
-		ftd_elapsed = input->fte_end - input->fte_start;
-	} else {
-		ftd_elapsed = dpc_fr_time() - input->fte_start;
-	}
-
+	fr_time_delta_t ftd_elapsed = ncc_elapsed_fr_time_get(input->fte_start, input->fte_end);
 	return ncc_fr_time_to_float(ftd_elapsed);
 }
 
@@ -2277,7 +2191,7 @@ static void dpc_loop_recv(void)
 static double dpc_segment_get_elapsed(ncc_segment_t *segment)
 {
 	fr_time_delta_t ftd_ref;
-	fr_time_delta_t ftd_elapsed = dpc_job_elapsed_fr_time_get();
+	fr_time_delta_t ftd_elapsed = ncc_load_elapsed_fr_time_get();
 
 	if (ftd_elapsed < segment->ftd_start) {
 		return 0; /* Segment is not started yet. */
@@ -2515,7 +2429,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Time limit reached. */
-		if (CONF.duration_start_max && dpc_job_elapsed_time_get() >= CONF.duration_start_max) {
+		if (CONF.duration_start_max && ncc_load_elapsed_time_get() >= CONF.duration_start_max) {
 			INFO("Max duration (%.3f s) reached: will not start any new session.", CONF.duration_start_max);
 			dpc_end_start_sessions();
 			break;
@@ -3734,20 +3648,20 @@ static void dpc_signal(int sig)
 static void dpc_end(void)
 {
 	/* Job end timestamp. */
-	fte_job_end = fr_time();
+	fte_job_end = ncc_load_end_time_set();
 
 	if (!check_config) {
 		/* Stop time-data handler if it is running. */
 		ncc_timedata_stop();
 
 		/* If we're producing progress statistics, do it one last time. */
-		if (CONF.ftd_progress_interval && dpc_job_elapsed_fr_time_get() > CONF.ftd_progress_interval) {
+		if (CONF.ftd_progress_interval && ncc_load_elapsed_fr_time_get() > CONF.ftd_progress_interval) {
 			dpc_progress_stats_fprint(CONF.pr_stat_fp, true);
 		}
 
 		/* End statistics report.
 		 */
-		dpc_job_elapsed_time_snapshot_set(); /* Fixed reference time for consistency. */
+		ncc_load_elapsed_time_snapshot_set(); /* Fixed reference time for consistency. */
 
 		dpc_stats_fprint(stdout);
 		dpc_tr_stats_fprint(stdout);
@@ -4024,7 +3938,8 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	fte_start = fte_job_start = fr_time(); /* Job start timestamp. */
+	/* Set job start timestamp. */
+	fte_start = fte_job_start = ncc_load_start_time_set();
 
 	if (CONF.duration_start_max) { /* Set timestamp limit for starting new input sessions. */
 		CONF.fte_start_max = ncc_float_to_fr_time(CONF.duration_start_max) + fte_job_start;
