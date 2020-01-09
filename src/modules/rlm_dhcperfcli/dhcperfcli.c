@@ -3632,7 +3632,7 @@ static void dpc_signal(int sig)
 static void dpc_end(void)
 {
 	/* Job end timestamp. */
-	fte_job_end = ncc_load_end_time_set(0);
+	fte_job_end = ncc_load_end_time_set();
 
 	if (!check_config) {
 		/* Stop time-data handler if it is running. */

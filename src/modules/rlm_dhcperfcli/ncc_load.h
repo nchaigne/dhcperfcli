@@ -29,7 +29,7 @@ typedef struct {
 
 
 fr_time_t ncc_load_start_time_set();
-fr_time_t ncc_load_end_time_set(fr_time_t fte_end);
+fr_time_t ncc_load_end_time_set();
 
 double ncc_load_elapsed_time_snapshot_set();
 void ncc_load_time_snapshot_clear();

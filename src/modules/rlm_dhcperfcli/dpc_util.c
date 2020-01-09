@@ -135,7 +135,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 	/* Elapsed time. */
 	if (CONF.packet_trace_elapsed) {
 		char time_buf[NCC_TIME_STRLEN];
-		fprintf(fp, "t(%s) ", ncc_fr_delta_time_snprint(time_buf, sizeof(time_buf), &fte_start, NULL, DPC_DELTA_TIME_DECIMALS));
+		fprintf(fp, "t(%s) ", ncc_fr_delta_time_snprint(time_buf, sizeof(time_buf), fte_start, 0, DPC_DELTA_TIME_DECIMALS));
 	}
 
 	/* Absolute date/time. */

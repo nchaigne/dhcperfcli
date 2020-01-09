@@ -787,7 +787,6 @@ char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, str
  */
 char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t fte_from, fr_time_t fte_to, uint8_t decimals)
 {
-	fr_time_t to;
 	fr_time_delta_t delta;
 	uint32_t delta_sec, hour, min, sec, usec;
 

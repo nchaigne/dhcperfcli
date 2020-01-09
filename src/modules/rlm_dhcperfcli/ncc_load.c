@@ -26,11 +26,9 @@ fr_time_t ncc_load_start_time_set()
 /**
  * Set load end time.
  */
-fr_time_t ncc_load_end_time_set(fr_time_t fte_end)
+fr_time_t ncc_load_end_time_set()
 {
-	if (fte_end) fte_load_end = fte_end;
-	else fte_load_end = fr_time();
-
+	fte_load_end = fr_time();
 	return fte_load_end;
 }
 
