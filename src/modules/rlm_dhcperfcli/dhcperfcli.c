@@ -2105,7 +2105,6 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	if (session->input) {
 		session_num_in_active --;
 		if (session->num_send == 1) session_num_parallel --; /* This was a session "initial request". */
-		//gettimeofday(&tve_last_session_in, NULL); // why ?? zzz
 	}
 
 	SDEBUG2("Session terminated - active sessions: %u (in: %u), parallel: %u",

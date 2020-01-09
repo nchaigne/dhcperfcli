@@ -12,10 +12,12 @@ extern fr_time_t fte_load_snapshot;
  * Holds statistics for a given transaction type.
  */
 typedef struct ncc_transaction_stats {
-	uint32_t num;              //!< Number of completed transactions
-	fr_time_delta_t rtt_cumul; //!< Cumulated rtt (request to reply time)
-	fr_time_delta_t rtt_min;   //!< Lowest rtt
-	fr_time_delta_t rtt_max;   //!< Highest rtt (timeout are not included)
+	uint32_t num;              //!< Number of completed transactions.
+	fr_time_t fte_start;       //!< Timestamp of first transaction.
+	fr_time_t fte_end;         //!< Timestamp of latest transaction.
+	fr_time_delta_t rtt_cumul; //!< Cumulated rtt (request to reply time).
+	fr_time_delta_t rtt_min;   //!< Lowest rtt.
+	fr_time_delta_t rtt_max;   //!< Highest rtt (timeout are not included).
 } ncc_transaction_stats_t;
 
 /*

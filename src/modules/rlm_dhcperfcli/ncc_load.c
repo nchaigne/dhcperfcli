@@ -105,6 +105,12 @@ void ncc_tr_stats_update_values(ncc_transaction_stats_t *stats, fr_time_delta_t 
 {
 	if (!rtt) return;
 
+	/* Set timestamp of first transaction. */
+	if (!stats->fte_start) stats->fte_start = fr_time();
+
+	/* Update timestamp of latest. */
+	stats->fte_end = fr_time();
+
 	/* Update 'rtt_min'. */
 	if (stats->num == 0 || rtt < stats->rtt_min) {
 		stats->rtt_min = rtt;
@@ -159,7 +165,7 @@ size_t ncc_dyn_tr_stats_name_max_len(size_t max_len, ncc_dyn_tr_stats_t *dyn_tr_
  */
 double ncc_get_tr_rate(ncc_transaction_stats_t *my_stats)
 {
-	double elapsed = ncc_load_elapsed_time_get();
+	double elapsed = ncc_fr_time_to_float(ncc_elapsed_fr_time_get(my_stats->fte_start, my_stats->fte_end));
 
 	if (elapsed <= 0) return 0; /* Should not happen. */
 	return (double)my_stats->num / elapsed;
