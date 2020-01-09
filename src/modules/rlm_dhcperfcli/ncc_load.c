@@ -142,6 +142,21 @@ void ncc_dyn_tr_stats_update(TALLOC_CTX *ctx, ncc_dyn_tr_stats_t *dyn_tr_stats, 
 }
 
 /**
+ * Get the longest name of actual transactions.
+ */
+size_t ncc_dyn_tr_stats_name_max_len(size_t max_len, ncc_dyn_tr_stats_t *dyn_tr_stats)
+{
+	int i;
+	size_t num_transaction_type = talloc_array_length(dyn_tr_stats->names);
+
+	for (i = 0; i < num_transaction_type; i++) {
+		size_t len = strlen(dyn_tr_stats->names[i]);
+		if (len > max_len) max_len = len;
+	}
+	return max_len;
+}
+
+/**
  * Compute the effective rate (reply per second) of a given transaction type (or all).
  */
 double ncc_get_tr_rate(ncc_transaction_stats_t *my_stats)

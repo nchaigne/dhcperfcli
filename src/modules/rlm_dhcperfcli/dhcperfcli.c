@@ -664,14 +664,9 @@ static double dpc_get_session_in_rate(bool per_input)
  */
 static size_t dpc_tr_name_max_len(void)
 {
-	int i;
-	size_t num_transaction_type = talloc_array_length(stat_ctx.dyn_tr_stats.names);
 	size_t max_len = strlen(transaction_types[DPC_TR_ALL]); /* (All) */
+	max_len = ncc_dyn_tr_stats_name_max_len(max_len, &stat_ctx.dyn_tr_stats);
 
-	for (i = 0; i < num_transaction_type; i++) {
-		size_t len = strlen(stat_ctx.dyn_tr_stats.names[i]);
-		if (len > max_len) max_len = len;
-	}
 	return max_len;
 }
 
@@ -3148,6 +3143,10 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	}
 
 	fr_strerror(); /* Clear the error buffer */
+
+	/* Check dictionaries. */
+	//fr_dict_dump(dict_dhcperfcli);
+	//fr_dict_dump(dpc_dict_dhcpv4);
 }
 
 /**

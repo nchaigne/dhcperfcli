@@ -41,4 +41,5 @@ double ncc_load_elapsed_time_get();
 
 void ncc_tr_stats_update_values(ncc_transaction_stats_t *stats, fr_time_delta_t rtt);
 void ncc_dyn_tr_stats_update(TALLOC_CTX *ctx, ncc_dyn_tr_stats_t *dyn_tr_stats, char const *name, fr_time_delta_t rtt);
+size_t ncc_dyn_tr_stats_name_max_len(size_t max_len, ncc_dyn_tr_stats_t *dyn_tr_stats);
 double ncc_get_tr_rate(ncc_transaction_stats_t *my_stats);

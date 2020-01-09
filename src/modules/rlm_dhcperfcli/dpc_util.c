@@ -38,6 +38,7 @@ dpc_dhcp_header_t dpc_dhcp_headers[] = {
  */
 char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_t *session)
 {
+	size_t len;
 	char *p = out;
 	char const *p_name_request;
 	char const *p_name_reply;
@@ -52,11 +53,14 @@ char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_
 	p_name_request = dpc_message_types[session->request->code];
 	p_name_reply = dpc_message_types[session->reply->code];
 
-	if (session->input->name) {
-		snprintf(p, outlen, "%s.%s:%s", session->input->name, p_name_request, p_name_reply);
-	} else {
-		snprintf(p, outlen, "%s:%s", p_name_request, p_name_reply);
+	if (session->input && session->input->name) {
+		len = snprintf(p, outlen, "%s.", session->input->name);
+		ERR_IF_TRUNCATED_LEN(p, outlen, len);
 	}
+
+	len = snprintf(p, outlen, "%s:%s", p_name_request, p_name_reply);
+	ERR_IF_TRUNCATED_LEN(p, outlen, len);
+
 	return out;
 }
 
