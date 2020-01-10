@@ -2,6 +2,7 @@
 /*
  *	ncc_load.h
  */
+#include "ncc_segment.h"
 
 extern fr_time_t fte_load_start;
 extern fr_time_t fte_load_end;
@@ -40,6 +41,8 @@ fr_time_delta_t ncc_elapsed_fr_time_get(fr_time_t start, fr_time_t end);
 
 fr_time_delta_t ncc_load_elapsed_fr_time_get();
 double ncc_load_elapsed_time_get();
+
+double ncc_segment_get_elapsed(ncc_segment_t *segment);
 
 void ncc_tr_stats_update_values(ncc_transaction_stats_t *stats, fr_time_delta_t rtt);
 void ncc_dyn_tr_stats_update(TALLOC_CTX *ctx, ncc_dyn_tr_stats_t *dyn_tr_stats, char const *name, fr_time_delta_t rtt);

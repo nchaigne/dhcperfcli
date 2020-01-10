@@ -338,7 +338,6 @@ static dpc_input_t *dpc_get_input(void);
 static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx);
 static void dpc_session_finish(dpc_session_ctx_t *session);
 
-static double dpc_segment_get_elapsed(ncc_segment_t *segment);
 static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment);
 static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre);
 
@@ -2165,37 +2164,13 @@ static void dpc_loop_recv(void)
 }
 
 /**
- * Get elapsed time from the start of a given time segment.
- */
-static double dpc_segment_get_elapsed(ncc_segment_t *segment)
-{
-	fr_time_delta_t ftd_ref;
-	fr_time_delta_t ftd_elapsed = ncc_load_elapsed_fr_time_get();
-
-	if (ftd_elapsed < segment->ftd_start) {
-		return 0; /* Segment is not started yet. */
-	}
-
-	if (segment->ftd_end && ftd_elapsed >= segment->ftd_end) {
-		/*
-		 * Current time is beyond segment end.
-		 */
-		ftd_ref = segment->ftd_end - segment->ftd_start;
-	} else {
-		ftd_ref = ftd_elapsed - segment->ftd_start;
-	}
-
-	return ncc_fr_time_to_float(ftd_ref);
-}
-
-/**
  * Get the use rate of a time segment.
  */
 static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment)
 {
 	*out_rate = 0;
 
-	double elapsed = dpc_segment_get_elapsed(segment);
+	double elapsed = ncc_segment_get_elapsed(segment);
 
 	if (segment->num_use < CONF.min_session_for_rps
 	    || elapsed < CONF.min_time_for_rps) return false;
@@ -2211,7 +2186,7 @@ static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *
 {
 	if (!list) return NULL;
 
-	fr_time_delta_t ftd_elapsed = fr_time() - fte_job_start;
+	fr_time_delta_t ftd_elapsed = ncc_load_elapsed_fr_time_get();
 	ncc_segment_t *segment = ncc_segment_from_elapsed_time(list, segment_pre, ftd_elapsed);
 
 	if (segment != segment_pre) {
@@ -2275,7 +2250,7 @@ static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc
 	}
 
 	/* Get elapsed time. */
-	elapsed_ref = dpc_segment_get_elapsed(segment);
+	elapsed_ref = ncc_segment_get_elapsed(segment);
 
 	if (!strict) {
 		if (elapsed_ref < CONF.rate_limit_min_ref_time) {

@@ -72,16 +72,11 @@ fr_time_delta_t ncc_elapsed_fr_time_get(fr_time_t start, fr_time_t end)
 {
 	if (!start) return 0; /* Start time not initialized yet. */
 
-	if (end) {
-		/* Time delta from start to end.
-		 */
-		return end - start;
+	/* If end is not provided, use current time (or time snapshot if set).
+	 */
+	if (!end) end = ncc_fr_time();
 
-	} else {
-		/* Time delta from start to current time (or time snapshot if set).
-		 */
-		return ncc_fr_time() - start;
-	}
+	return end - start;
 }
 
 /**
@@ -94,6 +89,30 @@ fr_time_delta_t ncc_load_elapsed_fr_time_get()
 double ncc_load_elapsed_time_get()
 {
 	return ncc_fr_time_to_float(ncc_load_elapsed_fr_time_get());
+}
+
+/**
+ * Get elapsed time from the start of a given time segment.
+ */
+double ncc_segment_get_elapsed(ncc_segment_t *segment)
+{
+	fr_time_delta_t ftd_ref;
+	fr_time_delta_t ftd_elapsed = ncc_load_elapsed_fr_time_get();
+
+	if (ftd_elapsed < segment->ftd_start) {
+		return 0; /* Segment is not started yet. */
+	}
+
+	if (segment->ftd_end && ftd_elapsed >= segment->ftd_end) {
+		/*
+		 * Current time is beyond segment end.
+		 */
+		ftd_ref = segment->ftd_end - segment->ftd_start;
+	} else {
+		ftd_ref = ftd_elapsed - segment->ftd_start;
+	}
+
+	return ncc_fr_time_to_float(ftd_ref);
 }
 
 
