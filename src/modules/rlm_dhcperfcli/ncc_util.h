@@ -386,7 +386,7 @@ static inline char const *ncc_strr_notspace(char const *value, ssize_t len)
 { \
 	size_t len = talloc_array_length(_ptr); \
 	TALLOC_REALLOC_ZERO(_ctx, _ptr, _type, len, len + 1); \
-	_ptr[len] = _v; \
+	(_ptr)[len] = _v; \
 }
 
 /**
