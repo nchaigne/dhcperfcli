@@ -247,10 +247,13 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	int64_t sinteger = 0;
 	char buffer[4096];
 
-	if (!value) return -1;
+	if (!value) {
+		fr_strerror_printf("No value");
+		return -1;
+	}
 
 	/*
-	 *	Copy to intermediary buffer if we were given a length
+	 * Copy to intermediary buffer if we were given a length
 	 */
 	if (inlen >= 0) {
 		if (inlen >= (ssize_t)sizeof(buffer)) {
@@ -271,7 +274,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	type = FR_BASE_TYPE(type);
 
 	/*
-	 *	Check for zero length strings
+	 * Check for zero length strings
 	 */
 	if (value[0] == '\0') {
 		fr_strerror_printf("Value cannot be empty");
@@ -305,7 +308,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	} while (0)
 
 	/*
-	 *	First pass for integers.
+	 * First pass for integers.
 	 */
 	switch (type) {
 	case FR_TYPE_UINT8:
@@ -313,8 +316,8 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	case FR_TYPE_UINT32:
 	case FR_TYPE_UINT64:
 		/*
-		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
-		 *	In case of ERANGE, we set our own error message (which is common to all "out of bounds" cases).
+		 * Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
+		 * In case of ERANGE, we set our own error message (which is common to all "out of bounds" cases).
 		 */
 		ret = ncc_strtoull(&uinteger, value);
 		if (ret < 0) {
@@ -328,8 +331,8 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	case FR_TYPE_INT32:
 	case FR_TYPE_INT64:
 		/*
-		 *	Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
-		 *	In case of ERANGE, we set our own error message (which is common to all "out of bounds" cases).
+		 * Function checks for overflows and trailing garbage, and calls fr_strerror_printf to set an error.
+		 * In case of ERANGE, we set our own error message (which is common to all "out of bounds" cases).
 		 */
 		ret = ncc_strtoll(&sinteger, value);
 		if (ret < 0) {
@@ -344,7 +347,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	}
 
 	/*
-	 *	Second pass for all. Integers are already parsed and now just need assignment.
+	 * Second pass for all. Integers are already parsed and now just need assignment.
 	 */
 	switch (type) {
 	case FR_TYPE_STRING:
