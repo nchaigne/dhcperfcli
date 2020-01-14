@@ -1061,6 +1061,8 @@ int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char c
 	ncc_parse_ctx_t *parse_ctx = (ncc_parse_ctx_t *)rule->uctx;
 	void *p_value;
 
+	if (!value && rule->dflt) value = rule->dflt;
+
 	if (!multi) {
 		p_value = (uint8_t *)base + rule->offset;
 
@@ -1110,6 +1112,8 @@ int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char c
 int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const *opt, int argval, char const *optarg)
 {
 	CONF_PARSER const *rule;
+	int ret;
+	bool parsed = false;
 
 	/* If it's a short option, rebuild corresponding string e.g. '-a'.
 	 */
@@ -1122,7 +1126,22 @@ int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const
 	/* Look for matching rule, and use if to parse the option argument.
 	 */
 	for (rule = rules; rule->name; rule++) {
-		if (strcmp(rule->name, opt) == 0) return ncc_getopt_rule(ctx, base, rule, optarg);
+		char *p, *name, *str;
+
+		str = name = talloc_strdup(ctx, rule->name);
+
+		while ((p = strsep(&str, "|")) != NULL) {
+			/* Trim spaces. */
+			ncc_str_trim(p, p, strlen(p));
+
+			if (strcmp(p, opt) == 0) {
+				ret = ncc_getopt_rule(ctx, base, rule, optarg);
+				parsed = true;
+			}
+		}
+
+		talloc_free(name);
+		if (parsed) return ret;
 	}
 
 	fr_strerror_printf("Parsing rule not found for %s", opt);
