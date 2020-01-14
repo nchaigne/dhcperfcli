@@ -1040,3 +1040,87 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 
 	}
 }
+
+/**
+ * Parse value to output struct, according to CONF_PARSER rule provided (reusing FreeRADIUS struct for this purpose).
+ *
+ * @param[in,out] base    base struct to write parsed values to.
+ * @param[in]     rule    parser rule.
+ * @param[in]     value   string to parse.
+ *
+ * @return -1 = error, 0 = success.
+ */
+int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char const *value)
+{
+	int type = rule->type;
+	int base_type = FR_BASE_TYPE(type);
+	bool multi = (type & FR_TYPE_MULTI);
+	ncc_parse_ctx_t *parse_ctx = (ncc_parse_ctx_t *)rule->uctx;
+	void *p_value;
+
+	if (!multi) {
+		p_value = (uint8_t *)base + rule->offset;
+
+	} else {
+		/*
+	 	 * A multi-valued item is stored within a talloc array.
+	 	 * The array is reallocated each time a value is parsed. This is not the most efficient, but it's simpler.
+	 	 */
+		void **p_array = (void **)((uint8_t *)base + rule->offset);
+
+#define CASE_MULTI_PARSE(_fr_type, _c_type) \
+		case _fr_type: \
+		{ \
+			size_t len = talloc_array_length(*(_c_type **)p_array); \
+			TALLOC_REALLOC_ZERO(ctx, *(_c_type **)p_array, _c_type, len, len + 1); \
+			p_value = (void *)(*p_array + (len * sizeof(_c_type))); \
+		} \
+		break;
+
+		switch (base_type) {
+		CASE_MULTI_PARSE(FR_TYPE_STRING, char *);
+		CASE_MULTI_PARSE(FR_TYPE_IPV4_ADDR, fr_ipaddr_t);
+
+		default:
+			fr_strerror_printf("Unsupported type '%s' (%i)",
+		                       fr_table_str_by_value(fr_value_box_type_table, base_type, "?Unknown?"), base_type);
+			return -1;
+		}
+	}
+
+	return ncc_parse_value_from_str(p_value, type, value, -1, parse_ctx);
+}
+
+/**
+ * Handle a short or long option value.
+ * Look for matching definition in the CONF_PARSER rules provided (reusing FreeRADIUS struct for this purpose).
+ * Assign member of the output struct.
+ *
+ * @param[in,out] base    base struct to write parsed values to.
+ * @param[in]     rules   parser rules.
+ * @param[in]     opt     option name, e.g "--my-long-opt"
+ * @param[in]     argval  return value of getopt_long (option character).
+ * @param[in]     optarg  option argument.
+ *
+ * @return -1 = error, 0 = success.
+ */
+int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const *opt, int argval, char const *optarg)
+{
+	CONF_PARSER const *rule;
+
+	/* If it's a short option, rebuild corresponding string e.g. '-a'.
+	 */
+	char opt_buf[3];
+	if ((!opt || opt[0] == '\0') && argval) {
+		sprintf(opt_buf, "-%c", argval);
+		opt = opt_buf;
+	}
+
+	/* Look for matching rule, and use if to parse the option argument.
+	 */
+	for (rule = rules; rule->name; rule++) {
+		if (strcmp(rule->name, opt) == 0) return ncc_getopt_rule(ctx, base, rule, optarg);
+	}
+
+	return -1;
+}
