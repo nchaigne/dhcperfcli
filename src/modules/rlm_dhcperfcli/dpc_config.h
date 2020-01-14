@@ -20,7 +20,7 @@ typedef enum {
 } dpc_progress_stat_dst_t;
 
 /*
- *	Main configuration
+ * Main configuration
  */
 struct dpc_config_s {
 	char const *name;            //!< Name of the daemon.
@@ -57,6 +57,7 @@ struct dpc_config_s {
 	char const **gateways;           //<! Gateways simulated for sending DHCP packets.
 	char const **listen_addrs;       //<! Additional listening addresses.
 	fr_ipaddr_t *authorized_servers; //<! Only allow replies from explicitly authorized servers.
+	bool multi_offer;                //<! Wait for multiple Offer replies to a broadcast Discover.
 
 	int32_t packet_trace_lvl;        //<! Packet trace level (0: none, 1: header, 2: and attributes, 3: and encoded hex data).
 	bool packet_trace_elapsed;       //<! Prefix packet trace with elapsed time.
@@ -83,7 +84,7 @@ struct dpc_config_s {
 };
 
 /*
- *	Segment configuration
+ * Segment configuration
  */
 typedef struct {
 	char const *name;           //!< Name of segment (optional).
@@ -107,7 +108,7 @@ void dpc_config_debug(dpc_config_t *config);
 
 
 /*
- *	Specific parsing contexts.
+ * Specific parsing contexts.
  */
 #define PARSE_CTX_LOG_DESTINATION &(ncc_parse_ctx_t){ .type = FR_TYPE_INT32, \
 	.type_check = NCC_TYPE_CHECK_TABLE, \
@@ -123,6 +124,13 @@ void dpc_config_debug(dpc_config_t *config);
 #define PARSE_CTX_REQUEST_TIMEOUT &(ncc_parse_ctx_t){ .type = FR_TYPE_FLOAT64, \
 	.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX, \
 	._float.min = 0.01, ._float.max = 3600 }
+/*
+ * 0 is allowed, it means we don't wait for replies, ever.
+ * This entails that:
+ * - we won't have "timed out" requests
+ * - we won't have rtt statistics
+ * - and we probably will have "unexpected replies" (if the server is responsive)
+ */
 
 #define PARSE_CTX_BASE_XID &(ncc_parse_ctx_t){ .type = FR_TYPE_INT64, \
 	.type_check = NCC_TYPE_CHECK_MIN | NCC_TYPE_CHECK_MAX, .uinteger.min = 0, .uinteger.max = 0xffffffff }

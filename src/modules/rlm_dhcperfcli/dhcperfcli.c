@@ -225,7 +225,6 @@ static fr_time_t fte_progress_stat; /* When next ongoing statistics is supposed 
 
 static fr_time_delta_t ftd_loop_max_time = 50 * 1000 * 1000; /* Max time spent in each iteration of the start loop. */
 
-static bool multi_offer = false;
 #ifdef HAVE_LIBPCAP
 static fr_pcap_t *pcap;
 #endif
@@ -1275,7 +1274,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	/*
 	 * There may be more Offer replies, from other DHCP servers. Wait for them.
 	 */
-	if (multi_offer && session->input->ext.with_pcap && session->reply->code == FR_DHCP_OFFER) {
+	if (CONF.multi_offer && session->input->ext.with_pcap && session->reply->code == FR_DHCP_OFFER) {
 		DEBUG3("Waiting for more replies from other DHCP servers");
 		session->state = DPC_STATE_WAIT_OTHER_REPLIES;
 		/* Note: there is no need to arm a new event timeout. The initial timer is still running. */
@@ -2404,7 +2403,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		if (do_limit && num_started >= limit_new_sessions) break;
 
 		/*
-		 *	Initialize a new session, if possible.
+		 * Initialize a new session, if possible.
 		 */
 		dpc_session_ctx_t *session = dpc_session_init_from_input(global_ctx);
 		if (!session) {
@@ -3269,6 +3268,7 @@ static struct option long_options[] = {
 
 	/* Long options flags can be handled automaticaly.
 	 * Note: this requires an "int" as flag variable. A boolean cannot be handled automatically.
+	 * Also this cannot be used with a struct pointer...
 	 */
 	//{ "xlat",                   no_argument, &with_xlat, 1 },
 
@@ -3290,6 +3290,38 @@ typedef enum {
 	LONGOPT_IDX_XLAT_FILE,
 	LONGOPT_IDX_MAX
 } longopt_index_t;
+
+/*
+ * Definitions for automatic options parsing.
+ */
+static CONF_PARSER options_conf_parser[] = {
+
+	{ FR_CONF_OFFSET("-a", FR_TYPE_IPV4_ADDR | FR_TYPE_MULTI, dpc_config_t, authorized_servers) },
+	{ FR_CONF_OFFSET("-A", FR_TYPE_BOOL, dpc_config_t, multi_offer) },
+	{ FR_CONF_OFFSET("-c", FR_TYPE_UINT32, dpc_config_t, input_num_use) },
+	{ FR_CONF_OFFSET("-f | --input-file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, input_files) },
+	{ FR_CONF_OFFSET("-g", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
+	{ FR_CONF_OFFSET("-i", FR_TYPE_STRING, dpc_config_t, interface) },
+	{ FR_CONF_OFFSET("-I", FR_TYPE_INT64, dpc_config_t, base_xid), .uctx = PARSE_CTX_BASE_XID },
+	{ FR_CONF_OFFSET("-L | --duration-start-max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("-N | --session-max", FR_TYPE_UINT32, dpc_config_t, session_max_num) },
+	{ FR_CONF_OFFSET("-p | --parallel", FR_TYPE_UINT32, dpc_config_t, session_max_active), .uctx = PARSE_CTX_SESSION_MAX_ACTIVE },
+	{ FR_CONF_OFFSET("-P | --packet-trace", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl), .uctx = PARSE_CTX_PACKET_TRACE_LEVEL },
+	{ FR_CONF_OFFSET("-r | --rate", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("-s", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), .uctx = PARSE_CTX_PROGRESS_INTERVAL },
+	{ FR_CONF_OFFSET("-t | --timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), .uctx = PARSE_CTX_REQUEST_TIMEOUT },
+	{ FR_CONF_OFFSET("-M", FR_TYPE_BOOL, dpc_config_t, talloc_memory_report) },
+	{ FR_CONF_OFFSET("-T | --template", FR_TYPE_BOOL, dpc_config_t, template) },
+
+	{ FR_CONF_OFFSET("--debug", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
+	{ FR_CONF_OFFSET("--input-rate", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("--listen-addr", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
+	{ FR_CONF_OFFSET("--retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) },
+	{ FR_CONF_OFFSET("--xlat", FR_TYPE_BOOL, dpc_config_t, xlat), .dflt = "yes" },
+	{ FR_CONF_OFFSET("--xlat-file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
+
+	CONF_PARSER_TERMINATOR
+};
 
 /**
  * Process command line options and arguments.
@@ -3316,6 +3348,11 @@ static void dpc_options_parse(int argc, char **argv)
 
 #define PARSE_OPT_CTX(_to, _type, _ctx) {\
 	ret = ncc_parse_value_from_str(&(_to), _type, optarg, -1, _ctx);\
+	if (ret < 0) ERROR_PARSE_OPT else if (ret) WARN_PARSE_OPT;\
+}
+
+#define PARSE_OPT_AUTO { \
+	ret = ncc_getopt(global_ctx, dpc_config, options_conf_parser, opt_buf, argval, optarg);\
 	if (ret < 0) ERROR_PARSE_OPT else if (ret) WARN_PARSE_OPT;\
 }
 
@@ -3388,102 +3425,13 @@ static void dpc_options_parse(int argc, char **argv)
 			/* If the option is not recognized we will have "-?", but this won't be used. */
 		}
 
+		DEBUG4("Option argval: %d ('%c'), long index: %d, rebuilt option: [%s]", argval, argval, opt_index, opt_buf);
+
+		OPTIONAL_ARG("yes"); /* Default for non-provided optional value (this is a boolean). */
+
 		switch (argval) {
-		case 'a':
-		{
-			fr_ipaddr_t server;
-			PARSE_OPT(server, FR_TYPE_IPV4_ADDR);
-			TALLOC_REALLOC_ONE_SET(global_ctx, CONF.authorized_servers, fr_ipaddr_t, server);
-		}
-			break;
-
-		case 'A':
-			multi_offer = true;
-			break;
-
-		case 'c':
-			PARSE_OPT(CONF.input_num_use, FR_TYPE_UINT32);
-			break;
-
-		case 'C':
-			check_config = true;
-			break;
-
-		case 'D':
-			dict_dir = optarg;
-			break;
-
-		case 'f':
-			TALLOC_REALLOC_ONE_SET(global_ctx, CONF.input_files, char const *, optarg);
-			break;
-
-		case 'g':
-			TALLOC_REALLOC_ONE_SET(global_ctx, CONF.gateways, char const *, optarg);
-			break;
-
-#ifdef HAVE_LIBPCAP
-		case 'i':
-			CONF.interface = optarg;
-			break;
-#endif
-
-		case 'I':
-			PARSE_OPT_CTX(CONF.base_xid, FR_TYPE_INT64, PARSE_CTX_BASE_XID);
-			break;
-
-		case 'L':
-			PARSE_OPT_CTX(CONF.duration_start_max, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
-			break;
-
-		case 'M':
-			CONF.talloc_memory_report = true;
-			break;
-
-		case 'n':
-			instance = optarg;
-			break;
-
-		case 'N':
-			PARSE_OPT(CONF.session_max_num, FR_TYPE_UINT32);
-			break;
-
-		case 'p':
-			PARSE_OPT_CTX(CONF.session_max_active, FR_TYPE_UINT32, PARSE_CTX_SESSION_MAX_ACTIVE);
-			break;
-
-		case 'P':
-			PARSE_OPT_CTX(CONF.packet_trace_lvl, FR_TYPE_INT32, PARSE_CTX_PACKET_TRACE_LEVEL);
-			break;
-
-		case 'r':
-			PARSE_OPT_CTX(CONF.rate_limit, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
-			break;
-
-		case 's':
-			PARSE_OPT_CTX(CONF.progress_interval, FR_TYPE_FLOAT64, PARSE_CTX_PROGRESS_INTERVAL);
-			break;
-
-		case 't':
-			PARSE_OPT_CTX(CONF.request_timeout, FR_TYPE_FLOAT64, PARSE_CTX_REQUEST_TIMEOUT);
-
-			/* 0 is allowed, it means we don't wait for replies, ever.
-			 * This entails that:
-			 * - we won't have "timed out" requests
-			 * - we won't have rtt statistics
-			 * - and we probably will have "unexpected replies" (if the server is responsive)
-			 */
-			break;
-
-		case 'T':
-			CONF.template = true;
-			break;
-
-		case 'x': /* Handled in first pass. */
-			break;
-
-		case 'X':
-			fr_debug_lvl = dpc_debug_lvl;
-			break;
+		case '?':
+			usage(EXIT_FAILURE);
 
 		case 0: /* Long option flag set, nothing to do. */
 			break;
@@ -3501,22 +3449,6 @@ static void dpc_options_parse(int argc, char **argv)
 				conf_inline = optarg;
 				break;
 
-			case LONGOPT_IDX_DEBUG: // --debug
-				CONF.debug_dev = true;
-				break;
-
-			case LONGOPT_IDX_INPUT_RATE: // --input-rate <float>
-				PARSE_OPT_CTX(CONF.input_rate_limit, FR_TYPE_FLOAT64, PARSE_CTX_FLOAT64_NOT_NEGATIVE);
-				break;
-
-			case LONGOPT_IDX_LISTEN_ADDR: // --listen-addr <ipaddr[:port]>
-				TALLOC_REALLOC_ONE_SET(global_ctx, CONF.listen_addrs, char const *, optarg);
-				break;
-
-			case LONGOPT_IDX_RETRANSMIT: // --retransmit <int>
-				PARSE_OPT(CONF.retransmit_max, FR_TYPE_UINT32);
-				break;
-
 			case LONGOPT_IDX_SEGMENT: // --segment <string>
 				if (ncc_segment_parse(global_ctx, segment_list, optarg) < 0) {
 					PERROR("Failed to parse segment \"%s\"", optarg);
@@ -3524,24 +3456,35 @@ static void dpc_options_parse(int argc, char **argv)
 				}
 				break;
 
-			case LONGOPT_IDX_XLAT: // --xlat
-				OPTIONAL_ARG("yes");
-				PARSE_OPT(CONF.xlat, FR_TYPE_BOOL);
-				break;
-
-			case LONGOPT_IDX_XLAT_FILE: // --xlat-file <file>
-				TALLOC_REALLOC_ONE_SET(global_ctx, CONF.xlat_files, char const *, optarg);
-				break;
-
 			default:
-				printf("Error: Unexpected 'option index': %d\n", opt_index);
-				usage(EXIT_FAILURE);
+				PARSE_OPT_AUTO;
 				break;
 			}
+
+		/*
+		 * Short options (may be a long option with a short option equivalent).
+		 */
+		case 'C':
+			check_config = true;
+			break;
+
+		case 'D':
+			dict_dir = optarg;
+			break;
+
+		case 'n':
+			instance = optarg;
+			break;
+
+		case 'x': /* Handled in first pass. */
+			break;
+
+		case 'X':
+			fr_debug_lvl = dpc_debug_lvl;
 			break;
 
 		default:
-			usage(EXIT_FAILURE);
+			PARSE_OPT_AUTO;
 			break;
 		}
 	}

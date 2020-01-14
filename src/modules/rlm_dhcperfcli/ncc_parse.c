@@ -1144,6 +1144,6 @@ int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const
 		if (parsed) return ret;
 	}
 
-	fr_strerror_printf("Parsing rule not found for %s", opt);
+	fr_strerror_printf("Parsing rule not found");
 	return -1;
 }
