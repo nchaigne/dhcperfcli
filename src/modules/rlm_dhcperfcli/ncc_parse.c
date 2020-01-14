@@ -1122,5 +1122,6 @@ int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const
 		if (strcmp(rule->name, opt) == 0) return ncc_getopt_rule(ctx, base, rule, optarg);
 	}
 
+	fr_strerror_printf("Parsing rule not found for %s", opt);
 	return -1;
 }
