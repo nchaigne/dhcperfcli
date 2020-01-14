@@ -3365,7 +3365,7 @@ static void dpc_options_parse(int argc, char **argv)
 	 * This can be handled the same way.
 	 *
 	 * Note: if non-option arguments immediately follow an optional argument with no value, then they must be
-	 * explicitely separated with "--".
+	 * explicitely separated with "--" (which forces the end of option-scanning).
 	 */
 #define OPTIONAL_ARG(_dflt) { \
 		if (!optarg && argv[optind] && argv[optind][0] != '-') optarg = argv[optind++]; \
@@ -3427,7 +3427,12 @@ static void dpc_options_parse(int argc, char **argv)
 
 		DEBUG4("Option argval: %d ('%c'), long index: %d, rebuilt option: [%s]", argval, argval, opt_index, opt_buf);
 
-		OPTIONAL_ARG("yes"); /* Default for non-provided optional value (this is a boolean). */
+		//OPTIONAL_ARG("yes");
+		// with this, if a flag option is last this would require using "--" before arguments...
+		// so only allow this for long options, and only use "optional_argument" where necessary (default = "yes").
+		if (opt_index >= 0) {
+			OPTIONAL_ARG("yes"); /* Default for non-provided optional value (this is a boolean). */
+		} else if (!optarg) optarg = "yes";
 
 		switch (argval) {
 		case '?':
