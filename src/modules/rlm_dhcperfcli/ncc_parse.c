@@ -199,16 +199,18 @@ int ncc_strtobool(bool *out, char const *value)
 	if (!end) goto error;
 	size_t len = end - value + 1;
 
-	if (   (strncasecmp(value, "yes", len) == 0)
-	    || (strncasecmp(value, "true", len) == 0)
-	    || (strncasecmp(value, "on", len) == 0) ) {
+#define STRCASECMP_LEN(_str1, _str2, _len2) (_len2 == strlen(_str1) && strncasecmp(_str2, _str1, _len2) == 0)
+
+	if (   STRCASECMP_LEN("yes", value, len)
+	    || STRCASECMP_LEN("true", value, len)
+	    || STRCASECMP_LEN("on", value, len) ) {
 		*(bool *)out = true;
 		return 0;
 	}
 
-	if (   (strncasecmp(value, "no", len) == 0)
-	    || (strncasecmp(value, "false", len) == 0)
-	    || (strncasecmp(value, "off", len) == 0) ) {
+	if (   STRCASECMP_LEN("no", value, len)
+	    || STRCASECMP_LEN("false", value, len)
+	    || STRCASECMP_LEN("off", value, len) ) {
 		*(bool *)out = false;
 		return 0;
 	}
