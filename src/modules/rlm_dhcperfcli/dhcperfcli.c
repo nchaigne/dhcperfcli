@@ -3461,6 +3461,8 @@ static void dpc_options_parse(int argc, char **argv)
 				break;
 			}
 
+			break;
+
 		/*
 		 * Short options (may be a long option with a short option equivalent).
 		 */
