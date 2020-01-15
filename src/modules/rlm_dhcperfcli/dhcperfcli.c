@@ -3321,6 +3321,7 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("--input-rate", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("--listen-addr", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
 	{ FR_CONF_OFFSET("--retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) },
+	{ FR_CONF_OFFSET("--segment", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, segments) },
 	{ FR_CONF_OFFSET("--xlat", FR_TYPE_BOOL, dpc_config_t, xlat), .dflt = "yes" },
 	{ FR_CONF_OFFSET("--xlat-file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
 
@@ -3450,13 +3451,6 @@ static void dpc_options_parse(int argc, char **argv)
 			 * Option is identified by its index in the option[] array.
 			 */
 			switch (opt_index) {
-			case LONGOPT_IDX_SEGMENT: // --segment <string>
-				if (ncc_segment_parse(global_ctx, segment_list, optarg) < 0) {
-					PERROR("Failed to parse segment \"%s\"", optarg);
-					exit(EXIT_FAILURE);
-				}
-				break;
-
 			default:
 				PARSE_OPT_AUTO;
 				break;
@@ -3645,13 +3639,11 @@ int main(int argc, char **argv)
 	/*
 	 * Allocate the main config structure.
 	 */
-	dpc_config = dpc_config_alloc(global_ctx);
+	dpc_config = dpc_config_alloc(global_ctx, &default_config);
 	if (!dpc_config) {
 		fprintf(stderr, "Failed to allocate main configuration\n"); /* Logging is not initialized yet. */
 		exit(EXIT_FAILURE);
 	}
-	/* Set default (static) configuration values. */
-	*dpc_config = default_config;
 
 	/* Get program name from argv. */
 	p = strrchr(argv[0], FR_DIR_SEP);
@@ -3716,6 +3708,15 @@ int main(int argc, char **argv)
 	if (dpc_config_init(dpc_config, CONF.config_file, CONF.conf_inline) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_timedata_config_load(dpc_config) < 0) exit(EXIT_FAILURE);
+
+	/* Handle segments specified through command-line options.
+	 */
+	for (i = 0; i < talloc_array_length(CONF.segments); i++) {
+		if (ncc_segment_parse(global_ctx, segment_list, CONF.segments[i]) < 0) {
+			PERROR("Failed to parse segment \"%s\"", CONF.segments[i]);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	if (dpc_config_load_segments(dpc_config, segment_list) < 0) exit(EXIT_FAILURE);
 

@@ -362,12 +362,15 @@ void dpc_config_dict_dir_set(dpc_config_t *config, char const *value)
 /**
  * Allocate a dpc_config_t struct, setting defaults
  */
-dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
+dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx, dpc_config_t *default_config)
 {
 	dpc_config_t *config;
 
 	config = talloc_zero(ctx, dpc_config_t);
 	if (!config) return NULL;
+
+	/* Set default configuration values. */
+	if (default_config) *config = *default_config;
 
 	dpc_config_dict_dir_set(config, DICTDIR);
 

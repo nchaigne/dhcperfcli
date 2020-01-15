@@ -80,6 +80,8 @@ struct dpc_config_s {
 	uint32_t session_max_num;        //<! Limit number of sessions initialized from input items.
 	uint32_t session_max_active;     //<! Max number of session packets sent concurrently (default: 1).
 
+	char const **segments;           //<! Segments specified through command-line options.
+
 	bool with_timedata;              //<! Whether time-data statistics are enabled.
 	bool talloc_memory_report;       //!< On exit, print a memory report on what's left unfreed.
 
@@ -105,7 +107,7 @@ typedef struct {
 typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
-dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx);
+dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx, dpc_config_t *default_config);
 int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *conf_inline);
 void dpc_config_free(dpc_config_t **config);
 int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handle);
