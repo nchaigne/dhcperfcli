@@ -28,6 +28,12 @@ struct dpc_config_s {
 	                             ///< was specified by the user on the command line.
 	CONF_SECTION *root_cs;       //!< Root of the main config.
 
+	bool check_config;               //<! Check configuration and exit.
+	char const *config_file;         //<! Configuration file.
+	char const *conf_inline;         //<! Inline configuration.
+
+	char const *dict_dir;           //!< Where to load dictionaries from.
+
 	ncc_log_dst_t log_dst;           //<! Log destination type.
 	char const *log_file;            //<! log file name (for "file" destination).
 	int debug_level;                 //!< The base debug level.

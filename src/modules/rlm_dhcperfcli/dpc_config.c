@@ -339,15 +339,24 @@ error:
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config)
 {
 	if (config->name) {
-		char *p;
-
-		memcpy(&p, &config->name, sizeof(p));
-		talloc_free(p);
+		talloc_const_free(config->name);
 		config->name = NULL;
 	}
 	if (name) config->name = talloc_typed_strdup(config, name);
 
 	config->overwrite_config_name = overwrite_config;
+}
+
+/**
+ * Set the global dictionary directory.
+ */
+void dpc_config_dict_dir_set(dpc_config_t *config, char const *value)
+{
+	if (config->dict_dir) {
+		talloc_const_free(config->dict_dir);
+		config->dict_dir = NULL;
+	}
+	if (value) config->dict_dir = talloc_typed_strdup(config, value);
 }
 
 /**
@@ -359,6 +368,8 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx)
 
 	config = talloc_zero(ctx, dpc_config_t);
 	if (!config) return NULL;
+
+	dpc_config_dict_dir_set(config, DICTDIR);
 
 	return config;
 }
@@ -531,7 +542,7 @@ void dpc_config_debug(dpc_config_t *config)
 
 	ncc_section_debug_start(depth, "dhcperfcli", "config");
 
-	ncc_parser_config_debug(dhcperfcli_conf_parser, config, depth + 1, check_config ? "" : NULL);
+	ncc_parser_config_debug(dhcperfcli_conf_parser, config, depth + 1, config->check_config ? "" : NULL);
 	dpc_timedata_config_debug(config, depth + 1);
 
 	ncc_section_debug_end(depth);

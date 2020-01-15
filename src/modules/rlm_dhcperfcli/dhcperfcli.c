@@ -43,6 +43,10 @@ fr_time_t fte_program_start; /* Program execution start timestamp. */
 fr_time_t fte_start;
 int dpc_debug_lvl = 0;
 
+/*
+ * Default configuration values.
+ * Caution: strings cannot be set here. They must be talloc'ed.
+ */
 static dpc_config_t default_config = {
 	.xlat = true,
 	.base_xid = -1, /* Default: random value. */
@@ -96,7 +100,6 @@ static pid_t my_pid;
  * Dictionaries and attributes.
  */
 static char alt_dict_dir[PATH_MAX + 1] = ""; /* Alternate directory for dictionaries. */
-static char const *dict_dir = DICTDIR;
 static char const *dict_fn_freeradius = "freeradius/dictionary.freeradius.internal";
 //static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.internal";
 
@@ -153,9 +156,6 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 
 	{ NULL }
 };
-
-static char const *file_config; /* Optional configuration file. */
-static char const *conf_inline;
 
 static char const *instance;
 static dpc_packet_list_t *pl; /* List of outgoing packets. */
@@ -3077,7 +3077,7 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	 * To simplify, first check if the default directory exists before doing anything.
 	 */
 	char dict_path_freeradius[PATH_MAX + 1] = "";
-	sprintf(dict_path_freeradius, "%s/%s", dict_dir, dict_fn_freeradius); // no "access_printf" or something!? damn.
+	sprintf(dict_path_freeradius, "%s/%s", CONF.dict_dir, dict_fn_freeradius); // no "access_printf" or something!? damn.
 	if (access(dict_path_freeradius, R_OK) < 0) {
 		DEBUG("Cannot access dictionary file: %s", dict_path_freeradius);
 
@@ -3086,13 +3086,13 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 			PERROR("Failed to initialize dictionary: unable to locate dictionary files");
 			exit(EXIT_FAILURE);
 		}
-		dict_dir = alt_dict_dir;
+		CONF.dict_dir = alt_dict_dir;
 	}
 
 	/*
 	 * Initialize dictionaries.
 	 */
-	if (!fr_dict_global_ctx_init(ctx, dict_dir)) {
+	if (!fr_dict_global_ctx_init(ctx, CONF.dict_dir)) {
 		PERROR("Failed to initialize dictionary");
 		exit(EXIT_FAILURE);
 	}
@@ -3299,6 +3299,8 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("-a", FR_TYPE_IPV4_ADDR | FR_TYPE_MULTI, dpc_config_t, authorized_servers) },
 	{ FR_CONF_OFFSET("-A", FR_TYPE_BOOL, dpc_config_t, multi_offer) },
 	{ FR_CONF_OFFSET("-c", FR_TYPE_UINT32, dpc_config_t, input_num_use) },
+	{ FR_CONF_OFFSET("-C | --conf-check", FR_TYPE_BOOL, dpc_config_t, check_config) },
+	{ FR_CONF_OFFSET("-D | --dict-dir", FR_TYPE_STRING, dpc_config_t, dict_dir) },
 	{ FR_CONF_OFFSET("-f | --input-file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, input_files) },
 	{ FR_CONF_OFFSET("-g", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 	{ FR_CONF_OFFSET("-i", FR_TYPE_STRING, dpc_config_t, interface) },
@@ -3313,6 +3315,8 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("-M", FR_TYPE_BOOL, dpc_config_t, talloc_memory_report) },
 	{ FR_CONF_OFFSET("-T | --template", FR_TYPE_BOOL, dpc_config_t, template) },
 
+	{ FR_CONF_OFFSET("--conf-file", FR_TYPE_STRING, dpc_config_t, config_file) },
+	{ FR_CONF_OFFSET("--conf-inline", FR_TYPE_STRING, dpc_config_t, conf_inline) },
 	{ FR_CONF_OFFSET("--debug", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
 	{ FR_CONF_OFFSET("--input-rate", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("--listen-addr", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
@@ -3446,14 +3450,6 @@ static void dpc_options_parse(int argc, char **argv)
 			 * Option is identified by its index in the option[] array.
 			 */
 			switch (opt_index) {
-			case LONGOPT_IDX_CONF_FILE: // --conf-file <file>
-				file_config = optarg;
-				break;
-
-			case LONGOPT_IDX_CONF_INLINE: // --conf-inline <string>
-				conf_inline = optarg;
-				break;
-
 			case LONGOPT_IDX_SEGMENT: // --segment <string>
 				if (ncc_segment_parse(global_ctx, segment_list, optarg) < 0) {
 					PERROR("Failed to parse segment \"%s\"", optarg);
@@ -3471,14 +3467,6 @@ static void dpc_options_parse(int argc, char **argv)
 		/*
 		 * Short options (may be a long option with a short option equivalent).
 		 */
-		case 'C':
-			check_config = true;
-			break;
-
-		case 'D':
-			dict_dir = optarg;
-			break;
-
 		case 'n':
 			instance = optarg;
 			break;
@@ -3558,7 +3546,7 @@ static void dpc_end(void)
 	/* Job end timestamp. */
 	fte_job_end = ncc_load_end_time_set();
 
-	if (!check_config) {
+	if (!CONF.check_config) {
 		/* Stop time-data handler if it is running. */
 		ncc_timedata_stop();
 
@@ -3725,7 +3713,7 @@ int main(int argc, char **argv)
 	/*
 	 * Read the configuration file (if provided), and parse configuration.
 	 */
-	if (dpc_config_init(dpc_config, file_config, conf_inline) < 0) exit(EXIT_FAILURE);
+	if (dpc_config_init(dpc_config, CONF.config_file, CONF.conf_inline) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_timedata_config_load(dpc_config) < 0) exit(EXIT_FAILURE);
 
@@ -3861,7 +3849,7 @@ int main(int argc, char **argv)
 	/*
 	 * Everything seems to have loaded OK, exit gracefully.
 	 */
-	if (check_config) {
+	if (CONF.check_config) {
 		DEBUG("Configuration appears to be OK");
 		dpc_end();
 	}
