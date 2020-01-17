@@ -242,12 +242,14 @@ error:
  *
  * @return -1 = error, 0 = success.
  */
-int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen)
+int ncc_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t inlen)
 {
 	int ret;
 	uint64_t uinteger = 0;
 	int64_t sinteger = 0;
 	char buffer[4096];
+
+	bool is_static = (type_ext & NCC_TYPE_STATIC);
 
 	if (!value) {
 		fr_strerror_printf("No value");
@@ -273,7 +275,7 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	char const *end = ncc_strr_notspace(value, -1);
 	ssize_t len = end ? (end - value + 1) : 0;
 
-	type = FR_BASE_TYPE(type);
+	uint32_t type = FR_BASE_TYPE(type_ext);
 
 	/*
 	 * Check for zero length strings
@@ -356,7 +358,9 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
 	{
 		if (out) {
 			char **str = out;
-			talloc_free(*str);
+			//talloc_free(*str);
+			/* Don't assume it was talloc'ed initially. */
+			if (!is_static) talloc_free(*str);
 			*str = talloc_strndup(NULL, value, len);
 		}
 	}
@@ -484,23 +488,24 @@ int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inle
  *
  * @return -1 = error, 0 = success and value is not modified, 1 = value is forced.
  */
-int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx)
+int ncc_parse_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx)
 {
 	int rcode = 0; /* Set to 1 if value is forced. */
 	int ret;
+
+	uint32_t type = FR_BASE_TYPE(type_ext);
 
 	if (!parse_ctx) {
 		/*
 		 * If no parse context is provided, just try to convert string value to target type.
 		 */
-		if (ncc_value_from_str(out, type, value, inlen) < 0) return -1;
+		if (ncc_value_from_str(out, type_ext, value, inlen) < 0) return -1;
 
 		return 0;
 	}
 
 	/* The parse context contains the base type, which should match that of "type".
 	 */
-	type = FR_BASE_TYPE(type);
 	ncc_assert(type == FR_BASE_TYPE(parse_ctx->type));
 
 	uint32_t type_check = parse_ctx->type_check;
@@ -517,7 +522,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_
 	/*
 	 * First try parsing according to target type.
 	 */
-	ret = ncc_value_from_str(out, type, value, inlen);
+	ret = ncc_value_from_str(out, type_ext, value, inlen);
 
 	if (ret < 0) {
 		if (check_table && (type == FR_TYPE_INT32 || type == FR_TYPE_UINT32)) {

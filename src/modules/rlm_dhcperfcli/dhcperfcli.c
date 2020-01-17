@@ -45,7 +45,9 @@ int dpc_debug_lvl = 0;
 
 /*
  * Default configuration values.
- * Caution: strings cannot be set here. They must be talloc'ed.
+ *
+ * Caution: strings are assumed to be talloc'ed by default (parser will free them before allocating new value).
+ * If this is not the case, they should be parsed as "NCC_TYPE_STRING_STATIC".
  */
 static dpc_config_t default_config = {
 	.xlat = true,
@@ -3306,13 +3308,13 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("-i", FR_TYPE_STRING, dpc_config_t, interface) },
 	{ FR_CONF_OFFSET("-I", FR_TYPE_INT64, dpc_config_t, base_xid), .uctx = PARSE_CTX_BASE_XID },
 	{ FR_CONF_OFFSET("-L | --duration-start-max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
+	{ FR_CONF_OFFSET("-M", FR_TYPE_BOOL, dpc_config_t, talloc_memory_report) },
 	{ FR_CONF_OFFSET("-N | --session-max", FR_TYPE_UINT32, dpc_config_t, session_max_num) },
 	{ FR_CONF_OFFSET("-p | --parallel", FR_TYPE_UINT32, dpc_config_t, session_max_active), .uctx = PARSE_CTX_SESSION_MAX_ACTIVE },
 	{ FR_CONF_OFFSET("-P | --packet-trace", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl), .uctx = PARSE_CTX_PACKET_TRACE_LEVEL },
 	{ FR_CONF_OFFSET("-r | --rate", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("-s", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), .uctx = PARSE_CTX_PROGRESS_INTERVAL },
 	{ FR_CONF_OFFSET("-t | --timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), .uctx = PARSE_CTX_REQUEST_TIMEOUT },
-	{ FR_CONF_OFFSET("-M", FR_TYPE_BOOL, dpc_config_t, talloc_memory_report) },
 	{ FR_CONF_OFFSET("-T | --template", FR_TYPE_BOOL, dpc_config_t, template) },
 
 	{ FR_CONF_OFFSET("--conf-file", FR_TYPE_STRING, dpc_config_t, config_file) },
@@ -3424,7 +3426,7 @@ static void dpc_options_parse(int argc, char **argv)
 		 */
 		char opt_buf[64] = "";
 		if (opt_index >= 0) {
-			sprintf(opt_buf, "--%s", long_options[opt_index].name);
+			snprintf(opt_buf, sizeof(opt_buf), "--%s", long_options[opt_index].name);
 		} else {
 			sprintf(opt_buf, "-%c", argval);
 			/* If the option is not recognized we will have "-?", but this won't be used. */

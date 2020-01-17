@@ -504,7 +504,7 @@ void dpc_config_free(dpc_config_t **config)
 	TALLOC_FREE(*config);
 }
 
-/*
+/**
  * Load configured 'input' sections.
  */
 int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handle)
@@ -520,7 +520,7 @@ int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handl
 	return 0;
 }
 
-/*
+/**
  * Load configured 'segment' sections.
  */
 int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list)

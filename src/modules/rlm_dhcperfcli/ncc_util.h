@@ -146,6 +146,9 @@ extern char const config_spaces[];
 #define NCC_TYPE_FORCE_MIN     (1 << 16)
 #define NCC_TYPE_FORCE_MAX     (1 << 17)
 #define NCC_TYPE_IGNORE_ZERO   (1 << 18)
+#define NCC_TYPE_STATIC        (1 << 19)
+
+#define NCC_TYPE_STRING_STATIC (FR_TYPE_STRING | NCC_TYPE_STATIC)
 
 /* Custom log flags that can extend fr_log_type_t */
 #define NCC_LOG_LOCATION       (1 << 10)
