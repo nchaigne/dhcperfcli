@@ -3310,11 +3310,11 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("-L | --duration-start-max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("-M", FR_TYPE_BOOL, dpc_config_t, talloc_memory_report) },
 	{ FR_CONF_OFFSET("-N | --session-max", FR_TYPE_UINT32, dpc_config_t, session_max_num) },
-	{ FR_CONF_OFFSET("-p | --parallel", FR_TYPE_UINT32, dpc_config_t, session_max_active), .uctx = PARSE_CTX_SESSION_MAX_ACTIVE },
+	{ FR_CONF_OFFSET("-p | --parallel", FR_TYPE_UINT32, dpc_config_t, session_max_active), .uctx = PARSE_CTX_SESSION_MAX_ACTIVE, .dflt = "1" },
 	{ FR_CONF_OFFSET("-P | --packet-trace", FR_TYPE_INT32, dpc_config_t, packet_trace_lvl), .uctx = PARSE_CTX_PACKET_TRACE_LEVEL },
 	{ FR_CONF_OFFSET("-r | --rate", FR_TYPE_FLOAT64, dpc_config_t, rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
-	{ FR_CONF_OFFSET("-s", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), .uctx = PARSE_CTX_PROGRESS_INTERVAL },
-	{ FR_CONF_OFFSET("-t | --timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), .uctx = PARSE_CTX_REQUEST_TIMEOUT },
+	{ FR_CONF_OFFSET("-s", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), .uctx = PARSE_CTX_PROGRESS_INTERVAL, .dflt = "10.0" },
+	{ FR_CONF_OFFSET("-t | --timeout", FR_TYPE_FLOAT64, dpc_config_t, request_timeout), .uctx = PARSE_CTX_REQUEST_TIMEOUT, .dflt = "1.0" },
 	{ FR_CONF_OFFSET("-T | --template", FR_TYPE_BOOL, dpc_config_t, template) },
 
 	{ FR_CONF_OFFSET("--conf-file", FR_TYPE_STRING, dpc_config_t, config_file) },
@@ -3322,7 +3322,7 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("--debug", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
 	{ FR_CONF_OFFSET("--input-rate", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("--listen-addr", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
-	{ FR_CONF_OFFSET("--retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max) },
+	{ FR_CONF_OFFSET("--retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max), .dflt = "2" },
 	{ FR_CONF_OFFSET("--segment", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, segments) },
 	{ FR_CONF_OFFSET("--xlat", FR_TYPE_BOOL, dpc_config_t, xlat), .dflt = "yes" },
 	{ FR_CONF_OFFSET("--xlat-file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, xlat_files) },
@@ -3410,6 +3410,13 @@ static void dpc_options_parse(int argc, char **argv)
 	}
 
 	ncc_log_init(stdout, dpc_debug_lvl); /* Initialize logging. */
+
+	/* Set default values configured through options parsing rules.
+	 */
+	if (ncc_opt_default(global_ctx, dpc_config, options_conf_parser) < 0) {
+		PERROR(NULL);
+		usage(EXIT_FAILURE);
+	}
 
 	/* Parse options: second pass.
 	 */

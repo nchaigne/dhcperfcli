@@ -312,6 +312,7 @@ void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, 
 void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old);
 int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char const *value);
 int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const *opt, int argval, char const *optarg);
+int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules);
 
 
 /*

@@ -1057,6 +1057,7 @@ void ncc_config_merge(CONF_PARSER const *rules, void *config, void *config_old)
 /**
  * Parse value to output struct, according to CONF_PARSER rule provided (reusing FreeRADIUS struct for this purpose).
  *
+ * @param[in]     ctx     talloc context.
  * @param[in,out] base    base struct to write parsed values to.
  * @param[in]     rule    parser rule.
  * @param[in]     value   string to parse.
@@ -1111,6 +1112,7 @@ int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char c
  * Look for matching definition in the CONF_PARSER rules provided (reusing FreeRADIUS struct for this purpose).
  * Assign member of the output struct.
  *
+ * @param[in]     ctx     talloc context.
  * @param[in,out] base    base struct to write parsed values to.
  * @param[in]     rules   parser rules.
  * @param[in]     opt     option name, e.g "--my-long-opt"
@@ -1156,4 +1158,29 @@ int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const
 
 	fr_strerror_printf("Parsing rule not found");
 	return -1;
+}
+
+/**
+ * Set default values for options through CONF_PARSER rules provided.
+ *
+ * @param[in]     ctx    talloc context.
+ * @param[in,out] base   base struct to write parsed values to.
+ * @param[in]     rules  parser rules.
+ *
+ * @return -1 = error, 0 = success.
+ */
+int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules)
+{
+	CONF_PARSER const *rule;
+
+	for (rule = rules; rule->name; rule++) {
+		if (rule->dflt) {
+			if (ncc_getopt_rule(ctx, base, rule, rule->dflt) < 0) {
+				fr_strerror_printf_push("Failed handling default for option \"%s\"", rule->name);
+				return -1;
+			}
+		}
+	}
+
+	return 0;
 }
