@@ -2384,7 +2384,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		}
 
 		/* Time limit reached. */
-		if (CONF.duration_start_max && ncc_load_elapsed_time_get() >= CONF.duration_start_max) {
+		if (CONF.fte_start_max && now >= CONF.fte_start_max) {
 			INFO("Max duration (%.3f s) reached: will not start any new session.", CONF.duration_start_max);
 			dpc_end_start_sessions();
 			break;
