@@ -234,6 +234,7 @@ error:
  * - FR_TYPE_IPV4_ADDR
  * - FR_TYPE_ETHERNET
  *
+ * @param[in]  ctx    talloc context (for string allocations, can be left NULL for other data types).
  * @param[out] out    where to write the parsed value (size depends on the type).
  *                    NULL allows to discard output (validity check only).
  * @param[in]  type   type of value being parsed (base type | optional qualifiers).
@@ -242,7 +243,7 @@ error:
  *
  * @return -1 = error, 0 = success.
  */
-int ncc_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t inlen)
+int ncc_value_from_str(TALLOC_CTX *ctx, void *out, uint32_t type_ext, char const *value, ssize_t inlen)
 {
 	int ret;
 	uint64_t uinteger = 0;
@@ -361,7 +362,7 @@ int ncc_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t 
 			//talloc_free(*str);
 			/* Don't assume it was talloc'ed initially. */
 			if (!is_static) talloc_free(*str);
-			*str = talloc_strndup(NULL, value, len);
+			*str = talloc_strndup(ctx, value, len);
 		}
 	}
 		break;
@@ -479,6 +480,7 @@ int ncc_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t 
  * - FR_TYPE_TIME_DELTA
  * - FR_TYPE_STRING
  *
+ * @param[in]  ctx        talloc context (for string allocations, can be left NULL for other data types).
  * @param[out] out        where to write the parsed value (size depends on the type).
  *                        NULL allows to discard output (validity check only).
  * @param[in]  type       type of value being parsed (base type | optional qualifiers).
@@ -488,7 +490,8 @@ int ncc_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t 
  *
  * @return -1 = error, 0 = success and value is not modified, 1 = value is forced.
  */
-int ncc_parse_value_from_str(void *out, uint32_t type_ext, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx)
+int ncc_parse_value_from_str(TALLOC_CTX *ctx, void *out, uint32_t type_ext,
+                             char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx)
 {
 	int rcode = 0; /* Set to 1 if value is forced. */
 	int ret;
@@ -499,7 +502,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type_ext, char const *value, ss
 		/*
 		 * If no parse context is provided, just try to convert string value to target type.
 		 */
-		if (ncc_value_from_str(out, type_ext, value, inlen) < 0) return -1;
+		if (ncc_value_from_str(ctx, out, type_ext, value, inlen) < 0) return -1;
 
 		return 0;
 	}
@@ -522,7 +525,7 @@ int ncc_parse_value_from_str(void *out, uint32_t type_ext, char const *value, ss
 	/*
 	 * First try parsing according to target type.
 	 */
-	ret = ncc_value_from_str(out, type_ext, value, inlen);
+	ret = ncc_value_from_str(ctx, out, type_ext, value, inlen);
 
 	if (ret < 0) {
 		if (check_table && (type == FR_TYPE_INT32 || type == FR_TYPE_UINT32)) {
@@ -1100,7 +1103,7 @@ int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char c
 		}
 	}
 
-	return ncc_parse_value_from_str(p_value, type, value, -1, parse_ctx);
+	return ncc_parse_value_from_str(ctx, p_value, type, value, -1, parse_ctx);
 }
 
 /**

@@ -297,8 +297,8 @@ int ncc_strtoll(int64_t *out, char const *value);
 int ncc_strtof(float *out, char const *value);
 int ncc_strtod(double *out, char const *value);
 int ncc_strtobool(bool *out, char const *value);
-int ncc_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen);
-int ncc_parse_value_from_str(void *out, uint32_t type, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx);
+int ncc_value_from_str(TALLOC_CTX *ctx, void *out, uint32_t type_ext, char const *value, ssize_t inlen);
+int ncc_parse_value_from_str(TALLOC_CTX *ctx, void *out, uint32_t type_ext, char const *value, ssize_t inlen, ncc_parse_ctx_t *parse_ctx);
 char const *ncc_parser_config_get_table_value(void *pvalue, ncc_parse_ctx_t *parse_ctx);
 int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t table_len, char const *str);
 int ncc_value_from_str_table(void *out, uint32_t type,

@@ -947,7 +947,7 @@ bool ncc_str_to_float(double *out, char const *in, bool allow_negative)
 	uint32_t type = FR_TYPE_FLOAT64;
 	if (!allow_negative) type |= NCC_TYPE_NOT_NEGATIVE;
 
-	if (ncc_value_from_str(&num, type, in, -1) < 0) return false;
+	if (ncc_value_from_str(NULL, &num, type, in, -1) < 0) return false;
 
 	if (out) *out = num;
 	return true;

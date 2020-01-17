@@ -391,7 +391,7 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 		ncc_str_trim_ptr(&q, &len, in, p - in);
 		if (q) {
 			/* Convert the file index. */
-			if (ncc_value_from_str(idx_file, FR_TYPE_UINT32, q, len) < 0) {
+			if (ncc_value_from_str(NULL, idx_file, FR_TYPE_UINT32, q, len) < 0) {
 				fr_strerror_printf("Invalid file index, in: [%s]", in);
 				return -1;
 			}
@@ -408,7 +408,7 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
 	ncc_str_trim_ptr(&q, &len, p ? (p + 1) : in, -1);
 
 	/* Convert the value index. */
-	if (!q || ncc_value_from_str(idx_value, FR_TYPE_UINT32, q, len) < 0) {
+	if (!q || ncc_value_from_str(NULL, idx_value, FR_TYPE_UINT32, q, len) < 0) {
 		fr_strerror_printf("Invalid value index, in: [%s]", in);
 		return -1;
 	}
@@ -473,7 +473,7 @@ int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
 
 	if (in) {
 		/* Convert the file index. */
-		if (ncc_value_from_str(idx_file, FR_TYPE_UINT32, in, -1) < 0) {
+		if (ncc_value_from_str(NULL, idx_file, FR_TYPE_UINT32, in, -1) < 0) {
 			fr_strerror_printf("Invalid index, in: [%s]", in);
 			return -1;
 		}
@@ -584,7 +584,7 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 
 	if (q) {
 		/* Convert the first number. */
-		if (ncc_value_from_str(num1, FR_TYPE_UINT64, q, len) < 0) {
+		if (ncc_value_from_str(NULL, num1, FR_TYPE_UINT64, q, len) < 0) {
 			fr_strerror_printf("Invalid first number, in: [%s]", in);
 			return -1;
 		}
@@ -601,7 +601,7 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
 
 	if (q) {
 		/* Convert the second number. */
-		if (ncc_value_from_str(num2, FR_TYPE_UINT64, q, len) < 0) {
+		if (ncc_value_from_str(NULL, num2, FR_TYPE_UINT64, q, len) < 0) {
 			fr_strerror_printf("Invalid second number, in: [%s]", in);
 			return -1;
 		}
@@ -731,7 +731,7 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
 
 	if (q) {
 		/* Convert the first IPv4 address. */
-		if (ncc_value_from_str(ipaddr1, FR_TYPE_IPV4_ADDR, q, len) < 0) {
+		if (ncc_value_from_str(NULL, ipaddr1, FR_TYPE_IPV4_ADDR, q, len) < 0) {
 			fr_strerror_printf("Invalid first ipaddr, in: [%s]", in);
 			return -1;
 		}
@@ -749,7 +749,7 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
 
 	if (q) {
 		/* Convert the second IPv4 address. */
-		if (ncc_value_from_str(ipaddr2, FR_TYPE_IPV4_ADDR, q, len) < 0) {
+		if (ncc_value_from_str(NULL, ipaddr2, FR_TYPE_IPV4_ADDR, q, len) < 0) {
 			fr_strerror_printf("Invalid second ipaddr, in: [%s]", in);
 			return -1;
 		}
@@ -905,7 +905,7 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
 
 	if (q) {
 		/* Convert the first Ethernet address. */
-		if (ncc_value_from_str(ethaddr1, FR_TYPE_ETHERNET, q, len) < 0) {
+		if (ncc_value_from_str(NULL, ethaddr1, FR_TYPE_ETHERNET, q, len) < 0) {
 			fr_strerror_printf("Invalid first ethaddr, in: [%s]", in);
 			return -1;
 		}
@@ -923,7 +923,7 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
 
 	if (q) {
 		/* Convert the second Ethernet address. */
-		if (ncc_value_from_str(ethaddr2, FR_TYPE_ETHERNET, q, len) < 0) {
+		if (ncc_value_from_str(NULL, ethaddr2, FR_TYPE_ETHERNET, q, len) < 0) {
 			fr_strerror_printf("Invalid second ethaddr, in: [%s]", in);
 			return -1;
 		}

@@ -96,7 +96,7 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 	       fr_table_str_by_value(fr_value_box_type_table, type, "?Unknown?"), type,
 	       value);
 
-	if (ncc_parse_value_from_str(out, type, value, -1, parse_ctx) < 0) {
+	if (ncc_parse_value_from_str(ctx, out, type, value, -1, parse_ctx) < 0) {
 		PERROR_CF(cp, "Failed to parse %s%s\"%s\"", section, sp_section, name);
 		return -1;
 	}

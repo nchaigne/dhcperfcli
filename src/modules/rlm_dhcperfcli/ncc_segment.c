@@ -287,10 +287,10 @@ int ncc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 
 	if (sep3) sep4 = strchr(sep3 + 1, ';');
 
-	if (ncc_value_from_str(&start, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, p, sep2 - p) < 0
-	   || ncc_value_from_str(&end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep2 + 1, sep3 ? sep3 - 1 - sep2 : -1) < 0
-	   || (sep3 && ncc_value_from_str(&rate, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep3 + 1, sep4 ? sep4 - 1 - sep3 : -1) < 0)
-	   || (sep4 && ncc_value_from_str(&rate_end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep4 + 1, -1) < 0)
+	if (ncc_value_from_str(ctx, &start, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, p, sep2 - p) < 0
+	   || ncc_value_from_str(ctx, &end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep2 + 1, sep3 ? sep3 - 1 - sep2 : -1) < 0
+	   || (sep3 && ncc_value_from_str(ctx, &rate, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep3 + 1, sep4 ? sep4 - 1 - sep3 : -1) < 0)
+	   || (sep4 && ncc_value_from_str(ctx, &rate_end, FR_TYPE_FLOAT64 | NCC_TYPE_NOT_NEGATIVE, sep4 + 1, -1) < 0)
 	   ) {
 		fr_strerror_printf_push("Failed to parse segment [%s]", in);
 		goto error;
