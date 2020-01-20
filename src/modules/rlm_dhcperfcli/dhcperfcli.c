@@ -161,7 +161,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 
 static char const *instance;
 static dpc_packet_list_t *pl; /* List of outgoing packets. */
-static fr_event_list_t *event_list;
+static fr_event_list_t **ev_lists; /* Event lists. */
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
 ncc_dlist_t input_list;
@@ -342,7 +342,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session);
 static bool dpc_segment_get_rate(double *out_rate, ncc_segment_t *segment);
 static ncc_segment_t *dpc_get_current_segment(ncc_dlist_t *list, ncc_segment_t *segment_pre);
 
-static void dpc_loop_recv(void);
+static uint32_t dpc_loop_recv(void);
 static bool dpc_rate_limit_calc_gen(uint32_t *max_new_sessions, bool strict, ncc_segment_t *segment, uint32_t cur_num_started);
 static bool dpc_rate_limit_calc(uint32_t *max_new_sessions);
 static void dpc_end_start_sessions(void);
@@ -359,7 +359,7 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
 
 static int dpc_get_alt_dir(void);
 static void dpc_dict_init(TALLOC_CTX *ctx);
-static void dpc_event_list_init(TALLOC_CTX *ctx);
+static void dpc_event_lists_init(TALLOC_CTX *ctx);
 static void dpc_packet_list_init(TALLOC_CTX *ctx);
 static int dpc_command_parse(char const *command);
 static void dpc_gateway_parse(TALLOC_CTX *ctx, ncc_dlist_t **gateway_list_p, char const *in);
@@ -863,7 +863,7 @@ static void dpc_event_add_progress_stats(void)
 		fte_progress_stat += CONF.ftd_progress_interval;
 	} while (fte_progress_stat < now);
 
-	if (fr_event_timer_at(global_ctx, event_list, &ev_progress_stats,
+	if (fr_event_timer_at(global_ctx, ev_lists[EL_INTERNAL], &ev_progress_stats,
 	                      fte_progress_stat, dpc_progress_stats, NULL) < 0) {
 		/* Should never happen. */
 		PERROR("Failed to insert progress statistics event");
@@ -941,7 +941,7 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_de
 	/* If there is an active event timer for this session, clear it before arming a new one. */
 	SESSION_EVENT_CLEAR(session);
 
-	session->ev_list = event_list;
+	session->ev_list = ev_lists[EL_NETWORK];
 
 	if (fr_event_timer_at(session, session->ev_list, &session->event,
 	                      fte_event, dpc_request_timeout, session) < 0) {
@@ -2094,10 +2094,7 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 	}
 
 	/* Clear the event timer if it is armed. */
-	if (session->event) {
-		fr_event_timer_delete(event_list, &session->event);
-		session->event = NULL;
-	}
+	SESSION_EVENT_CLEAR(session);
 
 	/* Update counters. */
 	session_num_active --;
@@ -2114,9 +2111,10 @@ static void dpc_session_finish(dpc_session_ctx_t *session)
 /**
  * Receive and handle reply packets.
  */
-static void dpc_loop_recv(void)
+static uint32_t dpc_loop_recv(void)
 {
 	bool done = false;
+	uint32_t num_received = 0; /* Number of packets received in this iteration. */
 	fr_time_t now, when;
 	fr_time_delta_t wait_max = 0;
 	int ev_peek;
@@ -2130,7 +2128,7 @@ static void dpc_loop_recv(void)
 		now = fr_time();
 
 		/* Next scheduled event (if there is one). */
-		ev_peek = ncc_fr_event_timer_peek(event_list, &when);
+		ev_peek = ncc_ev_lists_peek(ev_lists, &when);
 
 		/* Whether we are ready to start new sessions right now. */
 		start_ready = (start_sessions_flag && session_num_parallel < CONF.session_max_active && !no_input_available);
@@ -2160,7 +2158,11 @@ static void dpc_loop_recv(void)
 		 * Receive and process packets until there's nothing left incoming.
 		 */
 		if (dpc_recv_one_packet(wait_max) < 1) break;
+
+		num_received ++;
 	}
+
+	return num_received;
 }
 
 /**
@@ -2437,18 +2439,11 @@ static uint32_t dpc_loop_start_sessions(void)
 /**
  * Handle timer events.
  */
-static void dpc_loop_timer_events(fr_event_list_t *el)
+static uint32_t dpc_loop_timer_events(void)
 {
-	int num_processed = 0; /* Number of timers events triggered. */
-	fr_time_t now;
+	if (job_done) return 0;
 
-	if (fr_event_list_num_timers(event_list) <= 0) return;
-
-	now = fr_time();
-
-	while (fr_event_timer_run(event_list, &now)) {
-		num_processed ++;
-	}
+	return ncc_ev_lists_service(ev_lists, fr_time());
 }
 
 /**
@@ -2460,10 +2455,12 @@ static bool dpc_loop_check_done(void)
 	//if (dpc_packet_list_num_elements(pl) > 0) return false; // checking active sessions is enough.
 
 	/* There are still active sessions. */
-	if (session_num_active > 0) return false;
+	if (session_num_active > 0 && !signal_done) return false;
 
-	/* There are still events to process (ignoring the progress statistics event if it is armed). */
-	if (fr_event_list_num_timers(event_list) - ((ev_progress_stats != NULL) ? 1 : 0) > 0) return false;
+	/* There are still outstanding requests waiting for a reply.
+	 * We wait for these even after a (first) terminating signal has been received.
+	 */
+	if (fr_event_list_num_timers(ev_lists[EL_NETWORK]) > 0) return false;
 
 	/* We still have sessions to start. */
 	if (start_sessions_flag) return false;
@@ -2488,7 +2485,7 @@ static void dpc_main_loop(void)
 		dpc_loop_recv();
 
 		/* Handle timer events. */
-		dpc_loop_timer_events(event_list);
+		dpc_loop_timer_events();
 
 		/* Check if we're done. */
 		dpc_loop_check_done();
@@ -3124,14 +3121,19 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 }
 
 /**
- * Initialize event list.
+ * Initialize event lists.
  */
-static void dpc_event_list_init(TALLOC_CTX *ctx)
+static void dpc_event_lists_init(TALLOC_CTX *ctx)
 {
-	event_list = fr_event_list_alloc(ctx, NULL, NULL);
-	if (!event_list) {
-		PERROR("Failed to create event list");
-		exit(EXIT_FAILURE);
+	ev_lists = talloc_zero_array(ctx, fr_event_list_t *, EL_MAX);
+
+	int i;
+	for (i = 0; i < EL_MAX; i++) {
+		ev_lists[i] = fr_event_list_alloc(ev_lists, NULL, NULL);
+		if (!ev_lists[i]) {
+			PERROR("Failed to create event list");
+			exit(EXIT_FAILURE);
+		}
 	}
 }
 
@@ -3599,7 +3601,7 @@ static void dpc_exit(void)
 	dpc_config_free(&dpc_config);
 
 	TALLOC_FREE(pl);
-	TALLOC_FREE(event_list);
+	TALLOC_FREE(ev_lists);
 	TALLOC_FREE(global_ctx);
 
 	fr_strerror_free();
@@ -3707,9 +3709,9 @@ int main(int argc, char **argv)
 	if (ncc_xlat_register() < 0) exit(EXIT_FAILURE);
 
 	/*
-	 * Initialize event list and packet list.
+	 * Initialize event lists and packet list.
 	 */
-	dpc_event_list_init(global_ctx);
+	dpc_event_lists_init(global_ctx);
 	dpc_packet_list_init(global_ctx);
 
 	/*

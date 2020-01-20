@@ -100,6 +100,13 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 	}
 
 
+/* Event lists. */
+typedef enum {
+	EL_NETWORK = 0,
+	EL_INTERNAL,
+	EL_MAX
+} dpc_event_list_t;
+
 /* Specific states of a session. */
 typedef enum {
 	DPC_STATE_UNDEFINED = 0,
