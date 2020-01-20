@@ -91,6 +91,14 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 #define DPC_PACKET_ID_UNASSIGNED (-1)
 
 
+/* If there is an active event timer for this session, clear it. */
+#define SESSION_EVENT_CLEAR(_s) \
+	if (_s->event) { \
+		fr_event_timer_delete(_s->ev_list, &_s->event); \
+		_s->event = NULL; \
+		_s->ev_list = NULL; \
+	}
+
 
 /* Specific states of a session. */
 typedef enum {
@@ -259,6 +267,7 @@ struct dpc_session_ctx {
 	bool reply_expected;      //!< Whether a reply is expected or not.
 
 	fr_event_timer_t const *event; //<! Armed timer event (if any).
+	fr_event_list_t *ev_list; //<! The list to which belongs the event.
 };
 
 

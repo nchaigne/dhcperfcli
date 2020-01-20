@@ -939,12 +939,11 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_de
 	fte_event += (ftd_timeout ? ftd_timeout : CONF.ftd_request_timeout);
 
 	/* If there is an active event timer for this session, clear it before arming a new one. */
-	if (session->event) {
-		fr_event_timer_delete(event_list, &session->event);
-		session->event = NULL;
-	}
+	SESSION_EVENT_CLEAR(session);
 
-	if (fr_event_timer_at(session, event_list, &session->event,
+	session->ev_list = event_list;
+
+	if (fr_event_timer_at(session, session->ev_list, &session->event,
 	                      fte_event, dpc_request_timeout, session) < 0) {
 		/* Should never happen. */
 		PERROR("Failed to insert request timeout event");
@@ -3529,7 +3528,9 @@ static void dpc_options_parse(int argc, char **argv)
 static void dpc_signal(int sig)
 {
 	if (!signal_done) {
-		/* Allow ongoing sessions to be finished gracefully. */
+		/*
+		 * Allow ongoing sessions to be finished gracefully.
+		 */
 		INFO("Received signal [%d] (%s): will not start any new session.", sig, strsignal(sig));
 		INFO("Send another signal if you wish to terminate immediately.");
 		signal_done = true;
