@@ -315,7 +315,7 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, UNUSED void *ctx);
 static void dpc_event_add_progress_stats(void);
 static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, void *uctx);
-static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in);
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t ftd_timeout);
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
 static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time);
@@ -892,7 +892,7 @@ static bool dpc_retransmit(dpc_session_ctx_t *session)
 	/*
 	 * Arm request timeout.
 	 */
-	dpc_event_add_request_timeout(session, NULL);
+	dpc_event_add_request_timeout(session, 0);
 	return true;
 }
 
@@ -931,12 +931,12 @@ static void dpc_request_timeout(UNUSED fr_event_list_t *el, UNUSED fr_time_t now
 /**
  * Add timer event: request timeout.
  * Note: even if timeout = 0 we do insert an event (in this case it will be triggered immediately).
- * If timeout_in is not NULL: use this as timeout. Otherwise, use fixed global timeout.
+ * If ftd_timeout is not 0: use this as timeout. Otherwise, use fixed global timeout.
  */
-static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t *timeout_in)
+static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_delta_t ftd_timeout)
 {
 	fr_time_t fte_event = fr_time();
-	fte_event += (timeout_in ? *timeout_in : CONF.ftd_request_timeout);
+	fte_event += (ftd_timeout ? ftd_timeout : CONF.ftd_request_timeout);
 
 	/* If there is an active event timer for this session, clear it before arming a new one. */
 	if (session->event) {
@@ -1377,7 +1377,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	/*
 	 * Arm request timeout.
 	 */
-	dpc_event_add_request_timeout(session, NULL);
+	dpc_event_add_request_timeout(session, 0);
 
 	return true; /* Session is not finished. */
 }
@@ -2426,7 +2426,7 @@ static uint32_t dpc_loop_start_sessions(void)
 			/*
 			 *	Arm request timeout.
 			 */
-			dpc_event_add_request_timeout(session, NULL);
+			dpc_event_add_request_timeout(session, 0);
 		}
 
 		num_started ++;
