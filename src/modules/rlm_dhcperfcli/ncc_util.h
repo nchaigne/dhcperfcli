@@ -234,6 +234,8 @@ typedef struct ncc_fr_event_list {
 
 
 int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when);
+int ncc_ev_lists_peek(fr_event_list_t **ev_lists, fr_time_t *when);
+uint32_t ncc_ev_lists_service(fr_event_list_t **ev_lists, fr_time_t now);
 
 char const *ncc_attr_dict_name(fr_dict_attr_t const *da);
 fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *name);

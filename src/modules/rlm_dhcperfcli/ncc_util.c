@@ -39,6 +39,49 @@ int ncc_fr_event_timer_peek(fr_event_list_t *fr_el, fr_time_t *when)
 	return 1;
 }
 
+/**
+ * Get next event from an array of event lists.
+ */
+int ncc_ev_lists_peek(fr_event_list_t **ev_lists, fr_time_t *when)
+{
+	int ret = 0;
+	fr_time_t fte_min = 0;
+	int i;
+	size_t num = talloc_array_length(ev_lists);
+
+	for (i = 0; i < num; i++) {
+		fr_time_t fte_event;
+		if (ncc_fr_event_timer_peek(ev_lists[i], &fte_event)) {
+			if (!fte_min || fte_event < fte_min) fte_min = fte_event;
+			*when = fte_min;
+			ret = 1;
+		}
+	}
+
+	return ret;
+}
+
+/**
+ * Service all events for which the scheduled timer is reached.
+ */
+uint32_t ncc_ev_lists_service(fr_event_list_t **ev_lists, fr_time_t now)
+{
+	uint32_t num_processed = 0; /* Number of timers events triggered. */
+	int i;
+	size_t num = talloc_array_length(ev_lists);
+
+	for (i = 0; i < num; i++) {
+		/* If there's nothing to run right now, fr_event_timer_run sets "when" to the next event.
+		 */
+		fr_time_t when = now;
+		while (fr_event_timer_run(ev_lists[i], &when)) {
+			num_processed ++;
+		}
+	}
+
+	return num_processed;
+}
+
 
 /**
  * Safely get the dictionary name of a dictionary attribute (or NULL).
