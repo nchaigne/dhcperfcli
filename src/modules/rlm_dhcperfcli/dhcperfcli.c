@@ -3319,7 +3319,7 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("-T | --template", FR_TYPE_BOOL, dpc_config_t, template) },
 
 	{ FR_CONF_OFFSET("--conf-file", FR_TYPE_STRING, dpc_config_t, config_file) },
-	{ FR_CONF_OFFSET("--conf-inline", FR_TYPE_STRING, dpc_config_t, conf_inline) },
+	{ FR_CONF_OFFSET("--conf-inline", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, conf_inline) },
 	{ FR_CONF_OFFSET("--debug", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
 	{ FR_CONF_OFFSET("--input-rate", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("--listen-addr", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
@@ -3717,7 +3717,7 @@ int main(int argc, char **argv)
 	/*
 	 * Read the configuration file (if provided), and parse configuration.
 	 */
-	if (dpc_config_init(dpc_config, CONF.config_file, CONF.conf_inline) < 0) exit(EXIT_FAILURE);
+	if (dpc_config_init(dpc_config) < 0) exit(EXIT_FAILURE);
 
 	if (dpc_timedata_config_load(dpc_config) < 0) exit(EXIT_FAILURE);
 

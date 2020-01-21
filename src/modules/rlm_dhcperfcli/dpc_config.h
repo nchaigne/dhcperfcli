@@ -30,7 +30,7 @@ struct dpc_config_s {
 
 	bool check_config;               //<! Check configuration and exit.
 	char const *config_file;         //<! Configuration file.
-	char const *conf_inline;         //<! Inline configuration.
+	char const **conf_inline;        //<! Inline configuration entries.
 
 	char const *dict_dir;           //!< Where to load dictionaries from.
 
@@ -108,7 +108,7 @@ typedef int (*fn_input_handle_t)(dpc_input_t *, ncc_dlist_t *);
 
 void dpc_config_name_set_default(dpc_config_t *config, char const *name, bool overwrite_config);
 dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx, dpc_config_t *default_config);
-int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *conf_inline);
+int dpc_config_init(dpc_config_t *config);
 void dpc_config_free(dpc_config_t **config);
 int dpc_config_load_input(dpc_config_t *config, fn_input_handle_t fn_input_handle);
 int dpc_config_load_segments(dpc_config_t *config, ncc_dlist_t *segment_list);

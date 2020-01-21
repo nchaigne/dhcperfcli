@@ -381,9 +381,10 @@ dpc_config_t *dpc_config_alloc(TALLOC_CTX *ctx, dpc_config_t *default_config)
  * Read the configuration file (if provided).
  * Parse the configuration (even without a file: this allows to set the default values).
  */
-int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *conf_inline)
+int dpc_config_init(dpc_config_t *config)
 {
 	CONF_SECTION *cs = NULL;
+	char const *conf_file = config->config_file;
 
 	cs = cf_section_alloc(NULL, NULL, "main", NULL);
 	if (!cs) return -1;
@@ -391,7 +392,7 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 	char *tmp_file = NULL;
 	char template[] = "./dhcperfcli.conf.tmp_XXXXXX"; /* must end with "XXXXXX". */
 
-	if (conf_inline) {
+	if (config->conf_inline) {
 		/* Create a temporary configuration file so FreeRADIUS can read from it.
 		 * It is created in current directory so that include works with relative path.
 		 *
@@ -412,8 +413,11 @@ int dpc_config_init(dpc_config_t *config, char const *conf_file, char const *con
 			goto error;
 		}
 
-		/* Write inline configuration. */
-		fprintf(fp_tmp, "%s", conf_inline);
+		/* Write inline configuration entries. */
+		int i;
+		for (i = 0; i < talloc_array_length(config->conf_inline); i++) {
+			fprintf(fp_tmp, "%s\n", config->conf_inline[i]);
+		}
 
 		/* If a configuration file is provided, include it. */
 		if (conf_file) {
