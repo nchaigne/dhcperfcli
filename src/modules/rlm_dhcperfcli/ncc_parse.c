@@ -250,8 +250,6 @@ int ncc_value_from_str(TALLOC_CTX *ctx, void *out, uint32_t type_ext, char const
 	int64_t sinteger = 0;
 	char buffer[4096];
 
-	bool is_static = (type_ext & NCC_TYPE_STATIC);
-
 	if (!value) {
 		fr_strerror_printf("No value");
 		return -1;
@@ -359,9 +357,10 @@ int ncc_value_from_str(TALLOC_CTX *ctx, void *out, uint32_t type_ext, char const
 	{
 		if (out) {
 			char **str = out;
-			//talloc_free(*str);
-			/* Don't assume it was talloc'ed initially. */
-			if (!is_static) talloc_free(*str);
+			/* If "out" contains a string pointer, it is replaced.
+			 * We do not attempt to free the string, as it may not have be talloc'ed.
+			 * If it was, then it will be freed later along with the whole configuration.
+			 */
 			*str = talloc_strndup(ctx, value, len);
 		}
 	}
