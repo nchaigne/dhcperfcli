@@ -3804,9 +3804,11 @@ int main(int argc, char **argv)
 	ncc_segment_list_debug(0, segment_list, (dpc_debug_lvl >= 4));
 	dpc_input_list_debug(&input_list);
 
-	/* If base xid is unspecified, get a random value. */
+	/* If base xid is unspecified, get a random value.
+	 */
 	if (CONF.base_xid < 0) {
 		CONF.base_xid = fr_rand();
+		DEBUG("Base xid set to (random): %u", CONF.base_xid);
 	}
 	dpc_packet_list_set_base_id(pl, CONF.base_xid);
 
@@ -3835,7 +3837,8 @@ int main(int argc, char **argv)
 			/* Several request in parallel: no packet print. */
 			CONF.packet_trace_lvl = 0;
 		}
-		DEBUG("Packet trace level set to: %u", CONF.packet_trace_lvl);
+		DEBUG("Packet trace level set to: %u (%s)", CONF.packet_trace_lvl,
+		      fr_table_str_by_value(dpc_packet_trace_table, CONF.packet_trace_lvl, "??"));
 	}
 
 #ifdef HAVE_LIBPCAP
