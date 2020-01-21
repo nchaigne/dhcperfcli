@@ -440,7 +440,17 @@ int dpc_config_init(dpc_config_t *config)
 
 	if (cf_section_rules_push(cs, dhcperfcli_conf_parser) < 0) goto error;
 
-	/* Parse main configuration. */
+	/*
+	 * Parse configuration.
+	 *
+	 * Note: pre-existing talloc arrays (used to store multi-valued items) in target struct are not freed.
+	 * They are just replaced. Thus the back-up in "old_config" remains valid, and safe to use.
+	 *
+	 * Pre-existing single-valued strings in target struct are not freed either.
+	 * It would seem (looking at cf_pair_parse_value) that they should be.
+	 * But cf_section_parse_init is called before that, which sets the pointer to NULL.
+	 * Thus the back-up in "old_config" remains valid also for these.
+	 */
 	if (cf_section_parse(config, config, cs) < 0) goto error;
 
 	/* Merge current and old configuration.
