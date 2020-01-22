@@ -43,11 +43,9 @@ size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_tabl
  *
  * - Type 'uint32' is restricted to values 0-INT32_MAX (not 0-UINT32_MAX).
  *   Cf. function cf_pair_parse_value (cf_parse.c) for rationale.
- *   We need real UINT32 values, so we'll be using 'uint64'.
  *
  * - Type 'string' with no configuration and no default ("dflt") will result in a NULL pointer,
- *   even if we had a value in target variable.
- *   Probably because the value pointer dynamically allocated - so we'll have to handle this.
+ *   even if we had a value in target variable (pointer set to NULL by cf_section_parse_init).
  *
  * - Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
  */

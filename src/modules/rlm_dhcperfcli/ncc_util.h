@@ -263,6 +263,7 @@ char *ncc_ether_addr_snprint(char *out, size_t outlen, const uint8_t *addr);
 char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, struct timeval *when, uint8_t decimals);
 char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t fte_from, fr_time_t fte_to, uint8_t decimals);
 char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt);
+char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown);
 
 int ncc_host_addr_resolve(ncc_endpoint_t *host_ep, char const *host_arg);
 

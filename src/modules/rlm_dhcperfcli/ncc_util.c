@@ -883,6 +883,44 @@ char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt)
 	return out;
 }
 
+/**
+ * Print retransmissions breakdown by number of retransmissions per request sent.
+ * e.g. "#1: 10 (2.4%), #2: 5 (1.2%)" means that:
+ * - 10 packets (2.4% of total requests) have been retransmitted at least once.
+ * - 5 packets (1.2% of total requests) have been retransmitted two times (exactly, because there is no #3).
+ *
+ * @param[out] out       where to write the output string.
+ * @param[in]  outlen    size of output buffer.
+ * @param[in]  num_sent  total number of requests sent.
+ * @param[in]  breakdown talloc array of retransmissions breakdown.
+ *
+ * @return pointer to the output buffer.
+ */
+char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown)
+{
+	int i;
+	char *p = out;
+	size_t len = 0;
+	size_t retransmit_max = talloc_array_length(breakdown);
+
+	*p = '\0';
+
+	if (num_sent == 0 || !breakdown) return out;
+
+	for (i = 0; i < retransmit_max; i++) {
+		/* Stop at the first 0. Everything after that is necessarily also 0.
+		 * And limit printing to the 10 first entries.
+		 */
+		if (breakdown[i] == 0 || i >= 10) break;
+
+		len = snprintf(p, outlen, "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
+		               i + 1, breakdown[i], 100 * (float)breakdown[i] / num_sent);
+		ERR_IF_TRUNCATED_LEN(p, outlen, len);
+	}
+
+	return out;
+}
+
 
 /**
  * Parse host address and port from a string: <addr>:<port>.

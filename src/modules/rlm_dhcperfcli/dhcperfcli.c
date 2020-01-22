@@ -762,7 +762,7 @@ static void dpc_stats_fprint(FILE *fp)
 
 	if (retr_breakdown && retr_breakdown[0] > 0) {
 		fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "  Retr breakdown",
-		        dpc_retransmit_snprint(buffer, sizeof(buffer), STAT_ALL_PACKET(sent), retr_breakdown, CONF.retransmit_max));
+		        ncc_retransmit_snprint(buffer, sizeof(buffer), STAT_ALL_PACKET(sent), retr_breakdown));
 	}
 
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_PACKET(lost));
