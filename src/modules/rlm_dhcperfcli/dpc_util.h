@@ -20,6 +20,7 @@ char *dpc_message_type_sprint(char *out, int code);
 
 void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp);
+size_t dpc_packet_option_snprint(char *out, size_t outlen, VALUE_PAIR const *vp);
 int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp);
 void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
 void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet);

@@ -193,39 +193,66 @@ void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp)
 }
 
 /**
+ * Print one DHCP option value pair to a string, using format:
+ * (<option number>[.<sub-option>]) <attribute name> = <value>
+ *
+ * e.g. "(82.1) DHCP-Relay-Circuit-Id = 0x686169"
+ *
+ * @param[out] out     where to write the output string.
+ * @param[in]  outlen  size of output buffer.
+ * @param[in]  vp      to print.
+ *
+ * @return
+ *	- Length of string (excluding the terminating '\0') written to out.
+ *	- value >= outlen on truncation
+ */
+size_t dpc_packet_option_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
+{
+	size_t len, freespace = outlen;
+	char *p = out;
+
+	if (!out) return 0;
+
+	*out = '\0';
+	if (!vp_is_dhcp_option(vp)) return 0;
+
+	if (vp_is_dhcp_sub_option(vp)) {
+		/* This is a sub-option.
+		 * Print <option.sub-attr> (eg. "82.1").
+		 */
+		len = snprintf(p, freespace, "(%d.%d) ", vp->da->parent->attr, vp->da->attr);
+	} else {
+		/* This is a simple option. */
+		len = snprintf(p, freespace, "(%d) ", vp->da->attr);
+	}
+	RET_LEN_IF_TRUNCATED(p, len, outlen, freespace);
+
+	len = fr_pair_snprint(p, freespace, vp);
+	RET_LEN_IF_TRUNCATED(p, len, outlen, freespace);
+
+	return (outlen - freespace);
+}
+
+/**
  * Print the "options" of a DHCP packet (from the VPs list).
  */
 int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
 {
 	char buf[1024];
-	char *p = buf;
+	size_t len;
 	int num = 0; /* Keep track of how many options we have. */
 
 	fr_cursor_t cursor;
 	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
 		if (vp_is_dhcp_option(vp)) {
-			num ++;
-
-			p = buf;
-			*p++ = '\t';
-
-			if (vp_is_dhcp_sub_option(vp)) {
-				/* This is a sub-option.
-				 * Print <option.sub-attr> (eg. "82.1").
-				 */
-				p += sprintf(p, "(%d.%d) ", vp->da->parent->attr, vp->da->attr);
-			} else {
-				/* This is a simple option. */
-				p += sprintf(p, "(%d) ", vp->da->attr);
+			len = dpc_packet_option_snprint(buf, sizeof(buf), vp);
+			if (len) {
+				fprintf(fp, "\t%s\n", buf);
+				num ++;
 			}
-
-			p += fr_pair_snprint(p, sizeof(buf) - 1, vp);
-			*p++ = '\n';
-			*p = '\0';
-
-			fputs(buf, fp);
 		}
 	}
+
 	return num;
 }
 

@@ -81,11 +81,12 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 
 #define vp_is_dhcp_attr(_vp) (_vp && (fr_dict_by_da(_vp->da) == dict_dhcpv4))
 
-#define vp_is_dhcp_field(_vp) vp_is_dhcp_attr(_vp) && (_vp->da->attr >= 256 && _vp->da->attr <= 269)
+#define vp_is_dhcp_field(_vp) (vp_is_dhcp_attr(_vp) && (_vp->da->attr >= 256 && _vp->da->attr <= 269))
 
-#define vp_is_dhcp_option(_vp) vp_is_dhcp_attr(_vp) && (_vp->da->attr <= 255)
+#define vp_is_dhcp_option(_vp) (vp_is_dhcp_attr(_vp) && (_vp->da->attr <= 255))
 
-#define vp_is_dhcp_sub_option(_vp) vp_is_dhcp_attr(_vp) && (_vp->da->parent && _vp->da->parent->type == FR_TYPE_TLV && _vp->da->parent->parent)
+#define vp_is_dhcp_sub_option(_vp) (vp_is_dhcp_attr(_vp) \
+	&& (_vp->da->parent && _vp->da->parent->type == FR_TYPE_TLV && _vp->da->parent->parent))
 // attribute is a DHCP sub-option if it has a parent of type "tlv", which has also a parent (the protocol itself).
 
 #define DPC_PACKET_ID_UNASSIGNED (-1)

@@ -126,6 +126,20 @@ extern char const config_spaces[];
 	_outlen -= _ret; \
 } while (0)
 
+/**
+ * Check if truncation occured after calling a function such as snprintf. If this is the case:
+ * Return the number of characters (excluding the terminating null byte) which would have been written
+ * to the final string if enough space had been available.
+ *
+ * Otherwise, update the current char pointer and the remaining free space in output buffer.
+ */
+#define RET_LEN_IF_TRUNCATED(_p, _rlen, _outlen, _freespace) do { \
+	if (is_truncated(_rlen, _freespace)) return (_outlen - _freespace) + _rlen; \
+	_p += _rlen; \
+	_freespace -= _rlen; \
+} while (0)
+
+
 
 // fr_box macro that is not defined in value.h (can't have "fr_box_bool", precompiler isn't happy with that)
 #define fr_box_boolean(_val) _fr_box(FR_TYPE_BOOL, .vb_bool, _val)
