@@ -118,6 +118,7 @@ Attribute|Description
 `Start-Delay` | Delay (seconds) before allowing to use this input item to start new sessions.<br>This is useful to handle synchronization between multiple input items.
 `Max-Duration` | Limit duration (seconds) for starting new sessions from this input item (relative to the time it started being used).<br>If a global limit is set (option `-L`), then the earliest limit applies.
 `Max-Use` | Maximum number of sessions that can be initialized from this input item. (Same as option `-c` for this input item only.)
+`Consecutive-Use` | Use this input item multiple times in a row. (The default is to use all input items in a round-robin fashion.)
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
 `DHCP-Authorized-Server` * | Authorized servers. Only allow replies from one of these.<br>Same as option `-a`, but for this input item only.<br>Can be provided multiple times, to authorize a list of servers.
 `DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `DHCP-Message-Type` is provided.
