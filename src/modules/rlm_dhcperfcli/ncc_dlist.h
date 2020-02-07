@@ -196,3 +196,12 @@ static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_
 	} \
 	(*_ncc_dlist).last_used = _item; \
 }
+
+/* Get last used item from list.
+ */
+#define NCC_DLIST_USE_LAST(_ncc_dlist, _item) { \
+	_item = (*_ncc_dlist).last_used; \
+	if (_item && NCC_IS_LONE_ITEM(_item)) { \
+		_item = NULL; \
+	} \
+}

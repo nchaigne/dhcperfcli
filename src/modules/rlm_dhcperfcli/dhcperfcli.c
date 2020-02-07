@@ -78,6 +78,7 @@ fr_dict_attr_t const *attr_start_delay;
 fr_dict_attr_t const *attr_rate_limit;
 fr_dict_attr_t const *attr_max_duration;
 fr_dict_attr_t const *attr_max_use;
+fr_dict_attr_t const *attr_consecutive_use;
 fr_dict_attr_t const *attr_segment;
 
 extern fr_dict_attr_t const *attr_dhcp_hop_count;
@@ -140,6 +141,7 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_rate_limit, .name = "Rate-Limit", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_duration, .name = "Max-Duration", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 	{ .out = &attr_max_use, .name = "Max-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
+	{ .out = &attr_consecutive_use, .name = "Consecutive-Use", .type = FR_TYPE_UINT32, .dict = &dict_dhcperfcli },
 	{ .out = &attr_segment, .name = "Segment", .type = FR_TYPE_STRING, .dict = &dict_dhcperfcli },
 /*
 	{ .out = &attr_dhcp_hop_count, .name = "DHCP-Hop-Count", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
@@ -1864,9 +1866,29 @@ static dpc_input_t *dpc_get_input(void)
 	no_input_available = false;
 	fte_input_available = 0;
 
+	bool reuse_last = false;
+	dpc_input_t *input, *input_last;
+	NCC_DLIST_USE_LAST(&input_list, input_last);
+	input = input_last;
+
 	while (checked < NCC_DLIST_SIZE(&input_list)) {
-		dpc_input_t *input;
-		NCC_DLIST_USE_NEXT(&input_list, input);
+		/*
+		 * Check if we can immediately use again last input.
+		 * If not, hop to the next.
+		 */
+		if (input && input == input_last) {
+			if (input->consecutive_use > 0 && input->num_consecutive < input->consecutive_use) {
+				DEBUG2("Re-using last input (max consecutive use: %u, num consecutive: %u)",
+				       input->consecutive_use, input->num_consecutive);
+				reuse_last = true;
+				input_last = NULL;
+			}
+		}
+
+		if (!reuse_last) {
+			NCC_DLIST_USE_NEXT(&input_list, input);
+			input->num_consecutive = 0;
+		}
 
 		checked++;
 
@@ -1906,10 +1928,14 @@ static dpc_input_t *dpc_get_input(void)
 
 		if (dpc_item_rate_limited(input)) continue;
 
+		/*
+		 * Use this input item now.
+		 */
 		if (!CONF.template) {
 			/* In non-template mode, item is removed from the list. */
 			NCC_DLIST_DRAW(&input_list, input);
 		}
+		input->num_consecutive++;
 		return input;
 	}
 
@@ -2722,6 +2748,9 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 
 		} else if (vp->da == attr_max_use) { /* Max-Use = <int> */
 			input->max_use = vp->vp_uint32;
+
+		} else if (vp->da == attr_consecutive_use) { /* Consecutive-Use = <int> */
+			input->consecutive_use = vp->vp_uint32;
 
 		} else if (vp->da == attr_segment) { /* Segment = <string> */
 			if (!CONF.template) {

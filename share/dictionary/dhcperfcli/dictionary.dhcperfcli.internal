@@ -22,7 +22,8 @@ ATTRIBUTE Start-Delay                  3705   string virtual
 ATTRIBUTE Rate-Limit                   3706   string virtual
 ATTRIBUTE Max-Duration                 3707   string virtual
 ATTRIBUTE Max-Use                      3708   integer virtual
-ATTRIBUTE Segment                      3709   string virtual
+ATTRIBUTE Consecutive-Use              3709   integer virtual
+ATTRIBUTE Segment                      3710   string virtual
 
 VALUE     DHCP-Workflow-Type           DORA           1
 VALUE     DHCP-Workflow-Type           DORA-Decline   2

@@ -216,16 +216,17 @@ struct dpc_input {
 	uint32_t id;              //!< Id of input (0 for the first one).
 	bool done;                //!< Is this input done ? (i.e. no session can be started from it).
 	uint32_t num_use;         //!< How many times has this input been used to start sessions.
+	uint32_t num_consecutive; //!< How many times has this input been used consecutively.
 
 	VALUE_PAIR *vps;          //!< List of input value pairs read.
 
-	ncc_dlist_t *gateway_list;   //<!List of gateways.
+	ncc_dlist_t *gateway_list;   //!<List of gateways.
 
-	ncc_dlist_t *segments;       //<! List of input scoped segments.
-	ncc_segment_t *segment_cur;  //<! Currently used segment.
-	ncc_segment_t *segment_dflt; //<! Default segment for this input.
+	ncc_dlist_t *segments;       //!< List of input scoped segments.
+	ncc_segment_t *segment_cur;  //!< Currently used segment.
+	ncc_segment_t *segment_dflt; //!< Default segment for this input.
 
-	bool do_xlat;             //<! If the input contain vp's of type VT_XLAT and we handle xlat expansion.
+	bool do_xlat;             //!< If the input contain vp's of type VT_XLAT and we handle xlat expansion.
 
 	fr_time_delta_t ftd_start_delay; //!< Delay after which this input can be used to start sessions.
 	fr_time_t fte_start;      //!< Timestamp of first use.
@@ -233,11 +234,13 @@ struct dpc_input {
 
 	double rate_limit;        //<! Limit rate/s of sessions initialized from this input.
 
-	uint32_t max_use;         //<! Maximum number of times this input can be used.
+	uint32_t max_use;         //!< Maximum number of times this input can be used.
 	double max_duration;      //!< Maximum duration of starting sessions with this input (relative to input start use).
 	fr_time_t fte_max_start;  // fte_start + max_duration
 
-	fr_ipaddr_t *authorized_servers; //<! Only allow replies from explicitly authorized servers.
+	uint32_t consecutive_use; //!< Number of times this input can be used consecutively.
+
+	fr_ipaddr_t *authorized_servers; //!< Only allow replies from explicitly authorized servers.
 
 	dpc_input_ext_t ext;      //!< Input pre-parsed information.
 };
