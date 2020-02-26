@@ -95,7 +95,7 @@ extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
 /* If there is an active event timer for this session, clear it. */
 #define SESSION_EVENT_CLEAR(_s) \
 	if (_s->event) { \
-		fr_event_timer_delete(_s->ev_list, &_s->event); \
+		fr_event_timer_delete(&_s->event); \
 		_s->event = NULL; \
 		_s->ev_list = NULL; \
 	}
