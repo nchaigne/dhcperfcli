@@ -1648,6 +1648,10 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	int r;
 	VALUE_PAIR *vp;
 
+	/* Already encoded (i.e. retransmitting).
+	 */
+	if (packet->data) return 0;
+
 	/*
 	 * If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
@@ -2451,7 +2455,7 @@ static uint32_t dpc_loop_start_sessions(void)
 		if (dpc_send_one_packet(session, &session->request) < 0
 		    || !session->reply_expected /* No reply is expected to this kind of packet (e.g. Release). */
 		    || !CONF.request_timeout /* Do not wait for a reply. */
-			|| CONF.noop /* Did not actually send anything. */
+		    || CONF.noop /* Did not actually send anything. */
 		    ) {
 			dpc_session_finish(session);
 		} else {
