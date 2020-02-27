@@ -52,6 +52,7 @@ struct dpc_config_s {
 	bool pr_stat_per_input_digest;   //<! Print the per-input progress statistics condensed on a single line.
 	uint32_t pr_stat_per_input_max;  //<! Max number of input items shown in progress statistics.
 
+	bool noop;                       //<! Dry-run mode (do not send anything over the network).
 	bool template;                   //<! Template mode.
 	bool xlat;                       //<! Xlat enabled on input items.
 	char const **input_files;        //<! Files from which input items are read.

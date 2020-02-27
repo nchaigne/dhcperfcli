@@ -1034,30 +1034,32 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 
 	packet->sockfd = sockfd;
 
+	if (!CONF.noop) {
 #ifdef HAVE_LIBPCAP
-	if (session->input->ext.with_pcap) {
-		/*
-		 * Send using pcap raw socket.
-		 */
-		packet->if_index = pcap->if_index; /* So we can trace it. */
-		ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
-		/*
-		 * Note: we're sending from our real Ethernet source address (from the selected interface,
-		 * set by fr_pcap_open / fr_pcap_mac_addr), *not* field 'chaddr' from the DHCP packet
-		 * (which is a fake hardware address).
-		 * This because we want replies (sent by the DHCP server to our Ethernet address) to reach us.
-		 */
-	} else
+		if (session->input->ext.with_pcap) {
+			/*
+			 * Send using pcap raw socket.
+			 */
+			packet->if_index = pcap->if_index; /* So we can trace it. */
+			ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
+			/*
+			 * Note: we're sending from our real Ethernet source address (from the selected interface,
+			 * set by fr_pcap_open / fr_pcap_mac_addr), *not* field 'chaddr' from the DHCP packet
+			 * (which is a fake hardware address).
+			 * This because we want replies (sent by the DHCP server to our Ethernet address) to reach us.
+			 */
+		} else
 #endif
-	{
-		/*
-		 * Send using a connectionless UDP socket (sendfromto).
-		 */
-		ret = fr_dhcpv4_udp_packet_send(packet);
-	}
-	if (ret < 0) {
-		SPERROR("Failed to send packet");
-		return -1;
+		{
+			/*
+			 * Send using a connectionless UDP socket (sendfromto).
+			 */
+			ret = fr_dhcpv4_udp_packet_send(packet);
+		}
+		if (ret < 0) {
+			SPERROR("Failed to send packet");
+			return -1;
+		}
 	}
 
 	/* Print sent packet. */
@@ -2443,15 +2445,18 @@ static uint32_t dpc_loop_start_sessions(void)
 
 		session->num_send = 1;
 
-		/* Send the packet. */
+		/*
+		 * Encode and send the packet.
+		 */
 		if (dpc_send_one_packet(session, &session->request) < 0
 		    || !session->reply_expected /* No reply is expected to this kind of packet (e.g. Release). */
 		    || !CONF.request_timeout /* Do not wait for a reply. */
+			|| CONF.noop /* Did not actually send anything. */
 		    ) {
 			dpc_session_finish(session);
 		} else {
 			/*
-			 *	Arm request timeout.
+			 * Arm request timeout.
 			 */
 			dpc_event_add_request_timeout(session, 0);
 		}
@@ -3280,6 +3285,7 @@ static struct option long_options[] = {
 	{ "debug",                  no_argument,       NULL, 1 },
 	{ "input-rate",             required_argument, NULL, 1 },
 	{ "listen-addr",            required_argument, NULL, 1 },
+	{ "noop",                   no_argument,       NULL, 1 },
 	{ "retransmit",             required_argument, NULL, 1 },
 	{ "segment",                required_argument, NULL, 1 },
 	{ "xlat",                   optional_argument, NULL, 1 },
@@ -3352,6 +3358,7 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("--debug", FR_TYPE_BOOL, dpc_config_t, debug_dev) },
 	{ FR_CONF_OFFSET("--input-rate", FR_TYPE_FLOAT64, dpc_config_t, input_rate_limit), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("--listen-addr", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, listen_addrs) },
+	{ FR_CONF_OFFSET("--noop", FR_TYPE_BOOL, dpc_config_t, noop) },
 	{ FR_CONF_OFFSET("--retransmit", FR_TYPE_UINT32, dpc_config_t, retransmit_max), .dflt = "2" },
 	{ FR_CONF_OFFSET("--segment", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, segments) },
 	{ FR_CONF_OFFSET("--xlat", FR_TYPE_BOOL, dpc_config_t, xlat), .dflt = "yes" },
