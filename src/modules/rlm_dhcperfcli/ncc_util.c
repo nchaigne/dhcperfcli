@@ -1111,6 +1111,33 @@ int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_
 	return 0;
 }
 
+/**
+ * Generate a random string.
+ * Similar to fr_rand_str, but accepts the array of allowed characters as argument.
+ *
+ * @param[out] out      where to write the output string.
+ * @param[in]  len      length of output string to generate.
+ * @param[in]  randstr  array to pick random characters from.
+ */
+void ncc_rand_str(uint8_t *out, size_t len, char *randstr)
+{
+	size_t randstr_len = strlen(randstr);
+
+	uint8_t *p = out, *end = p + len;
+	unsigned int word, mod;
+	uint8_t byte;
+
+#define fill(_expr) \
+while (p < end) { \
+	if ((mod = ((p - out) & (sizeof(word) - 1))) == 0) word = fr_rand(); \
+	byte = ((uint8_t *)&word)[mod]; \
+	*p++ = (_expr); \
+}
+
+	fill(randstr[byte % randstr_len]);
+	out[len] = '\0';
+}
+
 
 /**
  * Parse a list of endpoint addresses.
