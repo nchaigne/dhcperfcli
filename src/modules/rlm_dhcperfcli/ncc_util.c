@@ -1115,17 +1115,23 @@ int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_
  * Generate a random string.
  * Similar to fr_rand_str, but accepts the array of allowed characters as argument.
  *
- * @param[out] out      where to write the output string.
- * @param[in]  len      length of output string to generate.
- * @param[in]  randstr  array to pick random characters from.
+ * @param[out] out          where to write the output string.
+ * @param[in]  len          length of output string to generate.
+ * @param[in]  randstr      array to pick random characters from.
+ * @param[in]  randstr_len  length of randstr (or -1 to use strlen).
  */
-void ncc_rand_str(uint8_t *out, size_t len, char *randstr)
+void ncc_rand_str(uint8_t *out, size_t len, char *randstr, ssize_t randstr_len)
 {
-	size_t randstr_len = strlen(randstr);
-
 	uint8_t *p = out, *end = p + len;
 	unsigned int word, mod;
 	uint8_t byte;
+
+	if (randstr_len < 0) randstr_len = strlen(randstr);
+
+	if (randstr_len == 0) { /* Ensure we don't crash. */
+		out[0] = '\0';
+		return;
+	}
 
 #define fill(_expr) \
 while (p < end) { \
