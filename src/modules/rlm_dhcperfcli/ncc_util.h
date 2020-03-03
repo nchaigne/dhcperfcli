@@ -73,15 +73,16 @@ extern char const config_spaces[];
 }
 
 
-/*	After a call to snprintf and similar functions, check if we have enough remaining buffer space.
+/* After a call to snprintf and similar functions, check if we have enough remaining buffer space.
  *
- *	These functions return the number of characters printed (excluding the null byte used to end output to strings).
- *	If the output was truncated due to this limit then the return value is the number of characters (excluding the
- *	terminating null byte) which would have been written to the final string if enough space had been available.
- *	Thus, a return value of size or more means that the output was truncated.
+ * These functions return the number of characters printed (excluding the null byte used to end output to strings).
+ * If the output was truncated due to this limit then the return value is the number of characters (excluding the
+ * terminating null byte) which would have been written to the final string if enough space had been available.
+ * Thus, a return value of size or more means that the output was truncated.
  */
 
-/* Push error about insufficient buffer size. */
+/* Push error about insufficient buffer size.
+ */
 #define ERR_BUFFER_SIZE(_need, _size) \
 	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (needed: %zu bytes, have: %zu)", (size_t)(_need), (size_t)(_size));
 
@@ -95,6 +96,19 @@ extern char const config_spaces[];
 #define CHECK_BUFFER_SIZE(_ret, _need, _size) \
 	if (_size < _need) { \
 		ERR_BUFFER_SIZE(_need, _size); \
+		return _ret; \
+	}
+
+/**
+ * Same as ERR_BUFFER_SIZE / CHECK_BUFFER_SIZE, but also show initially available size.
+ */
+#define ERR_BUFFER_SIZE_IN(_need, _size, _size_in) \
+	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (needed: %zu bytes, have: %zu, initial: %zu)", \
+		(size_t)(_need), (size_t)(_size), (size_t)(_size_in));
+
+#define CHECK_BUFFER_SIZE_IN(_ret, _need, _size, _size_in) \
+	if (_size < _need) { \
+		ERR_BUFFER_SIZE_IN(_need, _size, _size_in); \
 		return _ret; \
 	}
 

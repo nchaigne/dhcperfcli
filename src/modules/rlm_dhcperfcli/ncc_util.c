@@ -633,7 +633,7 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 	/* Account for separators space between each octet, except at end of each line. */
 	needed += (sep_len * (in_len - 1 - (num_line - 1)));
 
-	DEBUG3("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
+	DEBUG4("outlen: %zu, in_len: %zu, num_line: %u, prefix_len: %u, needed: %zu\n",
 	       outlen, in_len, num_line, prefix_len, needed);
 
 	CHECK_BUFFER_SIZE(NULL, needed, outlen);
