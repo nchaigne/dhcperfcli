@@ -281,6 +281,7 @@ size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp);
 FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
 FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);
 int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone);
+int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, char const **strings);
 
 char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
                            char const *prefix, int line_max_len);

@@ -585,6 +585,48 @@ error:
 	return -1;
 }
 
+/**
+ * Read pairs from an array of strings (must have a NULL terminator).
+ * Append them to the provided list.
+ * Inspired from FreeRADIUS function fr_pair_list_afrom_file.
+ */
+int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, char const **strings)
+{
+	int i = 0;
+	FR_TOKEN last_token = T_EOL;
+	fr_cursor_t cursor;
+
+	VALUE_PAIR *vp = NULL;
+	fr_cursor_init(&cursor, out);
+
+	while (strings[i] != NULL) {
+		VALUE_PAIR *next;
+
+		vp = NULL;
+		last_token = fr_pair_list_afrom_str(ctx, dict, strings[i], &vp);
+		if (!vp) {
+			if (last_token != T_EOL) goto error;
+			break;
+		}
+
+		do {
+			next = vp->next;
+			fr_cursor_append(&cursor, vp);
+		} while (next && (vp = next));
+
+		i++;
+	}
+
+	return 0;
+
+error:
+	vp = fr_cursor_head(&cursor);
+	if (vp) fr_pair_list_free(&vp);
+	*out = NULL;
+
+	return -1;
+}
+
 
 /**
  * Print to a string buffer the hexadecimal representation of a data buffer.
