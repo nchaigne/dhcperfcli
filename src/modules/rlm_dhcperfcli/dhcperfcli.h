@@ -31,10 +31,22 @@ extern int dpc_debug_lvl;
 extern fr_time_t fte_start;
 extern ncc_dlist_t input_list;
 extern fr_dict_attr_t const *attr_encoded_data;
-extern fr_dict_attr_t const *attr_dhcp_message_type;
-extern fr_dict_attr_t const *attr_dhcp_requested_ip_address;
 
-extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
+extern fr_dict_attr_t const *attr_dhcp_hop_count;
+extern fr_dict_attr_t const *attr_dhcp_transaction_id;
+extern fr_dict_attr_t const *attr_dhcp_client_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_your_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_gateway_ip_address;
+extern fr_dict_attr_t const *attr_dhcp_message_type;
+extern fr_dict_attr_t const *attr_dhcp_server_identifier;
+extern fr_dict_attr_t const *attr_dhcp_requested_ip_address;
+/*
+ * Except from the last two, all these dhcpv4 attributes are linked from src/protocols/dhcpv4/base.c
+ * (and loaded when calling fr_dhcpv4_global_init)
+ */
+
+extern fr_dict_t const *dict_dhcperfcli;
+extern fr_dict_t const *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 
 
 /*
@@ -67,7 +79,7 @@ extern fr_dict_t *dict_dhcpv4; /* Defined in src/protocols/dhcpv4/base.c */
 
 #define DHCP_MAX_MESSAGE_TYPE  (16)
 // DHCP_MAX_MESSAGE_TYPE is defined in protocols/dhcpv4/base.c, we need our own.
-extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
+
 #define is_dhcp_message(_x) ((_x > 0) && (_x < DHCP_MAX_MESSAGE_TYPE))
 
 #define is_dhcp_reply_expected(_x) (_x == FR_DHCP_DISCOVER || _x == FR_DHCP_REQUEST || _x == FR_DHCP_INFORM \

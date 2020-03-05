@@ -6,13 +6,12 @@
 #include "dhcperfcli.h"
 
 
+extern char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE];
+
 #define DPC_FROM_TO_STRLEN       (21 + (FR_IPADDR_STRLEN * 2) + 5 + IFNAMSIZ + 1)
-
 #define DPC_MSG_NUM_STRLEN       ((16 + 2) * (DHCP_MAX_MESSAGE_TYPE - 2) + 1)
-
 #define DPC_DELTA_TIME_DECIMALS  3
-
-#define DPC_XLAT_MAX_LEN 4096
+#define DPC_XLAT_MAX_LEN         4096
 
 
 char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_t *session);

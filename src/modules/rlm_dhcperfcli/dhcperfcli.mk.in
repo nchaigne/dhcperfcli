@@ -20,7 +20,7 @@ TARGET := dhcperfcli
 # configuration dependent sources (libcurl-devel)
 MOD_SOURCES := @mod_sources@
 
-SOURCES := dhcperfcli.c
+SOURCES := dhcperfcli.c dpc_glob.c
 SOURCES += dpc_config.c dpc_packet_list.c dpc_util.c
 SOURCES += ncc_time_data.c dpc_time_data.c
 

@@ -23,11 +23,7 @@
 static char const *fr_version = RADIUSD_VERSION_STRING_BUILD("FreeRADIUS");
 static char const *prog_version = DHCPERFCLI_VERSION_STRING;
 
-/*
- * Global variables.
- */
-TALLOC_CTX *global_ctx;
-dpc_config_t *dpc_config;
+static TALLOC_CTX *global_ctx;
 
 /*
  * Scheduling and time measurement are performed using FreeRADIUS time library, whichs is not susceptible
@@ -39,9 +35,7 @@ dpc_config_t *dpc_config;
  * ("epoch" here means: number of nanoseconds since the start of the program)
  */
 
-fr_time_t fte_program_start; /* Program execution start timestamp. */
-fr_time_t fte_start;
-int dpc_debug_lvl = 0;
+static fr_time_t fte_program_start; /* Program execution start timestamp. */
 
 /*
  * Default configuration values.
@@ -81,20 +75,6 @@ fr_dict_attr_t const *attr_max_use;
 fr_dict_attr_t const *attr_consecutive_use;
 fr_dict_attr_t const *attr_segment;
 
-extern fr_dict_attr_t const *attr_dhcp_hop_count;
-extern fr_dict_attr_t const *attr_dhcp_transaction_id;
-extern fr_dict_attr_t const *attr_dhcp_client_ip_address;
-extern fr_dict_attr_t const *attr_dhcp_your_ip_address;
-extern fr_dict_attr_t const *attr_dhcp_gateway_ip_address;
-extern fr_dict_attr_t const *attr_dhcp_message_type;
-fr_dict_attr_t const *attr_dhcp_server_identifier;
-fr_dict_attr_t const *attr_dhcp_requested_ip_address;
-/*
- * Except from the last two, all these dhcpv4 attributes are actually linked from src/protocols/dhcpv4/base.c
- * (and loaded when calling fr_dhcpv4_global_init)
- * The "extern" is not strictly required, but it's certainly less confusing.
- */
-
 
 static char const *progname;
 static pid_t my_pid;
@@ -107,7 +87,6 @@ static char const *dict_fn_freeradius = "freeradius/dictionary.freeradius.intern
 //static char const *dict_fn_dhcperfcli = "dhcperfcli/dictionary.dhcperfcli.internal";
 
 static fr_dict_t const *dict_freeradius;
-static fr_dict_t const *dict_dhcperfcli;
 //fr_dict_t const *dict_dhcpv4;
 static fr_dict_t const *dpc_dict_dhcpv4; /* Ensure we use our own. */
 
@@ -166,12 +145,11 @@ static dpc_packet_list_t *pl; /* List of outgoing packets. */
 static fr_event_list_t **ev_lists; /* Event lists. */
 
 static bool with_stdin_input = false; /* Whether we have something from stdin or not. */
-ncc_dlist_t input_list;
 
 /* List of global time segments, and a pointer on the segment lastly in use.
  */
-ncc_dlist_t *segment_list;
-ncc_segment_t *segment_cur;
+static ncc_dlist_t *segment_list;
+static ncc_segment_t *segment_cur;
 
 /* A default global segment, temporally all-encompassing: with no rate limit, if a global rate limit (-r) is not set.
  * Or with a fixed rate set to the global rate limit, otherwise.
@@ -233,29 +211,6 @@ static fr_time_delta_t ftd_loop_max_time = 50 * 1000 * 1000; /* Max time spent i
 static fr_pcap_t *pcap;
 #endif
 
-/*
- * More concise version of dhcp_message_types defined in protocols/dhcpv4/base.c
- * (Stripped of the "DHCP-" prefix. We only do DHCP.)
- */
-char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE] = {
-	"",
-	"Discover",
-	"Offer",
-	"Request",
-	"Decline",
-	"Ack",
-	"NAK",
-	"Release",
-	"Inform",
-	"Force-Renew",
-	"Lease-Query",
-	"Lease-Unassigned",
-	"Lease-Unknown",
-	"Lease-Active",
-	"Bulk-Lease-Query",
-	"Lease-Query-Done"
-};
-
 static fr_table_num_sorted_t const request_types[] = {
 	{ "-",           FR_CODE_UNDEFINED },
 	{ "auto",        FR_CODE_UNDEFINED },
@@ -290,7 +245,7 @@ static char const *transaction_types[DPC_TR_MAX] = {
 #define LG_PAD_TR_TYPE_MAX 50 /* Limit transaction type name displayed. */
 #define LG_PAD_STATS       20
 
-char elapsed_buf[NCC_TIME_STRLEN];
+static char elapsed_buf[NCC_TIME_STRLEN];
 #define ELAPSED ncc_fr_delta_time_snprint(elapsed_buf, sizeof(elapsed_buf), fte_load_start, fte_load_snapshot, DPC_DELTA_TIME_DECIMALS)
 
 
@@ -376,7 +331,7 @@ static void dpc_exit(void);
 /**
  * Print number of each type of message (sent, received, ...).
  */
-char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type)
+static char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type)
 {
 	int i;
 	char *p = out;
@@ -413,7 +368,7 @@ char *dpc_num_message_type_sprint(char *out, size_t outlen, dpc_packet_stat_fiel
  * E.g.:
  * segment #1 <name> (2.000 - 8.000) fixed: use: 21, rate (/s): 20.999
  */
-void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
+static void dpc_segment_stats_fprint(FILE *fp, ncc_segment_t *segment)
 {
 	char buf[128];
 

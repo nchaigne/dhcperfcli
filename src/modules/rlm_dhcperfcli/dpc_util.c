@@ -10,6 +10,31 @@
 #include "dpc_util.h"
 #include "dpc_config.h"
 
+fr_dict_attr_t const *attr_dhcp_server_identifier;
+fr_dict_attr_t const *attr_dhcp_requested_ip_address;
+
+/*
+ * More concise version of dhcp_message_types defined in protocols/dhcpv4/base.c
+ * (Stripped of the "DHCP-" prefix. We only do DHCP.)
+ */
+char const *dpc_message_types[DHCP_MAX_MESSAGE_TYPE] = {
+	"",
+	"Discover",
+	"Offer",
+	"Request",
+	"Decline",
+	"Ack",
+	"NAK",
+	"Release",
+	"Inform",
+	"Force-Renew",
+	"Lease-Query",
+	"Lease-Unassigned",
+	"Lease-Unknown",
+	"Lease-Active",
+	"Bulk-Lease-Query",
+	"Lease-Query-Done"
+};
 
 typedef struct {
 	uint8_t size;
