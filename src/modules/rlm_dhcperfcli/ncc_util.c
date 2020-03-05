@@ -213,13 +213,26 @@ int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
 /**
  * Set value of a pair (of any data type) from a string.
  * If the conversion is not possible, an error will be returned.
+ *
+ * Similar to FreeRADIUS's fr_pair_value_from_str, but with no de-quoting / unescaping of input string.
+ * Also value is never considered as "tainted".
+ *
+ * @param[out] vp       where to write the output string.
+ * @param[in]  value    string value to convert.
+ *
+ * @return -1 = error, 0 = success.
  */
 int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
 {
 	fr_type_t type = vp->da->type;
 
 	vp->type = VT_DATA;
-	return fr_value_box_from_str(vp, &vp->data, &type, NULL, value, strlen(value), '\0', false);
+
+	/* Note: if 4th parameter (dst_enumv) is NULL, string enum values won't be converted.
+	 */
+	if (fr_value_box_from_str(vp, &vp->data, &type, vp->da, value, strlen(value), '\0', false) < 0) return -1;
+
+	return 0;
 }
 
 /**
