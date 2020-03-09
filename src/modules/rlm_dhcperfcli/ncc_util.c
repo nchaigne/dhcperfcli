@@ -1188,14 +1188,50 @@ void ncc_rand_str(uint8_t *out, size_t len, char *randstr, ssize_t randstr_len)
 		return;
 	}
 
-#define fill(_expr) \
+#define FILL(_expr) \
 while (p < end) { \
 	if ((mod = ((p - out) & (sizeof(word) - 1))) == 0) word = fr_rand(); \
 	byte = ((uint8_t *)&word)[mod]; \
 	*p++ = (_expr); \
 }
 
-	fill(randstr[byte % randstr_len]);
+	FILL(randstr[byte % randstr_len]);
+	out[len] = '\0';
+}
+
+/**
+ * Initialize a fr_fast_rand_t with random seed values.
+ */
+void ncc_rand_ctx_init(fr_fast_rand_t *rand_ctx)
+{
+	rand_ctx->a = fr_rand();
+	rand_ctx->b = fr_rand();
+}
+
+/**
+ * Generate a random string.
+ * Same as ncc_rand_str but using fr_fast_rand instead of fr_rand.
+ * Random context must have been initialized beforehand.
+ */
+void ncc_rand_str_ctx(uint8_t *out, fr_fast_rand_t *rand_ctx, size_t len, char *randstr, ssize_t randstr_len)
+{
+	uint8_t *p = out, *end = p + len;
+	unsigned int word, mod;
+	uint8_t byte;
+
+	if (randstr_len < 0) randstr_len = strlen(randstr);
+
+	if (randstr_len == 0) { /* Ensure we don't crash. */
+		out[0] = '\0';
+		return;
+	}
+
+	while (p < end) {
+		if ((mod = ((p - out) & (sizeof(word) - 1))) == 0) word = fr_fast_rand(rand_ctx);
+		byte = ((uint8_t *)&word)[mod];
+		*p++ = (randstr[byte % randstr_len]);
+	}
+
 	out[len] = '\0';
 }
 

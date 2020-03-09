@@ -305,6 +305,8 @@ bool ncc_str_to_float32(float *out, char const *in, bool allow_negative);
 size_t ncc_str_trim(char *out, char const *in, size_t inlen);
 int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_t inlen);
 void ncc_rand_str(uint8_t *out, size_t len, char *randstr,  ssize_t randstr_len);
+void ncc_rand_ctx_init(fr_fast_rand_t *rand_ctx);
+void ncc_rand_str_ctx(uint8_t *out, fr_fast_rand_t *rand_ctx, size_t len, char *randstr, ssize_t randstr_len);
 
 int ncc_endpoint_list_parse(TALLOC_CTX *ctx, ncc_dlist_t **ep_dlist_p, char const *in,
                             ncc_endpoint_t *default_ep);
