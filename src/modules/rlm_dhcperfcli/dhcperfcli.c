@@ -1129,7 +1129,7 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	/*
 	 * Decode the reply packet.
 	 */
-	if (fr_dhcpv4_packet_decode(packet) < 0) {
+	if (fr_dhcpv4_decode(packet, packet->data, packet->data_len, &packet->vps, &packet->code) < 0) {
 		SPERROR("Failed to decode reply packet (id: %u)", packet->id);
 		fr_radius_packet_free(&packet);
 		/*
@@ -2592,7 +2592,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		 * These are the same that are allowed by the configuration parser (cf. function cf_section_read).
 		 *
 		 * Note: dhcpclient doesn't care, it allows all operators.
-		 * It displays VPs after a "fr_dhcpv4_packet_decode" whichs sets all operators to '='.
+		 * It displays VPs after a "fr_dhcpv4_decode" whichs sets all operators to '='.
 		 */
 		if (vp->op != T_OP_EQ && vp->op != T_OP_SET) {
 			WARN("Invalid operator '%s' in assignment for attribute '%s'. Discarding input (id: %u)",
