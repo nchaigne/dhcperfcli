@@ -1167,39 +1167,6 @@ int ncc_str_trim_ptr(char const **out_p, ssize_t *outlen, char const *in, ssize_
 }
 
 /**
- * Generate a random string.
- * Similar to fr_rand_str, but accepts the array of allowed characters as argument.
- *
- * @param[out] out          where to write the output string.
- * @param[in]  len          length of output string to generate.
- * @param[in]  randstr      array to pick random characters from.
- * @param[in]  randstr_len  length of randstr (or -1 to use strlen).
- */
-void ncc_rand_str(uint8_t *out, size_t len, char *randstr, ssize_t randstr_len)
-{
-	uint8_t *p = out, *end = p + len;
-	unsigned int word, mod;
-	uint8_t byte;
-
-	if (randstr_len < 0) randstr_len = strlen(randstr);
-
-	if (randstr_len == 0) { /* Ensure we don't crash. */
-		out[0] = '\0';
-		return;
-	}
-
-#define FILL(_expr) \
-while (p < end) { \
-	if ((mod = ((p - out) & (sizeof(word) - 1))) == 0) word = fr_rand(); \
-	byte = ((uint8_t *)&word)[mod]; \
-	*p++ = (_expr); \
-}
-
-	FILL(randstr[byte % randstr_len]);
-	out[len] = '\0';
-}
-
-/**
  * Initialize a fr_fast_rand_t with random seed values.
  */
 void ncc_rand_ctx_init(fr_fast_rand_t *rand_ctx)
@@ -1210,8 +1177,15 @@ void ncc_rand_ctx_init(fr_fast_rand_t *rand_ctx)
 
 /**
  * Generate a random string.
- * Same as ncc_rand_str but using fr_fast_rand instead of fr_rand.
- * Random context must have been initialized beforehand.
+ * Similar to fr_rand_str, but accepts the array of allowed characters as argument.
+ * Use fr_fast_rand_t if a random context is provided (otherwise, fall back to fr_rand).
+ *
+ * @param[out] out          where to write the output string.
+ * @param[in]  rand_ctx     random context for fr_fast_rand. Must have been initialized beforehand with random
+ *                          seed values. (if NULL, fr_rand is used instead)
+ * @param[in]  len          length of output string to generate.
+ * @param[in]  randstr      array to pick random characters from.
+ * @param[in]  randstr_len  length of randstr (or -1 to use strlen).
  */
 void ncc_rand_str_ctx(uint8_t *out, fr_fast_rand_t *rand_ctx, size_t len, char *randstr, ssize_t randstr_len)
 {
@@ -1227,7 +1201,10 @@ void ncc_rand_str_ctx(uint8_t *out, fr_fast_rand_t *rand_ctx, size_t len, char *
 	}
 
 	while (p < end) {
-		if ((mod = ((p - out) & (sizeof(word) - 1))) == 0) word = fr_fast_rand(rand_ctx);
+		if ((mod = ((p - out) & (sizeof(word) - 1))) == 0) {
+			if (rand_ctx) word = fr_fast_rand(rand_ctx);
+			else word = fr_rand();
+		}
 		byte = ((uint8_t *)&word)[mod];
 		*p++ = (randstr[byte % randstr_len]);
 	}
