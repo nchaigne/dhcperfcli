@@ -25,7 +25,7 @@ size_t ncc_log_dst_table_len = NUM_ELEMENTS(ncc_log_dst_table);
 FILE *ncc_log_fp = NULL;
 fr_time_t fte_ncc_start; /* Program execution start timestamp. */
 int ncc_debug_lvl = 0;
-fr_thread_local_setup(TALLOC_CTX *, ncc_vlog_pool); /* macro */
+static _Thread_local TALLOC_CTX *ncc_vlog_pool;
 static uint32_t location_indent = 30;
 static char const spaces_location[] = "                                                 ";
 static char const spaces_marker[] = "                                                                                "; // 80

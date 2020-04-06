@@ -11,7 +11,7 @@
 #include "ncc_util.h"
 #include "ncc_xlat.h"
 
-#include <freeradius-devel/server/xlat_priv.h>
+#include <freeradius-devel/unlang/xlat_priv.h>
 
 
 /*

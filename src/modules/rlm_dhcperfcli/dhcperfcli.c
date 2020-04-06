@@ -2619,7 +2619,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 
 				value = talloc_typed_strdup(ctx, vp->xlat); /* modified by xlat_tokenize */
 
-				slen = xlat_tokenize(global_ctx, &xlat, value, NULL);
+				slen = xlat_tokenize(global_ctx, &xlat, value, talloc_array_length(value), NULL);
 				/* Notes:
 				 * - First parameter is talloc context.
 				 *   We cannot use "input" as talloc context, because we may free the input and still need the parsed xlat expression.
@@ -3301,7 +3301,7 @@ static CONF_PARSER options_conf_parser[] = {
 	{ FR_CONF_OFFSET("-f | --input-file", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, input_files) },
 	{ FR_CONF_OFFSET("-g", FR_TYPE_STRING | FR_TYPE_MULTI, dpc_config_t, gateways) },
 	{ FR_CONF_OFFSET("-i", FR_TYPE_STRING, dpc_config_t, interface) },
-	{ FR_CONF_OFFSET("-I", FR_TYPE_INT64, dpc_config_t, base_xid), .uctx = PARSE_CTX_BASE_XID, .dflt = "-1" },
+	{ NCC_CONF_OFFSET("-I", FR_TYPE_INT64, dpc_config_t, base_xid), .uctx = PARSE_CTX_BASE_XID, .dflt = "-1" },
 	{ FR_CONF_OFFSET("-L | --duration-start-max", FR_TYPE_FLOAT64, dpc_config_t, duration_start_max), .uctx = PARSE_CTX_FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("-M", FR_TYPE_BOOL, dpc_config_t, talloc_memory_report) },
 	{ FR_CONF_OFFSET("-N | --session-max", FR_TYPE_UINT32, dpc_config_t, session_max_num) },
@@ -3598,8 +3598,6 @@ static void dpc_exit(void)
 	TALLOC_FREE(pl);
 	TALLOC_FREE(ev_lists);
 	TALLOC_FREE(global_ctx);
-
-	fr_strerror_free();
 
 	/*
 	 * Anything not cleaned up by the above is allocated in

@@ -178,6 +178,15 @@ extern char const config_spaces[];
 /* Custom log flags that can extend fr_log_type_t */
 #define NCC_LOG_LOCATION       (1 << 10)
 
+/*
+ * A simpler "FR_CONF_OFFSET" macro, which bypasses the type checks.
+ * Useful to gain support for types such as FR_TYPE_INT64.
+ */
+#define NCC_CONF_OFFSET(_n, _t, _s, _f) \
+	.name = _n, \
+	.type = _t, \
+	.offset = offsetof(_s, _f)
+
 
 /* Check that endpoint is not undefined. */
 #define is_ipaddr_defined(_x) (_x.af != AF_UNSPEC)

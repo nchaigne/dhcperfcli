@@ -5,28 +5,28 @@
 
 /*
  * Reuse from FreeRADIUS, see:
- * src/lib/server/xlat_func.c
+ * src/lib/unlang/xlat_builtin.c
  *
  * We need that to do our own xlat'ing without pulling the whole server in.
  * And also, to avoid having unchecked xlat functions which can crash our process. :'(
  *
- * Note: we need to link with libfreeradius-server (and libfreeradius-unlang) for xlat_tokenize, xlat_eval, etc.
+ * Note: we need to link with libfreeradius-unlang for xlat_tokenize, xlat_eval, etc.
  *
  * Our xlat_func_find must be called by xlat_tokenize_function, so our own "xlat_root" tree is used instead
  * of that of FreeRADIUS.
- * For this to work, our symbols must be processed by the linker before those of "libfreeradius-server".
+ * For this to work, our symbols must be processed by the linker before those of "libfreeradius-unlang".
  * Which means files must be provided to the linker in the correct order.
  */
 
 #include <freeradius-devel/server/base.h>
-#include <freeradius-devel/server/xlat_priv.h>
+#include <freeradius-devel/unlang/xlat_priv.h>
 
 #include "ncc_util.h"
 #include "ncc_xlat.h"
 
 
 /*
- * The following is copied verbatim from src/lib/server/xlat_func.c
+ * The following is copied verbatim from src/lib/unlang/xlat_builtin.c
  *
  * xlat_cmp
  * xlat_func_find
@@ -63,15 +63,22 @@ static int xlat_cmp(void const *one, void const *two)
 /*
  *	find the appropriate registered xlat function.
  */
-xlat_t *xlat_func_find(char const *name)
+xlat_t *xlat_func_find(char const *in, ssize_t inlen)
 {
-	xlat_t *found;
+	char buffer[256];
 
 	if (!xlat_root) return NULL;
 
-	found = rbtree_finddata(xlat_root, &(xlat_t){ .name = name });
+	if (inlen < 0) {
+		return rbtree_finddata(xlat_root, &(xlat_t){ .name = in });
+	}
 
-	return found;
+	if ((size_t) inlen >= sizeof(buffer)) return NULL;
+
+	memcpy(buffer, in, inlen);
+	buffer[inlen] = '\0';
+
+	return rbtree_finddata(xlat_root, &(xlat_t){ .name = buffer });
 }
 
 /** Remove an xlat function from the function tree

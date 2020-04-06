@@ -55,8 +55,10 @@ typedef struct ncc_segment {
 	uint32_t num_use;           //!< How many times has this segment been used to start sessions.
 	uint32_t target;            //!< How many times should this segment have been used to meet target rate.
 
-	ncc_segment_alloc_t alloc;  //!< Allocation method.
-	ncc_segment_type_t type;    //!< Type of segment.
+	//ncc_segment_alloc_t alloc;  //!< Allocation method.
+	int32_t alloc;              //!< Allocation method.
+	//ncc_segment_type_t type;    //!< Type of segment.
+	int32_t type;               //!< Type of segment.
 
 	union {
 		double rate_limit;      //<! Limit rate/s of sessions initialized from this segment.
