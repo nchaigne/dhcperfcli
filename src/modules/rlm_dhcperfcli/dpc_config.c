@@ -48,22 +48,14 @@ size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_tabl
  *   even if we had a value in target variable (pointer set to NULL by cf_section_parse_init).
  *
  * - Prefer FR_TYPE_STRING rather than FR_TYPE_FILE_INPUT (we don't want all the checks that FreeRADIUS do with it).
- */
-
-/* Not all types are supported by the parser (cf. FR_CONF_OFFSET -> FR_CONF_TYPE_CHECK in cf_parse.h)
- * The following do not work ("error: void value not ignored as it ought to be"):
- * FR_TYPE_INT16, FR_TYPE_INT8
  *
- * Validation macro FR_CONF_TYPE_CHECK does not seem to work in all cases.
- * For example it doesn't compain if there is a mismatch between integer types.
+ * Not all types are supported by FreeRADIUS parser (cf. FR_CONF_OFFSET -> FR_CONF_TYPE_CHECK in cf_parse.h)
+ * The following do not work (compiler "error: void value not ignored as it ought to be"):
+ * FR_TYPE_INT8, FR_TYPE_INT16, FR_TYPE_INT64, any enum type.
  *
- * To bypass it we could just use a simpler "CONF_OFFSET" macro.
- * Nope. We can't, actually, because they are also not handled at runtime. So just don't use them.
+ * To bypass the compile-time checks, use NCC_CONF_OFFSET (which is FR_CONF_OFFSET without the type checks).
+ * In addition, the default parsing function cannot be used. Instead use ".func = ncc_conf_item_parse".
  */
-#define _CONF_OFFSET(_n, _t, _s, _f) \
-	.name = _n, \
-	.type = _t, \
-	.offset = offsetof(_s, _f)
 
 static CONF_PARSER segment_conf_parser[] = {
 	{ FR_CONF_OFFSET("type", FR_TYPE_INT32, dpc_segment_config_t, type), .dflt = "fixed",
@@ -161,13 +153,6 @@ static const CONF_PARSER dhcperfcli_conf_parser[] = {
 	{ FR_CONF_POINTER("progress", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) progress_conf_parser },
 	{ FR_CONF_POINTER("transport", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) transport_conf_parser },
 	{ FR_CONF_POINTER("load", FR_TYPE_SUBSECTION, NULL), .subcs = (void const *) load_conf_parser },
-
-	// test
-	{ FR_CONF_OFFSET("ftd_progress_interval", FR_TYPE_TIME_DELTA, dpc_config_t, ftd_progress_interval),
-		.func = ncc_conf_item_parse, .uctx = &(ncc_parse_ctx_t){ .type = FR_TYPE_TIME_DELTA,
-		.type_check = NCC_TYPE_IGNORE_ZERO | NCC_TYPE_NOT_NEGATIVE | NCC_TYPE_FORCE_MIN | NCC_TYPE_FORCE_MAX,
-		._float.min = 0.001, ._float.max = 86400.003002001 }
-	},
 
 	CONF_PARSER_TERMINATOR
 };
