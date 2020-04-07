@@ -55,7 +55,7 @@ size_t ncc_timedata_dst_table_len = NUM_ELEMENTS(ncc_timedata_dst_table);
 		.fr_table = ncc_timedata_dst_table, .fr_table_len_p = &ncc_timedata_dst_table_len }
 
 CONF_PARSER timedata_conf_parser[] = {
-	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, ncc_timedata_config_t, dst), .dflt = "influx",
+	{ NCC_CONF_OFFSET("destination", NCC_TYPE_ENUM, ncc_timedata_config_t, dst), .dflt = "influx",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_TIMEDATA_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, ncc_timedata_config_t, file) },
 	{ FR_CONF_OFFSET("max_backlog", FR_TYPE_UINT32, ncc_timedata_config_t, max_backlog), .dflt = "300",

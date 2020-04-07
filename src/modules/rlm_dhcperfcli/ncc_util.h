@@ -187,6 +187,8 @@ extern char const config_spaces[];
 	.type = _t, \
 	.offset = offsetof(_s, _f)
 
+#define NCC_TYPE_ENUM FR_TYPE_INT32
+
 
 /* Check that endpoint is not undefined. */
 #define is_ipaddr_defined(_x) (_x.af != AF_UNSPEC)

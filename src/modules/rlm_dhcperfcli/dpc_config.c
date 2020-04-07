@@ -58,7 +58,7 @@ size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_tabl
  */
 
 static CONF_PARSER segment_conf_parser[] = {
-	{ FR_CONF_OFFSET("type", FR_TYPE_INT32, dpc_segment_config_t, type), .dflt = "fixed",
+	{ NCC_CONF_OFFSET("type", NCC_TYPE_ENUM, dpc_segment_config_t, type), .dflt = "fixed",
 		.func = ncc_conf_item_parse, PARSE_CTX_SEGMENT_TYPE },
 	{ FR_CONF_OFFSET("start", FR_TYPE_FLOAT64, dpc_segment_config_t, start), .dflt = "0", FLOAT64_NOT_NEGATIVE },
 	{ FR_CONF_OFFSET("end", FR_TYPE_FLOAT64, dpc_segment_config_t, end), .dflt = "0", FLOAT64_NOT_NEGATIVE },
@@ -70,7 +70,7 @@ static CONF_PARSER segment_conf_parser[] = {
 };
 
 static const CONF_PARSER log_conf_parser[] = {
-	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, dpc_config_t, log_dst), .dflt = "stdout",
+	{ NCC_CONF_OFFSET("destination", NCC_TYPE_ENUM, dpc_config_t, log_dst), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_LOG_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, log_file) },
 	{ FR_CONF_OFFSET("debug_level", FR_TYPE_INT32, dpc_config_t, debug_level), /* No default */
@@ -94,7 +94,7 @@ static const CONF_PARSER packet_trace_conf_parser[] = {
 static const CONF_PARSER progress_conf_parser[] = {
 	{ FR_CONF_OFFSET("interval", FR_TYPE_FLOAT64, dpc_config_t, progress_interval), /* No default */
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_INTERVAL },
-	{ FR_CONF_OFFSET("destination", FR_TYPE_INT32, dpc_config_t, pr_stat_dst), .dflt = "stdout",
+	{ NCC_CONF_OFFSET("destination", NCC_TYPE_ENUM, dpc_config_t, pr_stat_dst), .dflt = "stdout",
 		.func = ncc_conf_item_parse, .uctx = PARSE_CTX_PROGRESS_DESTINATION },
 	{ FR_CONF_OFFSET("file", FR_TYPE_STRING, dpc_config_t, pr_stat_file) },
 	{ FR_CONF_OFFSET("file_rewrite", FR_TYPE_BOOL, dpc_config_t, pr_stat_file_rewrite), .dflt = "no" },

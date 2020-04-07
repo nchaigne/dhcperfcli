@@ -34,16 +34,14 @@ struct dpc_config_s {
 
 	char const *dict_dir;           //!< Where to load dictionaries from.
 
-	//ncc_log_dst_t log_dst;           //<! Log destination type.
-	int32_t log_dst;                 //<! Log destination type.
+	ncc_log_dst_t log_dst;           //<! Log destination type.
 	char const *log_file;            //<! log file name (for "file" destination).
 	int debug_level;                 //!< The base debug level.
 	bool debug_dev;                  //!< Enable extended debug information for developper.
 	bool debug_basename;             //!< Print only file base name.
 	bool log_timestamp;              //!< Add timestamp to log messages.
 
-	//dpc_progress_stat_dst_t pr_stat_dst; //<! Progress statistics destination type.
-	int32_t pr_stat_dst;             //<! Progress statistics destination type.
+	dpc_progress_stat_dst_t pr_stat_dst; //<! Progress statistics destination type.
 	double progress_interval;        //<! Time interval between periodic progress statistics.
 	fr_time_delta_t ftd_progress_interval;
 	char const *pr_stat_file;        //<! Progress statistics file name (for "file" destination).
@@ -99,8 +97,7 @@ struct dpc_config_s {
  */
 typedef struct {
 	char const *name;           //!< Name of segment (optional).
-	//ncc_segment_type_t type;    //!< Type of segment.
-	int32_t type;               //!< Type of segment.
+	ncc_segment_type_t type;    //!< Type of segment.
 	double start;               //!< Start of segment.
 	double end;                 //!< End of segment.
 	double rate;                //<! Segment fixed rate.
