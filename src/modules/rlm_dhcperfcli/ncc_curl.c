@@ -1110,7 +1110,7 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 		break;
 
 	default:
-		ncc_void_assert(0);
+		ncc_assert(0);
 		break;
 	};
 
@@ -1214,7 +1214,7 @@ int ncc_curl_request_config(ncc_curl_mod_t const *inst, ncc_curl_mod_section_t c
 
 	// we don't handle anything else.
 	default:
-		ncc_void_assert(0);
+		ncc_assert(0);
 	}
 
 //finish:

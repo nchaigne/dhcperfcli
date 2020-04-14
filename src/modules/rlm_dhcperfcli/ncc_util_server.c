@@ -230,7 +230,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 		}
 
 		cp = cf_item_to_pair(ci);
-		rad_assert(cp != NULL);
+		fr_assert(cp != NULL);
 
 		VALUE_PAIR *vp = ncc_pair_afrom_cp(ctx, dict, cp);
 		if (!vp) goto error;

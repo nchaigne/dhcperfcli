@@ -25,19 +25,22 @@ extern char const config_spaces[];
 
 
 /*
- *	Using rad_assert (which calls fr_assert_exit) defined in lib/server/rad_assert.h
- *	Not anymore: now in non-debug build (NDEBUG) it does nothing... (??)
+ * FreeRADIUS assert macros are defined in src/lib/util/debug.h
+ * Some depend on NDEBUG (set for a standard, i.e. non-debug build):
+ * - fr_assert does nothing on standard build
  *
- *	assert output:
- *	dhcperfcli: src/modules/rlm_dhcperfcli/dpc_packet_list.c:601: dpc_packet_list_recv: Assertion `pl != ((void *)0)' failed.
+ * "assert" output example:
+ *   dhcperfcli: src/modules/rlm_dhcperfcli/dpc_packet_list.c:601: dpc_packet_list_recv: Assertion `pl != ((void *)0)' failed.
  *
- *	fr_assert_exit output:
- *	ASSERT FAILED src/modules/rlm_dhcperfcli/dpc_packet_list.c[601]: pl != NULL
- *	or "ASSERT WOULD FAIL" if non-debug build (NDEBUG).
+ * FreeRADIUS assert macros:
+ *   ASSERT FAILED src/modules/rlm_dhcperfcli/dpc_packet_list.c[601]: pl != NULL
+ *   or "ASSERT WOULD FAIL" if non-debug build (NDEBUG).
  */
-#define ncc_void_assert(_expr) ((void) ((_expr) ? (void) 0 : (void) fr_assert_exit(__FILE__, __LINE__, #_expr)))
-#define ncc_assert(_expr) (((_expr) ? true : fr_assert_exit(__FILE__, __LINE__, #_expr)))
+#define ncc_assert(_x) likely((bool)((_x) ? true : (_fr_assert_fail(__FILE__, __LINE__, #_x, NULL) && false)))
+// this is "fr_cond_assert" (redefined just in case it changes once again in FreeRADIUS...)
 
+#define ncc_assert_msg(_x, _fmt, ...) likely((bool)((_x) ? true : (_fr_assert_fail(__FILE__, __LINE__, #_x, _fmt, ## __VA_ARGS__) && false)))
+// and this is "fr_cond_assert_msg"
 
 
 /* Generic function argument check. Return error value if condition is not verified. */
