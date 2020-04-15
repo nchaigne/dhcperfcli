@@ -643,7 +643,10 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, ncc_transaction_st
 
 	/* Print rate if job elapsed time is at least 1 s. */
 	if (ncc_load_elapsed_time_get() >= 1.0) {
-		fprintf(fp, ", rate (avg/s): %.3f", ncc_get_tr_rate(my_stats));
+		double rate = ncc_get_tr_rate(my_stats, 1.0);
+		if (rate) {
+			fprintf(fp, ", rate (avg/s): %.3f", rate);
+		}
 	}
 
 	fprintf(fp, "\n");

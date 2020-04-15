@@ -181,11 +181,13 @@ size_t ncc_dyn_tr_stats_name_max_len(size_t max_len, ncc_dyn_tr_stats_t *dyn_tr_
 
 /**
  * Compute the effective rate (reply per second) of a given transaction type (or all).
+ * Allow to specify a minimum elapsed time. If not attained, rate is not calculated.
  */
-double ncc_get_tr_rate(ncc_transaction_stats_t *my_stats)
+double ncc_get_tr_rate(ncc_transaction_stats_t *my_stats, double elapsed_min)
 {
 	double elapsed = ncc_fr_time_to_float(ncc_elapsed_fr_time_get(my_stats->fte_start, my_stats->fte_end));
 
-	if (elapsed <= 0) return 0; /* Should not happen. */
+	if (elapsed <= 0 || elapsed < elapsed_min) return 0;
+
 	return (double)my_stats->num / elapsed;
 }
