@@ -245,9 +245,9 @@ int dpc_socket_provide(dpc_packet_list_t *pl, fr_ipaddr_t *src_ipaddr, uint16_t 
 	int i;
 	dpc_packet_socket_t *ps;
 
-	FN_ARG_CHECK(-1, pl);
-	FN_ARG_CHECK(-1, src_ipaddr);
-	FN_ARG_CHECK(-1, src_ipaddr->af != AF_UNSPEC);
+	FN_ARG_ASSERT(-1, pl);
+	FN_ARG_ASSERT(-1, src_ipaddr);
+	FN_ARG_ASSERT(-1, src_ipaddr->af != AF_UNSPEC);
 
 	for (i = 0; i<pl->num_sockets; i++) {
 		ps = &pl->sockets[i];

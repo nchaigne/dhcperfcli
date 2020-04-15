@@ -70,7 +70,7 @@ char *ncc_segment_description_snprint(char *out, size_t outlen, ncc_segment_t *s
 	size_t len;
 	char *p = out;
 
-	FN_ARG_CHECK(NULL, out);
+	FN_ARG_ASSERT(NULL, out);
 
 	/* Segment name if defined, or id otherwise.
 	 */
@@ -124,9 +124,8 @@ char *ncc_segment_interval_snprint(char *out, size_t outlen, ncc_segment_t *segm
 	size_t len;
 	char *p = out;
 
-	if (!ncc_assert(segment)) return NULL;
-
-	FN_ARG_CHECK(NULL, out);
+	FN_ARG_ASSERT(NULL, out);
+	FN_ARG_ASSERT(NULL, segment);
 
 	/* First endpoint is always bounded (finite value).
 	 * Second endpoint is unbounded if set to 0.
@@ -255,8 +254,8 @@ void ncc_segment_list_debug(int depth, ncc_dlist_t *list, bool show_all)
  */
 int ncc_segment_parse(TALLOC_CTX *ctx, ncc_dlist_t *dlist, char const *in)
 {
-	FN_ARG_CHECK(-1, in);
-	FN_ARG_CHECK(-1, in[0] != '\0');
+	FN_ARG_ASSERT(-1, in);
+	FN_ARG_ASSERT(-1, in[0] != '\0');
 
 	char const *p = in;
 	char const *sep1, *sep2, *sep3, *sep4 = NULL;

@@ -193,7 +193,7 @@ VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_att
 {
 	VALUE_PAIR *vp;
 
-	FN_ARG_CHECK(NULL, da);
+	FN_ARG_ASSERT(NULL, da);
 
 	MEM(vp = fr_pair_afrom_da(ctx, da));
 	if (vps) fr_pair_add(vps, vp);
@@ -422,9 +422,9 @@ FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
 	FR_TOKEN ret = T_INVALID, next, quote;
 	char buf[8];
 
-	FN_ARG_CHECK(T_INVALID, ptr);
-	FN_ARG_CHECK(T_INVALID, *ptr);
-	FN_ARG_CHECK(T_INVALID, raw);
+	FN_ARG_ASSERT(T_INVALID, ptr);
+	FN_ARG_ASSERT(T_INVALID, *ptr);
+	FN_ARG_ASSERT(T_INVALID, raw);
 
 	/*
 	 *	Skip leading spaces
@@ -498,7 +498,7 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
 	FR_TOKEN last_token = T_INVALID;
 	VALUE_PAIR_RAW raw;
 
-	FN_ARG_CHECK(T_INVALID, buffer);
+	FN_ARG_ASSERT(T_INVALID, buffer);
 
 	/*
 	 *	We allow an empty line.
@@ -663,9 +663,9 @@ char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_l
 	int num_line;
 	ssize_t needed;
 
-	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(NULL, outlen > 0);
-	FN_ARG_CHECK(NULL, line_max_len > 0);
+	FN_ARG_ASSERT(NULL, out);
+	FN_ARG_ASSERT(NULL, outlen > 0);
+	FN_ARG_ASSERT(NULL, line_max_len > 0);
 
 	*out = '\0';
 	if (!in || in_len <= 0) return out; /* Nothing to print. */
@@ -755,7 +755,7 @@ int ncc_hex_data_fprint(FILE *fp, const uint8_t *in, int in_len, char const *sep
  */
 char *ncc_endpoint_sprint(char *out, ncc_endpoint_t *ep)
 {
-	FN_ARG_CHECK(NULL, out);
+	FN_ARG_ASSERT(NULL, out);
 
 	char ipaddr_buf[FR_IPADDR_STRLEN];
 	if (!fr_inet_ntop(ipaddr_buf, sizeof(ipaddr_buf), &ep->ipaddr)) return NULL;
@@ -778,8 +778,8 @@ char *ncc_ether_addr_snprint(char *out, size_t outlen, const uint8_t *addr)
 	size_t len;
 	char *p = out;
 
-	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(NULL, addr);
+	FN_ARG_ASSERT(NULL, out);
+	FN_ARG_ASSERT(NULL, addr);
 
 	len = snprintf(out, outlen, "%02x:%02x:%02x:%02x:%02x:%02x",
 	               addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
@@ -847,8 +847,8 @@ char *ncc_delta_time_snprint(char *out, size_t outlen, struct timeval *from, str
 	struct timeval delta, to;
 	uint32_t hour, min, sec, usec;
 
-	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(NULL, from);
+	FN_ARG_ASSERT(NULL, out);
+	FN_ARG_ASSERT(NULL, from);
 
 	if (when && timercmp(when, from, <)) {
 		fr_strerror_printf("Cannot have a negative time difference");
@@ -888,8 +888,8 @@ char *ncc_fr_delta_time_snprint(char *out, size_t outlen, fr_time_t fte_from, fr
 	fr_time_delta_t delta;
 	uint32_t delta_sec, hour, min, sec, usec;
 
-	FN_ARG_CHECK(NULL, out);
-	FN_ARG_CHECK(NULL, fte_from);
+	FN_ARG_ASSERT(NULL, out);
+	FN_ARG_ASSERT(NULL, fte_from);
 
 	if (fte_to && fte_to < fte_from) {
 		fr_strerror_printf("Cannot have a negative time difference");
@@ -927,7 +927,7 @@ char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt)
 	time_t date;
 	struct tm tminfo;
 
-	FN_ARG_CHECK(NULL, out);
+	FN_ARG_ASSERT(NULL, out);
 
 	time(&date);
 	if (localtime_r(&date, &tminfo) == NULL || strftime(out, outlen, fmt, &tminfo) == 0) {
@@ -990,8 +990,8 @@ char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
  */
 int ncc_host_addr_resolve(ncc_endpoint_t *ep, char const *host_arg)
 {
-	FN_ARG_CHECK(-1, ep);
-	FN_ARG_CHECK(-1, host_arg);
+	FN_ARG_ASSERT(-1, ep);
+	FN_ARG_ASSERT(-1, host_arg);
 
 	unsigned long port;
 	uint16_t port_fr;
