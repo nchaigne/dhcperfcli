@@ -43,13 +43,20 @@ extern char const config_spaces[];
 // and this is "fr_cond_assert_msg"
 
 
-/* Generic function argument check. Return error value if condition is not verified. */
-#define FN_ARG_CHECK(_ret, _cond) { \
-	if (!(_cond)) { \
-		fr_strerror_printf("Failed argument check '%s'", STRINGIFY(_cond)); \
+/* Generic function argument check. Return error value "_ret" if condition "_x" is not verified. */
+#define FN_ARG_CHECK(_ret, _x) { \
+	if (!likely((bool)(_x))) { \
+		fr_strerror_printf("Failed argument check '%s'", #_x); \
 		return _ret; \
 	} \
 }
+#define FN_ARG_ASSERT(_ret, _x) { \
+	if (!(likely((bool)((_x) ? true : (_fr_assert_fail(__FILE__, __LINE__, #_x, "Failed argument check") && false))))) { \
+		fr_strerror_printf("Failed argument check '%s'", #_x); \
+		return _ret; \
+	} \
+}
+// note: not using the *assert macro, otherwise NULL would be printed as "((void *)0)" in one of the "#_x"
 
 /* Print an error to FreeRADIUS error stack, and return error value. */
 #define FN_ERROR_PRINTF(_ret, _f, ...) { \
