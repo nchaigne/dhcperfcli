@@ -638,12 +638,11 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, ncc_transaction_st
 	fprintf(fp, "\t%-*.*s: num: %u, RTT (ms): [avg: %.3f, min: %.3f, max: %.3f]",
 	        pad_len, pad_len, name, my_stats->num, rtt_avg, rtt_min, rtt_max);
 
-	/* Print rate if job elapsed time is at least 1 s. */
-	if (ncc_load_elapsed_time_get() >= 1.0) {
-		double rate = ncc_get_tr_rate(my_stats, 1.0);
-		if (rate) {
-			fprintf(fp, ", rate (avg/s): %.3f", rate);
-		}
+	/* Print rate if considered time is not too small.
+	 */
+	double rate = ncc_get_tr_rate(my_stats, CONF.min_time_for_rps);
+	if (rate) {
+		fprintf(fp, ", rate (avg/s): %.3f", rate);
 	}
 
 	fprintf(fp, "\n");
