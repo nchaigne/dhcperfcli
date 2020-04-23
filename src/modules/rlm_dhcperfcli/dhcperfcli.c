@@ -262,11 +262,11 @@ static void dpc_progress_stats_fprint(FILE *fp, bool force);
 static inline double dpc_start_sessions_elapsed_time_get(void);
 
 static double dpc_get_session_in_rate(bool per_input);
-static size_t dpc_tr_name_max_len(void);
+static size_t dpc_tr_name_max_len(dpc_statistics_t *stat_ctx);
 static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, ncc_transaction_stats_t *my_stats, char const *name);
-static void dpc_tr_stats_fprint(FILE *fp);
-static void dpc_stats_fprint(FILE *fp);
-static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt);
+static void dpc_tr_stats_fprint(FILE *fp, dpc_statistics_t *stat_ctx);
+static void dpc_stats_fprint(FILE *fp, dpc_statistics_t *stat_ctx);
+static void dpc_tr_stats_update(dpc_statistics_t *stat_ctx, dpc_transaction_type_t tr_type, fr_time_delta_t rtt);
 static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *request, DHCP_PACKET *reply);
 
 static void dpc_progress_stats(UNUSED fr_event_list_t *el, UNUSED fr_time_t now, UNUSED void *ctx);
@@ -616,10 +616,10 @@ static double dpc_get_session_in_rate(bool per_input)
 /**
  * Get the longest name of actual transactions.
  */
-static size_t dpc_tr_name_max_len(void)
+static size_t dpc_tr_name_max_len(dpc_statistics_t *stat_ctx)
 {
 	size_t max_len = strlen(transaction_types[DPC_TR_ALL]); /* (All) */
-	max_len = ncc_dyn_tr_stats_name_max_len(max_len, &stat_ctx.dyn_tr_stats);
+	max_len = ncc_dyn_tr_stats_name_max_len(max_len, &stat_ctx->dyn_tr_stats);
 
 	return max_len;
 }
@@ -653,39 +653,39 @@ static int dpc_tr_stat_fprint(FILE *fp, unsigned int pad_len, ncc_transaction_st
 /**
  * Print per-transaction type statistics.
  */
-static void dpc_tr_stats_fprint(FILE *fp)
+static void dpc_tr_stats_fprint(FILE *fp, dpc_statistics_t *stat_ctx)
 {
 	int i;
 	int pad_len = 0;
 
-	size_t num_transaction_type = talloc_array_length(stat_ctx.dyn_tr_stats.names);
+	size_t num_transaction_type = talloc_array_length(stat_ctx->dyn_tr_stats.names);
 
 	if (num_transaction_type == 0) return; /* We got nothing. */
 
-	pad_len = dpc_tr_name_max_len() + 1;
+	pad_len = dpc_tr_name_max_len(stat_ctx) + 1;
 	if (pad_len > LG_PAD_TR_TYPE_MAX) pad_len = LG_PAD_TR_TYPE_MAX;
 
 	fprintf(fp, "*** Statistics (per-transaction):\n");
 
 	/* only print "All" if we have more than one (otherwise it's redundant). */
 	if (num_transaction_type > 1) {
-		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.tr_stats[DPC_TR_ALL], transaction_types[DPC_TR_ALL]);
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx->tr_stats[DPC_TR_ALL], transaction_types[DPC_TR_ALL]);
 	}
 
 	for (i = 0; i < num_transaction_type; i++) {
-		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.dyn_tr_stats.stats[i], stat_ctx.dyn_tr_stats.names[i]);
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx->dyn_tr_stats.stats[i], stat_ctx->dyn_tr_stats.names[i]);
 	}
 
 	/* print DORA if we have some. */
-	if (stat_ctx.tr_stats[DPC_TR_DORA].num > 0) {
-		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx.tr_stats[DPC_TR_DORA], transaction_types[DPC_TR_DORA]);
+	if (stat_ctx->tr_stats[DPC_TR_DORA].num > 0) {
+		dpc_tr_stat_fprint(fp, pad_len, &stat_ctx->tr_stats[DPC_TR_DORA], transaction_types[DPC_TR_DORA]);
 	}
 }
 
 /**
  * Print global statistics.
  */
-static void dpc_stats_fprint(FILE *fp)
+static void dpc_stats_fprint(FILE *fp, dpc_statistics_t *stat_ctx)
 {
 	if (!fp) return;
 
@@ -700,47 +700,47 @@ static void dpc_stats_fprint(FILE *fp)
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Sessions", session_num);
 
 	/* Packets sent (total, and of each message type). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", STAT_ALL_PACKET(&stat_ctx, sent));
-	if (STAT_ALL_PACKET(&stat_ctx, sent) > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), &stat_ctx, DPC_STAT_PACKET_SENT));
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", STAT_ALL_PACKET(stat_ctx, sent));
+	if (STAT_ALL_PACKET(stat_ctx, sent) > 0) {
+		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), stat_ctx, DPC_STAT_PACKET_SENT));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", STAT_ALL_PACKET(&stat_ctx, recv));
-	if (STAT_ALL_PACKET(&stat_ctx, recv) > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), &stat_ctx, DPC_STAT_PACKET_RECV));
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", STAT_ALL_PACKET(stat_ctx, recv));
+	if (STAT_ALL_PACKET(stat_ctx, recv) > 0) {
+		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), stat_ctx, DPC_STAT_PACKET_RECV));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets to which no response was received. */
-	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Retransmissions", STAT_ALL_PACKET(&stat_ctx, retr));
+	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Retransmissions", STAT_ALL_PACKET(stat_ctx, retr));
 
 	if (retr_breakdown && retr_breakdown[0] > 0) {
 		fprintf(fp, "\t%-*.*s: %s\n", LG_PAD_STATS, LG_PAD_STATS, "  Retr breakdown",
-		        ncc_retransmit_snprint(buffer, sizeof(buffer), STAT_ALL_PACKET(&stat_ctx, sent), retr_breakdown));
+		        ncc_retransmit_snprint(buffer, sizeof(buffer), STAT_ALL_PACKET(stat_ctx, sent), retr_breakdown));
 	}
 
-	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_PACKET(&stat_ctx, lost));
-	if (STAT_ALL_PACKET(&stat_ctx, lost) > 0) {
-		fprintf(fp, " (%.1f%%)", 100 * (float)STAT_ALL_PACKET(&stat_ctx, lost) / STAT_ALL_PACKET(&stat_ctx, sent));
+	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets lost", STAT_ALL_PACKET(stat_ctx, lost));
+	if (STAT_ALL_PACKET(stat_ctx, lost) > 0) {
+		fprintf(fp, " (%.1f%%)", 100 * (float)STAT_ALL_PACKET(stat_ctx, lost) / STAT_ALL_PACKET(stat_ctx, sent));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received but which were not expected (timed out, sent to the wrong address, or whatever. */
 	fprintf(fp, "\t%-*.*s: %u\n", LG_PAD_STATS, LG_PAD_STATS, "Replies unexpected",
-	        stat_ctx.num_packet_recv_unexpected);
+	        stat_ctx->num_packet_recv_unexpected);
 }
 
 /**
  * Update statistics for a type of transaction.
  */
-static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t rtt)
+static void dpc_tr_stats_update(dpc_statistics_t *stat_ctx, dpc_transaction_type_t tr_type, fr_time_delta_t rtt)
 {
 	if (tr_type < 0 || tr_type >= DPC_TR_MAX) return;
 	if (!rtt) return;
 
-	ncc_transaction_stats_t *my_stats = &stat_ctx.tr_stats[tr_type];
+	ncc_transaction_stats_t *my_stats = &stat_ctx->tr_stats[tr_type];
 
 	ncc_tr_stats_update_values(my_stats, rtt);
 
@@ -752,7 +752,7 @@ static void dpc_tr_stats_update(dpc_transaction_type_t tr_type, fr_time_delta_t 
 /**
  * From a session context, update dynamically named transaction statistics.
  */
-static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_delta_t rtt)
+static void dpc_session_dyn_tr_stats_update(dpc_statistics_t *stat_ctx, dpc_session_ctx_t *session, fr_time_delta_t rtt)
 {
 	char name[256];
 
@@ -760,7 +760,7 @@ static void dpc_session_dyn_tr_stats_update(dpc_session_ctx_t *session, fr_time_
 	dpc_session_transaction_snprint(name, sizeof(name), session);
 
 	/* Update transaction statistics. */
-	ncc_dyn_tr_stats_update(global_ctx, &stat_ctx.dyn_tr_stats, name, rtt);
+	ncc_dyn_tr_stats_update(global_ctx, &stat_ctx->dyn_tr_stats, name, rtt);
 
 	/* If time-data is enabled, also store in time-data context. */
 	if (CONF.with_timedata) dpc_timedata_store_tr_stat(name, rtt);
@@ -779,10 +779,10 @@ static void dpc_statistics_update(dpc_session_ctx_t *session, DHCP_PACKET *reque
 	rtt = session->ftd_rtt;
 
 	/* Name the transaction and update its statistics. */
-	dpc_session_dyn_tr_stats_update(session, rtt);
+	dpc_session_dyn_tr_stats_update(&stat_ctx, session, rtt);
 
 	/* Also update for 'All'. */
-	dpc_tr_stats_update(DPC_TR_ALL, rtt);
+	dpc_tr_stats_update(&stat_ctx, DPC_TR_ALL, rtt);
 }
 
 /**
@@ -1216,7 +1216,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 		 */
 		fr_time_delta_t rtt;
 		rtt = session->reply->timestamp - session->fte_start;
-		dpc_tr_stats_update(DPC_TR_DORA, rtt);
+		dpc_tr_stats_update(&stat_ctx, DPC_TR_DORA, rtt);
 
 		/*
 		 * Maybe send a Decline or Release now.
@@ -3559,8 +3559,8 @@ static void dpc_end(void)
 		 */
 		ncc_load_elapsed_time_snapshot_set(); /* Fixed reference time for consistency. */
 
-		dpc_stats_fprint(stdout);
-		dpc_tr_stats_fprint(stdout);
+		dpc_stats_fprint(stdout, &stat_ctx);
+		dpc_tr_stats_fprint(stdout, &stat_ctx);
 	}
 
 	dpc_exit();
