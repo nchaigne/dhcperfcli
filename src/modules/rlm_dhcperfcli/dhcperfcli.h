@@ -351,5 +351,5 @@ static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_pack
 #define STAT_INCR_PACKET_LOST(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_LOST, _packet)
 #define STAT_INCR_PACKET_RECV(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_RECV, _packet)
 
-#define STAT_ALL_PACKET(_type) (stat_ctx.dpc_stat[0]._type)
-#define STAT_NAK_RECV (stat_ctx.dpc_stat[6].recv)
+#define STAT_ALL_PACKET(_stat_ctx, _type) ((_stat_ctx)->dpc_stat[0]._type)
+#define STAT_NAK_RECV(_stat_ctx) ((_stat_ctx)->dpc_stat[6].recv)
