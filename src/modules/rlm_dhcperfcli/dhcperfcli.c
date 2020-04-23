@@ -255,7 +255,7 @@ static char elapsed_buf[NCC_TIME_STRLEN];
 static void usage(int);
 static void version_print(void);
 
-static char *dpc_num_message_type_snprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type);
+static char *dpc_num_message_type_snprint(char *out, size_t outlen, dpc_statistics_t *stat_ctx, dpc_packet_stat_field_t stat_type);
 static void dpc_per_input_stats_fprint(FILE *fp, bool force);
 static void dpc_progress_stats_fprint(FILE *fp, bool force);
 
@@ -331,7 +331,7 @@ static void dpc_exit(void);
 /**
  * Print number of each type of message (sent, received, ...).
  */
-static char *dpc_num_message_type_snprint(char *out, size_t outlen, dpc_packet_stat_field_t stat_type)
+static char *dpc_num_message_type_snprint(char *out, size_t outlen, dpc_statistics_t *stat_ctx, dpc_packet_stat_field_t stat_type)
 {
 	int i;
 	char *p = out;
@@ -349,10 +349,10 @@ static char *dpc_num_message_type_snprint(char *out, size_t outlen, dpc_packet_s
 	} \
 }
 
-	uint32_t remain = PACKET_STAT_NUM_GET(stat_ctx.dpc_stat, stat_type, 0); /* Total. */
+	uint32_t remain = PACKET_STAT_NUM_GET(stat_ctx->dpc_stat, stat_type, 0); /* Total. */
 
 	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i++) {
-		MSG_TYPE_PRINT(PACKET_STAT_NUM_GET(stat_ctx.dpc_stat, stat_type, i), dpc_message_types[i]);
+		MSG_TYPE_PRINT(PACKET_STAT_NUM_GET(stat_ctx->dpc_stat, stat_type, i), dpc_message_types[i]);
 	}
 	if (remain) { /* Unknown message types. */
 		MSG_TYPE_PRINT(remain, "unknown");
@@ -702,14 +702,14 @@ static void dpc_stats_fprint(FILE *fp)
 	/* Packets sent (total, and of each message type). */
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets sent", STAT_ALL_PACKET(sent));
 	if (STAT_ALL_PACKET(sent) > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), DPC_STAT_PACKET_SENT));
+		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), &stat_ctx, DPC_STAT_PACKET_SENT));
 	}
 	fprintf(fp, "\n");
 
 	/* Packets received (total, and of each message type - if any). */
 	fprintf(fp, "\t%-*.*s: %u", LG_PAD_STATS, LG_PAD_STATS, "Packets received", STAT_ALL_PACKET(recv));
 	if (STAT_ALL_PACKET(recv) > 0) {
-		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), DPC_STAT_PACKET_RECV));
+		fprintf(fp, " (%s)", dpc_num_message_type_snprint(buffer, sizeof(buffer), &stat_ctx, DPC_STAT_PACKET_RECV));
 	}
 	fprintf(fp, "\n");
 

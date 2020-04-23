@@ -333,8 +333,11 @@ static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_pack
 /* Update packet statistics.
  * If time-data is enabled, also store in time-data context.
  */
+#define STAT_CTX_NUM_INCR(_stat_ctx, _type_num, _packet) { \
+	PACKET_STAT_NUM_INCR((_stat_ctx)->dpc_stat, _type_num, _packet->code); \
+}
 #define STAT_NUM_INCR(_type_num, _packet) { \
-	PACKET_STAT_NUM_INCR(stat_ctx.dpc_stat, _type_num, _packet->code); \
+	STAT_CTX_NUM_INCR(&stat_ctx, _type_num, _packet); \
 	if (CONF.with_timedata) dpc_timedata_store_packet_stat(_type_num, _packet->code); \
 }
 
