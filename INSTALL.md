@@ -14,6 +14,8 @@ To sum up you will need :
 
 - C11 support. This implies a relatively recent compiler (GCC 4.9.0 or later). Version of GCC shipped with RHEL 7 is not adequate, so an upgrade (e.g. [GCC 9.2.0](https://gist.github.com/nchaigne/ad06bc867f911a3c0d32939f1e930a11)) is necessary.<br>Alternatively, you can compile with clang (3.0 or later).
 
+- [GNU Make](https://www.gnu.org/software/make/) 4.0 or later (with support for C extensions). The default version (3.81) on RHEL 7 / CentOS 7 is not adequate.
+
 - Talloc
 
 >__`yum -y install libtalloc-devel`__
