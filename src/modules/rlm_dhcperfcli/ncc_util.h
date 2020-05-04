@@ -168,6 +168,27 @@ extern char const config_spaces[];
 } while (0)
 
 
+/*
+ * FreeRADIUS generic string buffer facility.
+ */
+#define ERR_SBUFF_SIZE(_sbuff, _need) { \
+	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (size: %zu, remain: %zu, need: %zu)", \
+		fr_sbuff_len(_sbuff), fr_sbuff_remaining(_sbuff), _need); \
+}
+
+// similar to FR_SBUFF_ADVANCE_RETURN
+// in case of insufficient space: push an error and return NULL.
+// using a standalone macro (instead of a macro calling an inline function) so we can trace location.
+#define NCC_SBUFF_ADVANCE_ERR(_sbuff, _n) { \
+	ssize_t _freespace = fr_sbuff_remaining(_sbuff); \
+	if (_n >= _freespace) { \
+		ERR_SBUFF_SIZE(_sbuff, _n + 1); \
+		return NULL; \
+	} \
+	_fr_sbuff_set_recurse(_sbuff, _sbuff->p + _n); \
+}
+
+
 
 // fr_box macro that is not defined in value.h (can't have "fr_box_bool", precompiler isn't happy with that)
 #define fr_box_boolean(_val) _fr_box(FR_TYPE_BOOL, .vb_bool, _val)

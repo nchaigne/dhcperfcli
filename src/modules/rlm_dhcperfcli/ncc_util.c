@@ -954,11 +954,14 @@ char *ncc_absolute_time_snprint(char *out, size_t outlen, const char *fmt)
 char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32_t *breakdown)
 {
 	int i;
-	char *p = out;
 	size_t len = 0;
 	size_t retransmit_max = talloc_array_length(breakdown);
 
-	*p = '\0';
+	FN_ARG_ASSERT(NULL, out);
+
+	*out = '\0';
+
+	fr_sbuff_t *sbuff = &FR_SBUFF_TMP(out, outlen); /* Generic string buffer. */
 
 	if (num_sent == 0 || !breakdown) return out;
 
@@ -968,14 +971,13 @@ char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
 		 */
 		if (breakdown[i] == 0 || i >= 10) break;
 
-		len = snprintf(p, outlen, "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
+		len = snprintf(sbuff->p, fr_sbuff_remaining(sbuff), "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
 		               i + 1, breakdown[i], 100 * (float)breakdown[i] / num_sent);
-		ERR_IF_TRUNCATED_LEN(p, outlen, len);
+		NCC_SBUFF_ADVANCE_ERR(sbuff, len);
 	}
 
 	return out;
 }
-
 
 /**
  * Parse host address and port from a string: <addr>:<port>.
