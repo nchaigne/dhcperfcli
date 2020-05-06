@@ -169,24 +169,45 @@ extern char const config_spaces[];
 
 
 /*
- * FreeRADIUS generic string buffer facility.
+ * FreeRADIUS generic buffer facilities.
  */
 #define ERR_SBUFF_SIZE(_sbuff, _need) { \
-	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (size: %zu, remain: %zu, need: %zu)", \
+	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (len: %zu, remain: %zu, need: %zu)", \
 		fr_sbuff_len(_sbuff), fr_sbuff_remaining(_sbuff), _need); \
 }
 
-// similar to FR_SBUFF_ADVANCE_RETURN
-// in case of insufficient space: push an error and return NULL.
-// using a standalone macro (instead of a macro calling an inline function) so we can trace location.
-#define NCC_SBUFF_ADVANCE_ERR(_sbuff, _n) { \
+#define ERR_DBUFF_SIZE(_dbuff, _need) { \
+	FR_ERROR_PRINTF_LOCATION("Insufficient buffer space (size: %zu, remain: %zu, need: %zu)", \
+		fr_dbuff_len(_dbuff), fr_dbuff_remaining(_dbuff), _need); \
+}
+
+/**
+ * Similar to FR_SBUFF_ADVANCE_RETURN.
+ * In case of insufficient space: push an error and return NULL.
+ * Using a standalone macro (instead of a macro calling an inline function) so we can trace location.
+ *
+ * @param[in,out] _sbuff  string buffer.
+ * @param[in]     _need   number of characters necessary (excluding the terminating null byte).
+ */
+#define NCC_SBUFF_ADVANCE_ERR(_sbuff, _need) { \
 	ssize_t _freespace = fr_sbuff_remaining(_sbuff); \
-	if (_n >= _freespace) { \
-		ERR_SBUFF_SIZE(_sbuff, _n + 1); \
+	if (_need > _freespace) { \
+		ERR_SBUFF_SIZE(_sbuff, _need); \
 		return NULL; \
 	} \
-	_fr_sbuff_set_recurse(_sbuff, _sbuff->p + _n); \
+	_fr_sbuff_set_recurse(_sbuff, _sbuff->p + _need); \
 }
+
+// similar to FR_DBUFF_CHECK_REMAINING_RETURN
+// in case of insufficient space: push an error
+#define NCC_DBUFF_CHECK_REMAIN_ERR(_dbuff, _need) \
+do { \
+	size_t _freespace = fr_dbuff_remaining(_dbuff); \
+	if (_need > _freespace) { \
+		ERR_DBUFF_SIZE(_dbuff, _need); \
+		return -(_need - _freespace); \
+	} \
+} while (0)
 
 
 
