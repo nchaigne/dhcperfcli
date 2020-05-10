@@ -135,7 +135,7 @@ Likewise for FreeRADIUS libraries. The safest option is to deploy all of FreeRAD
 
 You will need to update your `PATH` environment variable so you can execute the program from wherever.<br>
 For example:
->__`export PATH=/opt/freeradius/4.0.x/sbin:$PATH`__
+>__`export PATH=/opt/freeradius/4.0.x/bin:$PATH`__
 
 Finally, check installation:
 
