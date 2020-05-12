@@ -416,10 +416,10 @@ size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
  * 	T_EOL = end of line was encountered.
  * 	the last token read otherwise (should be T_COMMA).
  */
-FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
+fr_token_t ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
 {
 	char const *p;
-	FR_TOKEN ret = T_INVALID, next, quote;
+	fr_token_t ret = T_INVALID, next, quote;
 	char buf[8];
 
 	FN_ARG_ASSERT(T_INVALID, ptr);
@@ -491,11 +491,11 @@ FR_TOKEN ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
  * All VP's are created using the same (provided) dictionary attribute.
  * Inspired from FreeRADIUS function fr_pair_list_afrom_str.
  */
-FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list)
+fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list)
 {
 	VALUE_PAIR *vp, *head, **tail;
 	char const *p;
-	FR_TOKEN last_token = T_INVALID;
+	fr_token_t last_token = T_INVALID;
 	VALUE_PAIR_RAW raw;
 
 	FN_ARG_ASSERT(T_INVALID, buffer);
@@ -557,7 +557,7 @@ FR_TOKEN ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, cha
 int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone)
 {
 	char buf[8192];
-	FR_TOKEN last_token = T_EOL;
+	fr_token_t last_token = T_EOL;
 
 	fr_cursor_t cursor;
 
@@ -606,7 +606,7 @@ error:
 int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, char const **strings)
 {
 	int i = 0;
-	FR_TOKEN last_token = T_EOL;
+	fr_token_t last_token = T_EOL;
 	fr_cursor_t cursor;
 
 	VALUE_PAIR *vp = NULL;
