@@ -320,7 +320,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 		 */
 		if (pevent == DPC_PACKET_SENT && !vp_encoded_data) {
 			VALUE_PAIR *vp = ncc_pair_create_by_da(packet, NULL, attr_encoded_data);
-			fr_pair_value_memcpy(vp, packet->data, packet->data_len, true);
+			fr_pair_value_memdup(vp, packet->data, packet->data_len, true);
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp);
 		}
