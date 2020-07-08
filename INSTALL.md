@@ -5,7 +5,7 @@
 
 Building *dhcperfcli* requires recent sources of FreeRADIUS version 4.0.x (`master` branch). Note that this version is currently in development. It's alright. We're using FreeRADIUS libraries. They just work fine.
 
-That said, changes made by the FreeRADIUS team may break *dhcperfcli* at any time. Although I try to keep up with these changes, I cannot guarantee responsiveness. Consequently, it is recommended to build a specific FreeRADIUS commit (with which *dhcpercli* will work) rather than the HEAD: [bd70d7bf4c297897951d344d31380d60f4374de2](https://github.com/FreeRADIUS/freeradius-server/tree/bd70d7bf4c297897951d344d31380d60f4374de2) (May 29, 2020).
+That said, changes made by the FreeRADIUS team may break *dhcperfcli* at any time. Although I try to keep up with these changes, I cannot guarantee responsiveness. Consequently, it is recommended to build a specific FreeRADIUS commit (with which *dhcpercli* will work) rather than the HEAD: [a1651f202ed717d55fa8916814759695fb12da7b](https://github.com/FreeRADIUS/freeradius-server/tree/a1651f202ed717d55fa8916814759695fb12da7b) (July 7, 2020).
 
 Instructions on how to build FreeRADIUS is available on their wiki :
 https://wiki.freeradius.org/building/home
@@ -58,7 +58,7 @@ You can get FreeRADIUS sources using git as follows:
 
 Note: to check out a specific commit (as recommended), replace `master` with the commit ID. For example:
 
->__`git checkout bd70d7bf4c297897951d344d31380d60f4374de2`__
+>__`git checkout a1651f202ed717d55fa8916814759695fb12da7b`__
 
 Avoid cloning using GitHub Desktop on Windows. You may have issues with line endings. And... other bad things. I've been there. Windows is hell.
 
