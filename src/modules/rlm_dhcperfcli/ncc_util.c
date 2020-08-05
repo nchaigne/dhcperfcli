@@ -962,7 +962,7 @@ char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
 
 	*out = '\0';
 
-	fr_sbuff_t *sbuff = &FR_SBUFF_IN(out, outlen - 1); /* Generic string buffer. */
+	fr_sbuff_t *sbuff = &FR_SBUFF_OUT(out, outlen); /* Generic string buffer. */
 
 	if (num_sent == 0 || !breakdown) return out;
 
@@ -972,7 +972,7 @@ char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
 		 */
 		if (breakdown[i] == 0 || i >= 10) break;
 
-		len = snprintf(sbuff->p, fr_sbuff_remaining(sbuff), "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
+		len = snprintf(sbuff->p, sbuff_out_remaining(sbuff), "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
 		               i + 1, breakdown[i], 100 * (float)breakdown[i] / num_sent);
 		NCC_SBUFF_ADVANCE_ERR(sbuff, len);
 	}

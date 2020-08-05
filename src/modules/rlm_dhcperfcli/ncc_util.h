@@ -181,6 +181,13 @@ extern char const config_spaces[];
 		fr_dbuff_len(_dbuff), fr_dbuff_remaining(_dbuff), _need); \
 }
 
+/* variant of fr_sbuff_remaining which returns +1 if we didn't write anything (yet) to output sbuff
+ * (to be used with FR_SBUFF_OUT)
+ */
+#define sbuff_out_remaining(_sbuff) \
+	fr_sbuff_start(_sbuff) == fr_sbuff_current(_sbuff) ? \
+	fr_sbuff_remaining(_sbuff) + 1 : fr_sbuff_remaining(_sbuff)
+
 /**
  * Similar to FR_SBUFF_ADVANCE_RETURN.
  * In case of insufficient space: push an error and return NULL.
