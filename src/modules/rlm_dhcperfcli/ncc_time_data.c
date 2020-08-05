@@ -38,10 +38,10 @@ static ncc_curl_mod_t *influx_config;
 
 
 fr_table_num_ordered_t const ncc_timedata_dst_table[] = {
-	{ "file",   TIMEDATA_DST_FILE },
-	{ "influx", TIMEDATA_DST_INFLUX },
-	{ "null",   TIMEDATA_DST_NULL },
-	{ "stdout", TIMEDATA_DST_STDOUT },
+	{ L("file"),   TIMEDATA_DST_FILE },
+	{ L("influx"), TIMEDATA_DST_INFLUX },
+	{ L("null"),   TIMEDATA_DST_NULL },
+	{ L("stdout"), TIMEDATA_DST_STDOUT },
 };
 size_t ncc_timedata_dst_table_len = NUM_ELEMENTS(ncc_timedata_dst_table);
 

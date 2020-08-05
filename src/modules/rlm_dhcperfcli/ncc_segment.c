@@ -12,10 +12,10 @@ static uint32_t segment_id;
  * Note: using "ordered" rather than "sorted" because performance is not an issue, and it's more convenient.
  */
 fr_table_num_ordered_t const segment_types[] = {
-	{ "fixed",     NCC_SEGMENT_RATE_FIXED },
-	{ "linear",    NCC_SEGMENT_RATE_LINEAR },
-	{ "null",      NCC_SEGMENT_RATE_NULL },
-	{ "unbounded", NCC_SEGMENT_RATE_UNBOUNDED },
+	{ L("fixed"),     NCC_SEGMENT_RATE_FIXED },
+	{ L("linear"),    NCC_SEGMENT_RATE_LINEAR },
+	{ L("null"),      NCC_SEGMENT_RATE_NULL },
+	{ L("unbounded"), NCC_SEGMENT_RATE_UNBOUNDED },
 };
 size_t segment_types_len = NUM_ELEMENTS(segment_types);
 

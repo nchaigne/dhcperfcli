@@ -18,28 +18,28 @@ char const config_spaces[] = "                                                  
 // => "(18446744073709551615UL)"... not good enough. BTW it's done that way in "inet.c": STRINGIFY(UINT16_MAX)
 
 fr_table_num_ordered_t const fr_type_int_max_table[] = {
-	{ "255",                  FR_TYPE_UINT8 },
-	{ "65536",                FR_TYPE_UINT16 },
-	{ "4294967295",           FR_TYPE_UINT32 },
-	{ "18446744073709551615", FR_TYPE_UINT64 },
+	{ L("255"),                  FR_TYPE_UINT8 },
+	{ L("65536"),                FR_TYPE_UINT16 },
+	{ L("4294967295"),           FR_TYPE_UINT32 },
+	{ L("18446744073709551615"), FR_TYPE_UINT64 },
 
-	{ "127",                  FR_TYPE_INT8 },
-	{ "32767",                FR_TYPE_INT16 },
-	{ "2147483647",           FR_TYPE_INT32 },
-	{ "9223372036854775807",  FR_TYPE_INT64 },
+	{ L("127"),                  FR_TYPE_INT8 },
+	{ L("32767"),                FR_TYPE_INT16 },
+	{ L("2147483647"),           FR_TYPE_INT32 },
+	{ L("9223372036854775807"),  FR_TYPE_INT64 },
 };
 size_t fr_type_int_max_table_len = NUM_ELEMENTS(fr_type_int_max_table);
 
 fr_table_num_ordered_t const fr_type_int_min_table[] = {
-	{ "0",                    FR_TYPE_UINT8 },
-	{ "0",                    FR_TYPE_UINT16 },
-	{ "0",                    FR_TYPE_UINT32 },
-	{ "0",                    FR_TYPE_UINT64 },
+	{ L("0"),                    FR_TYPE_UINT8 },
+	{ L("0"),                    FR_TYPE_UINT16 },
+	{ L("0"),                    FR_TYPE_UINT32 },
+	{ L("0"),                    FR_TYPE_UINT64 },
 
-	{ "-128",                 FR_TYPE_INT8 },
-	{ "-32768",               FR_TYPE_INT16 },
-	{ "-2147483648",          FR_TYPE_INT32 },
-	{ "-9223372036854775808", FR_TYPE_INT64 },
+	{ L("-128"),                 FR_TYPE_INT8 },
+	{ L("-32768"),               FR_TYPE_INT16 },
+	{ L("-2147483648"),          FR_TYPE_INT32 },
+	{ L("-9223372036854775808"), FR_TYPE_INT64 },
 };
 size_t fr_type_int_min_table_len = NUM_ELEMENTS(fr_type_int_min_table);
 
@@ -737,7 +737,7 @@ int ncc_str_in_table(int32_t *out, fr_table_num_ordered_t const *table, size_t t
 	/* Build a comma-separated list of allowed string values.
 	 */
 	for (i = 0; i < table_len; i++) {
-		MEM(list = talloc_asprintf_append_buffer(list, "%s'%s'", i ? ", " : "", table[i].name));
+		MEM(list = talloc_asprintf_append_buffer(list, "%s'%s'", i ? ", " : "", table[i].name.str));
 	}
 	fr_strerror_printf("Expected one of %s", list);
 

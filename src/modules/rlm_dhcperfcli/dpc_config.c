@@ -17,19 +17,19 @@ static int dpc_segment_sections_parse(TALLOC_CTX *ctx, CONF_SECTION *section, nc
 /* Allowed values for packet trace level
  */
 fr_table_num_ordered_t const dpc_packet_trace_table[] = {
-	{ "auto",    -1 },
-	{ "none",    0  },
-	{ "digest",  1  },
-	{ "pairs",   2  },
-	{ "data",    3  },
+	{ L("auto"),    -1 },
+	{ L("none"),    0  },
+	{ L("digest"),  1  },
+	{ L("pairs"),   2  },
+	{ L("data"),    3  },
 };
 size_t dpc_packet_trace_table_len = NUM_ELEMENTS(dpc_packet_trace_table);
 
 /* Progress statistics destination
  */
 fr_table_num_ordered_t const dpc_progress_stat_dst_table[] = {
-	{ "stdout", PR_STAT_DST_STDOUT },
-	{ "file",   PR_STAT_DST_FILE },
+	{ L("stdout"), PR_STAT_DST_STDOUT },
+	{ L("file"),   PR_STAT_DST_FILE },
 };
 size_t dpc_progress_stat_dst_table_len = NUM_ELEMENTS(dpc_progress_stat_dst_table);
 

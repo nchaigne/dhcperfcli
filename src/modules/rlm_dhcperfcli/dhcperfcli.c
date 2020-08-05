@@ -212,21 +212,21 @@ static fr_pcap_t *pcap;
 #endif
 
 static fr_table_num_sorted_t const request_types[] = {
-	{ "-",           FR_CODE_UNDEFINED },
-	{ "auto",        FR_CODE_UNDEFINED },
-	{ "decline",     FR_DHCP_DECLINE },
-	{ "discover",    FR_DHCP_DISCOVER },
-	{ "inform",      FR_DHCP_INFORM },
-	{ "lease_query", FR_DHCP_LEASE_QUERY },
-	{ "release",     FR_DHCP_RELEASE },
-	{ "request",     FR_DHCP_REQUEST }
+	{ L("-"),           FR_CODE_UNDEFINED },
+	{ L("auto"),        FR_CODE_UNDEFINED },
+	{ L("decline"),     FR_DHCP_DECLINE },
+	{ L("discover"),    FR_DHCP_DISCOVER },
+	{ L("inform"),      FR_DHCP_INFORM },
+	{ L("lease_query"), FR_DHCP_LEASE_QUERY },
+	{ L("release"),     FR_DHCP_RELEASE },
+	{ L("request"),     FR_DHCP_REQUEST }
 };
 static size_t request_types_len = NUM_ELEMENTS(request_types);
 
 static fr_table_num_sorted_t const workflow_types[] = {
-	{ "dora",        DPC_WORKFLOW_DORA },
-	{ "doradec",     DPC_WORKFLOW_DORA_DECLINE },
-	{ "dorarel",     DPC_WORKFLOW_DORA_RELEASE }
+	{ L("dora"),        DPC_WORKFLOW_DORA },
+	{ L("doradec"),     DPC_WORKFLOW_DORA_DECLINE },
+	{ L("dorarel"),     DPC_WORKFLOW_DORA_RELEASE }
 };
 static size_t workflow_types_len = NUM_ELEMENTS(workflow_types);
 

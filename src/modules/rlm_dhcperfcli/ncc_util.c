@@ -962,7 +962,7 @@ char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
 
 	*out = '\0';
 
-	fr_sbuff_t *sbuff = &FR_SBUFF_TMP(out, outlen - 1); /* Generic string buffer. */
+	fr_sbuff_t *sbuff = &FR_SBUFF_IN(out, outlen - 1); /* Generic string buffer. */
 
 	if (num_sent == 0 || !breakdown) return out;
 
