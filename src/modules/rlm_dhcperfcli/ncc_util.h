@@ -185,8 +185,11 @@ extern char const config_spaces[];
  * (to be used with FR_SBUFF_OUT)
  */
 #define sbuff_out_remaining(_sbuff) \
-	fr_sbuff_start(_sbuff) == fr_sbuff_current(_sbuff) ? \
-	fr_sbuff_remaining(_sbuff) + 1 : fr_sbuff_remaining(_sbuff)
+	((size_t)(fr_sbuff_start(_sbuff) == fr_sbuff_current(_sbuff) ? \
+	((fr_sbuff_remaining(_sbuff)) + 1) : (fr_sbuff_remaining(_sbuff))))
+// for some reason (bug ?) gcc is not happy with the ternary construct, this triggers a warning when using snprintf
+// "directive output truncated writing (...) into a region of size 0"
+// (but it's alright if using a temporary variable...)
 
 /**
  * Similar to FR_SBUFF_ADVANCE_RETURN.

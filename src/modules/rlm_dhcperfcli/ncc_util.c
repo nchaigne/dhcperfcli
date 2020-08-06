@@ -972,7 +972,8 @@ char *ncc_retransmit_snprint(char *out, size_t outlen, uint32_t num_sent, uint32
 		 */
 		if (breakdown[i] == 0 || i >= 10) break;
 
-		len = snprintf(sbuff->p, sbuff_out_remaining(sbuff), "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
+		size_t remain = sbuff_out_remaining(sbuff); /* Quiet bogus truncation warning */
+		len = snprintf(fr_sbuff_current(sbuff), remain, "%s#%u: %u (%.1f%%)", (i ? ", " : ""),
 		               i + 1, breakdown[i], 100 * (float)breakdown[i] / num_sent);
 		NCC_SBUFF_ADVANCE_ERR(sbuff, len);
 	}
