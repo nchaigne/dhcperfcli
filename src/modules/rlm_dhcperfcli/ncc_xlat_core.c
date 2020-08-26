@@ -37,7 +37,7 @@
  *
  * xlat_init (ncc_xlat_core_init) - it does not register any of FreeRADIUS unlang / server xlat functions.
  * xlat_free (ncc_xlat_core_free).
- * xlat_register (ncc_xlat_core_register) - calls ncc_xlat_core_init.
+ * xlat_register_legacy (ncc_xlat_core_register) - calls ncc_xlat_core_init.
  */
 
 static rbtree_t *xlat_root = NULL;
@@ -104,28 +104,27 @@ static void _xlat_func_tree_free(void *xlat)
 	talloc_free(xlat);
 }
 
-/** Register an xlat function.
+/** Register an old style xlat function
  *
  * @param[in] mod_inst		Instance of module that's registering the xlat function.
  * @param[in] name		xlat name.
- * @param[in] func 		xlat function to be called.
+ * @param[in] func		xlat function to be called.
  * @param[in] escape		function to sanitize any sub expansions passed to the xlat function.
  * @param[in] instantiate	function to pre-parse any xlat specific data.
  * @param[in] inst_size		sizeof() this xlat's instance data.
  * @param[in] buf_len		Size of the output buffer to allocate when calling the function.
  *				May be 0 if the function allocates its own buffer.
- * @param[in] async_safe	whether or not the function is async-safe.
  * @return
  *	- 0 on success.
  *	- -1 on failure.
  */
 int ncc_xlat_core_register(void *mod_inst, char const *name,
-		  xlat_func_sync_t func, xlat_escape_t escape,
-		  xlat_instantiate_t instantiate, size_t inst_size,
-		  size_t buf_len, bool async_safe)
+			 xlat_func_legacy_t func, xlat_escape_legacy_t escape,
+			 xlat_instantiate_t instantiate, size_t inst_size,
+			 size_t buf_len)
 {
 	xlat_t	*c;
-	bool	new = false;
+	bool	is_new = false;
 
 	if (!xlat_root && (ncc_xlat_core_init() < 0)) return -1;;
 
@@ -143,12 +142,6 @@ int ncc_xlat_core_register(void *mod_inst, char const *name,
 			ERROR("%s: Cannot re-define internal expansion %s", __FUNCTION__, name);
 			return -1;
 		}
-
-		if (c->async_safe != async_safe) {
-			ERROR("%s: Cannot change async capability of %s", __FUNCTION__, name);
-			return -1;
-		}
-
 	/*
 	 *	Doesn't exist.  Create it.
 	 */
@@ -156,21 +149,21 @@ int ncc_xlat_core_register(void *mod_inst, char const *name,
 		c = talloc_zero(xlat_root, xlat_t);
 		c->name = talloc_typed_strdup(c, name);
 		talloc_set_destructor(c, _xlat_func_talloc_free);
-		new = true;
+		is_new = true;
 	}
 
 	c->func.sync = func;
-	c->type = XLAT_FUNC_SYNC;
+	c->type = XLAT_FUNC_LEGACY;
 	c->buf_len = buf_len;
 	c->escape = escape;
 	c->mod_inst = mod_inst;
 	c->instantiate = instantiate;
 	c->inst_size = inst_size;
-	c->async_safe = async_safe;
+	c->async_safe = true;
 
 	DEBUG3("%s: %s", __FUNCTION__, c->name);
 
-	if (new && !rbtree_insert(xlat_root, c)) {
+	if (is_new && !rbtree_insert(xlat_root, c)) {
 		ERROR("Failed inserting xlat registration for %s",
 		      c->name);
 		talloc_free(c);
