@@ -349,10 +349,11 @@ static char *dpc_num_message_type_snprint(char *out, size_t outlen, dpc_statisti
 	} \
 }
 
-	uint32_t remain = PACKET_STAT_NUM_GET(stat_ctx->dpc_stat, stat_type, 0); /* Total. */
+	dpc_packet_stats_t *pkt_stats = &(stat_ctx->pkt_stats);
+	uint32_t remain = PACKET_STAT_NUM_GET(pkt_stats->dhcp_stat, stat_type, 0); /* Total. */
 
 	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i++) {
-		MSG_TYPE_PRINT(PACKET_STAT_NUM_GET(stat_ctx->dpc_stat, stat_type, i), dpc_message_types[i]);
+		MSG_TYPE_PRINT(PACKET_STAT_NUM_GET(pkt_stats->dhcp_stat, stat_type, i), dpc_message_types[i]);
 	}
 	if (remain) { /* Unknown message types. */
 		MSG_TYPE_PRINT(remain, "unknown");

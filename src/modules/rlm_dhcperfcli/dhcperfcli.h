@@ -162,7 +162,7 @@ typedef enum {
 	DPC_PACKET_TIMEOUT
 } dpc_packet_event_t;
 
-/* Packet statistics. */
+/* Packet statistics fields. */
 typedef enum {
 	DPC_STAT_PACKET_SENT = 0,  //<! Packets sent (not including retransmissions)
 	DPC_STAT_PACKET_RETR = 1,  //<! Packets retransmitted
@@ -183,6 +183,11 @@ typedef struct {
 	uint32_t recv;  //<! Packets (replies) received
 } dpc_packet_stat_t;
 
+/* Statistics for all types of DHCP packets. */
+typedef struct dpc_packet_stats {
+	dpc_packet_stat_t dhcp_stat[DHCP_MAX_MESSAGE_TYPE + 1];
+} dpc_packet_stats_t;
+
 typedef struct dpc_statistics {
 	/*
 	 *	Statistics per transaction or workflow type.
@@ -193,7 +198,8 @@ typedef struct dpc_statistics {
 	/* Statistics per dynamically named transaction type. */
 	ncc_dyn_tr_stats_t dyn_tr_stats;
 
-	dpc_packet_stat_t dpc_stat[DHCP_MAX_MESSAGE_TYPE + 1];
+	/* Packets statistics. */
+	dpc_packet_stats_t pkt_stats;
 
 	uint32_t num_packet_recv_unexpected;
 
@@ -334,7 +340,7 @@ static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_pack
  * If time-data is enabled, also store in time-data context.
  */
 #define STAT_CTX_NUM_INCR(_stat_ctx, _type_num, _packet) { \
-	PACKET_STAT_NUM_INCR((_stat_ctx)->dpc_stat, _type_num, _packet->code); \
+	PACKET_STAT_NUM_INCR((_stat_ctx)->pkt_stats.dhcp_stat, _type_num, _packet->code); \
 }
 #define STAT_NUM_INCR(_type_num, _packet) { \
 	STAT_CTX_NUM_INCR(&stat_ctx, _type_num, _packet); \
@@ -351,5 +357,5 @@ static inline uint32_t PACKET_STAT_NUM_GET(dpc_packet_stat_t *dpc_stat, dpc_pack
 #define STAT_INCR_PACKET_LOST(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_LOST, _packet)
 #define STAT_INCR_PACKET_RECV(_packet) STAT_NUM_INCR(DPC_STAT_PACKET_RECV, _packet)
 
-#define STAT_ALL_PACKET(_stat_ctx, _type) ((_stat_ctx)->dpc_stat[0]._type)
-#define STAT_NAK_RECV(_stat_ctx) ((_stat_ctx)->dpc_stat[6].recv)
+#define STAT_ALL_PACKET(_stat_ctx, _type) ((_stat_ctx)->pkt_stats.dhcp_stat[0]._type)
+#define STAT_NAK_RECV(_stat_ctx) ((_stat_ctx)->pkt_stats.dhcp_stat[FR_DHCP_NAK].recv)

@@ -106,11 +106,11 @@ void dpc_timedata_store_packet_stat(dpc_packet_stat_field_t stat_type, uint32_t 
 		/* Newly allocated item.
 		 * Now allocate specific data storage.
 		 */
-		stat->data = talloc_zero_array(stat, dpc_packet_stat_t, DHCP_MAX_MESSAGE_TYPE + 1);
+		stat->data = talloc_zero(stat, dpc_packet_stats_t);
 	}
 
-	dpc_packet_stat_t *packet_stat = stat->data;
-	PACKET_STAT_NUM_INCR(packet_stat, stat_type, packet_type);
+	dpc_packet_stats_t *pkt_stats = stat->data;
+	PACKET_STAT_NUM_INCR(pkt_stats->dhcp_stat, stat_type, packet_type);
 }
 
 /**
@@ -121,12 +121,13 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 	char influx_data[1024];
 	int i;
 
-	dpc_packet_stat_t *packet_stat = stat->data;
-	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i ++) {
+	dpc_packet_stats_t *pkt_stats = stat->data;
+	dpc_packet_stat_t *dhcp_stat = pkt_stats->dhcp_stat;
+
+	for (i = 1; i < DHCP_MAX_MESSAGE_TYPE; i++) {
 		/* Don't write if we have nothing for this type of packet.
 		 */
-		if (PACKET_STAT_GET(packet_stat, recv, i) == 0 && PACKET_STAT_GET(packet_stat, sent, i) == 0
-			&& PACKET_STAT_GET(packet_stat, retr, i) == 0 && PACKET_STAT_GET(packet_stat, lost, i) == 0) {
+		if (PACKET_STAT_GET(dhcp_stat, recv, i) == 0 && PACKET_STAT_GET(dhcp_stat, sent, i) == 0) {
 			continue;
 		}
 
@@ -134,10 +135,10 @@ int dpc_timedata_send_packet_stat(ncc_timedata_stat_t *stat)
 			"packet,instance=%s,type=%s recv=%ui,sent=%ui,retr=%ui,lost=%ui %lu%06lu000",
 			ncc_timedata_get_inst_esc(),
 			dpc_message_types[i],
-			PACKET_STAT_GET(packet_stat, recv, i),
-			PACKET_STAT_GET(packet_stat, sent, i),
-			PACKET_STAT_GET(packet_stat, retr, i),
-			PACKET_STAT_GET(packet_stat, lost, i),
+			PACKET_STAT_GET(dhcp_stat, recv, i),
+			PACKET_STAT_GET(dhcp_stat, sent, i),
+			PACKET_STAT_GET(dhcp_stat, retr, i),
+			PACKET_STAT_GET(dhcp_stat, lost, i),
 			stat->timestamp.tv_sec, stat->timestamp.tv_usec);
 
 		if (ncc_timedata_write(influx_data) < 0) {
