@@ -539,7 +539,7 @@ int ncc_timedata_send(ncc_timedata_context_t *context, bool force)
 			/*
 			 * Item is ready to send. Do that now.
 			 */
-			if (send_func(stat) < 0) {
+			if (send_func && send_func(stat) < 0) {
 				return -1;
 			}
 
