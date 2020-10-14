@@ -185,7 +185,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 		/* If we sent a Request and got a NAK, print the Requested IP address that the server didn't like.
 		 */
 		if (packet->code == FR_DHCP_NAK && session->request->code == FR_DHCP_REQUEST) {
-			VALUE_PAIR *vp = fr_pair_find_by_da(session->request->vps, attr_dhcp_requested_ip_address, TAG_ANY);
+			VALUE_PAIR *vp = fr_pair_find_by_da(session->request->vps, attr_dhcp_requested_ip_address);
 			if (vp) {
 				fprintf(fp, ", req addr: %s", inet_ntop(AF_INET, &vp->vp_ipv4addr, lease_ipaddr, sizeof(lease_ipaddr)));
 			}
@@ -253,7 +253,8 @@ size_t dpc_packet_option_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
 	}
 	RET_LEN_IF_TRUNCATED(p, len, outlen, freespace);
 
-	len = fr_pair_snprint(p, freespace, vp);
+	len = fr_pair_print(&FR_SBUFF_OUT(p, freespace), vp);
+	//TODO: rework func to use sbuff
 	RET_LEN_IF_TRUNCATED(p, len, outlen, freespace);
 
 	return (outlen - freespace);
@@ -483,24 +484,24 @@ char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
 	char dst_ipaddr_buf[FR_IPADDR_STRLEN] = "";
 	char via[5 + IFNAMSIZ] = "";
 
-	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &packet->src_ipaddr);
-	fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->dst_ipaddr);
+	fr_inet_ntop(src_ipaddr_buf, sizeof(src_ipaddr_buf), &packet->socket.inet.src_ipaddr);
+	fr_inet_ntop(dst_ipaddr_buf, sizeof(dst_ipaddr_buf), &packet->socket.inet.dst_ipaddr);
 
 	if (!extra) {
 		sprintf(out, "from %s:%u to %s:%u",
-		        src_ipaddr_buf, packet->src_port, dst_ipaddr_buf, packet->dst_port
+		        src_ipaddr_buf, packet->socket.inet.src_port, dst_ipaddr_buf, packet->socket.inet.dst_port
 		);
 	} else {
 		sprintf(out, "from %s:%u (prefix: %d) to %s:%u (prefix: %d)",
-		        src_ipaddr_buf, packet->src_port, packet->src_ipaddr.prefix,
-		        dst_ipaddr_buf, packet->dst_port, packet->dst_ipaddr.prefix
+		        src_ipaddr_buf, packet->socket.inet.src_port, packet->socket.inet.src_ipaddr.prefix,
+		        dst_ipaddr_buf, packet->socket.inet.dst_port, packet->socket.inet.dst_ipaddr.prefix
 		);
 	}
 
 #if defined(WITH_IFINDEX_NAME_RESOLUTION)
-	if (packet->if_index) {
+	if (packet->socket.inet.ifindex) {
 		char if_name[IFNAMSIZ];
-		sprintf(via, " via %s", fr_ifname_from_ifindex(if_name, packet->if_index));
+		sprintf(via, " via %s", fr_ifname_from_ifindex(if_name, packet->socket.inet.ifindex));
 		strcat(out, via);
 	}
 #endif
