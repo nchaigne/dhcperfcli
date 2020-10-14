@@ -447,8 +447,10 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 
 	ncc_xlat_file_t *xlat_file = &ncc_xlat_files[xlat_frame->file_csv.idx_file];
 
-	/* Read the requested value from CSV file. */
-	VALUE_PAIR *vp = ncc_xlat_get_value_from_csv_file(ctx, xlat_file, xlat_frame->file_csv.idx_value);
+	/* Read the requested value from CSV file.
+	 * Note: the talloc context used here must *not* be the one provided by FreeRADIUS xlat engine.
+	 */
+	VALUE_PAIR *vp = ncc_xlat_get_value_from_csv_file(xlat_ctx, xlat_file, xlat_frame->file_csv.idx_value);
 	if (!vp) {
 		XLAT_ERR_RETURN;
 	}
