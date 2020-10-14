@@ -82,7 +82,8 @@ static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 	int rcode = 0;
 
 	DEBUG3("id: (%u <-> %u), sockfd: (%d <-> %d), src_port: (%d <-> %d), dst_port: (%d <-> %d)",
-	       a->id, b->id, a->sockfd, b->sockfd, a->src_port, b->src_port, a->dst_port, b->dst_port);
+	       a->id, b->id, a->socket.fd, b->socket.fd,
+	       a->socket.inet.src_port, b->socket.inet.src_port, a->socket.inet.dst_port, b->socket.inet.dst_port);
 
 	/* xid is always compared. */
 	if (a->id < b->id) return -1;
@@ -98,32 +99,32 @@ static int dpc_packet_cmp(DHCP_PACKET const *a, DHCP_PACKET const *b)
 	//}
 
 	/* Compare socket FD if set. */
-	if (a->sockfd && b->sockfd) {
-		if (a->sockfd < b->sockfd) return -1;
-		if (a->sockfd > b->sockfd) return +1;
+	if (a->socket.fd && b->socket.fd) {
+		if (a->socket.fd < b->socket.fd) return -1;
+		if (a->socket.fd > b->socket.fd) return +1;
 	}
 
 	/* Compare source port if set. */
-	if (a->src_port && b->src_port) {
-		rcode = (int) a->src_port - (int) b->src_port;
+	if (a->socket.inet.src_port && b->socket.inet.src_port) {
+		rcode = (int) a->socket.inet.src_port - (int) b->socket.inet.src_port;
 		if (rcode != 0) return rcode;
 	}
 
 	/* Compare source IP addr if set. */
-	if (a->src_ipaddr.af && b->src_ipaddr.af) {
-		rcode = fr_ipaddr_cmp(&a->src_ipaddr, &b->src_ipaddr);
+	if (a->socket.inet.src_ipaddr.af && b->socket.inet.src_ipaddr.af) {
+		rcode = fr_ipaddr_cmp(&a->socket.inet.src_ipaddr, &b->socket.inet.src_ipaddr);
 		if (rcode != 0) return rcode;
 	}
 
 	/* Compare destination IP addr if set. */
-	if (a->dst_ipaddr.af && b->dst_ipaddr.af) {
-		rcode = fr_ipaddr_cmp(&a->dst_ipaddr, &b->dst_ipaddr);
+	if (a->socket.inet.dst_ipaddr.af && b->socket.inet.dst_ipaddr.af) {
+		rcode = fr_ipaddr_cmp(&a->socket.inet.dst_ipaddr, &b->socket.inet.dst_ipaddr);
 		if (rcode != 0) return rcode;
 	}
 
 	/* Compare destination port if set. */
-	if (a->dst_port && b->dst_port) {
-		rcode = (int) a->dst_port - (int) b->dst_port;
+	if (a->socket.inet.dst_port && b->socket.inet.dst_port) {
+		rcode = (int) a->socket.inet.dst_port - (int) b->socket.inet.dst_port;
 		if (rcode != 0) return rcode;
 	}
 
@@ -365,7 +366,7 @@ bool dpc_packet_list_insert(dpc_packet_list_t *pl, DHCP_PACKET **request_p)
 	bool r = rbtree_insert(pl->tree, request_p);
 	if (r) {
 		char from_to_buf[DPC_FROM_TO_STRLEN];
-		DEBUG3("Inserted packet: fd: %d, id: %u, %s", (*request_p)->sockfd, (*request_p)->id,
+		DEBUG3("Inserted packet: fd: %d, id: %u, %s", (*request_p)->socket.fd, (*request_p)->id,
 		       dpc_packet_from_to_sprint(from_to_buf, *request_p, true));
 	}
 
@@ -385,9 +386,9 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	ncc_assert(pl != NULL);
 	ncc_assert(reply != NULL);
 
-	ps = dpc_socket_find(pl, reply->sockfd);
+	ps = dpc_socket_find(pl, reply->socket.fd);
 	if (!ps) {
-		ERROR("Failed to find socket in packet list, fd: %d", reply->sockfd);
+		ERROR("Failed to find socket in packet list, fd: %d", reply->socket.fd);
 		return NULL;
 	}
 
@@ -399,20 +400,20 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 
 	my_request.id = reply->id;
 
-	//my_request.sockfd = reply->sockfd;
+	//my_request.socket.fd = reply->socket.fd;
 
 	/* DHCP allows a reply to be sent to a destination which is not the source of the request.
 	 * If "giaddr" is provided, a server is expected to send the reply to that giaddr.
 	 */
 	if (!pl->relaxed_ipaddr) {
 		if (ps->src_any) {
-			my_request.src_ipaddr = ps->src_ipaddr;
+			my_request.socket.inet.src_ipaddr = ps->src_ipaddr;
 		} else {
-			my_request.src_ipaddr = reply->dst_ipaddr;
+			my_request.socket.inet.src_ipaddr = reply->socket.inet.dst_ipaddr;
 		}
 	}
 
-	my_request.dst_ipaddr = reply->src_ipaddr;
+	my_request.socket.inet.dst_ipaddr = reply->socket.inet.src_ipaddr;
 
 	/* The reply source port should normally match the request destination port.
 	 * However, when testing with non standard ports, FreeRADIUS will reply using its "server port" as source port.
@@ -420,8 +421,8 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 	 * Request from port 67 to port 6700, reply from port 6700 to port 6700.
 	 */
 	if (!pl->relaxed_port) {
-		my_request.src_port = ps->src_port;
-		my_request.dst_port = reply->src_port;
+		my_request.socket.inet.src_port = ps->src_port;
+		my_request.socket.inet.dst_port = reply->socket.inet.src_port;
 	}
 
 	/* Allow chaddr to be accessible. */
@@ -436,15 +437,15 @@ DHCP_PACKET **dpc_packet_list_find_byreply(dpc_packet_list_t *pl, DHCP_PACKET *r
 #ifdef HAVE_LIBPCAP
 	if (ps->pcap) {
 		DEBUG3("Reply received through raw socket: looking for broadcast packet.");
-		my_request.src_ipaddr.addr.v4.s_addr = htonl(INADDR_ANY);
-		my_request.dst_ipaddr.addr.v4.s_addr = htonl(INADDR_BROADCAST);
-		my_request.src_port = 0; /* Match all. This allows to handle multiple source ports with a single pcap socket. */
+		my_request.socket.inet.src_ipaddr.addr.v4.s_addr = htonl(INADDR_ANY);
+		my_request.socket.inet.dst_ipaddr.addr.v4.s_addr = htonl(INADDR_BROADCAST);
+		my_request.socket.inet.src_port = 0; /* Match all. This allows to handle multiple source ports with a single pcap socket. */
 	}
 #endif
 
 	request = &my_request;
 
-	DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->sockfd, request->id,
+	DEBUG3("Searching for packet: fd: %d, id: %u, %s", request->socket.fd, request->id,
 	       dpc_packet_from_to_sprint(from_to_buf, request, true));
 
 	return rbtree_finddata(pl->tree, &request);
@@ -519,9 +520,9 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	/*
 	 * Set the ID, source IP, and source port.
 	 */
-	request->sockfd = ps->sockfd;
-	request->src_ipaddr = ps->src_ipaddr;
-	//request->src_port = ps->src_port; /* Keep source port set by requestor. */
+	request->socket.fd = ps->sockfd;
+	request->socket.inet.src_ipaddr = ps->src_ipaddr;
+	//request->socket.inet.src_port = ps->src_port; /* Keep source port set by requestor. */
 
 	if (request->id == DPC_PACKET_ID_UNASSIGNED) {
 		id = ++ pl->prev_id;
@@ -564,9 +565,9 @@ bool dpc_packet_list_id_alloc(dpc_packet_list_t *pl, int sockfd, DHCP_PACKET **r
 	 * Failed to allocate an ID. Reset information in the packet before returning.
 	 */
 	request->id = DPC_PACKET_ID_UNASSIGNED;
-	request->sockfd = -1;
-	request->src_ipaddr.af = AF_UNSPEC;
-	request->src_port = 0;
+	request->socket.fd = -1;
+	request->socket.inet.src_ipaddr.af = AF_UNSPEC;
+	request->socket.inet.src_port = 0;
 
 	return false;
 }
@@ -585,16 +586,16 @@ bool dpc_packet_list_id_free(dpc_packet_list_t *pl, DHCP_PACKET *request)
 
 	if (!dpc_packet_list_yank(pl, request)) return false;
 
-	ps = dpc_socket_find(pl, request->sockfd);
+	ps = dpc_socket_find(pl, request->socket.fd);
 	if (!ps) return false;
 
 	ps->num_outgoing --;
 	pl->num_outgoing --;
 
 	request->id = DPC_PACKET_ID_UNASSIGNED;
-	request->sockfd = -1;
-	request->src_ipaddr.af = AF_UNSPEC;
-	request->src_port = 0;
+	request->socket.fd = -1;
+	request->socket.inet.src_ipaddr.af = AF_UNSPEC;
+	request->socket.inet.src_port = 0;
 
 	return true;
 }
@@ -660,7 +661,7 @@ DHCP_PACKET *dpc_packet_list_recv(dpc_packet_list_t *pl, fd_set *set)
 #ifdef HAVE_LIBPCAP
 		if (ps->pcap) {
 			packet = fr_dhcpv4_pcap_recv(ps->pcap);
-			if (packet) packet->sockfd = ps->pcap->fd; /* fr_dhcpv4_pcap_recv does not fill this. Why!? */
+			if (packet) packet->socket.fd = ps->pcap->fd; /* fr_dhcpv4_pcap_recv does not fill this. Why!? */
 		} else
 #endif
 		{
