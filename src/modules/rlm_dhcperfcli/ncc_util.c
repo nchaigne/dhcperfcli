@@ -251,7 +251,6 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 	if (!n) return NULL;
 
 	n->op = vp->op;
-	n->tag = vp->tag;
 	n->next = NULL;
 	n->type = vp->type;
 
