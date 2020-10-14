@@ -151,9 +151,9 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 
 	if (!da) return;
 
-	fr_dict_print_attr_oid(NULL, oid_str, sizeof(oid_str), NULL, da);
+	fr_dict_print_attr_oid(&FR_SBUFF_OUT(oid_str, sizeof(oid_str)), NULL, da);
 
-	fr_dict_snprint_flags(flags, sizeof(flags), fr_dict_by_da(da), da->type, &da->flags);
+	fr_dict_snprint_flags(&FR_SBUFF_OUT(flags, sizeof(flags)), fr_dict_by_da(da), da->type, &da->flags);
 
 	fprintf(fp, "attr: [%s], OID: [%s], dict: [%s], type: [%s], flags: [%s]\n",
 	        da->name, oid_str, ncc_attr_dict_name(da),
