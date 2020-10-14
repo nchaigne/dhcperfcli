@@ -933,7 +933,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	} else
 #endif
 	{
-		sockfd = dpc_socket_provide(pl, &packet->src_ipaddr, packet->src_port);
+		sockfd = dpc_socket_provide(pl, &packet->socket.inet.src_ipaddr, packet->socket.inet.src_port);
 	}
 	if (sockfd < 0) {
 		SPERROR("Failed to provide a suitable socket");
@@ -987,7 +987,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	// on receive, reply timestamp is set by fr_dhcpv4_udp_packet_recv
 	// - actual value is set in recvfromto right before returning
 
-	packet->sockfd = sockfd;
+	packet->socket.fd = sockfd;
 
 	if (!CONF.noop) {
 #ifdef HAVE_LIBPCAP
@@ -995,7 +995,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 			/*
 			 * Send using pcap raw socket.
 			 */
-			packet->if_index = pcap->if_index; /* So we can trace it. */
+			packet->socket.inet.ifindex = pcap->ifindex; /* So we can trace it. */
 			ret = fr_dhcpv4_pcap_send(pcap, eth_bcast, packet);
 			/*
 			 * Note: we're sending from our real Ethernet source address (from the selected interface,
@@ -1079,9 +1079,9 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	/*
 	 * Only allow replies from specific servers (overall policy set through option -a).
 	 */
-	if (CONF.authorized_servers && ncc_ipaddr_array_find(CONF.authorized_servers, &packet->src_ipaddr) < 0) {
+	if (CONF.authorized_servers && ncc_ipaddr_array_find(CONF.authorized_servers, &packet->socket.inet.src_ipaddr) < 0) {
 		DEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored",
-		      packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+		      packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->socket.inet.src_ipaddr));
 		fr_radius_packet_free(&packet);
 		return -1;
 	}
@@ -1116,9 +1116,9 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	/*
 	 * Only allow replies from a specific server (per-packet policy set through attribute).
 	 */
-	if (session->input->authorized_servers && ncc_ipaddr_array_find(session->input->authorized_servers, &packet->src_ipaddr) < 0) {
+	if (session->input->authorized_servers && ncc_ipaddr_array_find(session->input->authorized_servers, &packet->socket.inet.src_ipaddr) < 0) {
 		SDEBUG("Received packet Id %u (0x%08x) from unauthorized server (%s): ignored",
-		       packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->src_ipaddr));
+		       packet->id, packet->id, fr_inet_ntop(from_to_buf, sizeof(from_to_buf), &packet->socket.inet.src_ipaddr));
 		fr_radius_packet_free(&packet);
 		return -1;
 	}
@@ -1584,10 +1584,10 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	 * Use values prepared earlier.
 	 */
 	request->code = input->ext.code;
-	request->src_port = session->src.port;
-	request->dst_port = session->dst.port;
-	request->src_ipaddr = session->src.ipaddr;
-	request->dst_ipaddr = session->dst.ipaddr;
+	request->socket.inet.src_port = session->src.port;
+	request->socket.inet.dst_port = session->dst.port;
+	request->socket.inet.src_ipaddr = session->src.ipaddr;
+	request->socket.inet.dst_ipaddr = session->dst.ipaddr;
 
 	DEBUG3("New packet allocated (code: %u, %s)", request->code,
 	       dpc_packet_from_to_sprint(from_to_buf, request, false));
