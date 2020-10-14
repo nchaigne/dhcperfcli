@@ -354,6 +354,7 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
 void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps);
 size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp);
+ssize_t ncc_pair_print(fr_sbuff_t *out, VALUE_PAIR const *vp);
 
 fr_token_t ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
 fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);

@@ -367,17 +367,21 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
 
 /**
  * Print one attribute and value to a string.
- * Similar to FreeRADIUS fr_pair_snprint, but prints 'x' for XLAT, '=' for DATA instead of the operator.
+ * Similar to FreeRADIUS fr_pair_print, but prints 'x' for XLAT, '=' for DATA instead of the operator.
  * Also, we don't handle tags here.
  */
 size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
 {
+	return ncc_pair_print(&FR_SBUFF_OUT(out, outlen), vp);
+}
+
+ssize_t ncc_pair_print(fr_sbuff_t *out, VALUE_PAIR const *vp)
+{
 	char const *token = NULL;
-	size_t len, freespace = outlen;
+	fr_sbuff_t our_out = FR_SBUFF_NO_ADVANCE(out);
 
 	if (!out) return 0;
 
-	*out = '\0';
 	if (!vp || !vp->da) return 0;
 
 	VP_VERIFY(vp);
@@ -388,17 +392,10 @@ size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
 		token = "=";
 	}
 
-	len = snprintf(out, freespace, "%s %s ", vp->da->name, token);
-	if (is_truncated(len, freespace)) return len;
+	FR_SBUFF_IN_SPRINTF_RETURN(&our_out, "%s %s ", vp->da->name, token);
+	FR_SBUFF_RETURN(fr_pair_print_value_quoted, &our_out, vp, T_DOUBLE_QUOTED_STRING);
 
-	out += len;
-	freespace -= len;
-
-	len = fr_pair_value_snprint(out, freespace, vp, '"');
-	if (is_truncated(len, freespace)) return (outlen - freespace) + len;
-	freespace -= len;
-
-	return (outlen - freespace);
+	return fr_sbuff_set(out, &our_out);
 }
 
 
