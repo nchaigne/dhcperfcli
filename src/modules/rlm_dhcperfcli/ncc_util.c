@@ -168,7 +168,7 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
 {
 	if (!da) return NULL;
-	return fr_pair_find_by_da(head, da, TAG_ANY);
+	return fr_pair_find_by_da(head, da);
 }
 
 /**
