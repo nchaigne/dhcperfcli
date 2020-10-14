@@ -40,7 +40,9 @@ void ncc_cf_log_perr(fr_log_type_t type, CONF_ITEM const *ci, char const *file, 
 		strerror = fr_strerror_pop();
 	}
 
-	_cf_log_perr(type, ci, file, line, tmp);
+	_cf_log_perr(type, ci, file, line, NULL, tmp);
+	// 5th argument is "fr_log_perror_format_t const *f_rule"
+	// which allows to define a prefix for the first line, and another prefix for the subsequent lines
 
 	if (tmp) talloc_free(tmp);
 }
