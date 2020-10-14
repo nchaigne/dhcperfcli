@@ -2619,12 +2619,12 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 
 				value = talloc_typed_strdup(ctx, vp->xlat); /* modified by xlat_tokenize */
 
-				slen = xlat_tokenize(global_ctx, &xlat, value, talloc_array_length(value), NULL);
+				slen = xlat_tokenize(global_ctx, &xlat, NULL, &FR_SBUFF_IN(value, talloc_array_length(value)), NULL, NULL);
 				/* Notes:
 				 * - First parameter is talloc context.
 				 *   We cannot use "input" as talloc context, because we may free the input and still need the parsed xlat expression.
 				 *   This happens in non template mode, with "num use > 1".
-				 * - Last parameter is "vp_tmpl_rules_t const *rules". (cf. vp_tmpl_rules_s in src/lib/server/tmpl.h)
+				 * - Last parameter is "tmpl_rules_t const *t_rules". (cf. tmpl_rules_s in src/lib/server/tmpl.h)
 				 *   NULL means default rules are used, which is fine.
 				 */
 
@@ -2974,6 +2974,7 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
 			vp->vp_ptr = NULL; /* Otherwise fr_pair_value_strcpy would free our compiled xlat! */
 
 			DEBUG3("xlat %s = [%s] => (len: %u) [%s]", vp->da->name, vp->xlat, len, buffer);
+			// it can be octets, so we should not print value that way => TODO
 
 			/* Convert the xlat'ed string to the appropriate type. */
 			if (ncc_pair_value_from_str(vp, buffer) < 0) {
