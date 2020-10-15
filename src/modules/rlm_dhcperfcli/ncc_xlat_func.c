@@ -354,14 +354,15 @@ VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *x
 
 	/* Retrieve the requested value from the list. */
 	VALUE_PAIR *vp = xlat_file->vps;
-	int i = 0;
+	int n = 0;
 	while (vp) {
-		if (i == idx_value) break;
+		n++;
+		if (n - 1 == idx_value) break;
 		vp = vp->next;
-		i++;
 	}
 	if (!vp) {
-		fr_strerror_printf("Not enough CSV values (file #%u, line %u)", xlat_file->idx_file, xlat_file->num_line);
+		fr_strerror_printf("Not enough CSV values (%u) for field #%u (file #%u, line %u)",
+		                   n, idx_value, xlat_file->idx_file, xlat_file->num_line);
 		return NULL;
 	}
 
