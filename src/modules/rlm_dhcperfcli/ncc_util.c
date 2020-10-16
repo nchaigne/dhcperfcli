@@ -258,7 +258,7 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 	 *	Copy the unknown attribute hierarchy
 	 */
 	if (n->da->flags.is_unknown) {
-		n->da = fr_dict_unknown_acopy(n, n->da);
+		n->da = fr_dict_unknown_acopy(n, n->da, NULL);
 		if (!n->da) {
 			talloc_free(n);
 			return NULL;
