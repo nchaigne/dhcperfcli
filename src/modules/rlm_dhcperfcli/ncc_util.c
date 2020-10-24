@@ -165,7 +165,7 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
  * Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
 // now redundant with fr_pair_find_by_da: TODO: remove this.
-VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
+fr_pair_t *ncc_pair_find_by_da(fr_pair_t *head, fr_dict_attr_t const *da)
 {
 	if (!da) return NULL;
 	return fr_pair_find_by_da(head, da);
@@ -175,10 +175,10 @@ VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da)
  * Create a value pair and add it to a list of value pairs.
  * This is a copy of (now defunct) FreeRADIUS function radius_pair_create (from src/main/pair.c)
  */
-VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
+fr_pair_t *ncc_pair_create(TALLOC_CTX *ctx, fr_pair_t **vps,
 			                unsigned int attribute, unsigned int vendor)
 {
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 
 	MEM(vp = fr_pair_afrom_num(ctx, vendor, attribute));
 	if (vps) fr_pair_add(vps, vp);
@@ -189,9 +189,9 @@ VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
 /**
  * Create a value pair from a dictionary attribute, and add it to a list of value pairs.
  */
-VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da)
+fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_t **vps, fr_dict_attr_t const *da)
 {
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 
 	FN_ARG_ASSERT(NULL, da);
 
@@ -204,7 +204,7 @@ VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_att
 /**
  * Copy the value from a pair to another, and the type also (e.g. VT_DATA).
  */
-int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
+int ncc_pair_copy_value(fr_pair_t *to, fr_pair_t *from)
 {
 	to->type = from->type;
 	return fr_value_box_copy(to, &to->data, &from->data);
@@ -222,7 +222,7 @@ int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from)
  *
  * @return -1 = error, 0 = success.
  */
-int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
+int ncc_pair_value_from_str(fr_pair_t *vp, char const *value)
 {
 	fr_type_t type = vp->da->type;
 
@@ -239,9 +239,9 @@ int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value)
  * Copy a single VP.
  * (FreeRADIUS's fr_pair_copy, altered to work with pre-compiled xlat)
  */
-VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
+fr_pair_t *ncc_pair_copy(TALLOC_CTX *ctx, fr_pair_t const *vp)
 {
-	VALUE_PAIR *n;
+	fr_pair_t *n;
 
 	if (!vp) return NULL;
 
@@ -268,7 +268,7 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
 	/*
 	 *	If it's an xlat, copy the raw string and return
 	 *	early, so we don't pre-expand or otherwise mangle
-	 *	the VALUE_PAIR.
+	 *	the fr_pair_t.
 	 */
 	if (vp->type == VT_XLAT) {
 		n->xlat = talloc_typed_strdup(n, vp->xlat);
@@ -284,16 +284,16 @@ VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp)
  * Copy a list of VP.
  * (FreeRADIUS's fr_pair_list_copy, altered to work with pre-compiled xlat)
  */
-int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
+int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
 {
 	fr_cursor_t	src, dst, tmp;
 
-	VALUE_PAIR	*head = NULL;
-	VALUE_PAIR	*vp;
+	fr_pair_t	*head = NULL;
+	fr_pair_t	*vp;
 	int		cnt = 0;
 
-	fr_cursor_talloc_init(&tmp, &head, VALUE_PAIR);
-	for (vp = fr_cursor_talloc_init(&src, &from, VALUE_PAIR);
+	fr_cursor_talloc_init(&tmp, &head, fr_pair_t);
+	for (vp = fr_cursor_talloc_init(&src, &from, fr_pair_t);
 	     vp;
 	     vp = fr_cursor_next(&src), cnt++) {
 		VP_VERIFY(vp);
@@ -308,7 +308,7 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
 	if (!*to) {	/* Fast Path */
 		*to = head;
 	} else {
-		fr_cursor_talloc_init(&dst, to, VALUE_PAIR);
+		fr_cursor_talloc_init(&dst, to, fr_pair_t);
 		fr_cursor_head(&tmp);
 		fr_cursor_merge(&dst, &tmp);
 	}
@@ -320,7 +320,7 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
  * Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  * Note: contrary to fr_pair_list_copy, this preserves the order of the value pairs.
  */
-VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from)
+fr_pair_t *ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
 {
 	vp_cursor_t src, dst;
 
@@ -329,7 +329,7 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 		return (*to);
 	}
 
-	VALUE_PAIR *out = *to, *vp;
+	fr_pair_t *out = *to, *vp;
 
 	fr_pair_cursor_init(&dst, &out);
 	for (vp = fr_pair_cursor_init(&src, &from);
@@ -350,9 +350,9 @@ VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *f
 /**
  * Print a list of VP.
  */
-void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
+void ncc_pair_list_fprint(FILE *fp, fr_pair_t *vps)
 {
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 	fr_cursor_t cursor;
 	char buf[4096];
 
@@ -370,12 +370,12 @@ void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps)
  * Similar to FreeRADIUS fr_pair_print, but prints 'x' for XLAT, '=' for DATA instead of the operator.
  * Also, we don't handle tags here.
  */
-size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
+size_t ncc_pair_snprint(char *out, size_t outlen, fr_pair_t const *vp)
 {
 	return ncc_pair_print(&FR_SBUFF_OUT(out, outlen), vp);
 }
 
-ssize_t ncc_pair_print(fr_sbuff_t *out, VALUE_PAIR const *vp)
+ssize_t ncc_pair_print(fr_sbuff_t *out, fr_pair_t const *vp)
 {
 	char const *token = NULL;
 	fr_sbuff_t our_out = FR_SBUFF_NO_ADVANCE(out);
@@ -412,7 +412,7 @@ ssize_t ncc_pair_print(fr_sbuff_t *out, VALUE_PAIR const *vp)
  * 	T_EOL = end of line was encountered.
  * 	the last token read otherwise (should be T_COMMA).
  */
-fr_token_t ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
+fr_token_t ncc_value_raw_from_str(char const **ptr, fr_pair_t_RAW *raw)
 {
 	char const *p;
 	fr_token_t ret = T_INVALID, next, quote;
@@ -487,12 +487,12 @@ fr_token_t ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw)
  * All VP's are created using the same (provided) dictionary attribute.
  * Inspired from FreeRADIUS function fr_pair_list_afrom_str.
  */
-fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list)
+fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, fr_pair_t **list)
 {
-	VALUE_PAIR *vp, *head, **tail;
+	fr_pair_t *vp, *head, **tail;
 	char const *p;
 	fr_token_t last_token = T_INVALID;
-	VALUE_PAIR_RAW raw;
+	fr_pair_t_RAW raw;
 
 	FN_ARG_ASSERT(T_INVALID, buffer);
 
@@ -550,14 +550,14 @@ fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, c
  * Read values from one line using the fp.
  * Inspired from FreeRADIUS function fr_pair_list_afrom_file.
  */
-int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone)
+int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, fr_pair_t **out, FILE *fp, uint32_t *line, bool *pfiledone)
 {
 	char buf[8192];
 	fr_token_t last_token = T_EOL;
 
 	fr_cursor_t cursor;
 
-	VALUE_PAIR *vp = NULL;
+	fr_pair_t *vp = NULL;
 	fr_cursor_init(&cursor, out);
 
 	if (fgets(buf, sizeof(buf), fp) == NULL) {
@@ -576,7 +576,7 @@ int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_P
 		goto done;
 	}
 
-	VALUE_PAIR *next;
+	fr_pair_t *next;
 	do {
 		next = vp->next;
 		fr_cursor_append(&cursor, vp);
@@ -599,17 +599,17 @@ error:
  * Append them to the provided list.
  * Inspired from FreeRADIUS function fr_pair_list_afrom_file.
  */
-int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, char const **strings)
+int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, fr_pair_t **out, char const **strings)
 {
 	int i = 0;
 	fr_token_t last_token = T_EOL;
 	fr_cursor_t cursor;
 
-	VALUE_PAIR *vp = NULL;
+	fr_pair_t *vp = NULL;
 	fr_cursor_init(&cursor, out);
 
 	while (strings[i] != NULL) {
-		VALUE_PAIR *next;
+		fr_pair_t *next;
 
 		vp = NULL;
 		last_token = fr_pair_list_afrom_str(ctx, dict, strings[i], &vp);

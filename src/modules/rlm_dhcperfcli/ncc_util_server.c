@@ -109,13 +109,13 @@ int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, UNUSED void *parent, CONF_IT
 }
 
 /**
- * Convert a CONF_PAIR to a VALUE_PAIR.
+ * Convert a CONF_PAIR to a fr_pair_t.
  */
-VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp)
+fr_pair_t *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp)
 {
 	char const *attr, *value;
 	fr_dict_attr_t const *da = NULL;
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 
 	attr = cf_pair_attr(cp); /* Note: attr cannot be NULL. */
 
@@ -202,7 +202,7 @@ void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth)
  * Inspired from FreeRADIUS function map_afrom_cs (src\lib\server\map.c).
  * Note: requires libfreeradius-server.
  */
-int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
+int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, fr_pair_t **out,
                            CONF_SECTION *cs, int cs_depth, unsigned int max)
 {
 	CONF_PAIR *cp;
@@ -234,7 +234,7 @@ int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **
 		cp = cf_item_to_pair(ci);
 		fr_assert(cp != NULL);
 
-		VALUE_PAIR *vp = ncc_pair_afrom_cp(ctx, dict, cp);
+		fr_pair_t *vp = ncc_pair_afrom_cp(ctx, dict, cp);
 		if (!vp) goto error;
 
 		fr_pair_add(out, vp);

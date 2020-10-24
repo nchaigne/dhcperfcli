@@ -804,9 +804,9 @@ void ncc_section_debug_end(int depth)
 /**
  * Debug a list of value pairs.
  */
-void ncc_pair_list_debug(int depth, VALUE_PAIR *vps)
+void ncc_pair_list_debug(int depth, fr_pair_t *vps)
 {
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 	fr_cursor_t cursor;
 	char buf[4096];
 

@@ -84,7 +84,7 @@ typedef struct ncc_xlat_file {
 
 	bool is_read; /* If current line has been read yet. */
 	char *value; /* Store single value read from current line using xlat "file". */
-	VALUE_PAIR *vps; /* Store list of values read from current line using xlat "file.csv". */
+	fr_pair_t *vps; /* Store list of values read from current line using xlat "file.csv". */
 } ncc_xlat_file_t;
 
 static bool done_init = false;
@@ -140,10 +140,10 @@ void ncc_xlat_free()
 }
 
 /*
- * To use FreeRADIUS xlat engine, we need a REQUEST (which is a "typedef struct rad_request").
+ * To use FreeRADIUS xlat engine, we need a request_t (which is a "struct request_s").
  * This is defined in src/lib/server/request.h
  */
-REQUEST *FX_request = NULL;
+request_t *FX_request = NULL;
 
 /* WARNING:
  * FreeRADIUS xlat functions can used this as Talloc context for allocating memory.
@@ -160,7 +160,7 @@ static uint32_t request_max_use = 10000;
 /**
  * Build a unique fake request for xlat.
  */
-void ncc_xlat_init_request(VALUE_PAIR *vps)
+void ncc_xlat_init_request(fr_pair_t *vps)
 {
 	if (FX_request && request_num_use >= request_max_use) {
 		TALLOC_FREE(FX_request);
@@ -345,7 +345,7 @@ error:
  * Get a value from CSV file. First, read a new line if it has not already been done.
  * Then extract the Nth value as requested.
  */
-VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file, uint32_t idx_value)
+fr_pair_t *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *xlat_file, uint32_t idx_value)
 {
 	/* Read a line from the file, or check we've already read. */
 	if (ncc_xlat_get_vps_from_file(ctx, xlat_file) < 0) {
@@ -353,7 +353,7 @@ VALUE_PAIR *ncc_xlat_get_value_from_csv_file(TALLOC_CTX *ctx, ncc_xlat_file_t *x
 	}
 
 	/* Retrieve the requested value from the list. */
-	VALUE_PAIR *vp = xlat_file->vps;
+	fr_pair_t *vp = xlat_file->vps;
 	int n = 0;
 	while (vp) {
 		n++;
@@ -428,7 +428,7 @@ int ncc_parse_file_csv(uint32_t *idx_file, uint32_t *idx_value, char const *in)
  */
 static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	*out = NULL;
 
@@ -451,7 +451,7 @@ static ssize_t _ncc_xlat_file_csv(UNUSED TALLOC_CTX *ctx, char **out, size_t out
 	/* Read the requested value from CSV file.
 	 * Note: the talloc context used here must *not* be the one provided by FreeRADIUS xlat engine.
 	 */
-	VALUE_PAIR *vp = ncc_xlat_get_value_from_csv_file(xlat_ctx, xlat_file, xlat_frame->file_csv.idx_value);
+	fr_pair_t *vp = ncc_xlat_get_value_from_csv_file(xlat_ctx, xlat_file, xlat_frame->file_csv.idx_value);
 	if (!vp) {
 		XLAT_ERR_RETURN;
 	}
@@ -497,7 +497,7 @@ int ncc_parse_file_raw(uint32_t *idx_file, char const *in)
  */
 static ssize_t _ncc_xlat_file_raw(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	*out = NULL;
 
@@ -627,7 +627,7 @@ int ncc_parse_num_range(uint64_t *num1, uint64_t *num2, char const *in)
  */
 static ssize_t _ncc_xlat_num_range(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	*out = NULL;
 
@@ -674,7 +674,7 @@ ssize_t ncc_xlat_num_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen, ch
  */
 static ssize_t _ncc_xlat_num_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	uint64_t delta, value;
 
@@ -782,7 +782,7 @@ int ncc_parse_ipaddr_range(fr_ipaddr_t *ipaddr1, fr_ipaddr_t *ipaddr2, char cons
  */
 static ssize_t _ncc_xlat_ipaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	*out = NULL;
 
@@ -839,7 +839,7 @@ ssize_t ncc_xlat_ipaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
  */
 static ssize_t _ncc_xlat_ipaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	uint32_t num1, num2, value;
 	uint64_t delta; /* Allow UINT32_MAX + 1. */
@@ -959,7 +959,7 @@ int ncc_parse_ethaddr_range(uint8_t ethaddr1[6], uint8_t ethaddr2[6], char const
  */
 static ssize_t _ncc_xlat_ethaddr_range(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	*out = NULL;
 
@@ -1018,7 +1018,7 @@ ssize_t ncc_xlat_ethaddr_range(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen
  */
 static ssize_t _ncc_xlat_ethaddr_rand(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	uint64_t num1 = 0, num2 = 0, delta;
 	uint64_t value;
@@ -1079,7 +1079,7 @@ ssize_t ncc_xlat_ethaddr_rand(TALLOC_CTX *ctx, char **out, UNUSED size_t outlen,
  */
 static ssize_t _ncc_xlat_randstr(UNUSED TALLOC_CTX *ctx, char **out, size_t outlen,
 				UNUSED void const *mod_inst, UNUSED void const *xlat_inst,
-				UNUSED REQUEST *request, char const *fmt)
+				UNUSED request_t *request, char const *fmt)
 {
 	/*
  	 *	Lookup tables for randstr char classes

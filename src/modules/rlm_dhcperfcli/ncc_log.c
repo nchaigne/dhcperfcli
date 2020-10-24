@@ -375,9 +375,9 @@ void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char c
 }
 
 /**
- * Provide our own version of "vlog_request" so we can handle FreeRADIUS "REQUEST" logs.
+ * Provide our own version of "vlog_request" so we can handle FreeRADIUS "request_t" logs.
  */
-void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
+void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, request_t *request,
 		  char const *file, int line,
 		  char const *fmt, va_list ap, void *uctx)
 {

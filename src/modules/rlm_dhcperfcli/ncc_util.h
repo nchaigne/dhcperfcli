@@ -343,23 +343,23 @@ char const *ncc_attr_dict_name(fr_dict_attr_t const *da);
 fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *name);
 void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da);
 
-VALUE_PAIR *ncc_pair_find_by_da(VALUE_PAIR *head, fr_dict_attr_t const *da);
-VALUE_PAIR *ncc_pair_create(TALLOC_CTX *ctx, VALUE_PAIR **vps,
+fr_pair_t *ncc_pair_find_by_da(fr_pair_t *head, fr_dict_attr_t const *da);
+fr_pair_t *ncc_pair_create(TALLOC_CTX *ctx, fr_pair_t **vps,
 			                unsigned int attribute, unsigned int vendor);
-VALUE_PAIR *ncc_pair_create_by_da(TALLOC_CTX *ctx, VALUE_PAIR **vps, fr_dict_attr_t const *da);
-int ncc_pair_copy_value(VALUE_PAIR *to, VALUE_PAIR *from);
-int ncc_pair_value_from_str(VALUE_PAIR *vp, char const *value);
-VALUE_PAIR *ncc_pair_copy(TALLOC_CTX *ctx, VALUE_PAIR const *vp);
-int ncc_pair_list_copy(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
-VALUE_PAIR *ncc_pair_list_append(TALLOC_CTX *ctx, VALUE_PAIR **to, VALUE_PAIR *from);
-void ncc_pair_list_fprint(FILE *fp, VALUE_PAIR *vps);
-size_t ncc_pair_snprint(char *out, size_t outlen, VALUE_PAIR const *vp);
-ssize_t ncc_pair_print(fr_sbuff_t *out, VALUE_PAIR const *vp);
+fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_t **vps, fr_dict_attr_t const *da);
+int ncc_pair_copy_value(fr_pair_t *to, fr_pair_t *from);
+int ncc_pair_value_from_str(fr_pair_t *vp, char const *value);
+fr_pair_t *ncc_pair_copy(TALLOC_CTX *ctx, fr_pair_t const *vp);
+int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
+fr_pair_t *ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
+void ncc_pair_list_fprint(FILE *fp, fr_pair_t *vps);
+size_t ncc_pair_snprint(char *out, size_t outlen, fr_pair_t const *vp);
+ssize_t ncc_pair_print(fr_sbuff_t *out, fr_pair_t const *vp);
 
-fr_token_t ncc_value_raw_from_str(char const **ptr, VALUE_PAIR_RAW *raw);
-fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, VALUE_PAIR **list);
-int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, VALUE_PAIR **out, FILE *fp, uint32_t *line, bool *pfiledone);
-int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out, char const **strings);
+fr_token_t ncc_value_raw_from_str(char const **ptr, fr_pair_t_RAW *raw);
+fr_token_t ncc_value_list_afrom_str(TALLOC_CTX *ctx, fr_dict_attr_t const *da, char const *buffer, fr_pair_t **list);
+int ncc_value_list_afrom_file(TALLOC_CTX *ctx, fr_dict_attr_t const *da, fr_pair_t **out, FILE *fp, uint32_t *line, bool *pfiledone);
+int ncc_pair_list_afrom_strings(TALLOC_CTX *ctx, fr_dict_t const *dict, fr_pair_t **out, char const **strings);
 
 char *ncc_hex_data_snprint(char *out, size_t outlen, const uint8_t *in, int in_len, char const *sep,
                            char const *prefix, int line_max_len);
@@ -417,7 +417,7 @@ int ncc_value_from_str_table(void *out, uint32_t type,
                              fr_table_num_ordered_t const *table, size_t table_len, char const *str);
 void ncc_section_debug_start(int depth, char const *name1, char const *name2);
 void ncc_section_debug_end(int depth);
-void ncc_pair_list_debug(int depth, VALUE_PAIR *vps);
+void ncc_pair_list_debug(int depth, fr_pair_t *vps);
 void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, ncc_parse_ctx_t *parse_ctx,
                                   int depth, char const *prefix);
 void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);
@@ -432,10 +432,10 @@ int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules);
  */
 void ncc_cf_log_perr(fr_log_type_t type, CONF_ITEM const *ci, char const *file, int line, char const *fmt, ...);
 int ncc_conf_item_parse(TALLOC_CTX *ctx, void *out, void *parent, CONF_ITEM *ci, CONF_PARSER const *rule);
-VALUE_PAIR *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
+fr_pair_t *ncc_pair_afrom_cp(TALLOC_CTX *ctx, fr_dict_t const *dict, CONF_PAIR *cp);
 void ncc_cs_debug_start(CONF_SECTION *cs, int cs_depth);
 void ncc_cs_debug_end(CONF_SECTION *cs, int cs_depth);
-int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, VALUE_PAIR **out,
+int ncc_pair_list_afrom_cs(TALLOC_CTX *ctx, fr_dict_t const *dict, fr_pair_t **out,
                            CONF_SECTION *cs, int cs_depth, unsigned int max);
 
 

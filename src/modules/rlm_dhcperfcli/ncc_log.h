@@ -125,7 +125,7 @@ int ncc_log_marker(ncc_log_t const *log, fr_log_type_t type, char const *file, i
 void ncc_log_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, ...);
 void ncc_log_dev_printf(ncc_log_t const *log, char const *file, int line, char const *fmt, ...);
 
-void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, REQUEST *request,
+void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, request_t *request,
 		  char const *file, int line,
 		  char const *fmt, va_list ap, void *uctx);
 

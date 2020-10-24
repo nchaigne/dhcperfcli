@@ -236,7 +236,7 @@ struct dpc_input {
 	uint32_t num_use;         //!< How many times has this input been used to start sessions.
 	uint32_t num_consecutive; //!< How many times has this input been used consecutively.
 
-	VALUE_PAIR *vps;          //!< List of input value pairs read.
+	fr_pair_t *vps;           //!< List of input value pairs read.
 
 	ncc_dlist_t *gateway_list;   //!<List of gateways.
 

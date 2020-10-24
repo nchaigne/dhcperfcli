@@ -185,7 +185,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 		/* If we sent a Request and got a NAK, print the Requested IP address that the server didn't like.
 		 */
 		if (packet->code == FR_DHCP_NAK && session->request->code == FR_DHCP_REQUEST) {
-			VALUE_PAIR *vp = fr_pair_find_by_da(session->request->vps, attr_dhcp_requested_ip_address);
+			fr_pair_t *vp = fr_pair_find_by_da(session->request->vps, attr_dhcp_requested_ip_address);
 			if (vp) {
 				fprintf(fp, ", req addr: %s", inet_ntop(AF_INET, &vp->vp_ipv4addr, lease_ipaddr, sizeof(lease_ipaddr)));
 			}
@@ -207,7 +207,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 /**
  * Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
  */
-void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp)
+void dpc_packet_fields_fprint(FILE *fp, fr_pair_t *vp)
 {
 	fr_cursor_t cursor;
 
@@ -232,7 +232,7 @@ void dpc_packet_fields_fprint(FILE *fp, VALUE_PAIR *vp)
  *	- Length of string (excluding the terminating '\0') written to out.
  *	- value >= outlen on truncation
  */
-size_t dpc_packet_option_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
+size_t dpc_packet_option_snprint(char *out, size_t outlen, fr_pair_t const *vp)
 {
 	size_t len, freespace = outlen;
 	char *p = out;
@@ -263,7 +263,7 @@ size_t dpc_packet_option_snprint(char *out, size_t outlen, VALUE_PAIR const *vp)
 /**
  * Print the "options" of a DHCP packet (from the VPs list).
  */
-int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
+int dpc_packet_options_fprint(FILE *fp, fr_pair_t *vp)
 {
 	char buf[1024];
 	size_t len;
@@ -288,7 +288,7 @@ int dpc_packet_options_fprint(FILE *fp, VALUE_PAIR *vp)
  */
 void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
 {
-	VALUE_PAIR *vp_encoded_data = NULL;
+	fr_pair_t *vp_encoded_data = NULL;
 
 	if (!fp || !packet) return;
 
@@ -320,7 +320,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 		 *	build and print the equivalent DHCP-Encoded-Data so we can reuse it effortlessly.
 		 */
 		if (pevent == DPC_PACKET_SENT && !vp_encoded_data) {
-			VALUE_PAIR *vp = ncc_pair_create_by_da(packet, NULL, attr_encoded_data);
+			fr_pair_t *vp = ncc_pair_create_by_da(packet, NULL, attr_encoded_data);
 			fr_pair_value_memdup(vp, packet->data, packet->data_len, true);
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp);
@@ -512,7 +512,7 @@ char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
 /**
  * Try and extract the message type from the DHCP pre-encoded data provided.
  */
-unsigned int dpc_message_type_extract(VALUE_PAIR *vp)
+unsigned int dpc_message_type_extract(fr_pair_t *vp)
 {
 	unsigned int code = FR_CODE_UNDEFINED;
 	uint8_t const *message_type;
@@ -533,7 +533,7 @@ end:
 /**
  * Extract the xid from the DHCP pre-encoded data provided.
  */
-uint32_t dpc_xid_extract(VALUE_PAIR *vp)
+uint32_t dpc_xid_extract(fr_pair_t *vp)
 {
 	uint32_t value;
 
@@ -654,7 +654,7 @@ int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr)
  */
 ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet)
 {
-	VALUE_PAIR *vps = NULL;
+	fr_pair_t *vps = NULL;
 	if (packet) vps = packet->vps;
 
 	return ncc_xlat_eval(out, outlen, fmt, vps);
@@ -666,7 +666,7 @@ ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *pa
  */
 ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, DHCP_PACKET *packet)
 {
-	VALUE_PAIR *vps = NULL;
+	fr_pair_t *vps = NULL;
 	if (packet) vps = packet->vps;
 
 	return ncc_xlat_eval_compiled(out, outlen, xlat, vps);

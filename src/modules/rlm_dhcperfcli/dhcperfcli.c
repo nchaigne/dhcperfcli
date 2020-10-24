@@ -312,7 +312,7 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *dlist, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
-static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps);
+static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_t *vps);
 
 static int dpc_get_alt_dir(void);
 static void dpc_dict_init(TALLOC_CTX *ctx);
@@ -952,7 +952,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		/* An xlat expression may have been provided. Go look in packet vps.
 		 */
 		if (packet->id == DPC_PACKET_ID_UNASSIGNED && CONF.xlat) {
-			VALUE_PAIR *vp_xid = ncc_pair_find_by_da(packet->vps, attr_dhcp_transaction_id);
+			fr_pair_t *vp_xid = ncc_pair_find_by_da(packet->vps, attr_dhcp_transaction_id);
 			if (vp_xid) packet->id = vp_xid->vp_uint32;
 		}
 
@@ -1254,7 +1254,7 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
  */
 static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 {
-	VALUE_PAIR *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
+	fr_pair_t *vp_xid, *vp_yiaddr, *vp_server_id, *vp_requested_ip;
 	DHCP_PACKET *packet;
 
 	/* Get the Offer xid. */
@@ -1348,7 +1348,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
  */
 static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 {
-	VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr;
+	fr_pair_t *vp_yiaddr, *vp_server_id, *vp_ciaddr;
 	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
@@ -1436,7 +1436,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
  */
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 {
-	VALUE_PAIR *vp_yiaddr, *vp_server_id, *vp_ciaddr, *vp_requested_ip;
+	fr_pair_t *vp_yiaddr, *vp_server_id, *vp_ciaddr, *vp_requested_ip;
 	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
@@ -1529,7 +1529,7 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	 * All of these can be overriden (entirely or partially) through input vps.
 	 * Note: the DHCP server will respond to the giaddr, not the packet source IP. Normally they are the same.
 	 */
-	VALUE_PAIR *vp_giaddr, *vp_hops;
+	fr_pair_t *vp_giaddr, *vp_hops;
 
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
 	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_dhcp_gateway_ip_address);
@@ -1603,7 +1603,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 static int dpc_dhcp_encode(DHCP_PACKET *packet)
 {
 	int r;
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 
 	/* Already encoded (i.e. retransmitting).
 	 */
@@ -2538,8 +2538,8 @@ static void dpc_input_socket_allocate(dpc_input_t *input)
 static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 {
 	fr_cursor_t cursor;
-	VALUE_PAIR *vp;
-	VALUE_PAIR *vp_encoded_data = NULL, *vp_workflow_type = NULL;
+	fr_pair_t *vp;
+	fr_pair_t *vp_encoded_data = NULL, *vp_workflow_type = NULL;
 
 	if (!input->vps) {
 		WARN("Empty vps list. Discarding input (id: %u)", input->id);
@@ -2947,10 +2947,10 @@ static int dpc_input_load(TALLOC_CTX *ctx)
  * Note: if one of the registered xlat complains (returns -1) the main xlat will consider it's fine.
  * However, if the main xlat is unhappy, it will return -1 (and an empty string).
  */
-static int dpc_pair_list_xlat(DHCP_PACKET *packet, VALUE_PAIR *vps)
+static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_t *vps)
 {
 	fr_cursor_t cursor;
-	VALUE_PAIR *vp;
+	fr_pair_t *vp;
 	ssize_t len;
 	char buffer[DPC_XLAT_MAX_LEN];
 
@@ -3585,7 +3585,7 @@ static void dpc_exit(void)
 	ncc_xlat_core_free();
 
 	// input list must be freed *before* dictionaries
-	// otherwise we would end up with VALUE_PAIR with no "da", which is very bad when trying to free them (cf. _fr_pair_free).
+	// otherwise we would end up with fr_pair_t with no "da", which is very bad when trying to free them (cf. _fr_pair_free).
 	NCC_DLIST_FREE(&input_list);
 
 	// If using non static "dict_dhcpv4" from FreeRADIUS, then dictionary "DHCPv4" has *two* talloc references
