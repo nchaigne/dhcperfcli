@@ -1129,7 +1129,9 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	/*
 	 * Decode the reply packet.
 	 */
-	if (fr_dhcpv4_decode(packet, packet->data, packet->data_len, &packet->vps, &packet->code) < 0) {
+	fr_cursor_t cursor;
+	fr_cursor_init(&cursor, &packet->vps);
+	if (fr_dhcpv4_decode(packet, packet->data, packet->data_len, &cursor, &packet->code) < 0) {
 		SPERROR("Failed to decode reply packet (id: %u)", packet->id);
 		fr_radius_packet_free(&packet);
 		/*
