@@ -22,6 +22,8 @@ typedef struct ncc_dlist {
  *	Get list current size.
  */
 #define NCC_DLIST_SIZE(_ncc_dlist) ((*_ncc_dlist).size)
+#define NCC_DLIST_SIZE_(_ncc_dlist) (fr_dlist_num_elements(&((*_ncc_dlist).head)))
+// => FreeRADIUS handles this natively now... TODO: remove NCC_DLIST_SIZE and our "size"
 
 /*
  *	Iterate on a list, starting from head.
@@ -48,6 +50,16 @@ typedef struct ncc_dlist {
 		(*_ncc_dlist).init = true; \
 	} \
 }
+
+/*
+ *	Free all items in list.
+ */
+#define NCC_DLIST_FREE(_ncc_dlist) \
+	if (NCC_DLIST_IS_INIT(_ncc_dlist)) { \
+		fr_dlist_talloc_free(&((*_ncc_dlist).head)); \
+		(*_ncc_dlist).size = 0; \
+		(*_ncc_dlist).last_used = NULL; \
+	}
 
 /*
  *	Allocate a new list item and properly initialize it.

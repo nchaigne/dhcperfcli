@@ -3584,6 +3584,10 @@ static void dpc_exit(void)
 	ncc_xlat_free(); // Note: this removes reference on "internal" (freeradius) dictionary
 	ncc_xlat_core_free();
 
+	// input list must be freed *before* dictionaries
+	// otherwise we would end up with VALUE_PAIR with no "da", which is very bad when trying to free them (cf. _fr_pair_free).
+	NCC_DLIST_FREE(&input_list);
+
 	// If using non static "dict_dhcpv4" from FreeRADIUS, then dictionary "DHCPv4" has *two* talloc references
 	// i.e. two parents in addition to the initial one (cf. talloc_reference_count).
 	// This is one more than expected (why ??) and thus prevents memory being properly freed.
