@@ -40,7 +40,7 @@ echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\", DHCP-
 - A test which lasts until 20k packets have been sent, broadcasting DHCP Discover messages concurrently, at a fixed rate of 1000 packets per second. Each packet originates from a distinct client (with randomly selected client MAC addresses).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.rand}\""  |  dhcperfcli  -T -N 20000 -p 32 -r 1000 -i eth0  255.255.255.255  discover
+echo "DHCP-Client-Hardware-Address=\"%{ethaddr.rand:}\""  |  dhcperfcli  -T -N 20000 -p 32 -r 1000 -i eth0  255.255.255.255  discover
 `__
 
 
