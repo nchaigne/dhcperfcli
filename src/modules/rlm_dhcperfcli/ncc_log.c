@@ -401,6 +401,8 @@ void ncc_vlog_request(fr_log_type_t type, fr_log_lvl_t lvl, request_t *request,
 		vsnprintf(buf, sizeof(buf), fmt, ap);
 		va_end(aq);
 
-		fr_strerror_printf_push(buf);
+		//fr_strerror_printf_push(buf);
+		// this is unsafe: fr_strerror_printf_push receives a printf style format string followed by arguments.
+		fr_strerror_printf_push("%s", buf);
 	}
 }
