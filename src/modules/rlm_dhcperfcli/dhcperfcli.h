@@ -17,7 +17,7 @@
 /*	We don't do RADIUS, but reuse the same structure for DHCP.
  *	(cf. lib/util/packet.h)
  */
-#define DHCP_PACKET RADIUS_PACKET
+#define DHCP_PACKET fr_radius_packet_t
 
 
 /*
