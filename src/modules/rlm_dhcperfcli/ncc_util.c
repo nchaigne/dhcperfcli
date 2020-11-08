@@ -320,31 +320,35 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
  * Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  * Note: contrary to fr_pair_list_copy, this preserves the order of the value pairs.
  */
-fr_pair_t *ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
+int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
 {
-	vp_cursor_t src, dst;
+	fr_cursor_t src, dst;
+	fr_pair_t *vp, *head = NULL;
+	int cnt = 0;
 
-	if (*to == NULL) { /* fall back to fr_pair_list_copy for a new list. */
-		MEM(ncc_pair_list_copy(ctx, to, from) >= 0);
-		return (*to);
+	if (*to == NULL) {
+		/* Fall back to ncc_pair_list_copy for a new list. */
+		return ncc_pair_list_copy(ctx, to, from);
 	}
 
-	fr_pair_t *out = *to, *vp;
+	/* Get "head" as the current tail of "to" */
+	head = *to;
+	while (head->next) head = head->next;
 
-	fr_pair_cursor_init(&dst, &out);
-	for (vp = fr_pair_cursor_init(&src, &from);
+	fr_cursor_talloc_init(&dst, &head, fr_pair_t);
+	for (vp = fr_cursor_talloc_init(&src, &from, fr_pair_t);
 	     vp;
-	     vp = fr_pair_cursor_next(&src)) {
+	     vp = fr_cursor_next(&src), cnt++) {
 		VP_VERIFY(vp);
 		vp = ncc_pair_copy(ctx, vp);
 		if (!vp) {
-			fr_pair_list_free(&out);
-			return NULL;
+			if (head->next) fr_pair_list_free(&head->next);
+			return -1;
 		}
-		fr_pair_cursor_append(&dst, vp); /* fr_pair_list_copy sets next pointer to NULL */
+		fr_cursor_append(&dst, vp);
 	}
 
-	return *to;
+	return cnt;
 }
 
 /**

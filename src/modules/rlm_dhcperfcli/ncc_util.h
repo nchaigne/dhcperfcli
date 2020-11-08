@@ -351,7 +351,7 @@ int ncc_pair_copy_value(fr_pair_t *to, fr_pair_t *from);
 int ncc_pair_value_from_str(fr_pair_t *vp, char const *value);
 fr_pair_t *ncc_pair_copy(TALLOC_CTX *ctx, fr_pair_t const *vp);
 int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
-fr_pair_t *ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
+int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
 void ncc_pair_list_fprint(FILE *fp, fr_pair_t *vps);
 size_t ncc_pair_snprint(char *out, size_t outlen, fr_pair_t const *vp);
 ssize_t ncc_pair_print(fr_sbuff_t *out, fr_pair_t const *vp);
