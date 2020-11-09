@@ -1258,20 +1258,20 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	DHCP_PACKET *packet;
 
 	/* Get the Offer xid. */
-	vp_xid = fr_pair_find_by_da(session->reply->vps, attr_dhcp_transaction_id);
+	vp_xid = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_transaction_id);
 	if (!vp_xid) { /* Should never happen (DHCP field). */
 		return false;
 	}
 
 	/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address);
+	vp_yiaddr = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_your_ip_address);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no yiaddr provided in Offer reply");
 		return false;
 	}
 
 	/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_dhcp_server_identifier);
+	vp_server_id = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_server_identifier);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 		return false;
@@ -1352,14 +1352,14 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address);
+	vp_yiaddr = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_your_ip_address);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_dhcp_server_identifier);
+	vp_server_id = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_server_identifier);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1440,14 +1440,14 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(session->reply->vps, attr_dhcp_your_ip_address);
+	vp_yiaddr = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_your_ip_address);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(session->reply->vps, attr_dhcp_server_identifier);
+	vp_server_id = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_server_identifier);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1532,7 +1532,7 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	fr_pair_t *vp_giaddr, *vp_hops;
 
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
-	vp_giaddr = fr_pair_find_by_da(packet->vps, attr_dhcp_gateway_ip_address);
+	vp_giaddr = fr_pair_find_by_da(&packet->vps, attr_dhcp_gateway_ip_address);
 	if (!vp_giaddr) {
 		vp_giaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_gateway_ip_address);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
@@ -1541,7 +1541,7 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	}
 
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
-	vp_hops = fr_pair_find_by_da(packet->vps, attr_dhcp_hop_count);
+	vp_hops = fr_pair_find_by_da(&packet->vps, attr_dhcp_hop_count);
 	if (!vp_hops) {
 		vp_hops = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_hop_count);
 		vp_hops->vp_uint8 = 1;
