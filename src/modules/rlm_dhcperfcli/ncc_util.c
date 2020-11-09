@@ -165,7 +165,7 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
  * Wrapper to fr_pair_find_by_da, which just returns NULL if we don't have the dictionary attr.
  */
 // now redundant with fr_pair_find_by_da: TODO: remove this.
-fr_pair_t *ncc_pair_find_by_da(fr_pair_t *head, fr_dict_attr_t const *da)
+fr_pair_t *ncc_pair_find_by_da(fr_pair_list_t *head, fr_dict_attr_t const *da)
 {
 	if (!da) return NULL;
 	return fr_pair_find_by_da(head, da);

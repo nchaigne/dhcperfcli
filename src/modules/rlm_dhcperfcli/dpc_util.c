@@ -185,7 +185,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 		/* If we sent a Request and got a NAK, print the Requested IP address that the server didn't like.
 		 */
 		if (packet->code == FR_DHCP_NAK && session->request->code == FR_DHCP_REQUEST) {
-			fr_pair_t *vp = fr_pair_find_by_da(session->request->vps, attr_dhcp_requested_ip_address);
+			fr_pair_t *vp = fr_pair_find_by_da(&session->request->vps, attr_dhcp_requested_ip_address);
 			if (vp) {
 				fprintf(fp, ", req addr: %s", inet_ntop(AF_INET, &vp->vp_ipv4addr, lease_ipaddr, sizeof(lease_ipaddr)));
 			}
@@ -297,7 +297,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 	}
 
 	if (CONF.packet_trace_lvl >= 2) {
-		if ((vp_encoded_data = ncc_pair_find_by_da(packet->vps, attr_encoded_data)) != NULL) {
+		if ((vp_encoded_data = ncc_pair_find_by_da(&packet->vps, attr_encoded_data)) != NULL) {
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, vp_encoded_data);
 		} else {

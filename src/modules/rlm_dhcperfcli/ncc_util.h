@@ -343,7 +343,7 @@ char const *ncc_attr_dict_name(fr_dict_attr_t const *da);
 fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *name);
 void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da);
 
-fr_pair_t *ncc_pair_find_by_da(fr_pair_t *head, fr_dict_attr_t const *da);
+fr_pair_t *ncc_pair_find_by_da(fr_pair_list_t *head, fr_dict_attr_t const *da);
 fr_pair_t *ncc_pair_create(TALLOC_CTX *ctx, fr_pair_t **vps,
 			                unsigned int attribute, unsigned int vendor);
 fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_t **vps, fr_dict_attr_t const *da);

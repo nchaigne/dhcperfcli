@@ -952,7 +952,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		/* An xlat expression may have been provided. Go look in packet vps.
 		 */
 		if (packet->id == DPC_PACKET_ID_UNASSIGNED && CONF.xlat) {
-			fr_pair_t *vp_xid = ncc_pair_find_by_da(packet->vps, attr_dhcp_transaction_id);
+			fr_pair_t *vp_xid = ncc_pair_find_by_da(&packet->vps, attr_dhcp_transaction_id);
 			if (vp_xid) packet->id = vp_xid->vp_uint32;
 		}
 
@@ -1612,7 +1612,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	/*
 	 * If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
-	if ((vp = ncc_pair_find_by_da(packet->vps, attr_encoded_data))) {
+	if ((vp = ncc_pair_find_by_da(&packet->vps, attr_encoded_data))) {
 		packet->data_len = vp->vp_length;
 		packet->data = talloc_zero_array(packet, uint8_t, packet->data_len);
 		memcpy(packet->data, vp->vp_octets, vp->vp_length);
@@ -2564,13 +2564,13 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	 * If so, extract (if there is one) the message type and the xid.
 	 * All other DHCP attributes provided through value pairs are ignored.
 	 */
-	vp_encoded_data = ncc_pair_find_by_da(input->vps, attr_encoded_data);
+	vp_encoded_data = ncc_pair_find_by_da(&input->vps, attr_encoded_data);
 	if (IS_VP_DATA(vp_encoded_data)) {
 		input->ext.code = dpc_message_type_extract(vp_encoded_data);
 		input->ext.xid = dpc_xid_extract(vp_encoded_data);
 	} else {
 		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
-		vp_workflow_type = ncc_pair_find_by_da(input->vps, attr_workflow_type);
+		vp_workflow_type = ncc_pair_find_by_da(&input->vps, attr_workflow_type);
 	}
 
 	/* Allocate and initialize input segments list.
@@ -2622,6 +2622,12 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 				value = talloc_typed_strdup(ctx, vp->xlat); /* modified by xlat_tokenize */
 
 				slen = xlat_tokenize(global_ctx, &xlat, NULL, &FR_SBUFF_IN(value, talloc_array_length(value)), NULL, NULL);
+				//fr_sbuff_parse_rules_t	p_rules = { .escapes = &fr_value_unescape_double };
+				//slen = xlat_tokenize(global_ctx, &xlat, NULL, &FR_SBUFF_IN(value, talloc_array_length(value)), &p_rules, NULL);
+//zzz not ok? test %...
+				// weird % stuff: a "%D" at the beginning will prevent the rest of the xlat from being expanded... why !?
+				// but if it is after an attribute, it works (expanded).
+
 				/* Notes:
 				 * - First parameter is talloc context.
 				 *   We cannot use "input" as talloc context, because we may free the input and still need the parsed xlat expression.
