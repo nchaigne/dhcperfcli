@@ -172,21 +172,6 @@ fr_pair_t *ncc_pair_find_by_da(fr_pair_list_t *head, fr_dict_attr_t const *da)
 }
 
 /**
- * Create a value pair and add it to a list of value pairs.
- * This is a copy of (now defunct) FreeRADIUS function radius_pair_create (from src/main/pair.c)
- */
-fr_pair_t *ncc_pair_create(TALLOC_CTX *ctx, fr_pair_t **vps,
-			                unsigned int attribute, unsigned int vendor)
-{
-	fr_pair_t *vp;
-
-	MEM(vp = fr_pair_afrom_num(ctx, vendor, attribute));
-	if (vps) fr_pair_add(vps, vp);
-
-	return vp;
-}
-
-/**
  * Create a value pair from a dictionary attribute, and add it to a list of value pairs.
  */
 fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_t **vps, fr_dict_attr_t const *da)
