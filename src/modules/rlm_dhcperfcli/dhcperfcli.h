@@ -19,6 +19,7 @@
  */
 #define DHCP_PACKET fr_radius_packet_t
 
+#define FR_DHCP_UNDEFINED 0 // to replace FR_CODE_UNDEFINED which is now in a radius enum.
 
 /*
  *	Assuming an upper rate of 20 000 packets sent per second, constant over a period of time.
