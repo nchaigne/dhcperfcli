@@ -213,7 +213,7 @@ void dpc_packet_fields_fprint(FILE *fp, fr_pair_t *vp)
 
 	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
 		if (vp_is_dhcp_field(vp)) {
-			fr_pair_fprint(fp, vp);
+			fr_pair_fprint(fp, NULL, vp);
 		}
 	}
 }
@@ -253,7 +253,7 @@ size_t dpc_packet_option_snprint(char *out, size_t outlen, fr_pair_t const *vp)
 	}
 	RET_LEN_IF_TRUNCATED(p, len, outlen, freespace);
 
-	len = fr_pair_print(&FR_SBUFF_OUT(p, freespace), vp);
+	len = fr_pair_print(&FR_SBUFF_OUT(p, freespace), NULL, vp);
 	//TODO: rework func to use sbuff
 	RET_LEN_IF_TRUNCATED(p, len, outlen, freespace);
 
@@ -299,7 +299,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 	if (CONF.packet_trace_lvl >= 2) {
 		if ((vp_encoded_data = ncc_pair_find_by_da(&packet->vps, attr_encoded_data)) != NULL) {
 			fprintf(fp, "DHCP data:\n");
-			fr_pair_fprint(fp, vp_encoded_data);
+			fr_pair_fprint(fp, NULL, vp_encoded_data);
 		} else {
 			fprintf(fp, "DHCP vps fields:\n");
 			dpc_packet_fields_fprint(fp, packet->vps);
@@ -323,7 +323,7 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 			fr_pair_t *vp = ncc_pair_create_by_da(packet, NULL, attr_encoded_data);
 			fr_pair_value_memdup(vp, packet->data, packet->data_len, true);
 			fprintf(fp, "DHCP data:\n");
-			fr_pair_fprint(fp, vp);
+			fr_pair_fprint(fp, NULL, vp);
 		}
 	}
 }
