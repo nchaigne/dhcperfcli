@@ -130,11 +130,11 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_dhcp_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 
 	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
-	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_requested_ip_address, .name = "Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_message_type, .name = "DHCP-Message-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 */
 
-	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
+	{ .out = &attr_dhcp_requested_ip_address, .name = "Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
 	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
 
 	{ NULL }
@@ -175,7 +175,7 @@ static ncc_endpoint_t client_ep = {
 
 static ncc_dlist_t *gateway_list; /* List of gateways. */
 
-static int packet_code = FR_CODE_UNDEFINED;
+static int packet_code = FR_DHCP_UNDEFINED;
 static int workflow_code = DPC_WORKFLOW_NONE;
 
 static bool start_sessions_flag =  true; /* Allow starting new sessions. */
@@ -212,8 +212,8 @@ static fr_pcap_t *pcap;
 #endif
 
 static fr_table_num_sorted_t const request_types[] = {
-	{ L("-"),           FR_CODE_UNDEFINED },
-	{ L("auto"),        FR_CODE_UNDEFINED },
+	{ L("-"),           FR_DHCP_UNDEFINED },
+	{ L("auto"),        FR_DHCP_UNDEFINED },
 	{ L("decline"),     FR_DHCP_DECLINE },
 	{ L("discover"),    FR_DHCP_DISCOVER },
 	{ L("inform"),      FR_DHCP_INFORM },
@@ -2551,7 +2551,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		return -1; \
 	}
 
-	input->ext.code = FR_CODE_UNDEFINED;
+	input->ext.code = FR_DHCP_UNDEFINED;
 
 	/* Default: global option -c, can be overriden through Max-Use attr. */
 	input->max_use = CONF.input_num_use;
@@ -2624,9 +2624,9 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 				slen = xlat_tokenize(global_ctx, &xlat, NULL, &FR_SBUFF_IN(value, talloc_array_length(value)), NULL, NULL);
 				//fr_sbuff_parse_rules_t	p_rules = { .escapes = &fr_value_unescape_double };
 				//slen = xlat_tokenize(global_ctx, &xlat, NULL, &FR_SBUFF_IN(value, talloc_array_length(value)), &p_rules, NULL);
-//zzz not ok? test %...
 				// weird % stuff: a "%D" at the beginning will prevent the rest of the xlat from being expanded... why !?
 				// but if it is after an attribute, it works (expanded).
+				// TODO: look into this
 
 				/* Notes:
 				 * - First parameter is talloc context.
@@ -2749,7 +2749,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	 * If not specified in input vps, use default values.
 	 */
 	if (!vp_encoded_data) {
-		if (input->ext.code == FR_CODE_UNDEFINED) {
+		if (input->ext.code == FR_DHCP_UNDEFINED) {
 			/*
 			 * Handling a workflow. All workflows start with a Discover.
 			 */
@@ -2764,7 +2764,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 		}
 
 		/* Fall back to message type provided through command line (if there is one). */
-		if (input->ext.code == FR_CODE_UNDEFINED) input->ext.code = packet_code;
+		if (input->ext.code == FR_DHCP_UNDEFINED) input->ext.code = packet_code;
 	}
 
 	/*
@@ -2781,7 +2781,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	if (!input->ext.dst.port) input->ext.dst.port = server_ep.port;
 	if (!is_ipaddr_defined(input->ext.dst.ipaddr)) input->ext.dst.ipaddr = server_ep.ipaddr;
 
-	if (!vp_encoded_data && input->ext.code == FR_CODE_UNDEFINED) {
+	if (!vp_encoded_data && input->ext.code == FR_DHCP_UNDEFINED) {
 		WARN("No packet type specified in input vps or command line. Discarding input (id: %u)", input->id);
 		return -1;
 	}
@@ -2877,6 +2877,8 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
+// this doesn't work anymore with our own internal attributes... TODO
+// (fr_dict_attr_by_qualified_oid works with fallback...)
 		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
 			return -1;
@@ -3118,8 +3120,9 @@ static void dpc_dict_init(TALLOC_CTX *ctx)
 	fr_strerror(); /* Clear the error buffer */
 
 	/* Check dictionaries. */
-	//fr_dict_dump(dict_dhcperfcli);
-	//fr_dict_dump(dpc_dict_dhcpv4);
+	//fr_dict_debug(dict_freeradius);
+	//fr_dict_debug(dict_dhcperfcli);
+	//fr_dict_debug(dpc_dict_dhcpv4);
 }
 
 /**

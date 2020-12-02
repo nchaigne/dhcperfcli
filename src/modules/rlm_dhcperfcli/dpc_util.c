@@ -514,7 +514,7 @@ char *dpc_packet_from_to_sprint(char *out, DHCP_PACKET *packet, bool extra)
  */
 unsigned int dpc_message_type_extract(fr_pair_t *vp)
 {
-	unsigned int code = FR_CODE_UNDEFINED;
+	unsigned int code = FR_DHCP_UNDEFINED;
 	uint8_t const *message_type;
 
 	if (vp->vp_length <= 240) goto end; /* No options. */
