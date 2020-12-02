@@ -130,11 +130,11 @@ fr_dict_attr_autoload_t dpc_dict_attr_autoload[] = {
 	{ .out = &attr_dhcp_gateway_ip_address, .name = "DHCP-Gateway-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 
 	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
-	{ .out = &attr_dhcp_requested_ip_address, .name = "Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
+	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dict_dhcpv4 },
 	{ .out = &attr_dhcp_message_type, .name = "DHCP-Message-Type", .type = FR_TYPE_UINT8, .dict = &dict_dhcpv4 },
 */
 
-	{ .out = &attr_dhcp_requested_ip_address, .name = "Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
+	{ .out = &attr_dhcp_requested_ip_address, .name = "DHCP-Requested-IP-Address", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
 	{ .out = &attr_dhcp_server_identifier, .name = "DHCP-DHCP-Server-Identifier", .type = FR_TYPE_IPV4_ADDR, .dict = &dpc_dict_dhcpv4 },
 
 	{ NULL }
