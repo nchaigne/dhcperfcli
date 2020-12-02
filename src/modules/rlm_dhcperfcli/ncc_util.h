@@ -424,6 +424,9 @@ int ncc_getopt_rule(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rule, char c
 int ncc_getopt(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules, char const *opt, int argval, char const *optarg);
 int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules);
 
+fr_token_t ncc_pair_list_afrom_str(TALLOC_CTX *ctx, fr_dict_t const *dict, char const *buffer, fr_pair_list_t *list);
+int ncc_pair_list_afrom_file(TALLOC_CTX *ctx, fr_dict_t const *dict, fr_pair_list_t *out, FILE *fp, bool *pfiledone);
+
 
 /*
  * Functions from ncc_util_server.c

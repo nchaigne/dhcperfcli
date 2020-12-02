@@ -1183,3 +1183,369 @@ int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules)
 
 	return 0;
 }
+
+
+/**
+ * Read one line of attribute/value pairs into a list.
+ * The line may specify multiple attributes separated by commas.
+ *
+ * Similar to fr_pair_list_afrom_substr (pair_legacy.c)
+ * But using fr_dict_attr_search_by_qualified_oid_substr with "fallback = true" instead of fr_dict_attr_by_oid_substr.
+ */
+extern fr_sbuff_term_t const bareword_terminals; // defined in pair_legacy.c
+static ssize_t ncc_pair_list_afrom_substr(TALLOC_CTX *ctx, fr_dict_attr_t const *parent, char const *buffer,
+					 fr_pair_list_t *list, fr_token_t *token, int depth)
+{
+	fr_pair_t	*vp, *head, **tail;
+	char const	*p, *next;
+	fr_token_t	last_token = T_INVALID;
+	fr_pair_t_RAW	raw;
+	fr_dict_attr_t const *internal = fr_dict_root(fr_dict_internal());
+
+	if (internal == parent) internal = NULL;
+
+	/*
+	 *	We allow an empty line.
+	 */
+	if (buffer[0] == 0) {
+		*token = T_EOL;
+		return 0;
+	}
+
+	head = NULL;
+	tail = &head;
+
+	p = buffer;
+	while (true) {
+		ssize_t slen;
+		fr_dict_attr_t const *da;
+		fr_dict_attr_t *da_unknown = NULL;
+		fr_skip_whitespace(p);
+
+		/*
+		 *	Stop at the end of the input, returning
+		 *	whatever token was last read.
+		 */
+		if (!*p) break;
+
+		if (*p == '#') {
+			last_token = T_EOL;
+			break;
+		}
+
+		/*
+		 *	Hacky hack...
+		 */
+		if (strncmp(p, "raw.", 4) == 0) goto do_unknown;
+
+		/*
+		 *	Parse the name.
+		 */
+//		slen = fr_dict_attr_by_oid_substr(NULL, &da, parent,
+//						  &FR_SBUFF_IN(p, strlen(p)), &bareword_terminals);
+//		if ((slen <= 0) && internal) {
+//			slen = fr_dict_attr_by_oid_substr(NULL, &da, internal,
+//							  &FR_SBUFF_IN(p, strlen(p)), &bareword_terminals);
+//		}
+		slen = fr_dict_attr_search_by_qualified_oid_substr(NULL, &da, NULL, &FR_SBUFF_IN(p, strlen(p)), &bareword_terminals, true);
+
+		if (slen <= 0) {
+		do_unknown:
+			slen = fr_dict_unknown_afrom_oid_substr(ctx, NULL, &da_unknown, parent,
+								&FR_SBUFF_IN(p, strlen(p)), &bareword_terminals);
+			if (slen <= 0) {
+				p += -slen;
+
+			error:
+				fr_pair_list_free(&head);
+				*token = T_INVALID;
+				return -(p - buffer);
+			}
+
+			da = da_unknown;
+		}
+
+		next = p + slen;
+
+		if ((size_t) (next - p) >= sizeof(raw.l_opand)) {
+			fr_dict_unknown_free(&da);
+			fr_strerror_printf("Attribute name too long");
+			goto error;
+		}
+
+		memcpy(raw.l_opand, p, next - p);
+		raw.l_opand[next - p] = '\0';
+		raw.r_opand[0] = '\0';
+
+		p = next;
+		fr_skip_whitespace(p);
+
+		/*
+		 *	There must be an operator here.
+		 */
+		raw.op = gettoken(&p, raw.r_opand, sizeof(raw.r_opand), false);
+		if ((raw.op  < T_EQSTART) || (raw.op  > T_EQEND)) {
+			fr_dict_unknown_free(&da);
+			fr_strerror_printf("Expecting operator");
+			goto error;
+		}
+
+		fr_skip_whitespace(p);
+
+		/*
+		 *	Allow grouping attributes.
+		 */
+		if ((da->type == FR_TYPE_GROUP) || (da->type == FR_TYPE_TLV) || (da->type == FR_TYPE_STRUCT)) {
+			if (*p != '{') {
+				fr_strerror_printf("Group list for %s MUST start with '{'", da->name);
+				goto error;
+			}
+			p++;
+
+			vp = fr_pair_afrom_da(ctx, da);
+			if (!vp) goto error;
+
+			/*
+			 *	Find the new root attribute to start encoding from.
+			 */
+			parent = fr_dict_attr_ref(da);
+			if (!parent) parent = da;
+
+			slen = ncc_pair_list_afrom_substr(vp, parent, p, &vp->vp_group, &last_token, depth + 1);
+			if (slen <= 0) {
+				talloc_free(vp);
+				goto error;
+			}
+
+			if (last_token != T_RCBRACE) {
+			failed_group:
+				fr_strerror_printf("Failed to end group list with '}'");
+				talloc_free(vp);
+				goto error;
+			}
+
+			p += slen;
+			fr_skip_whitespace(p);
+			if (*p != '}') goto failed_group;
+			p++;
+
+		} else {
+			fr_token_t quote;
+			char const *q;
+
+			/*
+			 *	Get the RHS thing.
+			 */
+			quote = gettoken(&p, raw.r_opand, sizeof(raw.r_opand), false);
+			if (quote == T_EOL) {
+				fr_strerror_printf("Failed to get value");
+				goto error;
+			}
+
+			switch (quote) {
+				/*
+				 *	Perhaps do xlat's
+				 */
+			case T_DOUBLE_QUOTED_STRING:
+				/*
+				 *	Only report as double quoted if it contained valid
+				 *	a valid xlat expansion.
+				 */
+				q = strchr(raw.r_opand, '%');
+				if (q && (q[1] == '{')) {
+					raw.quote = quote;
+				} else {
+					raw.quote = T_SINGLE_QUOTED_STRING;
+				}
+				break;
+
+			case T_SINGLE_QUOTED_STRING:
+			case T_BACK_QUOTED_STRING:
+			case T_BARE_WORD:
+				raw.quote = quote;
+				break;
+
+			default:
+				fr_strerror_printf("Failed to find expected value on right hand side in %s", da->name);
+				goto error;
+			}
+
+			fr_skip_whitespace(p);
+
+			/*
+			 *	Regular expressions get sanity checked by pair_make().
+			 *
+			 *	@todo - note that they will also be escaped,
+			 *	so we may need to fix that later.
+			 */
+			if ((raw.op == T_OP_REG_EQ) || (raw.op == T_OP_REG_NE)) {
+				vp = fr_pair_afrom_da(ctx, da);
+				if (!vp) goto error;
+				vp->op = raw.op;
+
+				fr_pair_value_bstrndup(vp, raw.r_opand, strlen(raw.r_opand), false);
+			} else {
+				/*
+				 *	All other attributes get the name
+				 *	parsed.
+				 */
+				vp = fr_pair_afrom_da(ctx, da);
+				if (!vp) goto error;
+				vp->op = raw.op;
+
+				/*
+				 *	We don't care what the value is, so
+				 *	ignore it.
+				 */
+				if ((raw.op == T_OP_CMP_TRUE) || (raw.op == T_OP_CMP_FALSE)) goto next;
+
+				/*
+				 *	fr_pair_raw_from_str() only returns this when
+				 *	the input looks like it needs to be xlat'd.
+				 */
+				if (raw.quote == T_DOUBLE_QUOTED_STRING) {
+					if (fr_pair_mark_xlat(vp, raw.r_opand) < 0) {
+						talloc_free(vp);
+						goto error;
+					}
+
+					/*
+					 *	Parse it ourselves.  The RHS
+					 *	might NOT be tainted, but we
+					 *	don't know.  So just mark it
+					 *	as such to be safe.
+					 */
+				} else if (fr_pair_value_from_str(vp, raw.r_opand, -1, '"', true) < 0) {
+					talloc_free(vp);
+					goto error;
+				}
+			}
+		}
+
+	next:
+		/*
+		 *	Free the unknown attribute, we don't need it any more.
+		 */
+		fr_dict_unknown_free(&da);
+
+		*tail = vp;
+		tail = &((*tail)->next);
+
+		/*
+		 *	Now look for EOL, hash, etc.
+		 */
+		if (!*p || (*p == '#') || (*p == '\n')) {
+			last_token = T_EOL;
+			break;
+		}
+
+		/*
+		 *	Check for nested groups.
+		 */
+		if ((depth > 0) && (p[0] == ' ') && (p[1] == '}')) p++;
+
+		/*
+		 *	Stop at '}', too, if we're inside of a group.
+		 */
+		if ((depth > 0) && (*p == '}')) {
+			last_token = T_RCBRACE;
+			break;
+		}
+
+		if (*p != ',') {
+			fr_strerror_printf("Expected ',', got '%c' at offset %zu", *p, p - buffer);
+			goto error;
+		}
+		p++;
+		last_token = T_COMMA;
+	}
+
+	if (head) fr_pair_add(list, head);
+
+	/*
+	 *	And return the last token which we read.
+	 */
+	*token = last_token;
+	return p - buffer;
+}
+
+/**
+ * Read one line of attribute/value pairs into a list.
+ * The line may specify multiple attributes separated by commas.
+ *
+ * Same as fr_pair_list_afrom_str (pair_legacy.c), but call ncc_pair_list_afrom_substr instead of fr_pair_list_afrom_substr.
+ */
+fr_token_t ncc_pair_list_afrom_str(TALLOC_CTX *ctx, fr_dict_t const *dict, char const *buffer, fr_pair_list_t *list)
+{
+	fr_token_t token;
+
+	(void) ncc_pair_list_afrom_substr(ctx, fr_dict_root(dict), buffer, list, &token, 0);
+	return token;
+}
+
+/**
+ * Read valuepairs from the fp up to End-Of-File.
+ *
+ * Same as fr_pair_list_afrom_file (pair_legacy.c), but call ncc_pair_list_afrom_str instead of fr_pair_list_afrom_str.
+ */
+int ncc_pair_list_afrom_file(TALLOC_CTX *ctx, fr_dict_t const *dict, fr_pair_list_t *out, FILE *fp, bool *pfiledone)
+{
+	fr_token_t	last_token = T_EOL;
+	bool		found = false;
+	fr_cursor_t	cursor;
+	char		buf[8192];
+
+	fr_cursor_init(&cursor, out);
+
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
+		fr_cursor_t append;
+		fr_pair_t   *vp;
+
+		/*
+		 *      If we get a '\n' by itself, we assume that's
+		 *      the end of that VP list.
+		 */
+		if (buf[0] == '\n') {
+			if (found) {
+				*pfiledone = false;
+				return 0;
+			}
+			continue;
+		}
+
+		/*
+		 *	Comments get ignored
+		 */
+		if (buf[0] == '#') continue;
+
+		/*
+		 *	Read all of the attributes on the current line.
+		 *
+		 *	If we get nothing but an EOL, it's likely OK.
+		 */
+		vp = NULL;
+		last_token = ncc_pair_list_afrom_str(ctx, dict, buf, &vp);
+		if (!vp) {
+			if (last_token == T_EOL) break;
+
+			/*
+			 *	Didn't read anything, but the previous
+			 *	line wasn't EOL.  The input file has a
+			 *	format error.
+			 */
+			*pfiledone = false;
+			vp = fr_cursor_head(&cursor);
+			if (vp) fr_pair_list_free(&vp);
+			*out = NULL;
+			return -1;
+		}
+
+		found = true;
+		fr_cursor_init(&append, &vp);
+		fr_cursor_merge(&cursor, &append);
+		(void) fr_cursor_tail(&cursor);
+	}
+
+	*pfiledone = true;
+	return 0;
+}

@@ -2877,9 +2877,10 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
-// this doesn't work anymore with our own internal attributes... TODO
-// (fr_dict_attr_by_qualified_oid works with fallback...)
-		if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
+		//if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
+		// this doesn't work anymore with our own internal attributes...
+
+		if (ncc_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
 			return -1;
 		}

@@ -130,7 +130,6 @@ fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *n
 
 		/* Note: fr_dict_attr_by_qualified_oid allows to provide a protocol qualifier.
 		 * E.g.: "dhcpv4.DHCP-Hostname" (non case sensitive).
-		 * We don't need this, but it's not an issue either.
 		 */
 	}
 
