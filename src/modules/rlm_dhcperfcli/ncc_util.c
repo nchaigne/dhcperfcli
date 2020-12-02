@@ -119,16 +119,16 @@ fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *n
 	/* If a dictionary is specified, look into it first.
 	 */
 	if (dict) {
-		da = fr_dict_attr_by_name(dict, name);
+		da = fr_dict_attr_by_name(NULL, fr_dict_root(dict), name);
 	}
 
 	if (!da) {
 		/*
 		 * Fallback to internal and other dictionaries.
 		 */
-		fr_dict_attr_by_qualified_name(&da, dict, name, true);
+		da = fr_dict_attr_by_qualified_oid(NULL, dict, name, true);
 
-		/* Note: fr_dict_attr_by_qualified_name allows to provide a protocol qualifier.
+		/* Note: fr_dict_attr_by_qualified_oid allows to provide a protocol qualifier.
 		 * E.g.: "dhcpv4.DHCP-Hostname" (non case sensitive).
 		 * We don't need this, but it's not an issue either.
 		 */
@@ -151,7 +151,7 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 
 	if (!da) return;
 
-	fr_dict_print_attr_oid(&FR_SBUFF_OUT(oid_str, sizeof(oid_str)), NULL, da);
+	fr_dict_attr_oid_print(&FR_SBUFF_OUT(oid_str, sizeof(oid_str)), NULL, da);
 
 	fr_dict_snprint_flags(&FR_SBUFF_OUT(flags, sizeof(flags)), fr_dict_by_da(da), da->type, &da->flags);
 
@@ -243,7 +243,7 @@ fr_pair_t *ncc_pair_copy(TALLOC_CTX *ctx, fr_pair_t const *vp)
 	 *	Copy the unknown attribute hierarchy
 	 */
 	if (n->da->flags.is_unknown) {
-		n->da = fr_dict_unknown_acopy(n, n->da, NULL);
+		n->da = fr_dict_unknown_afrom_da(n, n->da);
 		if (!n->da) {
 			talloc_free(n);
 			return NULL;
