@@ -91,7 +91,7 @@ For example:
 DHCP-Transaction-Id = 42
 DHCP-Client-Hardware-Address = 50:41:4e:44:41:00
 DHCP-Hostname = "myhost.whimsical.org"
-DHCP-Message-Type = DHCP-Discover
+DHCP-Message-Type = Discover
 ```
 
 In this example, DHCP fields `xid` and `chaddr` are provided, as well as DHCP options 12 (Host Name) and 53 (DHCP Message Type).
