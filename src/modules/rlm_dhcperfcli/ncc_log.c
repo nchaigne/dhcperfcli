@@ -337,9 +337,37 @@ int ncc_vlog_perror(ncc_log_t const *log, fr_log_type_t type, char const *fmt, v
 		/*
 		 * Append all errors on the same line, separated with ": ".
 		 */
+		//while (strerror) {
+		//	tmp = talloc_asprintf_append(tmp, "%s%s", (tmp ? ": " : ""), strerror);
+		//	strerror = fr_strerror_pop();
+		//}
+		/* The error stack order is now (November 2020 ?) reversed, so this won't do.
+		 * So we need to "un-reverse" to build a single-line error message that makes sense.
+		 */
+#define ERR_STACK_MAX_ENTRIES 16 // more than enough
+
+		char const *errors[ERR_STACK_MAX_ENTRIES] = { 0 };
+		int num_err = 0;
+		bool trunc = false;
+
 		while (strerror) {
-			tmp = talloc_asprintf_append(tmp, "%s%s", (tmp ? ": " : ""), strerror);
+			if (num_err < ERR_STACK_MAX_ENTRIES) {
+				errors[num_err ++] = strerror;
+			} else {
+				trunc = true;
+			}
 			strerror = fr_strerror_pop();
+		}
+
+		/* If should never be truncated, but just in case. */
+		if (trunc) {
+			tmp = talloc_asprintf_append(tmp, "%s%s", (tmp ? ": " : ""), "... ");
+		}
+
+		/* Append errors in reverse order (last popped is appended first). */
+		while (num_err) {
+			num_err --;
+			tmp = talloc_asprintf_append(tmp, "%s%s", (tmp ? ": " : ""), errors[num_err]);
 		}
 
 		ncc_log_printf(log, type, NULL, 0, "%s", tmp);
