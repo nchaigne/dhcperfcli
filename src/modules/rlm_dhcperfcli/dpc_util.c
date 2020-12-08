@@ -459,7 +459,7 @@ void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t cons
 
 		/* One valid option to print. */
 		int opt_size = p[1] + 2;
-		if (overload && p[0] == FR_DHCP_OVERLOAD) *overload = p[2];
+		if (overload && p[0] == 52) *overload = p[2]; /* 52 = DHCP "Option Overload" */
 		sprintf(header, "  %04x  %10d: ", cur_pos, p[0]);
 		ncc_hex_data_snprint(buf, sizeof(buf), p, opt_size, " ", header, 16);
 		fprintf(fp, "%s\n", buf);
