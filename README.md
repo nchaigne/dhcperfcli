@@ -35,7 +35,7 @@ Note: some options can be provided more than once. They are identified by an ast
 Arguments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|Description
 -|-
 `<server>:[<port>]` | The DHCP server. If omitted, if must be specified through input items.<br>Default port is 67.
-`<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`DHCP-Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
+`<command>` | One of (message type): `discover`, `request`, `decline`, `release`, `inform`, `lease_query`.<br> Or (workflow): `dora` (Discover, Offer, Request, Ack), `doradec` (DORA followed by Decline), `dorarel` (DORA  followed by Release).<br>`<command>` can be omitted, in which case either the message type (`Message-Type`) or workflow (`DHCP-Workflow-Type`) must be provided through input items.
 `-a <ipaddr>` * | Authorized servers. Only allow replies from one of these.<br>Useful to select a DHCP server if there are several which might reply to a broadcasting client.
 `-A` | Wait for multiple Offer replies to broadcast Discover (instead of only the first). This requires option `-i`.
 `-c <num>` | Use each input item up to `<num>` times.<br>Default: unlimited in template mode, or 1 otherwise.
@@ -88,10 +88,10 @@ The name of DHCP attributes (along with their type, and enumerated values if app
 For example:
 
 ```text
-DHCP-Transaction-Id = 42
-DHCP-Client-Hardware-Address = 50:41:4e:44:41:00
-DHCP-Hostname = "myhost.whimsical.org"
-DHCP-Message-Type = Discover
+Transaction-Id = 42
+Client-Hardware-Address = 50:41:4e:44:41:00
+Hostname = "myhost.whimsical.org"
+Message-Type = Discover
 ```
 
 In this example, DHCP fields `xid` and `chaddr` are provided, as well as DHCP options 12 (Host Name) and 53 (DHCP Message Type).
@@ -121,7 +121,7 @@ Attribute|Description
 `Consecutive-Use` | Use this input item multiple times in a row. (The default is to use all input items in a round-robin fashion.)
 `DHCP-Encoded-Data` | DHCP pre-encoded data. Refer to related section for details.
 `DHCP-Authorized-Server` * | Authorized servers. Only allow replies from one of these.<br>Same as option `-a`, but for this input item only.<br>Can be provided multiple times, to authorize a list of servers.
-`DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `DHCP-Message-Type` is provided.
+`DHCP-Workflow-Type` | Workflow type: `DORA` (Discover, Offer, Request, Ack), `Dora-Decline` (DORA followed by Decline), `Dora-Release` (DORA followed by Release).<br>Takes precedence over `<command>` argument. Ignored if `Message-Type` is provided.
 
 Input items can be used more than once with option `-c`. All input items are used in the order in which they are provided. If they are reused this will also be in the same sequential order.
 
@@ -132,7 +132,7 @@ The Transaction Id (field `xid`) is a number used to correlate messages and resp
 
 Once a reply is received to a message (or the timeout expires), the allocated xid is freed and might be used again.
 
-For a given DHCP packet, a specific xid value can be requested (through input attribute `DHCP-Transaction-Id`), which *dhcperfcli* will try to allocate. If this is not possible (which means packets are sent in parallel and this xid is already in use) then it will fall back to the automatic incremental generation.
+For a given DHCP packet, a specific xid value can be requested (through input attribute `Transaction-Id`), which *dhcperfcli* will try to allocate. If this is not possible (which means packets are sent in parallel and this xid is already in use) then it will fall back to the automatic incremental generation.
 
 For a DORA transaction, the xid used to build the Request message is the same as from the Offer reply (which is also the same as the xid from the Discover message), as described in RFC 2131.
 
@@ -164,7 +164,7 @@ A SIGKILL signal (a.k.a « kill -9 ») will stop the program immediately, but wo
 Example:
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00-50:41:4e:44:41:09}\""  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
+echo "Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00-50:41:4e:44:41:09}\""  |  dhcperfcli  -T -N 10 -g 10.11.12.1  10.11.12.42  discover
 `__
 
 This will generate and send (simulating a gateway with option `-g`) successively 10 DHCP Discover messages, using client MAC addresses `50:41:4e:44:41:00`, `50:41:4e:44:41:01` ... up to `50:41:4e:44:41:09`.
@@ -195,8 +195,8 @@ Example:
 
 ```text
 Tmp-Ethernet-0 = 50:41:4e:44:41:00
-DHCP-Client-Hardware-Address = "%{Tmp-Ethernet-0}"
-DHCP-Hostname = "host.%{Tmp-Ethernet-0}.whimsical.org"
+Client-Hardware-Address = "%{Tmp-Ethernet-0}"
+Hostname = "host.%{Tmp-Ethernet-0}.whimsical.org"
 ```
 
 This will expand field `chaddr` to `50:41:4e:44:41:00`, and DHCP option 12 (HostName) to `host.50:41:4e:44:41:00.whimsical.org`.
@@ -378,11 +378,11 @@ For requests, this is the input from which the packet is built. For responses, t
 Example:
 ```
 DHCP vps fields:
-        DHCP-Client-Hardware-Address = 50:41:4e:44:41:00
-        DHCP-Transaction-Id = 1001
+        Client-Hardware-Address = 50:41:4e:44:41:00
+        Transaction-Id = 1001
 DHCP vps options:
-        (12) DHCP-Hostname = "dhcperfcli"
-        (51) DHCP-IP-Address-Lease-Time = 86400
+        (12) Hostname = "dhcperfcli"
+        (51) IP-Address-Lease-Time = 86400
 ```
 
 The names of DHCP attributes are defined in FreeRADIUS DHCP dictionary files: [dhcpv4/dictionary.rfc2131](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/dhcpv4/dictionary.rfc2131) and [dhcpv4/dictionary.freeradius.internal](https://github.com/FreeRADIUS/freeradius-server/blob/master/share/dictionary/dhcpv4/dictionary.freeradius.internal).<br>
