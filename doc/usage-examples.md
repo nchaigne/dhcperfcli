@@ -17,7 +17,7 @@ Packet destination is broadcast IP address (255.255.255.255) and MAC address (se
 The program will wait for the first suitable DHCP Offer reply sent by a DHCP server on the chosen interface (option `-i`), up to a maximum wait time (option `-t`).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0 -t 1.5  255.255.255.255  discover
+echo "Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0 -t 1.5  255.255.255.255  discover
 `__
 
 Note: multiple DHCP servers may provide an Offer. Option `-A` allows to wait for all replies (up to the timeout limit). The default behavior is to stop waiting as soon as a valid Offer reply is received.
@@ -39,13 +39,13 @@ Packet source is the gateway IP address, port 67 (default for a gateway).<br>
 Packet destination is the DHCP server IP address, port 67 (default for a server).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Transaction-Id=362"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  discover
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Transaction-Id=362"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  discover
 `__
 
 Without option `-g`, the same behavior can be obtained as follows:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Transaction-Id=362, DHCP-Gateway-IP-Address=10.11.12.1, Packet-Src-IP-Address=10.11.12.1, Packet-Src-Port=67"  |  dhcperfcli  10.11.12.42  discover
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Transaction-Id=362, Gateway-IP-Address=10.11.12.1, Packet-Src-IP-Address=10.11.12.1, Packet-Src-Port=67"  |  dhcperfcli  10.11.12.42  discover
 `__
 
 Note that field `giaddr` and the packet source IP address have the same value. The DHCP server will respond to `giaddr` if it is set, so the program must be listening on that address.
@@ -63,7 +63,7 @@ This requires the following information:
 Note: field `ciaddr` must be zero (the client does not have an assigned IP address yet).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1, DHCP-DHCP-Server-Identifier=10.11.12.42"  |  dhcperfcli  -i eth0  255.255.255.255  request
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Requested-IP-Address=16.128.0.1, Server-Identifier=10.11.12.42"  |  dhcperfcli  -i eth0  255.255.255.255  request
 `__
 
 
@@ -80,7 +80,7 @@ This requires the following information:
 Note: field `ciaddr` must be zero (the client does not have an assigned IP address yet).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1, DHCP-DHCP-Server-Identifier=10.11.12.42"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Requested-IP-Address=16.128.0.1, Server-Identifier=10.11.12.42"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
 `__
 
 
@@ -97,7 +97,7 @@ Notes:
 - Option 54 *Server Identifier* must not be set (the client is not responding to a DHCP Offer).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
 `__
 
 
@@ -115,7 +115,7 @@ Notes:
 - Option 54 *Server Identifier* must not be set (the client is not responding to a DHCP Offer).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -i eth0  255.255.255.255  request
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -i eth0  255.255.255.255  request
 `__
 
 
@@ -140,13 +140,13 @@ You can provide option 50 (*Requested IP address*), in which case it will be set
 Example of DORA from a broadcasting client:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  255.255.255.255  dora
+echo "Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  255.255.255.255  dora
 `__
 
 Example of DORA using a gateway:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dora
+echo "Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1   10.11.12.42  dora
 `__
 
 Note: if broadcasting, option `-A` has no effect, as the first valid Offer reply will be selected. However, option `-a` can be used to ignore all DHCP servers but one.
@@ -165,13 +165,13 @@ Performing a DORA / Release requires the following information:
 Example of DORA / Release from a broadcasting client:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  255.255.255.255  dorarel
+echo "Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -i eth0  255.255.255.255  dorarel
 `__
 
 Example of DORA / Release using a gateway:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  dorarel
+echo "Client-Hardware-Address=50:41:4e:44:41:00"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  dorarel
 `__
 
 
@@ -188,13 +188,13 @@ Notes:
 - Option 54 *Server Identifier* must not be set (the client is not responding to a DHCP Offer).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  request
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Client-IP-Address=16.128.0.1, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  request
 `__
 
 Or, if a gateway is involved:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  request
 `__
 
 
@@ -210,13 +210,13 @@ This requires the following information:
 Note: field `ciaddr` must be zero.
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -i eth0  255.255.255.255  decline
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Server-Identifier=10.11.12.42, Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -i eth0  255.255.255.255  decline
 `__
 
 Or, if a gateway is involved:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  decline
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Server-Identifier=10.11.12.42, Requested-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1  10.11.12.42  decline
 `__
 
 
@@ -230,13 +230,13 @@ This requires the following information:
 - The address of the DHCP server (option 54 *Server Identifier*).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Client-IP-Address=16.128.0.1, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  release
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Server-Identifier=10.11.12.42, Client-IP-Address=16.128.0.1, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  release
 `__
 
 Or, if a gateway is involved:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-DHCP-Server-Identifier=10.11.12.42, DHCP-Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  release
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Server-Identifier=10.11.12.42, Client-IP-Address=16.128.0.1"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  release
 `__
 
 Notes:
@@ -253,14 +253,14 @@ This requires the following information:
 - The DHCP message type (option 53 *Messsage Type*, provided through argument `inform`).
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1, DHCP-Parameter-Request-List=252, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  inform
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Client-IP-Address=16.128.0.1, Parameter-Request-List=252, Packet-Src-IP-Address=16.128.0.1"  |  dhcperfcli  10.11.12.42  inform
 `__
 
 
 Or, if a gateway is involved:
 
 >__`
-echo "DHCP-Client-Hardware-Address=50:41:4e:44:41:00, DHCP-Client-IP-Address=16.128.0.1, DHCP-Parameter-Request-List=252"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  inform
+echo "Client-Hardware-Address=50:41:4e:44:41:00, Client-IP-Address=16.128.0.1, Parameter-Request-List=252"  |  dhcperfcli  -g 10.11.12.1 10.11.12.42  inform
 `__
 
 Note: the DHCP server responds directly to the client IP address (field `ciaddr`) even if the DHCP Inform is relayed. This entails that the client address must be reachable by the server (otherwise the client will never receive the DHCP Ack response). The program assumes this is the case.

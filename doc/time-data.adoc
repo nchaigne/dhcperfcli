@@ -90,7 +90,7 @@ Execute _dhcperfcli_ as usual, with the added time-data configuration.
 
 For example:
 ----
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.rand}\"" | dhcperfcli --conf-file conf/dhcperfcli-influx.conf -T -L 60 -p 32 -r 1000 -g 10.11.12.1 10.11.12.42 discover
+echo "Client-Hardware-Address=\"%{ethaddr.rand}\"" | dhcperfcli --conf-file conf/dhcperfcli-influx.conf -T -L 60 -p 32 -r 1000 -g 10.11.12.1 10.11.12.42 discover
 ----
 
 Statistics will be automatically collected, and written once every second (or the configured `time_interval`) to the specified destination.

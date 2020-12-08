@@ -33,40 +33,40 @@ Xlat expansion (automatically enabled in template mode) allows to dynamically ex
 - A test which lasts for 60 seconds, simulating a gateway sending DHCP Discover messages (and expecting Offer replies) concurrently, at a fixed rate of 1000 packets per second. Each packet originates from a distinct client (with incrementing client MAC addresses, starting from `50:41:4e:44:41:00`, and a randomly generated client hostname).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\", DHCP-Hostname=\"%{randstr:12c3n}.whimsical.org\""  |  dhcperfcli  -T -L 60 -p 32 -r 1000 -g 10.11.12.1  10.11.12.42  discover
+echo "Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\", Hostname=\"%{randstr:12c3n}.whimsical.org\""  |  dhcperfcli  -T -L 60 -p 32 -r 1000 -g 10.11.12.1  10.11.12.42  discover
 `__
 
 
 - A test which lasts until 20k packets have been sent, broadcasting DHCP Discover messages concurrently, at a fixed rate of 1000 packets per second. Each packet originates from a distinct client (with randomly selected client MAC addresses).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.rand:}\""  |  dhcperfcli  -T -N 20000 -p 32 -r 1000 -i eth0  255.255.255.255  discover
+echo "Client-Hardware-Address=\"%{ethaddr.rand:}\""  |  dhcperfcli  -T -N 20000 -p 32 -r 1000 -i eth0  255.255.255.255  discover
 `__
 
 
 - A ten minutes long test with no rate limit, sending DHCP Discover messages as fast as the server can handle them (allowing to measure its capabilities).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  discover
+echo "Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  discover
 `__
 
 
 - The same test but this time playing out DORA transactions. With these, the server will really allocate IP addresses. Since we're not releasing them, you should have sufficiently large subnets configured (and an appropriate lease expiration delay) - that is, if you do not wish to run out of available leases.
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  dora
+echo "Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  dora
 `__
 
 
 - To avoid having to worry about leases depletion, you can instead use a DORA / Release workflow. This is more considerate to the server (but involves an additional DHCP Release message for each session - more work!).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  dorarel
+echo "Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -L 600 -p 32 -g 10.11.12.1  10.11.12.42  dorarel
 `__
 
 
 - Or if you want to be really mean, you can acquire leases and decline them, prompting the server to mark them as unavailable. If sustained long enough, this will deplete the entire IP address pool managed by the server (a.k.a. *DHCP starvation attack*).
 
 >__`
-echo "DHCP-Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -p 32 -i eth0  255.255.255.255  dorarec
+echo "Client-Hardware-Address=\"%{ethaddr.range:50:41:4e:44:41:00}\""  |  dhcperfcli  -T -p 32 -i eth0  255.255.255.255  dorarec
 `__
