@@ -126,10 +126,10 @@ fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *n
 		/*
 		 * Fallback to internal and other dictionaries.
 		 */
-		da = fr_dict_attr_by_qualified_oid(NULL, dict, name, true);
+		da = fr_dict_attr_search_by_qualified_oid(NULL, dict, name, true);
 
 		/* Note: fr_dict_attr_by_qualified_oid allows to provide a protocol qualifier.
-		 * E.g.: "dhcpv4.DHCP-Hostname" (non case sensitive).
+		 * E.g.: "dhcpv4.Hostname" (non case sensitive).
 		 */
 	}
 
@@ -139,9 +139,8 @@ fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *n
 /**
  * Print information on a dictionary attribute (cf. function da_print_info_td from radict.c)
  *
- * <dictionary name> <OID> <attribute name> <type> <flags>
  * e.g.:
- * dhcperfcli      3004    Rate-Limit      string  internal,virtual
+ * attr: [Rate-Limit], OID: [Rate-Limit], dict: [dhcperfcli], type: [string], flags: [internal,virtual]
  */
 void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 {
@@ -152,7 +151,7 @@ void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da)
 
 	fr_dict_attr_oid_print(&FR_SBUFF_OUT(oid_str, sizeof(oid_str)), NULL, da);
 
-	fr_dict_snprint_flags(&FR_SBUFF_OUT(flags, sizeof(flags)), fr_dict_by_da(da), da->type, &da->flags);
+	fr_dict_print_flags(&FR_SBUFF_OUT(flags, sizeof(flags)), fr_dict_by_da(da), da->type, &da->flags);
 
 	fprintf(fp, "attr: [%s], OID: [%s], dict: [%s], type: [%s], flags: [%s]\n",
 	        da->name, oid_str, ncc_attr_dict_name(da),
