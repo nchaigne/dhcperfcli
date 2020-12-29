@@ -160,7 +160,9 @@ typedef struct ncc_dlist {
 
 /** Insert an item before an existing (reference) item of a list.
  */
-static inline void fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_ref, void *ptr)
+// FreeRADIUS now provides a "fr_dlist_insert_before" so we don't need this anymore.
+// TODO: remove.
+static inline void _OLD_fr_dlist_insert_before(fr_dlist_head_t *list_head, void *ptr_ref, void *ptr)
 {
 	fr_dlist_t *entry_ref, *entry;
 	fr_dlist_t *head;
