@@ -170,16 +170,16 @@ fr_pair_t *ncc_pair_find_by_da(fr_pair_list_t *head, fr_dict_attr_t const *da)
 }
 
 /**
- * Create a value pair from a dictionary attribute, and add it to a list of value pairs.
+ * Create a value pair from a dictionary attribute, and add it to a pair list.
  */
-fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_t **vps, fr_dict_attr_t const *da)
+fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_list_t *pair_list, fr_dict_attr_t const *da)
 {
 	fr_pair_t *vp;
 
 	FN_ARG_ASSERT(NULL, da);
 
 	MEM(vp = fr_pair_afrom_da(ctx, da));
-	if (vps) fr_pair_add(vps, vp);
+	if (pair_list) fr_pair_add(pair_list, vp);
 
 	return vp;
 }
@@ -267,7 +267,7 @@ fr_pair_t *ncc_pair_copy(TALLOC_CTX *ctx, fr_pair_t const *vp)
  * Copy a list of VP.
  * (FreeRADIUS's fr_pair_list_copy, altered to work with pre-compiled xlat)
  */
-int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
+int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_list_t *to, fr_pair_list_t const *from)
 {
 	fr_cursor_t	src, dst, tmp;
 
@@ -276,7 +276,7 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
 	int		cnt = 0;
 
 	fr_cursor_talloc_init(&tmp, &head, fr_pair_t);
-	for (vp = fr_cursor_talloc_init(&src, &from, fr_pair_t);
+	for (vp = fr_cursor_talloc_init(&src, from, fr_pair_t);
 	     vp;
 	     vp = fr_cursor_next(&src), cnt++) {
 		VP_VERIFY(vp);
@@ -293,6 +293,7 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
 	} else {
 		fr_cursor_talloc_init(&dst, to, fr_pair_t);
 		fr_cursor_head(&tmp);
+		fr_cursor_tail(&dst);
 		fr_cursor_merge(&dst, &tmp);
 	}
 
@@ -303,7 +304,7 @@ int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
  * Append a list of VP. (inspired from FreeRADIUS's fr_pair_list_copy.)
  * Note: contrary to fr_pair_list_copy, this preserves the order of the value pairs.
  */
-int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
+int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_list_t *to, fr_pair_list_t const *from)
 {
 	fr_cursor_t src, dst;
 	fr_pair_t *vp, *head = NULL;
@@ -319,7 +320,7 @@ int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from)
 	while (head->next) head = head->next;
 
 	fr_cursor_talloc_init(&dst, &head, fr_pair_t);
-	for (vp = fr_cursor_talloc_init(&src, &from, fr_pair_t);
+	for (vp = fr_cursor_talloc_init(&src, from, fr_pair_t);
 	     vp;
 	     vp = fr_cursor_next(&src), cnt++) {
 		VP_VERIFY(vp);

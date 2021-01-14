@@ -160,7 +160,7 @@ static uint32_t request_max_use = 10000;
 /**
  * Build a unique fake request for xlat.
  */
-void ncc_xlat_init_request(fr_pair_t *vps)
+void ncc_xlat_init_request(fr_pair_list_t *pair_list)
 {
 	if (FX_request && request_num_use >= request_max_use) {
 		TALLOC_FREE(FX_request);
@@ -182,8 +182,10 @@ void ncc_xlat_init_request(fr_pair_t *vps)
 		FX_request->log.lvl = L_DBG_LVL_OFF;
 	}
 
-	FX_request->control = vps; /* Allow to use %{control:Attr} */
-	FX_request->packet->vps = vps; /* Allow to use %{request:Attr} or directly %{Attr} */
+	if (pair_list) {
+		FX_request->control_list = *pair_list; /* Allow to use %{control:Attr} */
+		FX_request->request_list = *pair_list; /* Allow to use %{request:Attr} or directly %{Attr} */
+	}
 	FX_request->rcode = 0;
 }
 

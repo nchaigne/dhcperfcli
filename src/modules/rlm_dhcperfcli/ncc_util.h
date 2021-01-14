@@ -344,12 +344,12 @@ fr_dict_attr_t const *ncc_dict_attr_by_name(fr_dict_t const *dict, char const *n
 void ncc_dict_attr_info_fprint(FILE *fp, fr_dict_attr_t const *da);
 
 fr_pair_t *ncc_pair_find_by_da(fr_pair_list_t *head, fr_dict_attr_t const *da);
-fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_t **vps, fr_dict_attr_t const *da);
+fr_pair_t *ncc_pair_create_by_da(TALLOC_CTX *ctx, fr_pair_list_t *pair_list, fr_dict_attr_t const *da);
 int ncc_pair_copy_value(fr_pair_t *to, fr_pair_t *from);
 int ncc_pair_value_from_str(fr_pair_t *vp, char const *value);
 fr_pair_t *ncc_pair_copy(TALLOC_CTX *ctx, fr_pair_t const *vp);
-int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
-int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_t **to, fr_pair_t *from);
+int ncc_pair_list_copy(TALLOC_CTX *ctx, fr_pair_list_t *to, fr_pair_list_t const *from);
+int ncc_pair_list_append(TALLOC_CTX *ctx, fr_pair_list_t *to, fr_pair_list_t const *from);
 void ncc_pair_list_fprint(FILE *fp, fr_pair_t *vps);
 size_t ncc_pair_snprint(char *out, size_t outlen, fr_pair_t const *vp);
 ssize_t ncc_pair_print(fr_sbuff_t *out, fr_pair_t const *vp);
@@ -415,7 +415,7 @@ int ncc_value_from_str_table(void *out, uint32_t type,
                              fr_table_num_ordered_t const *table, size_t table_len, char const *str);
 void ncc_section_debug_start(int depth, char const *name1, char const *name2);
 void ncc_section_debug_end(int depth);
-void ncc_pair_list_debug(int depth, fr_pair_t *vps);
+void ncc_pair_list_debug(int depth, fr_pair_list_t *pair_list);
 void ncc_parser_config_item_debug(int type, char const *name, void *pvalue, size_t vsize, ncc_parse_ctx_t *parse_ctx,
                                   int depth, char const *prefix);
 void ncc_parser_config_debug(CONF_PARSER const *rules, void *config, int depth, char const *prefix);

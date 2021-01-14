@@ -804,7 +804,7 @@ void ncc_section_debug_end(int depth)
 /**
  * Debug a list of value pairs.
  */
-void ncc_pair_list_debug(int depth, fr_pair_t *vps)
+void ncc_pair_list_debug(int depth, fr_pair_list_t *pair_list)
 {
 	fr_pair_t *vp;
 	fr_cursor_t cursor;
@@ -812,7 +812,7 @@ void ncc_pair_list_debug(int depth, fr_pair_t *vps)
 
 	/* Iterate on the value pairs of the list. */
 	int i = 0;
-	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
+	for (vp = fr_cursor_init(&cursor, pair_list); vp; vp = fr_cursor_next(&cursor)) {
 		ncc_pair_snprint(buf, sizeof(buf), vp);
 		DEBUG("%.*s%s", CONF_SPACE(depth), config_spaces, buf);
 		i++;

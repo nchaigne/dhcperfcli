@@ -17,8 +17,8 @@ int ncc_xlat_core_register(void *mod_inst, char const *name,
 int ncc_xlat_core_init(void);
 void ncc_xlat_core_free(void);
 
-ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_t *vps);
-ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, fr_pair_t *vps);
+ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_list_t *pair_list);
+ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, fr_pair_list_t *pair_list);
 
 
 /*
@@ -26,7 +26,7 @@ ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat,
  */
 int ncc_xlat_init(void);
 void ncc_xlat_free(void);
-void ncc_xlat_init_request(fr_pair_t *vps);
+void ncc_xlat_init_request(fr_pair_list_t *pair_list);
 void ncc_xlat_set_num(uint64_t num);
 int ncc_xlat_get_rcode(void);
 int ncc_xlat_file_add_fp(FILE *fp);

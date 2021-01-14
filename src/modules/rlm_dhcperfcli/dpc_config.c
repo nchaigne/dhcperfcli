@@ -175,15 +175,15 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 
 		MEM(input = talloc_zero(section, dpc_input_t));
 
-		/* Look for a "pairs" sub-section. If found, get the list of vps from this sub-section.
-		 * Otherwise, consider "input" as the list of vps.
+		/* Look for a "pairs" sub-section. If found, get the list of pairs from this sub-section.
+		 * Otherwise, consider "input" as the list of pairs.
 		 */
 		subcs = cf_section_find_next(cs, NULL, "pairs", CF_IDENT_ANY);
 		if (!subcs) {
 			/*
-			 * "input" section contains the list of vps.
+			 * "input" section contains the list of pairs.
 			 */
-			if (ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps,
+			if (ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->pair_list,
 			                           cs, cs_depth_base, MAX_ATTR_INPUT) != 0) {
 			error:
 				talloc_free(input);
@@ -192,12 +192,12 @@ static int dpc_input_list_parse_section(CONF_SECTION *section, fn_input_handle_t
 
 		} else {
 			/*
-			 * Parse "pairs" sub-sections and aggregate all vps.
+			 * Parse "pairs" sub-sections and aggregate all pairs.
 			 */
 			ncc_cs_debug_start(cs, cs_depth_base);
 
 			while (subcs) {
-				if (ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->vps,
+				if (ncc_pair_list_afrom_cs(input, dict_dhcpv4, &input->pair_list,
 				                           subcs, cs_depth_base + 1, MAX_ATTR_INPUT) != 0) goto error;
 
 				subcs = cf_section_find_next(section, subcs, "pairs", CF_IDENT_ANY);

@@ -276,13 +276,13 @@ static void dpc_event_add_request_timeout(dpc_session_ctx_t *session, fr_time_de
 
 static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_p);
 static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time);
-static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply);
+static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply, fr_pair_list_t *reply_list);
 static bool dpc_session_dora_request(dpc_session_ctx_t *session);
 static bool dpc_session_dora_release(dpc_session_ctx_t *session);
 static bool dpc_session_dora_decline(dpc_session_ctx_t *session);
-static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gateway);
+static void dpc_request_gateway_handle(DHCP_PACKET *packet, fr_pair_list_t *packet_list, ncc_endpoint_t *gateway);
 static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input);
-static int dpc_dhcp_encode(DHCP_PACKET *packet);
+static int dpc_dhcp_encode(DHCP_PACKET *packet, fr_pair_list_t *packet_list);
 
 static void dpc_session_set_transport(dpc_session_ctx_t *session, dpc_input_t *input);
 
@@ -312,7 +312,7 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist);
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *dlist, char const *filename);
 static int dpc_input_load(TALLOC_CTX *ctx);
 
-static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_t *vps);
+static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_list_t *packet_list);
 
 static int dpc_get_alt_dir(void);
 static void dpc_dict_init(TALLOC_CTX *ctx);
@@ -952,7 +952,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		/* An xlat expression may have been provided. Go look in packet vps.
 		 */
 		if (packet->id == DPC_PACKET_ID_UNASSIGNED && CONF.xlat) {
-			fr_pair_t *vp_xid = ncc_pair_find_by_da(&packet->vps, attr_dhcp_transaction_id);
+			fr_pair_t *vp_xid = ncc_pair_find_by_da(&session->request_list, attr_dhcp_transaction_id);
 			if (vp_xid) packet->id = vp_xid->vp_uint32;
 		}
 
@@ -973,7 +973,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 		 * Note: it's already encoded if retransmitting.
 		 */
 		DEBUG3("Encoding packet");
-		if (dpc_dhcp_encode(packet) < 0) { /* Should never happen. */
+		if (dpc_dhcp_encode(packet, &session->request_list) < 0) { /* Should never happen. */
 			SERROR("Failed to encode request packet");
 			exit(EXIT_FAILURE);
 		}
@@ -1018,7 +1018,7 @@ static int dpc_send_one_packet(dpc_session_ctx_t *session, DHCP_PACKET **packet_
 	}
 
 	/* Print sent packet. */
-	dpc_packet_fprint(fr_log_fp, session, packet, DPC_PACKET_SENT);
+	dpc_packet_fprint(fr_log_fp, session, packet, &session->request_list, DPC_PACKET_SENT);
 
 	/* Statistics. */
 	if (session->retransmit == 0) {
@@ -1130,7 +1130,10 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	 * Decode the reply packet.
 	 */
 	fr_cursor_t cursor;
-	fr_cursor_init(&cursor, &packet->vps);
+	fr_pair_list_t packet_vps;
+	fr_pair_list_init(&packet_vps); // for now (2021/01/11) this just sets pointer to NULL, cf. src/lib/util/pair.h
+
+	fr_cursor_init(&cursor, &packet_vps);
 	if (fr_dhcpv4_decode(packet, packet->data, packet->data_len, &cursor, &packet->code) < 0) {
 		SPERROR("Failed to decode reply packet (id: %u)", packet->id);
 		fr_radius_packet_free(&packet);
@@ -1147,7 +1150,7 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
 	/*
 	 * Handle the reply, and decide if the session is finished or not yet.
 	 */
-	if (!dpc_session_handle_reply(session, packet)) {
+	if (!dpc_session_handle_reply(session, packet, &packet_vps)) {
 		dpc_session_finish(session);
 	}
 
@@ -1159,7 +1162,7 @@ static int dpc_recv_one_packet(fr_time_delta_t ftd_wait_time)
  *
  * @return true if the session is not finished (should be retained), false otherwise (will be terminated).
  */
-static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply)
+static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *reply, fr_pair_list_t *reply_list)
 {
 	if (!session || !reply) return false;
 
@@ -1193,12 +1196,14 @@ static bool dpc_session_handle_reply(dpc_session_ctx_t *session, DHCP_PACKET *re
 	session->reply = reply;
 	talloc_steal(session, reply); /* Reparent reply packet (allocated on NULL context) so we don't leak. */
 
+	session->reply_list = *reply_list;
+
 	/* Compute rtt.
 	 * Relative to initial request so we get the real rtt (regardless of retransmissions).
 	 */
 	session->ftd_rtt = session->reply->timestamp - session->fte_init;
 
-	dpc_packet_fprint(fr_log_fp, session, reply, DPC_PACKET_RECEIVED); /* print reply packet. */
+	dpc_packet_fprint(fr_log_fp, session, reply, &session->reply_list, DPC_PACKET_RECEIVED); /* print reply packet. */
 
 	/* Update statistics. */
 	dpc_statistics_update(session, session->request, session->reply);
@@ -1258,29 +1263,32 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	DHCP_PACKET *packet;
 
 	/* Get the Offer xid. */
-	vp_xid = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_transaction_id);
+	vp_xid = fr_pair_find_by_da(&session->reply_list, attr_dhcp_transaction_id);
 	if (!vp_xid) { /* Should never happen (DHCP field). */
 		return false;
 	}
 
 	/* Offer must provide yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_your_ip_address);
+	vp_yiaddr = fr_pair_find_by_da(&session->reply_list, attr_dhcp_your_ip_address);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no yiaddr provided in Offer reply");
 		return false;
 	}
 
 	/* Offer must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_server_identifier);
+	vp_server_id = fr_pair_find_by_da(&session->reply_list, attr_dhcp_server_identifier);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA: no option 54 (server id) provided in Offer reply");
 		return false;
 	}
 
 	/*
-	 *	Prepare a new DHCP Request packet.
+	 * Prepare a new DHCP Request packet.
 	 */
 	DEBUG3("DORA: received valid Offer, now preparing Request");
+
+	fr_pair_list_init(&session->request_pairs);
+	/* Note: pairs from the old request are allocated on packet context, hence will be properly freed with it. */
 
 	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
@@ -1296,12 +1304,12 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 * Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 * First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
-	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
+	fr_pair_delete_by_da(&session->request_list, attr_dhcp_requested_ip_address);
+	vp_requested_ip = ncc_pair_create_by_da(packet, &session->request_list, attr_dhcp_requested_ip_address);
 	ncc_pair_copy_value(vp_requested_ip, vp_yiaddr);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+	fr_pair_add(&session->request_list, fr_pair_copy(packet, vp_server_id));
 
 	/* Reset input xid to value obtained from the Offer reply. */
 	session->input->ext.xid = vp_xid->vp_uint32;
@@ -1352,14 +1360,14 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_your_ip_address);
+	vp_yiaddr = fr_pair_find_by_da(&session->reply_list, attr_dhcp_your_ip_address);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_server_identifier);
+	vp_server_id = fr_pair_find_by_da(&session->reply_list, attr_dhcp_server_identifier);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Release: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1369,6 +1377,9 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 * Prepare a new DHCP Release packet.
 	 */
 	DEBUG3("DORA-Release: received valid Ack, now preparing Release");
+
+	fr_pair_list_init(&session->request_pairs);
+	/* Note: pairs from the old request are allocated on packet context, hence will be properly freed with it. */
 
 	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
@@ -1381,17 +1392,17 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
+	vp_ciaddr = ncc_pair_create_by_da(packet, &session->request_list, attr_dhcp_client_ip_address);
 	ncc_pair_copy_value(vp_ciaddr, vp_yiaddr);
 
 	/*
 	 * Remove eventual option 50 Requested IP Address.
 	 * (it may be provided for Discover, but must *not* be in Release)
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
+	fr_pair_delete_by_da(&session->request_list, attr_dhcp_requested_ip_address);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+	fr_pair_add(&session->request_list, fr_pair_copy(packet, vp_server_id));
 
 	/* xid is supposed to be selected by client. Let the program pick a new one. */
 	session->input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
@@ -1440,14 +1451,14 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	DHCP_PACKET *packet;
 
 	/* Ack provides IP address assigned to client in field yiaddr (DHCP-Your-IP-Address). */
-	vp_yiaddr = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_your_ip_address);
+	vp_yiaddr = fr_pair_find_by_da(&session->reply_list, attr_dhcp_your_ip_address);
 	if (!vp_yiaddr || vp_yiaddr->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no yiaddr provided in Ack reply");
 		return false;
 	}
 
 	/* Ack must contain option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	vp_server_id = fr_pair_find_by_da(&session->reply->vps, attr_dhcp_server_identifier);
+	vp_server_id = fr_pair_find_by_da(&session->reply_list, attr_dhcp_server_identifier);
 	if (!vp_server_id || vp_server_id->vp_ipv4addr == 0) {
 		DEBUG2("Session DORA-Decline: no option 54 (server id) provided in Ack reply");
 		return false;
@@ -1457,6 +1468,9 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 * Prepare a new DHCP Decline packet.
 	 */
 	DEBUG3("DORA-Decline: received valid Ack, now preparing Decline");
+
+	fr_pair_list_init(&session->request_pairs);
+	/* Note: pairs from the old request are allocated on packet context, hence will be properly freed with it. */
 
 	packet = dpc_request_init(session, session, session->input);
 	if (!packet) return false;
@@ -1469,19 +1483,19 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 
 	/* Add field ciaddr (DHCP-Client-IP-Address) = yiaddr */
-	vp_ciaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_client_ip_address);
+	vp_ciaddr = ncc_pair_create_by_da(packet, &session->request_list, attr_dhcp_client_ip_address);
 	ncc_pair_copy_value(vp_ciaddr, vp_yiaddr);
 
 	/*
 	 * Add option 50 Requested IP Address (DHCP-Requested-IP-Address) = yiaddr
 	 * First remove previous option 50 if one was provided (server may have offered a different lease).
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_dhcp_requested_ip_address);
-	vp_requested_ip = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_requested_ip_address);
+	fr_pair_delete_by_da(&session->request_list, attr_dhcp_requested_ip_address);
+	vp_requested_ip = ncc_pair_create_by_da(packet, &session->request_list, attr_dhcp_requested_ip_address);
 	ncc_pair_copy_value(vp_requested_ip, vp_yiaddr);
 
 	/* Add option 54 Server Identifier (DHCP-DHCP-Server-Identifier). */
-	fr_pair_add(&packet->vps, fr_pair_copy(packet, vp_server_id));
+	fr_pair_add(&session->request_list, fr_pair_copy(packet, vp_server_id));
 
 	/* xid is supposed to be selected by client. Let the program pick a new one. */
 	session->input->ext.xid = DPC_PACKET_ID_UNASSIGNED;
@@ -1513,7 +1527,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 /**
  * Prepare a request to be sent as if relayed through a gateway.
  */
-static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gateway)
+static void dpc_request_gateway_handle(DHCP_PACKET *packet, fr_pair_list_t *packet_list, ncc_endpoint_t *gateway)
 {
 	if (!gateway) return;
 
@@ -1532,24 +1546,25 @@ static void dpc_request_gateway_handle(DHCP_PACKET *packet, ncc_endpoint_t *gate
 	fr_pair_t *vp_giaddr, *vp_hops;
 
 	/* set giaddr if not specified in input vps (DHCP-Gateway-IP-Address). */
-	vp_giaddr = fr_pair_find_by_da(&packet->vps, attr_dhcp_gateway_ip_address);
+	vp_giaddr = fr_pair_find_by_da(packet_list, attr_dhcp_gateway_ip_address);
 	if (!vp_giaddr) {
-		vp_giaddr = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_gateway_ip_address);
+		vp_giaddr = ncc_pair_create_by_da(packet, packet_list, attr_dhcp_gateway_ip_address);
 		vp_giaddr->vp_ipv4addr = gateway->ipaddr.addr.v4.s_addr;
 		vp_giaddr->vp_ip.af = AF_INET;
 		vp_giaddr->vp_ip.prefix = 32;
 	}
 
 	/* set hops if not specified in input vps (DHCP-Hop-Count). */
-	vp_hops = fr_pair_find_by_da(&packet->vps, attr_dhcp_hop_count);
+	vp_hops = fr_pair_find_by_da(packet_list, attr_dhcp_hop_count);
 	if (!vp_hops) {
-		vp_hops = ncc_pair_create_by_da(packet, &packet->vps, attr_dhcp_hop_count);
+		vp_hops = ncc_pair_create_by_da(packet, packet_list, attr_dhcp_hop_count);
 		vp_hops->vp_uint8 = 1;
 	}
 }
 
 /**
- * Initialize a DHCP packet from an input item.
+ * Initialize a DHCP request from an input item.
+ * Note: the value pairs list is now stored outside of the DHCP_PACKET structure.
  */
 static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session, dpc_input_t *input)
 {
@@ -1565,7 +1580,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	session->fte_init = fr_time();
 
 	/* Fill in the packet value pairs. */
-	ncc_pair_list_append(request, &request->vps, input->vps);
+	ncc_pair_list_append(request, &session->request_list, &input->pair_list);
 
 	if (input->do_xlat) {
 		/*
@@ -1573,14 +1588,14 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 		 */
 		ncc_xlat_set_num(input->id); /* Initialize xlat context for processing this input. */
 
-		if (dpc_pair_list_xlat(request, request->vps) < 0) {
+		if (dpc_pair_list_xlat(request, &session->request_list) < 0) {
 			talloc_free(request);
 			return NULL;
 		}
 	}
 
 	/* Prepare gateway handling. */
-	dpc_request_gateway_handle(request, session->gateway);
+	dpc_request_gateway_handle(request, &session->request_list, session->gateway);
 
 	/*
 	 * Use values prepared earlier.
@@ -1600,7 +1615,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 /**
  * Encode a DHCP packet.
  */
-static int dpc_dhcp_encode(DHCP_PACKET *packet)
+static int dpc_dhcp_encode(DHCP_PACKET *packet, fr_pair_list_t *packet_list)
 {
 	int r;
 	fr_pair_t *vp;
@@ -1612,7 +1627,7 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	/*
 	 * If DHCP encoded data is provided, use it as is. Do not call fr_dhcpv4_packet_encode.
 	 */
-	if ((vp = ncc_pair_find_by_da(&packet->vps, attr_encoded_data))) {
+	if ((vp = fr_pair_find_by_da(packet_list, attr_encoded_data))) {
 		packet->data_len = vp->vp_length;
 		packet->data = talloc_zero_array(packet, uint8_t, packet->data_len);
 		memcpy(packet->data, vp->vp_octets, vp->vp_length);
@@ -1631,12 +1646,12 @@ static int dpc_dhcp_encode(DHCP_PACKET *packet)
 	 * the requested id may not have been available).
 	 * Note: function fr_dhcpv4_packet_encode uses this to (re)write packet->id.
 	 */
-	fr_pair_delete_by_da(&packet->vps, attr_dhcp_transaction_id);
+	fr_pair_delete_by_da(packet_list, attr_dhcp_transaction_id);
 	vp = fr_pair_afrom_da(packet, attr_dhcp_transaction_id);
 	vp->vp_uint32 = packet->id;
-	fr_pair_add(&packet->vps, vp);
+	fr_pair_add(packet_list, vp);
 
-	r = fr_dhcpv4_packet_encode(packet); /* This always returns 0. */
+	r = fr_dhcpv4_packet_encode(packet, packet_list); /* This always returns 0. */
 	/* Note: fr_dhcpv4_packet_encode encodes a NAK if there is no message type provided. */
 
 	fr_strerror(); /* Clear the error buffer */
@@ -1978,6 +1993,12 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	 */
 	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
 	dpc_session_set_transport(session, input);
+
+	/*
+	 * Initialise pair value lists.
+	 */
+	fr_pair_list_init(&session->request_pairs);
+	fr_pair_list_init(&session->reply_pairs);
 
 	/*
 	 * Prepare a DHCP packet to send for this session.
@@ -2541,8 +2562,8 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	fr_pair_t *vp;
 	fr_pair_t *vp_encoded_data = NULL, *vp_workflow_type = NULL;
 
-	if (!input->vps) {
-		WARN("Empty vps list. Discarding input (id: %u)", input->id);
+	if (!input->pair_list) {
+		WARN("Empty pair list. Discarding input (id: %u)", input->id);
 		return -1;
 	}
 
@@ -2564,13 +2585,13 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	 * If so, extract (if there is one) the message type and the xid.
 	 * All other DHCP attributes provided through value pairs are ignored.
 	 */
-	vp_encoded_data = ncc_pair_find_by_da(&input->vps, attr_encoded_data);
+	vp_encoded_data = ncc_pair_find_by_da(&input->pair_list, attr_encoded_data);
 	if (IS_VP_DATA(vp_encoded_data)) {
 		input->ext.code = dpc_message_type_extract(vp_encoded_data);
 		input->ext.xid = dpc_xid_extract(vp_encoded_data);
 	} else {
 		/* Memorize attribute DHCP-Workflow-Type for later (DHCP-Message-Type takes precedence). */
-		vp_workflow_type = ncc_pair_find_by_da(&input->vps, attr_workflow_type);
+		vp_workflow_type = ncc_pair_find_by_da(&input->pair_list, attr_workflow_type);
 	}
 
 	/* Allocate and initialize input segments list.
@@ -2584,10 +2605,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	/*
 	 * Pre-process attributes (1: xlat).
 	 */
-	for (vp = fr_cursor_init(&cursor, &input->vps);
-	     vp;
-	     vp = fr_cursor_next(&cursor)) {
-
+	for (vp = fr_cursor_init(&cursor, &input->pair_list); vp; vp = fr_cursor_next(&cursor)) {
 		/*
 		 * First ensure the operator makes sense. It should be '=' (T_OP_EQ) or ':=' (T_OP_SET).
  		 * Anything else is not allowed.
@@ -2626,7 +2644,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 				//slen = xlat_tokenize(global_ctx, &xlat, NULL, &FR_SBUFF_IN(value, talloc_array_length(value)), &p_rules, NULL);
 				// weird % stuff: a "%D" at the beginning will prevent the rest of the xlat from being expanded... why !?
 				// but if it is after an attribute, it works (expanded).
-				// TODO: look into this
+				// TODO: look into this.
 
 				/* Notes:
 				 * - First parameter is talloc context.
@@ -2667,10 +2685,7 @@ static int dpc_input_parse(TALLOC_CTX *ctx, dpc_input_t *input)
 	/*
 	 * Pre-process attributes (2: control attributes).
 	 */
-	for (vp = fr_cursor_init(&cursor, &input->vps);
-	     vp;
-	     vp = fr_cursor_next(&cursor)) {
-
+	for (vp = fr_cursor_init(&cursor, &input->pair_list); vp; vp = fr_cursor_next(&cursor)) {
 		/*
 		 * Process special attributes. They take precedence over command line arguments.
 		 * Note: xlat is not supported for these.
@@ -2861,7 +2876,7 @@ static int dpc_input_handle(dpc_input_t *input, ncc_dlist_t *dlist)
 }
 
 /**
- * Load input vps from the provided file pointer.
+ * Load input pair list from the provided file pointer.
  */
 static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, char const *filename)
 {
@@ -2877,14 +2892,14 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 
 		MEM(input = talloc_zero(ctx, dpc_input_t));
 
-		//if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
+		//if (fr_pair_list_afrom_file(input, dict_dhcpv4, &input->pair_list, fp, &file_done) < 0) {
 		// this doesn't work anymore with our own internal attributes...
 
-		if (ncc_pair_list_afrom_file(input, dict_dhcpv4, &input->vps, fp, &file_done) < 0) {
+		if (ncc_pair_list_afrom_file(input, dict_dhcpv4, &input->pair_list, fp, &file_done) < 0) {
 			PERROR("Failed to read input items from %s", filename);
 			return -1;
 		}
-		if (!input->vps) {
+		if (!input->pair_list) {
 			/* Last line might be empty, in this case we will obtain a NULL vps pointer. Silently ignore this. */
 			talloc_free(input);
 			break;
@@ -2956,14 +2971,14 @@ static int dpc_input_load(TALLOC_CTX *ctx)
  * Note: if one of the registered xlat complains (returns -1) the main xlat will consider it's fine.
  * However, if the main xlat is unhappy, it will return -1 (and an empty string).
  */
-static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_t *vps)
+static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_list_t *packet_list)
 {
 	fr_cursor_t cursor;
 	fr_pair_t *vp;
 	ssize_t len;
 	char buffer[DPC_XLAT_MAX_LEN];
 
-	for (vp = fr_cursor_init(&cursor, &vps); vp; vp = fr_cursor_next(&cursor)) {
+	for (vp = fr_cursor_init(&cursor, packet_list); vp; vp = fr_cursor_next(&cursor)) {
 		/*
 		 * Handle xlat expansion for this attribute.
 		 * Allow any data type. Value will be cast by FreeRADIUS (if possible).
@@ -2976,7 +2991,7 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_t *vps)
 				return -1;
 			}
 
-			len = dpc_xlat_eval_compiled(buffer, sizeof(buffer), xlat, packet);
+			len = dpc_xlat_eval_compiled(buffer, sizeof(buffer), xlat, packet_list);
 			if (len <= 0) { /* Consider empty string as failed expansion. */
 				fr_strerror_printf_push("Failed to expand xlat '%s'", vp->da->name);
 				return -1;

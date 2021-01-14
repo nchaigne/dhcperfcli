@@ -18,10 +18,10 @@ char *dpc_session_transaction_snprint(char *out, size_t outlen, dpc_session_ctx_
 char *dpc_message_type_sprint(char *out, int code);
 
 void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
-void dpc_packet_fields_fprint(FILE *fp, fr_pair_t *vp);
+void dpc_packet_fields_fprint(FILE *fp, fr_pair_list_t *packet_list);
 size_t dpc_packet_option_snprint(char *out, size_t outlen, fr_pair_t const *vp);
-int dpc_packet_options_fprint(FILE *fp, fr_pair_t *vp);
-void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent);
+int dpc_packet_options_fprint(FILE *fp, fr_pair_list_t *packet_list);
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, fr_pair_list_t *packet_list, dpc_packet_event_t pevent);
 void dpc_packet_data_fprint(FILE *fp, DHCP_PACKET *packet);
 void dpc_packet_data_options_fprint(FILE *fp, unsigned int cur_pos, uint8_t const *p, uint8_t const *data_end,
                                     bool print_end_pad, uint8_t *overload);
@@ -37,5 +37,5 @@ void dpc_input_list_debug(ncc_dlist_t *dlist);
 
 int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr);
 
-ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet);
-ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, DHCP_PACKET *packet);
+ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_list_t *pair_list);
+ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, fr_pair_list_t *pair_list);

@@ -237,7 +237,7 @@ struct dpc_input {
 	uint32_t num_use;         //!< How many times has this input been used to start sessions.
 	uint32_t num_consecutive; //!< How many times has this input been used consecutively.
 
-	fr_pair_t *vps;           //!< List of input value pairs read.
+	fr_pair_list_t pair_list; //!< List of input value pairs read.
 
 	ncc_dlist_t *gateway_list;   //!<List of gateways.
 
@@ -277,8 +277,11 @@ struct dpc_session_ctx {
 	ncc_endpoint_t src;       //!< Src IP address and port.
 	ncc_endpoint_t dst;       //!< Dst IP address and port.
 
-	DHCP_PACKET *request;
-	DHCP_PACKET *reply;
+	DHCP_PACKET *request;     //!< Incoming request.
+	DHCP_PACKET *reply;       //!< Outgoing response.
+
+	fr_pair_list_t request_list;
+	fr_pair_list_t reply_list;
 
 	uint32_t retransmit;      //!< Number of times we've retransmitted this request.
 	fr_time_t fte_init;       //!< When the packet was (first) initialized. Not altered when retransmitting.

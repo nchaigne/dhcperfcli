@@ -216,17 +216,17 @@ void ncc_xlat_core_free(void)
 
 
 /**
- * Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
- * which allows access to "control" and "packet" lists of value pairs.
+ * Wrapper to FreeRADIUS xlat_eval with a fake request_t provided,
+ * which allows access to "control_list" and "request_list" (lists of value pairs).
  *
  * In case of parsing error, xlat_eval consumes the error (by calling REMARKER) and returns -1,
  * which is all we got (no error message we can print).
  * It's always better to pre-compile the xlat expression with xlat_tokenize, in this case we
  * get error messages that we can handle ourselves.
  */
-ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_t *vps)
+ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_list_t *pair_list)
 {
-	ncc_xlat_init_request(vps);
+	ncc_xlat_init_request(pair_list);
 
 	size_t len = xlat_eval(out, outlen, FX_request, fmt, NULL, NULL);
 	CHECK_BUFFER_SIZE(-1, len + 1, outlen); /* push error and return -1. */
@@ -238,13 +238,13 @@ ssize_t ncc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_t *vps)
 }
 
 /**
- * Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
- * which allows access to "control" and "packet" lists of value pairs.
+ * Wrapper to FreeRADIUS xlat_eval_compiled with a fake request_t provided,
+ * which allows access to "control_list" and "request_list" (lists of value pairs).
  * The xlat expression must have been compiled beforehand with xlat_tokenize.
  */
-ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, fr_pair_t *vps)
+ssize_t ncc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, fr_pair_list_t *pair_list)
 {
-	ncc_xlat_init_request(vps);
+	ncc_xlat_init_request(pair_list);
 
 	size_t len = xlat_eval_compiled(out, outlen, FX_request, xlat, NULL, NULL);
 	CHECK_BUFFER_SIZE(-1, len + 1, outlen); /* push error and return -1. */

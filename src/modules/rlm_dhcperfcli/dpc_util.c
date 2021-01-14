@@ -185,7 +185,7 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 		/* If we sent a Request and got a NAK, print the Requested IP address that the server didn't like.
 		 */
 		if (packet->code == FR_DHCP_NAK && session->request->code == FR_DHCP_REQUEST) {
-			fr_pair_t *vp = fr_pair_find_by_da(&session->request->vps, attr_dhcp_requested_ip_address);
+			fr_pair_t *vp = fr_pair_find_by_da(&session->request_list, attr_dhcp_requested_ip_address);
 			if (vp) {
 				fprintf(fp, ", req addr: %s", inet_ntop(AF_INET, &vp->vp_ipv4addr, lease_ipaddr, sizeof(lease_ipaddr)));
 			}
@@ -207,11 +207,12 @@ void dpc_packet_digest_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET 
 /**
  * Print the "fields" (options excluded) of a DHCP packet (from the VPs list).
  */
-void dpc_packet_fields_fprint(FILE *fp, fr_pair_t *vp)
+void dpc_packet_fields_fprint(FILE *fp, fr_pair_list_t *packet_list)
 {
 	fr_cursor_t cursor;
+	fr_pair_t *vp;
 
-	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
+	for (vp = fr_cursor_init(&cursor, packet_list); vp; vp = fr_cursor_next(&cursor)) {
 		if (vp_is_dhcp_field(vp)) {
 			fr_pair_fprint(fp, NULL, vp);
 		}
@@ -263,14 +264,16 @@ size_t dpc_packet_option_snprint(char *out, size_t outlen, fr_pair_t const *vp)
 /**
  * Print the "options" of a DHCP packet (from the VPs list).
  */
-int dpc_packet_options_fprint(FILE *fp, fr_pair_t *vp)
+int dpc_packet_options_fprint(FILE *fp, fr_pair_list_t *packet_list)
 {
 	char buf[1024];
 	size_t len;
 	int num = 0; /* Keep track of how many options we have. */
 
 	fr_cursor_t cursor;
-	for (vp = fr_cursor_init(&cursor, &vp); vp; vp = fr_cursor_next(&cursor)) {
+	fr_pair_t *vp;
+
+	for (vp = fr_cursor_init(&cursor, packet_list); vp; vp = fr_cursor_next(&cursor)) {
 		if (vp_is_dhcp_option(vp)) {
 			len = dpc_packet_option_snprint(buf, sizeof(buf), vp);
 			if (len) {
@@ -286,7 +289,7 @@ int dpc_packet_options_fprint(FILE *fp, fr_pair_t *vp)
 /**
  * Print a DHCP packet.
  */
-void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, dpc_packet_event_t pevent)
+void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet, fr_pair_list_t *packet_list, dpc_packet_event_t pevent)
 {
 	fr_pair_t *vp_encoded_data = NULL;
 
@@ -297,15 +300,15 @@ void dpc_packet_fprint(FILE *fp, dpc_session_ctx_t *session, DHCP_PACKET *packet
 	}
 
 	if (CONF.packet_trace_lvl >= 2) {
-		if ((vp_encoded_data = ncc_pair_find_by_da(&packet->vps, attr_encoded_data)) != NULL) {
+		if ((vp_encoded_data = ncc_pair_find_by_da(packet_list, attr_encoded_data)) != NULL) {
 			fprintf(fp, "DHCP data:\n");
 			fr_pair_fprint(fp, NULL, vp_encoded_data);
 		} else {
 			fprintf(fp, "DHCP vps fields:\n");
-			dpc_packet_fields_fprint(fp, packet->vps);
+			dpc_packet_fields_fprint(fp, packet_list);
 
 			fprintf(fp, "DHCP vps options:\n");
-			if (dpc_packet_options_fprint(fp, packet->vps) == 0) {
+			if (dpc_packet_options_fprint(fp, packet_list) == 0) {
 				fprintf(fp, "\t(empty list)\n");
 			}
 		}
@@ -557,11 +560,11 @@ dpc_input_t *dpc_input_item_copy(TALLOC_CTX *ctx, dpc_input_t const *in)
 	 */
 	memcpy(out, in, sizeof(*out));
 
-	out->vps = NULL;
+	fr_pair_list_init(&out->pair_list);
 	out->dlist = (fr_dlist_t){};
 
 	/* Copy the list of vps (preserving pre-compiled xlat) */
-	MEM(ncc_pair_list_copy(out, &out->vps, in->vps) >= 0);
+	MEM(ncc_pair_list_copy(out, &out->pair_list, &in->pair_list) >= 0);
 
 	return out;
 }
@@ -583,7 +586,7 @@ void dpc_input_debug(dpc_input_t *input)
 
 	ncc_section_debug_start(depth, "input", buf);
 	ncc_section_debug_start(depth + 1, "pairs", NULL);
-	ncc_pair_list_debug(depth + 2, input->vps);
+	ncc_pair_list_debug(depth + 2, &input->pair_list);
 	ncc_section_debug_end(depth + 1);
 
 	/* Trace the input time segments. */
@@ -649,25 +652,19 @@ int dpc_ipaddr_is_broadcast(fr_ipaddr_t const *ipaddr)
 
 
 /**
- * Wrapper to FreeRADIUS xlat_eval with a fake REQUEST provided,
- * which allows access to "control" and "packet" lists of value pairs
+ * Wrapper to FreeRADIUS xlat_eval with a fake request_t provided,
+ * which allows access to "control_list" and "request_list" (lists of value pairs).
  */
-ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, DHCP_PACKET *packet)
+ssize_t dpc_xlat_eval(char *out, size_t outlen, char const *fmt, fr_pair_list_t *pair_list)
 {
-	fr_pair_t *vps = NULL;
-	if (packet) vps = packet->vps;
-
-	return ncc_xlat_eval(out, outlen, fmt, vps);
+	return ncc_xlat_eval(out, outlen, fmt, pair_list);
 }
 
 /**
- * Wrapper to FreeRADIUS xlat_eval_compiled with a fake REQUEST provided,
- * which allows access to "control" and "packet" lists of value pairs
+ * Wrapper to FreeRADIUS xlat_eval_compiled with a fake request_t provided,
+ * which allows access to "control_list" and "request_list" (lists of value pairs).
  */
-ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, DHCP_PACKET *packet)
+ssize_t dpc_xlat_eval_compiled(char *out, size_t outlen, xlat_exp_t const *xlat, fr_pair_list_t *pair_list)
 {
-	fr_pair_t *vps = NULL;
-	if (packet) vps = packet->vps;
-
-	return ncc_xlat_eval_compiled(out, outlen, xlat, vps);
+	return ncc_xlat_eval_compiled(out, outlen, xlat, pair_list);
 }
