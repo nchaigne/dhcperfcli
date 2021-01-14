@@ -1571,7 +1571,7 @@ static DHCP_PACKET *dpc_request_init(TALLOC_CTX *ctx, dpc_session_ctx_t *session
 	DHCP_PACKET *request;
 	char from_to_buf[DPC_FROM_TO_STRLEN];
 
-	MEM(request = fr_radius_alloc(ctx, true)); /* Note: this sets id to -1. */
+	MEM(request = fr_radius_packet_alloc(ctx, true)); /* Note: this sets id to -1. */
 
 	session->retransmit = 0;
 	session->ftd_rtt = 0;

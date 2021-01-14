@@ -170,7 +170,7 @@ void ncc_xlat_init_request(fr_pair_list_t *pair_list)
 
 	if (!FX_request) {
 		FX_request = request_alloc(xlat_ctx);
-		FX_request->packet = fr_radius_alloc(FX_request, false);
+		FX_request->packet = fr_radius_packet_alloc(FX_request, false);
 
 		/* Set a logger for FreeRADIUS calls to log_request through macros such as REMARKER.
 		 * We're only interested in errors, which are of type "L_DBG_ERR".
