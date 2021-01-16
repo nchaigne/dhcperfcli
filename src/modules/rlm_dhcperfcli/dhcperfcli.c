@@ -1287,7 +1287,7 @@ static bool dpc_session_dora_request(dpc_session_ctx_t *session)
 	 */
 	DEBUG3("DORA: received valid Offer, now preparing Request");
 
-	fr_pair_list_init(&session->request_pairs);
+	fr_pair_list_init(&session->request_list);
 	/* Note: pairs from the old request are allocated on packet context, hence will be properly freed with it. */
 
 	packet = dpc_request_init(session, session, session->input);
@@ -1927,6 +1927,31 @@ static dpc_input_t *dpc_get_input(void)
 }
 
 /**
+ * Allocate a session context.
+ *
+ * @param[in] ctx  talloc context.
+ *
+ * @return the new session.
+ */
+static dpc_session_ctx_t *dpc_session_alloc(TALLOC_CTX *ctx)
+{
+	dpc_session_ctx_t *session;
+
+	/*
+	 * Allocate the session.
+	 */
+	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
+
+	/*
+	 * Initialise pair value lists.
+	 */
+	fr_pair_list_init(&session->request_pairs);
+	fr_pair_list_init(&session->reply_pairs);
+
+	return session;
+}
+
+/**
  * Initialize a new session from input.
  *
  * @param[in] ctx  talloc context.
@@ -1991,14 +2016,8 @@ static dpc_session_ctx_t *dpc_session_init_from_input(TALLOC_CTX *ctx)
 	/*
 	 * Initialize the new session.
 	 */
-	MEM(session = talloc_zero(ctx, dpc_session_ctx_t));
+	session = dpc_session_alloc(ctx);
 	dpc_session_set_transport(session, input);
-
-	/*
-	 * Initialise pair value lists.
-	 */
-	fr_pair_list_init(&session->request_pairs);
-	fr_pair_list_init(&session->reply_pairs);
 
 	/*
 	 * Prepare a DHCP packet to send for this session.
@@ -2901,6 +2920,7 @@ static int dpc_input_load_from_fp(TALLOC_CTX *ctx, FILE *fp, ncc_dlist_t *list, 
 		}
 		if (!input->pair_list) {
 			/* Last line might be empty, in this case we will obtain a NULL vps pointer. Silently ignore this. */
+//TODO TEST THIS now.
 			talloc_free(input);
 			break;
 		}
@@ -2998,6 +3018,7 @@ static int dpc_pair_list_xlat(DHCP_PACKET *packet, fr_pair_list_t *packet_list)
 			}
 
 			vp->vp_ptr = NULL; /* Otherwise fr_pair_value_strcpy would free our compiled xlat! */
+// zzz?
 
 			DEBUG3("xlat %s = [%s] => (len: %u) [%s]", vp->da->name, vp->xlat, len, buffer);
 			// it can be octets, so we should not print value that way => TODO
