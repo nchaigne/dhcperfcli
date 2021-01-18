@@ -1192,7 +1192,31 @@ int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules)
  * Similar to fr_pair_list_afrom_substr (pair_legacy.c)
  * But using fr_dict_attr_search_by_qualified_oid_substr with "fallback = true" instead of fr_dict_attr_by_oid_substr.
  */
-extern fr_sbuff_term_t const bareword_terminals; // defined in pair_legacy.c
+// need our own bareword_terminals (it is now static in pair_legacy.c)
+// we probably do not need all of these though...
+static fr_sbuff_term_t const 		bareword_terminals =
+				FR_SBUFF_TERMS(
+					L("\t"),
+					L("\n"),
+					L(" "),
+					L("!*"),
+					L("!="),
+					L("!~"),
+					L("&&"),		/* Logical operator */
+					L(")"),			/* Close condition/sub-condition */
+					L("+="),
+					L("-="),
+					L(":="),
+					L("<"),
+					L("<="),
+					L("=*"),
+					L("=="),
+					L("=~"),
+					L(">"),
+					L(">="),
+					L("||"),		/* Logical operator */
+				);
+
 static ssize_t ncc_pair_list_afrom_substr(TALLOC_CTX *ctx, fr_dict_attr_t const *parent, char const *buffer,
 					 fr_pair_list_t *list, fr_token_t *token, int depth)
 {
