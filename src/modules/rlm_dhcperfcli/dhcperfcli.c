@@ -1378,7 +1378,7 @@ static bool dpc_session_dora_release(dpc_session_ctx_t *session)
 	 */
 	DEBUG3("DORA-Release: received valid Ack, now preparing Release");
 
-	fr_pair_list_init(&session->request_pairs);
+	fr_pair_list_init(&session->request_list);
 	/* Note: pairs from the old request are allocated on packet context, hence will be properly freed with it. */
 
 	packet = dpc_request_init(session, session, session->input);
@@ -1469,7 +1469,7 @@ static bool dpc_session_dora_decline(dpc_session_ctx_t *session)
 	 */
 	DEBUG3("DORA-Decline: received valid Ack, now preparing Decline");
 
-	fr_pair_list_init(&session->request_pairs);
+	fr_pair_list_init(&session->request_list);
 	/* Note: pairs from the old request are allocated on packet context, hence will be properly freed with it. */
 
 	packet = dpc_request_init(session, session, session->input);
@@ -1945,8 +1945,10 @@ static dpc_session_ctx_t *dpc_session_alloc(TALLOC_CTX *ctx)
 	/*
 	 * Initialise pair value lists.
 	 */
-	fr_pair_list_init(&session->request_pairs);
-	fr_pair_list_init(&session->reply_pairs);
+	fr_pair_list_init(&session->request_list);
+	fr_pair_list_init(&session->reply_list);
+	// Don't use "request_pairs" and "reply_pairs". Those are convenience macros, no longer equal to "request_list" and "reply_list".
+	// (cf. src/lib/server/request.h)
 
 	return session;
 }

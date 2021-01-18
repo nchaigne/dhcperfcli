@@ -113,6 +113,12 @@ int ncc_xlat_init()
 {
 	if (done_init) return 0;
 
+	/*
+	 * Load dictionary attributes used for requests.
+	 * (This is done by FreeRADIUS server in "server_init". We now need this to allocate a request.)
+	 */
+	if (request_global_init() < 0) return -1; /* FreeRADIUS prints error. */
+
 	if (!xlat_ctx) xlat_ctx = talloc_new(talloc_autofree_context());
 
 	if (fr_dict_autoload(_dict_autoload) < 0) {
@@ -133,7 +139,13 @@ void ncc_xlat_free()
 {
 	fr_dict_autofree(_dict_autoload);
 
-	if (FX_request) TALLOC_FREE(FX_request);
+	if (FX_request) {
+		/* Reset the pair lists "children" that we used, they are not to be freed. */
+		FX_request->pair_list.control->children = NULL;
+		FX_request->pair_list.request->children = NULL;
+
+		TALLOC_FREE(FX_request);
+	}
 	TALLOC_FREE(xlat_ctx);
 
 	done_init = false;
@@ -146,7 +158,7 @@ void ncc_xlat_free()
 request_t *FX_request = NULL;
 
 /* WARNING:
- * FreeRADIUS xlat functions can used this as Talloc context for allocating memory.
+ * FreeRADIUS xlat functions can use this as Talloc context for allocating memory.
  * This happens when we have a simple attribute expansion, e.g. Attr1 = "%{Attr2}".
  * Cf. xlat_process function (src/lib/server/xlat_eval.c):
  * "Hack for speed. If it's one expansion, just allocate that and return, instead of allocating an intermediary array."
@@ -169,7 +181,7 @@ void ncc_xlat_init_request(fr_pair_list_t *pair_list)
 	request_num_use++;
 
 	if (!FX_request) {
-		FX_request = request_alloc(xlat_ctx);
+		FX_request = request_alloc(xlat_ctx, NULL);
 		FX_request->packet = fr_radius_packet_alloc(FX_request, false);
 
 		/* Set a logger for FreeRADIUS calls to log_request through macros such as REMARKER.
@@ -183,8 +195,8 @@ void ncc_xlat_init_request(fr_pair_list_t *pair_list)
 	}
 
 	if (pair_list) {
-		FX_request->control_list = *pair_list; /* Allow to use %{control:Attr} */
-		FX_request->request_list = *pair_list; /* Allow to use %{request:Attr} or directly %{Attr} */
+		FX_request->pair_list.control->children = *pair_list; /* Allow to use %{control:Attr} */
+		FX_request->pair_list.request->children = *pair_list; /* Allow to use %{request:Attr} or directly %{Attr} */
 	}
 	FX_request->rcode = 0;
 }
