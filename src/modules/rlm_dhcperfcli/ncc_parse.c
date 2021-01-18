@@ -1192,8 +1192,8 @@ int ncc_opt_default(TALLOC_CTX *ctx, void *base, CONF_PARSER const *rules)
  * Similar to fr_pair_list_afrom_substr (pair_legacy.c)
  * But using fr_dict_attr_search_by_qualified_oid_substr with "fallback = true" instead of fr_dict_attr_by_oid_substr.
  */
-// need our own bareword_terminals (it is now static in pair_legacy.c)
-// we probably do not need all of these though...
+// Need our own bareword_terminals (it is now static in pair_legacy.c)
+// We probably do not need all of these though...
 static fr_sbuff_term_t const 		bareword_terminals =
 				FR_SBUFF_TERMS(
 					L("\t"),
@@ -1310,7 +1310,8 @@ static ssize_t ncc_pair_list_afrom_substr(TALLOC_CTX *ctx, fr_dict_attr_t const 
 		raw.op = gettoken(&p, raw.r_opand, sizeof(raw.r_opand), false);
 		if ((raw.op  < T_EQSTART) || (raw.op  > T_EQEND)) {
 			fr_dict_unknown_free(&da);
-			fr_strerror_printf("Expecting operator");
+			//fr_strerror_printf("Expecting operator");
+			fr_strerror_printf("Expecting operator for %s", da->name);
 			goto error;
 		}
 
@@ -1362,7 +1363,8 @@ static ssize_t ncc_pair_list_afrom_substr(TALLOC_CTX *ctx, fr_dict_attr_t const 
 			 */
 			quote = gettoken(&p, raw.r_opand, sizeof(raw.r_opand), false);
 			if (quote == T_EOL) {
-				fr_strerror_printf("Failed to get value");
+				//fr_strerror_printf("Failed to get value");
+				fr_strerror_printf("Failed to get value for %s", da->name);
 				goto error;
 			}
 
